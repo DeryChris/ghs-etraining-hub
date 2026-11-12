@@ -1,0 +1,1717 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ghana Health Service - CPD & Clinical Learning Portal (GHS-CPD)</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ghs: {
+              green: '#006B3F',
+              greenDark: '#004D2D',
+              greenLight: '#008E53',
+              gold: '#D97706',
+              goldBright: '#FCD116',
+              cyan: '#0891B2',
+              red: '#DC2626',
+              slateBg: '#0B131F',
+              cardDark: 'rgba(15, 23, 42, 0.85)',
+              cardLight: 'rgba(255, 255, 255, 0.95)',
+              borderDark: 'rgba(255, 255, 255, 0.1)',
+              borderLight: 'rgba(0, 107, 63, 0.15)'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['Fira Code', 'JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Chart.js for Enterprise CPD Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    html.dark ::-webkit-scrollbar-thumb:hover {
+      background: #006B3F;
+    }
+    html.light ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    html.light ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+    }
+
+    /* Enterprise Surface Styling */
+    .ghs-panel {
+      transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    html.dark .ghs-panel {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    html.light .ghs-panel {
+      background: #ffffff;
+      border: 1px solid rgba(0, 107, 63, 0.12);
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .ghs-panel-glow {
+      box-shadow: 0 0 20px -5px rgba(0, 107, 63, 0.25);
+    }
+
+    /* Subtle Government Mesh Backdrop */
+    html.dark body {
+      background-color: #070D16;
+      color: #f3f4f6;
+      background-image: 
+        radial-gradient(at 10% 10%, rgba(0, 107, 63, 0.15) 0px, transparent 50%),
+        radial-gradient(at 90% 10%, rgba(217, 119, 6, 0.08) 0px, transparent 50%),
+        radial-gradient(at 50% 90%, rgba(8, 145, 178, 0.1) 0px, transparent 50%);
+    }
+    html.light body {
+      background-color: #F8FAFC;
+      color: #0f172a;
+      background-image: 
+        radial-gradient(at 10% 10%, rgba(0, 107, 63, 0.05) 0px, transparent 50%),
+        radial-gradient(at 90% 90%, rgba(8, 145, 178, 0.04) 0px, transparent 50%);
+    }
+
+    .badge-ghs-gold {
+      background: rgba(217, 119, 6, 0.15);
+      color: #d97706;
+      border: 1px solid rgba(217, 119, 6, 0.3);
+    }
+    html.dark .badge-ghs-gold {
+      color: #f59e0b;
+    }
+
+    .badge-ghs-green {
+      background: rgba(0, 107, 63, 0.15);
+      color: #006B3F;
+      border: 1px solid rgba(0, 107, 63, 0.3);
+    }
+    html.dark .badge-ghs-green {
+      color: #34d399;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-emerald-600 selection:text-white">
+
+  <!-- ================================================================= -->
+  <!-- TOP UTILITY BAR & RBAC CONTEXT SWITCHER -->
+  <!-- ================================================================= -->
+  <header class="sticky top-0 z-40 ghs-panel border-b border-slate-800/80 px-4 lg:px-8 py-2.5">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <!-- Brand Crest & Official Directorate Title -->
+      <div class="flex items-center space-x-3 w-full md:w-auto justify-between md:justify-start">
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('learner-dashboard')">
+          <!-- GHS Emblem Badge -->
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-800 via-emerald-700 to-amber-600 flex items-center justify-center shadow-lg shadow-emerald-950/40 border border-amber-400/40">
+            <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M2 12h20M12 6l4 4-4 4-4-4 4-4z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-lg font-extrabold tracking-tight dark:text-white text-slate-900">GHS-CPD</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded badge-ghs-gold uppercase">Official Portal</span>
+            </div>
+            <p class="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 tracking-wider">GHANA HEALTH SERVICE • HUMAN RESOURCES DIRECTORATE</p>
+          </div>
+        </div>
+
+        <!-- Mobile Quick Icons -->
+        <div class="flex items-center space-x-2 md:hidden">
+          <button onclick="toggleTheme()" class="p-2 rounded-lg bg-slate-800/60 text-slate-300">
+            <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+            <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+          </button>
+          <button onclick="toggleDrawer('notifications-drawer')" class="p-2 rounded-lg bg-slate-800/60 text-slate-300 relative">
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-500 rounded-full"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- DYNAMIC RBAC ROLE SWITCHER TOOLBAR -->
+      <div class="flex items-center space-x-1.5 bg-slate-900/90 dark:bg-slate-900/90 light:bg-slate-100 p-1 rounded-xl border border-slate-800 dark:border-slate-800 light:border-slate-300 w-full md:w-auto justify-center">
+        <span class="text-[11px] font-bold text-slate-400 px-2 uppercase tracking-wider hidden lg:inline">Active Context:</span>
+        
+        <button onclick="setUserRole('learner')" id="role-btn-learner" class="role-btn text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center space-x-1.5 bg-emerald-700 text-white shadow">
+          <i data-lucide="user" class="w-3.5 h-3.5"></i>
+          <span>Nurse Addo</span>
+        </button>
+
+        <button onclick="setUserRole('facilitator')" id="role-btn-facilitator" class="role-btn text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center space-x-1.5 text-slate-400 hover:text-slate-200">
+          <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+          <span>Dr. Quaye</span>
+        </button>
+
+        <button onclick="setUserRole('admin')" id="role-btn-admin" class="role-btn text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center space-x-1.5 text-slate-400 hover:text-slate-200">
+          <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+          <span>HQ Admin</span>
+        </button>
+      </div>
+
+      <!-- User Info & Utility Actions -->
+      <div class="hidden md:flex items-center space-x-3">
+        
+        <!-- Theme Toggle Button -->
+        <button onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-800/60 dark:bg-slate-900 border border-slate-700/60 dark:border-slate-800 text-slate-300 hover:text-white transition" title="Toggle Light/Dark Theme">
+          <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+          <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+        </button>
+
+        <!-- Messages Drawer Trigger -->
+        <button onclick="toggleDrawer('messages-drawer')" class="p-2 rounded-xl bg-slate-800/60 dark:bg-slate-900 border border-slate-700/60 dark:border-slate-800 text-slate-300 hover:text-white transition relative" title="Direct Messaging">
+          <i data-lucide="message-square" class="w-4 h-4"></i>
+          <span class="absolute top-1 right-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+        </button>
+
+        <!-- Notifications Drawer Trigger -->
+        <button onclick="toggleDrawer('notifications-drawer')" class="p-2 rounded-xl bg-slate-800/60 dark:bg-slate-900 border border-slate-700/60 dark:border-slate-800 text-slate-300 hover:text-white transition relative" title="System Alerts">
+          <i data-lucide="bell" class="w-4 h-4"></i>
+          <span id="unread-count-badge" class="absolute -top-1 -right-1 px-1.5 py-0.2 bg-amber-500 text-slate-950 font-bold text-[10px] rounded-full">3</span>
+        </button>
+
+        <!-- User Identity Tag -->
+        <div class="flex items-center space-x-2.5 pl-2 border-l border-slate-700 dark:border-slate-800">
+          <img id="user-avatar" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=120" class="w-8 h-8 rounded-full object-cover border border-emerald-500/50">
+          <div class="text-left leading-tight hidden lg:block">
+            <div id="user-name" class="text-xs font-bold dark:text-white text-slate-900">Nurse Perpetual Addo</div>
+            <div id="user-detail" class="text-[10px] text-slate-400 font-mono">GHS-102938 • NMC/RNR-2024-8849</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER WITH SIDEBAR & VIEWPORT -->
+  <div class="max-w-7xl w-full mx-auto flex-grow flex flex-col md:flex-row gap-6 p-4 sm:p-6 lg:p-8">
+    
+    <!-- SIDEBAR NAVIGATION PANEL -->
+    <aside class="w-full md:w-64 flex-shrink-0 space-y-4">
+      
+      <!-- Role Permission Context Card -->
+      <div class="ghs-panel p-4 rounded-2xl space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-400 font-medium">RBAC Context</span>
+          <span id="role-context-tag" class="px-2 py-0.5 rounded text-[10px] font-bold badge-ghs-green uppercase">Learner</span>
+        </div>
+        <div id="role-description" class="text-xs font-medium dark:text-slate-300 text-slate-700 leading-relaxed">
+          Full clinical protocol access, CPD points accrual, interactive case discussion.
+        </div>
+        <div class="pt-2 border-t border-slate-800 dark:border-slate-800 light:border-slate-200 flex items-center justify-between text-[11px] font-mono text-slate-400">
+          <span>License State:</span>
+          <span id="role-license-tag" class="text-emerald-500 font-bold">NMC ACCREDITED</span>
+        </div>
+      </div>
+
+      <!-- Dynamic Navigation Menu -->
+      <nav id="sidebar-nav" class="ghs-panel p-2 rounded-2xl space-y-1">
+        <!-- Rendered dynamically by JS -->
+      </nav>
+
+      <!-- GHS National Secretariate Card -->
+      <div class="ghs-panel p-4 rounded-2xl space-y-3 bg-gradient-to-br from-emerald-950/30 to-slate-900/60 dark:from-emerald-950/40 border border-emerald-800/30">
+        <div class="flex items-center space-x-2 text-emerald-400 text-xs font-bold">
+          <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i>
+          <span>CPD Verification HQ</span>
+        </div>
+        <p class="text-[11px] text-slate-400 leading-relaxed">
+          Annual licensure credits are synchronized automatically with Nursing & Midwifery Council (NMC) and Medical & Dental Council (MDC) Ghana.
+        </p>
+        <button onclick="toggleDrawer('messages-drawer')" class="w-full py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-semibold border border-emerald-500/30 transition">
+          Contact CPD Registrar
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- MAIN DYNAMIC VIEWPORT -->
+    <main class="flex-grow space-y-6 overflow-hidden">
+
+      <!-- ================================================================= -->
+      <!-- VIEW 1: LEARNER DASHBOARD (CPD PROGRESS & CATALOG) -->
+      <!-- ================================================================= -->
+      <section id="view-learner-dashboard" class="app-view space-y-6">
+        
+        <!-- Welcome Hero & CPD Progress Tracker Banner -->
+        <div class="relative overflow-hidden rounded-3xl ghs-panel p-6 sm:p-8 border border-slate-800">
+          <div class="absolute -right-12 -bottom-12 w-64 h-64 bg-emerald-600/15 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute right-40 -top-10 w-48 h-48 bg-amber-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div class="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div class="space-y-2">
+              <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full badge-ghs-green text-xs font-semibold">
+                <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                <span>License Renewal Cycle 2026 Active</span>
+              </div>
+              <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight dark:text-white text-slate-900">Welcome, Nurse Perpetual Addo 👋</h1>
+              <p class="text-slate-400 text-xs sm:text-sm max-w-xl">
+                Senior Nursing Officer at <span class="text-emerald-400 font-semibold">Greater Accra Regional Hospital (Ridge)</span>. You have completed <span class="text-amber-400 font-bold">28 of 30</span> required CPD points for 2026.
+              </p>
+            </div>
+
+            <!-- CPD Points Radial Indicator -->
+            <div class="flex items-center space-x-4 bg-slate-900/90 dark:bg-slate-950 p-4 rounded-2xl border border-slate-800 flex-shrink-0">
+              <div class="text-center">
+                <div class="text-3xl font-extrabold text-amber-400 font-mono">28 / 30</div>
+                <div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Accumulated CPD Credits</div>
+              </div>
+              <div class="w-12 h-12 rounded-full border-4 border-amber-500 border-t-emerald-500 flex items-center justify-center text-xs font-bold text-white">
+                93%
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filterable Categories Header -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold dark:text-white text-slate-900">Clinical Training Categories & Spaces</h2>
+            <p class="text-xs text-slate-400">Official accredited continuous learning modules by clinical domain</p>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button onclick="switchView('learner-reader')" class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold shadow transition flex items-center gap-1.5">
+              <i data-lucide="play-circle" class="w-4 h-4"></i>
+              <span>Resume Active Lesson</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Category Grid -->
+        <div class="space-y-6" id="learner-category-grid">
+          <!-- Dynamically injected via JS -->
+        </div>
+
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- VIEW 2: INTERACTIVE PROTOCOL READER & CASE DISCUSSION FORUM -->
+      <!-- ================================================================= -->
+      <section id="view-learner-reader" class="app-view hidden space-y-6">
+        
+        <!-- Reader Workstation Bar -->
+        <div class="ghs-panel p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <button onclick="switchView('learner-dashboard')" class="p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition">
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            </button>
+            <div>
+              <div class="flex items-center space-x-2 text-xs">
+                <span class="font-bold text-emerald-400">Maternal & Neonatal Health</span>
+                <span class="text-slate-600">•</span>
+                <span class="text-slate-400">Space: EmONC Protocol 2026</span>
+              </div>
+              <h2 class="text-base font-bold dark:text-white text-slate-900">GHS National Guidelines on Postpartum Hemorrhage (PPH) Management</h2>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <span class="px-3 py-1 rounded-lg badge-ghs-gold text-xs font-bold flex items-center gap-1">
+              <i data-lucide="award" class="w-3.5 h-3.5"></i> 5 NMC CPD Credits
+            </span>
+            <button onclick="markProtocolComplete()" class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold shadow transition">
+              Complete & Claim Credits
+            </button>
+          </div>
+        </div>
+
+        <!-- Reader Main Layout (8 cols reader, 4 cols workspace context) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- Content Box (8 cols) -->
+          <div class="lg:col-span-8 space-y-4">
+            <div class="ghs-panel rounded-2xl overflow-hidden border border-slate-800">
+              
+              <!-- Tab Navigation Bar -->
+              <div class="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center space-x-2 overflow-x-auto text-xs">
+                <button onclick="switchReaderTab('text')" id="rtab-text" class="reader-tab-btn px-3.5 py-1.5 rounded-lg bg-emerald-700 text-white font-semibold flex items-center gap-1.5">
+                  <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Clinical Protocol Text
+                </button>
+                <button onclick="switchReaderTab('pdf')" id="rtab-pdf" class="reader-tab-btn px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white font-semibold flex items-center gap-1.5">
+                  <i data-lucide="file" class="w-3.5 h-3.5"></i> Official PDF Document
+                </button>
+                <button onclick="switchReaderTab('video')" id="rtab-video" class="reader-tab-btn px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white font-semibold flex items-center gap-1.5">
+                  <i data-lucide="video" class="w-3.5 h-3.5"></i> Video Lecture
+                </button>
+                <button onclick="switchReaderTab('forum')" id="rtab-forum" class="reader-tab-btn px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white font-semibold flex items-center gap-1.5">
+                  <i data-lucide="messages-square" class="w-3.5 h-3.5"></i> Peer Forum <span class="px-1.5 py-0.2 bg-emerald-500/20 text-emerald-400 rounded-full text-[10px]">4</span>
+                </button>
+              </div>
+
+              <!-- TAB 1: PROTOCOL DOCUMENT TEXT -->
+              <div id="reader-content-text" class="p-6 space-y-4 text-xs dark:text-slate-300 text-slate-700 leading-relaxed">
+                <div class="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-start space-x-3">
+                  <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5"></i>
+                  <div>
+                    <span class="font-bold text-emerald-300 block text-xs">GHS Mandatory First-Line Treatment Directive</span>
+                    <p class="text-[11px] text-slate-400">Approved by the Institutional Care Division (ICD) Ghana Health Service. Effective January 2026 across all Regional & District Hospitals.</p>
+                  </div>
+                </div>
+
+                <h3 class="text-sm font-bold dark:text-white text-slate-900">1. Active Management of the Third Stage of Labor (AMTSL)</h3>
+                <p>Administer 10 IU of Oxytocin IM immediately following the delivery of the anterior shoulder or full body of the infant. If Oxytocin is unavailable due to cold-chain disruption, administer Misoprostol 600 mcg sublingually.</p>
+                
+                <h3 class="text-sm font-bold dark:text-white text-slate-900">2. First-Line Resuscitation Protocol for Refractory PPH</h3>
+                <p>Initiate bimanual uterine compression and rapid IV crystalloid infusion (Ringer's Lactate or Normal Saline) using two large-bore 16G cannulae while notifying the Specialist Obstetrician on call.</p>
+                
+                <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2 font-mono text-[11px]">
+                  <span class="text-amber-400 font-bold block">Pharmacological Dosage Matrix:</span>
+                  <div class="grid grid-cols-3 gap-2 text-slate-300">
+                    <div><span class="text-slate-500 block">Medication</span>Oxytocin</div>
+                    <div><span class="text-slate-500 block">Route / Dose</span>10 IU IM / IV infusion</div>
+                    <div><span class="text-slate-500 block">Interval</span>Single dose initial</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- TAB 2: PDF DOCUMENT DOWNLOADER -->
+              <div id="reader-content-pdf" class="hidden p-6 text-center space-y-4">
+                <div class="h-64 bg-slate-950 border border-slate-800 rounded-xl flex flex-col items-center justify-center p-6 space-y-3">
+                  <i data-lucide="file-text" class="w-12 h-12 text-emerald-400"></i>
+                  <div class="text-xs font-bold text-white">GHS_EmONC_PPH_Guidelines_2026_Official.pdf</div>
+                  <span class="text-[11px] text-slate-400 font-mono">Size: 3.4 MB • Digital Signature Verified by Director ICD</span>
+                  <button onclick="downloadPDFSimulated()" class="px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold flex items-center gap-2 shadow">
+                    <i data-lucide="download" class="w-4 h-4"></i> Download PDF Protocol
+                  </button>
+                </div>
+              </div>
+
+              <!-- TAB 3: VIDEO LECTURE CONTAINER -->
+              <div id="reader-content-video" class="hidden p-6 space-y-4">
+                <div class="relative aspect-video bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center group cursor-pointer">
+                  <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=800" class="w-full h-full object-cover opacity-60">
+                  <div class="absolute w-16 h-16 rounded-full bg-emerald-700 flex items-center justify-center group-hover:scale-110 transition shadow-xl">
+                    <i data-lucide="play" class="w-8 h-8 text-white fill-white ml-1"></i>
+                  </div>
+                  <div class="absolute bottom-3 left-3 bg-slate-900/90 px-3 py-1 rounded-lg text-xs font-semibold text-white">
+                    Clinical Briefing: Dr. Emmanuel K. Quaye (18 min)
+                  </div>
+                </div>
+              </div>
+
+              <!-- TAB 4: THREADED PEER DISCUSSION FORUM -->
+              <div id="reader-content-forum" class="hidden p-6 space-y-6">
+                
+                <!-- Comment Input Box -->
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between text-xs">
+                    <label class="font-bold dark:text-white text-slate-900">Clinical Query & Peer Discussion</label>
+                    <span class="text-slate-400">Tag facilitator with <code class="text-emerald-400">@Dr.Quaye</code></span>
+                  </div>
+                  <textarea id="forum-input" rows="3" placeholder="Ask a clinical question regarding the protocol or share facility experiences..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition"></textarea>
+                  <div class="flex justify-end">
+                    <button onclick="postForumComment()" class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold shadow flex items-center gap-1.5">
+                      <i data-lucide="send" class="w-3.5 h-3.5"></i> Post Question
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Existing Forum Thread -->
+                <div id="forum-thread-list" class="space-y-4 pt-4 border-t border-slate-800">
+                  
+                  <div class="ghs-panel p-4 rounded-xl border border-slate-800 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-2.5">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" class="w-7 h-7 rounded-full object-cover">
+                        <div>
+                          <div class="text-xs font-bold dark:text-white text-slate-900">Midwife Comfort Appiah</div>
+                          <div class="text-[10px] text-slate-400">Greater Accra Regional Hospital • 3 hrs ago</div>
+                        </div>
+                      </div>
+                      <span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">Learner</span>
+                    </div>
+                    <p class="text-xs text-slate-300">
+                      In district health centers with unreliable refrigeration, is sublingual Misoprostol recommended as first-line prior to referral? <span class="text-emerald-400">@Dr.Quaye</span>
+                    </p>
+
+                    <!-- Verified Facilitator Reply -->
+                    <div class="ml-4 pl-4 border-l-2 border-emerald-500 bg-emerald-950/20 p-3 rounded-r-xl space-y-1.5">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                          <span class="text-xs font-bold text-emerald-400">Dr. Emmanuel K. Quaye</span>
+                          <span class="px-2 py-0.2 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">FACILITATOR</span>
+                        </div>
+                        <span class="text-[10px] text-slate-500">1 hr ago</span>
+                      </div>
+                      <p class="text-[11px] text-slate-300">
+                        Correct, Midwife Comfort. Misoprostol 600 mcg sublingually is heat-stable and recommended by GHS ICD directives where cold-chain Oxytocin cannot be guaranteed.
+                      </p>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Space Modules Sidebar (4 cols) -->
+          <div class="lg:col-span-4 space-y-4">
+            <div class="ghs-panel p-4 rounded-2xl space-y-3">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Space Modules</h3>
+              <div class="space-y-2 text-xs">
+                <div class="p-3 rounded-xl bg-emerald-700/20 border border-emerald-500/30 text-white font-medium flex items-center justify-between">
+                  <span class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Module 1: PPH Guidelines</span>
+                  <span class="text-[10px] text-emerald-400 font-bold">Active</span>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer flex items-center justify-between">
+                  <span class="flex items-center gap-2"><i data-lucide="circle" class="w-4 h-4 text-slate-600"></i> Module 2: Eclampsia & MgSO4</span>
+                  <span class="text-[10px] text-slate-500">3 CPD pts</span>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer flex items-center justify-between">
+                  <span class="flex items-center gap-2"><i data-lucide="circle" class="w-4 h-4 text-slate-600"></i> Module 3: Neonatal Resuscitation</span>
+                  <span class="text-[10px] text-slate-500">4 CPD pts</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Facilitator Info Badge -->
+            <div class="ghs-panel p-4 rounded-2xl space-y-3">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Assigned Space Specialist</span>
+              <div class="flex items-center space-x-3">
+                <img src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=120" class="w-10 h-10 rounded-xl object-cover border border-emerald-500/40">
+                <div>
+                  <h4 class="text-xs font-bold dark:text-white text-slate-900">Dr. Emmanuel K. Quaye</h4>
+                  <p class="text-[10px] text-slate-400">Senior Specialist Obstetrician • MDC/PE-11029</p>
+                </div>
+              </div>
+              <button onclick="toggleDrawer('messages-drawer')" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center justify-center gap-1.5">
+                <i data-lucide="message-square" class="w-3.5 h-3.5"></i> Direct Message Facilitator
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- VIEW 3: FACILITATOR WORKSPACE & ASSESSMENT SCORING QUEUE -->
+      <!-- ================================================================= -->
+      <section id="view-facilitator-workspace" class="app-view hidden space-y-6">
+        
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-extrabold dark:text-white text-slate-900 tracking-tight">Facilitator Clinical Control Board</h1>
+            <p class="text-xs text-slate-400">Curate assigned spaces, grade clinical case assessments, and verify CPD credit hours</p>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button onclick="openModal('modal-add-space')" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+              <i data-lucide="folder-plus" class="w-4 h-4 text-emerald-400"></i> Add Sub-space
+            </button>
+            <button onclick="openModal('modal-upload-material')" class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold shadow transition flex items-center gap-1.5">
+              <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload Clinical Protocol
+            </button>
+          </div>
+        </div>
+
+        <!-- Metrics Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="ghs-panel p-5 rounded-2xl space-y-2">
+            <span class="text-xs text-slate-400">Assigned Clinical Spaces</span>
+            <div class="text-2xl font-bold dark:text-white text-slate-900">4 Managed Spaces</div>
+            <p class="text-[11px] text-emerald-400">1,840 Enrolled GHS Personnel</p>
+          </div>
+
+          <div class="ghs-panel p-5 rounded-2xl space-y-2">
+            <span class="text-xs text-slate-400">Pending Assessment Queue</span>
+            <div class="text-2xl font-bold text-amber-400 font-mono">6 Submissions</div>
+            <p class="text-[11px] text-slate-400">Requires qualitative review for CPD points</p>
+          </div>
+
+          <div class="ghs-panel p-5 rounded-2xl space-y-2">
+            <span class="text-xs text-slate-400">Total Credits Awarded</span>
+            <div class="text-2xl font-bold dark:text-white text-slate-900">4,920 CPD Pts</div>
+            <p class="text-[11px] text-emerald-400">Verified with MDC / NMC Registries</p>
+          </div>
+        </div>
+
+        <!-- Learner Assessment Submission Queue Table -->
+        <div class="ghs-panel rounded-2xl overflow-hidden space-y-4">
+          <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-bold dark:text-white text-slate-900">Learner Assessment Review Queue</h3>
+              <p class="text-xs text-slate-400">Verify case study submissions and issue accredited CPD credits</p>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900/80 text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-800">
+                <tr>
+                  <th class="p-4 pl-6">Staff ID & Name</th>
+                  <th class="p-4">Cadre & Facility</th>
+                  <th class="p-4">Target Space</th>
+                  <th class="p-4">Submission Date</th>
+                  <th class="p-4">Status</th>
+                  <th class="p-4 text-right pr-6">Grading Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60 text-slate-300">
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="p-4 pl-6 font-semibold text-white">
+                    <div class="font-mono text-cyan-400 text-[11px]">GHS-102938</div>
+                    Nurse Perpetual Addo
+                  </td>
+                  <td class="p-4 text-slate-400">Senior Nursing Officer • Ridge Hospital</td>
+                  <td class="p-4 text-slate-300">EmONC Protocol 2026</td>
+                  <td class="p-4 font-mono text-slate-400">Yesterday, 14:20</td>
+                  <td class="p-4"><span class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold">PENDING REVIEW</span></td>
+                  <td class="p-4 text-right pr-6">
+                    <button onclick="openGradeModal('GHS-102938', 'Nurse Perpetual Addo', 'EmONC Protocol 2026')" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold shadow">
+                      Review & Grade
+                    </button>
+                  </td>
+                </tr>
+
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="p-4 pl-6 font-semibold text-white">
+                    <div class="font-mono text-cyan-400 text-[11px]">GHS-554109</div>
+                    Staff Nurse Kwabena Mensah
+                  </td>
+                  <td class="p-4 text-slate-400">Staff Nurse II • Komfo Anokye Hospital</td>
+                  <td class="p-4 text-slate-300">Eclampsia Management</td>
+                  <td class="p-4 font-mono text-slate-400">10 Nov 2026</td>
+                  <td class="p-4"><span class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">VERIFIED (+5 PTS)</span></td>
+                  <td class="p-4 text-right pr-6">
+                    <span class="text-xs text-slate-500 font-mono">Graded by Dr. Quaye</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- VIEW 4: SUPER ADMIN HQ - REGIONAL ANALYTICS, RBAC & AUDIT LOGS -->
+      <!-- ================================================================= -->
+      <section id="view-admin-dashboard" class="app-view hidden space-y-6">
+        
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h1 class="text-2xl font-extrabold dark:text-white text-slate-900 tracking-tight">GHS HQ Executive Directorate Panel</h1>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">HQ SUPER ADMIN</span>
+            </div>
+            <p class="text-xs text-slate-400">Complete RBAC administration, regional compliance charts, audit trail logs & global announcements</p>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button onclick="openModal('modal-broadcast')" class="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold transition flex items-center gap-1.5">
+              <i data-lucide="radio" class="w-4 h-4 text-amber-400"></i> Dispatch System Broadcast
+            </button>
+            <button onclick="openModal('modal-add-user')" class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold shadow transition flex items-center gap-1.5">
+              <i data-lucide="user-plus" class="w-4 h-4"></i> Create GHS User
+            </button>
+          </div>
+        </div>
+
+        <!-- Regional Analytics Chart & National Compliance Metrics -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- Bar Chart (8 cols) -->
+          <div class="lg:col-span-8 ghs-panel p-6 rounded-2xl space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-base font-bold dark:text-white text-slate-900">Regional Health Personnel CPD Compliance (%)</h3>
+                <p class="text-xs text-slate-400">Live credit accrual rates across 16 Ghana Health Service administrative regions</p>
+              </div>
+              <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">National Target: 85%</span>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="adminRegionalChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Quick Metrics (4 cols) -->
+          <div class="lg:col-span-4 space-y-4">
+            <div class="ghs-panel p-5 rounded-2xl space-y-1">
+              <span class="text-xs text-slate-400">Registered GHS Staff Accounts</span>
+              <div class="text-2xl font-bold dark:text-white text-slate-900 font-mono">48,920 Personnel</div>
+              <span class="text-[11px] text-emerald-400">Active across 260 District Directorates</span>
+            </div>
+
+            <div class="ghs-panel p-5 rounded-2xl space-y-1">
+              <span class="text-xs text-slate-400">Certified Facilitator Accounts</span>
+              <div class="text-2xl font-bold dark:text-white text-slate-900 font-mono">412 Specialists</div>
+              <span class="text-[11px] text-cyan-400">MDC & NMC Board Approved</span>
+            </div>
+
+            <div class="ghs-panel p-5 rounded-2xl space-y-1">
+              <span class="text-xs text-slate-400">Security Audit Events (24h)</span>
+              <div class="text-2xl font-bold dark:text-white text-slate-900 font-mono">1,842 Events</div>
+              <span class="text-[11px] text-slate-400">0 High-Severity Security Anomalies</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ADMIN TABBED PANELS: User Directory, Category Hierarchy, Audit Log -->
+        <div class="ghs-panel rounded-2xl overflow-hidden space-y-4">
+          
+          <!-- Tab Bar -->
+          <div class="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center space-x-2 text-xs">
+            <button onclick="switchAdminTab('users')" id="atab-users" class="admin-tab-btn px-4 py-2 rounded-xl bg-emerald-700 text-white font-semibold">
+              RBAC User Directory
+            </button>
+            <button onclick="switchAdminTab('categories')" id="atab-categories" class="admin-tab-btn px-4 py-2 rounded-xl text-slate-400 hover:text-white font-semibold">
+              Category & Space Tree Builder
+            </button>
+            <button onclick="switchAdminTab('audit')" id="atab-audit" class="admin-tab-btn px-4 py-2 rounded-xl text-slate-400 hover:text-white font-semibold">
+              Enterprise Security Audit Log
+            </button>
+          </div>
+
+          <!-- ADMIN TAB 1: RBAC USER MANAGEMENT -->
+          <div id="admin-sec-users" class="p-6 space-y-4">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <input type="text" id="user-search-input" onkeyup="filterUserTable()" placeholder="Search Staff ID, Name, Cadre, Facility..." class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-slate-200 w-full sm:w-80 focus:outline-none">
+              <span class="text-xs text-slate-400">Filtered Total: <span id="user-count-label" class="font-bold text-white">4</span> Personnel</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table id="admin-user-table" class="w-full text-left text-xs">
+                <thead class="bg-slate-900/80 text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-800">
+                  <tr>
+                    <th class="p-3 pl-4">Staff ID & Name</th>
+                    <th class="p-3">Cadre / Title</th>
+                    <th class="p-3">Facility & Region</th>
+                    <th class="p-3">Council License</th>
+                    <th class="p-3">Role</th>
+                    <th class="p-3 text-right pr-4">RBAC Operations</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 text-slate-300">
+                  <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-3 pl-4 font-semibold text-white">
+                      <div class="font-mono text-cyan-400 text-[11px]">GHS-102938</div>
+                      Nurse Perpetual Addo
+                    </td>
+                    <td class="p-3 text-slate-300">Senior Nursing Officer</td>
+                    <td class="p-3 text-slate-400">Ridge Hospital, Greater Accra</td>
+                    <td class="p-3 font-mono text-amber-400 text-[11px]">NMC/RNR-2024-8849</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded badge-ghs-green text-[10px] font-bold">LEARNER</span></td>
+                    <td class="p-3 text-right pr-4 space-x-2">
+                      <button onclick="editUserRole('GHS-102938', 'Nurse Perpetual Addo', 'Learner')" class="text-xs text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded-lg">Mutate Role</button>
+                    </td>
+                  </tr>
+
+                  <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-3 pl-4 font-semibold text-white">
+                      <div class="font-mono text-cyan-400 text-[11px]">GHS-449102</div>
+                      Dr. Emmanuel K. Quaye
+                    </td>
+                    <td class="p-3 text-slate-300">Senior Specialist Obstetrician</td>
+                    <td class="p-3 text-slate-400">Korle Bu Teaching Hospital</td>
+                    <td class="p-3 font-mono text-amber-400 text-[11px]">MDC/PE-11029</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold">FACILITATOR</span></td>
+                    <td class="p-3 text-right pr-4 space-x-2">
+                      <button onclick="editUserRole('GHS-449102', 'Dr. Emmanuel K. Quaye', 'Facilitator')" class="text-xs text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded-lg">Mutate Role</button>
+                    </td>
+                  </tr>
+
+                  <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-3 pl-4 font-semibold text-white">
+                      <div class="font-mono text-cyan-400 text-[11px]">GHS-884920</div>
+                      Kofi Mensah
+                    </td>
+                    <td class="p-3 text-slate-300">Principal IT Systems Officer</td>
+                    <td class="p-3 text-slate-400">GHS HQ, HR Directorate, Accra</td>
+                    <td class="p-3 font-mono text-slate-500 text-[11px]">GHS/IT-0082</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded bg-red-500/20 text-red-400 text-[10px] font-bold">SUPER ADMIN</span></td>
+                    <td class="p-3 text-right pr-4 space-x-2">
+                      <button onclick="editUserRole('GHS-884920', 'Kofi Mensah', 'Admin')" class="text-xs text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded-lg">Mutate Role</button>
+                    </td>
+                  </tr>
+
+                  <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-3 pl-4 font-semibold text-white">
+                      <div class="font-mono text-cyan-400 text-[11px]">GHS-304911</div>
+                      Senior Pharmacist Yaw Darko
+                    </td>
+                    <td class="p-3 text-slate-300">Senior Pharmacist</td>
+                    <td class="p-3 text-slate-400">Komfo Anokye Teaching Hospital</td>
+                    <td class="p-3 font-mono text-amber-400 text-[11px]">Pharmacy Council 8829</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded badge-ghs-green text-[10px] font-bold">LEARNER</span></td>
+                    <td class="p-3 text-right pr-4 space-x-2">
+                      <button onclick="editUserRole('GHS-304911', 'Senior Pharmacist Yaw Darko', 'Learner')" class="text-xs text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded-lg">Mutate Role</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ADMIN TAB 2: CATEGORY & SPACE HIERARCHY TREE BUILDER -->
+          <div id="admin-sec-categories" class="hidden p-6 space-y-4">
+            <div class="flex justify-between items-center">
+              <h3 class="text-sm font-bold text-white">Clinical Category & Sub-Space Hierarchy Tree</h3>
+              <button onclick="openModal('modal-add-space')" class="px-3.5 py-1.5 rounded-xl bg-emerald-700 text-white text-xs font-semibold">+ Add Primary Category</button>
+            </div>
+            <div class="space-y-3" id="admin-category-tree">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- ADMIN TAB 3: AUDIT TRAIL LOG STREAM -->
+          <div id="admin-sec-audit" class="hidden p-6 space-y-4">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-400 font-mono">Immutable Security Event Stream (RBAC Monitored)</span>
+              <button onclick="renderAuditLogs()" class="text-emerald-400 hover:underline">Refresh Logs</button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs font-mono">
+                <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                  <tr>
+                    <th class="p-3">Timestamp</th>
+                    <th class="p-3">Performer Staff ID</th>
+                    <th class="p-3">Event Type</th>
+                    <th class="p-3">Target Resource</th>
+                    <th class="p-3">IP Address</th>
+                  </tr>
+                </thead>
+                <tbody id="audit-logs-body" class="divide-y divide-slate-800/60 text-slate-300 text-[11px]">
+                  <!-- Rendered via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- DRAWERS: NOTIFICATIONS & DIRECT MESSAGES -->
+  <!-- ================================================================= -->
+
+  <!-- NOTIFICATIONS DRAWER -->
+  <div id="notifications-drawer" class="fixed inset-y-0 right-0 z-50 w-full sm:w-96 ghs-panel border-l border-slate-800 translate-x-full transition-transform duration-300 p-6 flex flex-col justify-between shadow-2xl">
+    <div class="space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="bell" class="w-4 h-4 text-emerald-400"></i>
+          <h3 class="text-sm font-bold dark:text-white text-slate-900">GHS Official Notifications</h3>
+        </div>
+        <button onclick="toggleDrawer('notifications-drawer')" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="notifications-feed" class="space-y-3 overflow-y-auto max-h-[75vh]">
+        <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="font-bold text-amber-400">CRITICAL HEALTH DIRECTIVE</span>
+            <span class="text-slate-500">12 mins ago</span>
+          </div>
+          <h4 class="text-xs font-bold text-white">EmONC Protocol 2026 Revision Release</h4>
+          <p class="text-[11px] text-slate-300">Mandatory Oxytocin & Misoprostol dosage matrix updated.</p>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="font-bold text-emerald-400">CPD CREDIT VERIFIED</span>
+            <span class="text-slate-500">2 hours ago</span>
+          </div>
+          <h4 class="text-xs font-bold text-white">+5 NMC CPD Credits Awarded</h4>
+          <p class="text-[11px] text-slate-400">Verified by Nursing & Midwifery Council Ghana portal API.</p>
+        </div>
+      </div>
+    </div>
+
+    <button onclick="clearNotifications()" class="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs text-slate-400 font-semibold border border-slate-800">
+      Dismiss Notifications
+    </button>
+  </div>
+
+  <!-- DIRECT MESSAGES DRAWER -->
+  <div id="messages-drawer" class="fixed inset-y-0 right-0 z-50 w-full sm:w-96 ghs-panel border-l border-slate-800 translate-x-full transition-transform duration-300 p-6 flex flex-col justify-between shadow-2xl">
+    <div class="space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="message-square" class="w-4 h-4 text-cyan-400"></i>
+          <h3 class="text-sm font-bold dark:text-white text-slate-900">Direct Clinical Messenger</h3>
+        </div>
+        <button onclick="toggleDrawer('messages-drawer')" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="messages-stream" class="space-y-3 overflow-y-auto max-h-[65vh] text-xs">
+        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+          <div class="flex justify-between text-[10px] text-slate-400">
+            <span class="font-bold text-emerald-400">Dr. Emmanuel K. Quaye</span>
+            <span>Yesterday</span>
+          </div>
+          <p class="text-slate-300">Hello Nurse Addo, please refer to section 2.1 of the EmONC guidelines for refractary PPH cases.</p>
+        </div>
+
+        <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/20 space-y-1 ml-4">
+          <div class="flex justify-between text-[10px] text-slate-400">
+            <span class="font-bold text-white">You (Nurse Perpetual Addo)</span>
+            <span>11:04 AM</span>
+          </div>
+          <p class="text-slate-200">Thank you Doctor, we have reviewed the guidelines with the Ridge maternity triage team.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-2 pt-2 border-t border-slate-800">
+      <div class="flex gap-2">
+        <input type="text" id="chat-input" placeholder="Message specialist..." class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none">
+        <button onclick="sendDirectMessage()" class="px-3 py-2 rounded-xl bg-emerald-700 text-white text-xs font-semibold">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL DIALOGS -->
+  <!-- ================================================================= -->
+
+  <!-- MODAL 1: SYSTEM ANNOUNCEMENT BROADCAST -->
+  <div id="modal-broadcast" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="ghs-panel w-full max-w-md rounded-3xl p-6 border border-slate-700 space-y-5 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="radio" class="w-4 h-4 text-amber-400"></i> Compose Emergency Broadcast Directive
+        </h3>
+        <button onclick="closeModal('modal-broadcast')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Target Personnel Cadre</label>
+          <select class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+            <option>All Ghana Health Service Personnel</option>
+            <option>Nurses & Midwives Cadre</option>
+            <option>Medical Practitioners & Specialists</option>
+            <option>Pharmacists & Dispensers</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Severity Flag</label>
+          <select id="broadcast-severity" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+            <option value="CRITICAL DIRECTIVE">Critical Emergency Directive (Red Flag)</option>
+            <option value="PROTOCOL UPDATE">Standard Protocol Revision</option>
+            <option value="MAINTENANCE">System Maintenance Alert</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Broadcast Subject Header</label>
+          <input type="text" id="broadcast-header" placeholder="e.g. Revised Cholera Triage Protocol 2026" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Directive Microcopy Body</label>
+          <textarea id="broadcast-body" rows="3" placeholder="Enter clinical directive content..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none"></textarea>
+        </div>
+      </div>
+
+      <button onclick="submitBroadcast()" class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-600 to-emerald-700 text-white font-bold text-xs uppercase tracking-wider shadow">
+        Dispatch Broadcast Alert
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 2: UPLOAD MATERIAL / PROTOCOL -->
+  <div id="modal-upload-material" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="ghs-panel w-full max-w-md rounded-3xl p-6 border border-slate-700 space-y-5 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="upload-cloud" class="w-4 h-4 text-emerald-400"></i> Add Clinical Protocol / Material
+        </h3>
+        <button onclick="closeModal('modal-upload-material')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Target Space</label>
+          <select id="mat-space" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+            <option>EmONC Protocol 2026</option>
+            <option>Lassa & Viral Hemorrhagic Fever Triage</option>
+            <option>Emergency Triage Protocol</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Document Title</label>
+          <input type="text" id="mat-title" placeholder="e.g. GHS Active Management Guidelines PDF" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Format Type</label>
+            <select class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+              <option>PDF Guideline</option>
+              <option>Video Briefing (MP4)</option>
+              <option>Interactive Case Study</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Accredited CPD Points</label>
+            <input type="number" value="5" min="1" max="15" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+          </div>
+        </div>
+      </div>
+
+      <button onclick="submitUploadMaterial()" class="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider shadow">
+        Publish to GHS Personnel
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 3: ADD SUB-SPACE -->
+  <div id="modal-add-space" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="ghs-panel w-full max-w-md rounded-3xl p-6 border border-slate-700 space-y-5 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="folder-plus" class="w-4 h-4 text-cyan-400"></i> Create Clinical Sub-Space
+        </h3>
+        <button onclick="closeModal('modal-add-space')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Parent Category</label>
+          <select id="space-parent-cat" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+            <option>Maternal & Neonatal Health</option>
+            <option>Infectious Disease & Epidemiology</option>
+            <option>Emergency Medicine & Triage</option>
+            <option>Clinical Governance & Medical Ethics</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Sub-Space Name</label>
+          <input type="text" id="space-name-input" placeholder="e.g. Neonatal Resuscitation & Oxygenation" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+        </div>
+      </div>
+
+      <button onclick="submitAddSpace()" class="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider shadow">
+        Create Space
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 4: FACILITATOR ASSESSMENT GRADING -->
+  <div id="modal-grade-submission" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="ghs-panel w-full max-w-md rounded-3xl p-6 border border-slate-700 space-y-5 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="award" class="w-4 h-4 text-amber-400"></i> Grade Clinical Case Assessment
+        </h3>
+        <button onclick="closeModal('modal-grade-submission')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1">
+          <div id="grade-target-id" class="font-mono text-cyan-400 text-[11px]">GHS-102938</div>
+          <div id="grade-target-name" class="font-bold text-white">Nurse Perpetual Addo</div>
+          <div id="grade-target-space" class="text-slate-400 text-[11px]">EmONC Protocol 2026 Assessment</div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">CPD Credits to Award</label>
+          <select id="grade-points-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+            <option value="5">5 CPD Credits (Full Compliance)</option>
+            <option value="3">3 CPD Credits (Partial Compliance)</option>
+            <option value="0">0 CPD Credits (Resubmission Required)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Qualitative Feedback for Learner</label>
+          <textarea rows="3" placeholder="Enter clinical feedback notes for personnel..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">Excellent adherence to AMTSL and Misoprostol dosage protocols. Credits approved.</textarea>
+        </div>
+      </div>
+
+      <button onclick="submitGrading()" class="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider shadow">
+        Award Credits & Update NMC Record
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 5: MUTATE USER ROLE (RBAC) -->
+  <div id="modal-edit-role" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="ghs-panel w-full max-w-md rounded-3xl p-6 border border-slate-700 space-y-5 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="shield" class="w-4 h-4 text-emerald-400"></i> Mutate User Permissions (RBAC)
+        </h3>
+        <button onclick="closeModal('modal-edit-role')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="p-3 bg-slate-900 rounded-xl border border-slate-800">
+          <div id="edit-role-staffid" class="font-mono text-cyan-400 text-[11px]">GHS-102938</div>
+          <div id="edit-role-name" class="font-bold text-white">Nurse Perpetual Addo</div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Target RBAC Role</label>
+          <select id="edit-role-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+            <option value="Learner">Learner (Content Reader & CPD Accrual)</option>
+            <option value="Facilitator">Facilitator (Course Creator & Evaluator)</option>
+            <option value="Admin">Super Admin (HQ System Control)</option>
+          </select>
+        </div>
+      </div>
+
+      <button onclick="saveRoleMutation()" class="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider shadow">
+        Mutate Permissions & Log Event
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 6: CREATE GHS USER ACCOUNT -->
+  <div id="modal-add-user" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="ghs-panel w-full max-w-md rounded-3xl p-6 border border-slate-700 space-y-5 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="user-plus" class="w-4 h-4 text-emerald-400"></i> Register GHS Staff Account
+        </h3>
+        <button onclick="closeModal('modal-add-user')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">GHS Staff ID</label>
+          <input type="text" id="new-staff-id" placeholder="e.g. GHS-994012" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Full Name</label>
+          <input type="text" id="new-staff-name" placeholder="e.g. Dr. Ama Serwaa" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Cadre Designation</label>
+            <input type="text" placeholder="e.g. Staff Nurse II" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Council License</label>
+            <input type="text" placeholder="e.g. NMC/88102" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+          </div>
+        </div>
+      </div>
+
+      <button onclick="submitNewUser()" class="w-full py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider shadow">
+        Create Account
+      </button>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- ================================================================= -->
+  <!-- JAVASCRIPT STATE ENGINE & INTERACTION LOGIC -->
+  <!-- ================================================================= -->
+  <script>
+    // State Engine
+    let currentRole = 'learner'; // 'learner' | 'facilitator' | 'admin'
+    let currentTheme = 'dark'; // 'dark' | 'light'
+    
+    // User Context Models
+    const userProfiles = {
+      learner: {
+        name: "Nurse Perpetual Addo",
+        detail: "GHS-102938 • NMC/RNR-2024-8849",
+        avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=120",
+        tag: "Learner",
+        license: "NMC ACCREDITED",
+        desc: "Full clinical protocol access, CPD points accrual, interactive case discussion."
+      },
+      facilitator: {
+        name: "Dr. Emmanuel K. Quaye",
+        detail: "GHS-449102 • MDC/PE-11029",
+        avatar: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=120",
+        tag: "Facilitator",
+        license: "MDC SPECIALIST BOARD",
+        desc: "Curate assigned spaces, grade clinical case assessments, and verify CPD credit hours."
+      },
+      admin: {
+        name: "Kofi Mensah",
+        detail: "GHS-884920 • HQ IT/HR Directorate",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120",
+        tag: "Super Admin",
+        license: "HQ SYSTEM DIRECTORY",
+        desc: "Complete RBAC administration, regional compliance charts, audit trail logs & global announcements."
+      }
+    };
+
+    // Category & Sub-Space Domain Hierarchy
+    let categoriesData = [
+      {
+        id: 'cat-maternal',
+        title: 'Maternal & Neonatal Health',
+        icon: 'baby',
+        spaces: [
+          { name: 'EmONC Protocol 2026', count: '4 Protocols', cpd: '5 Points', assignedTo: 'Dr. Emmanuel K. Quaye' },
+          { name: 'Eclampsia & MgSO4 Dosage', count: '3 Protocols', cpd: '3 Points', assignedTo: 'Dr. Emmanuel K. Quaye' },
+          { name: 'Neonatal Resuscitation Workflow', count: '2 Protocols', cpd: '4 Points', assignedTo: 'Dr. Emmanuel K. Quaye' }
+        ]
+      },
+      {
+        id: 'cat-infectious',
+        title: 'Infectious Disease & Epidemiology',
+        icon: 'activity',
+        spaces: [
+          { name: 'Lassa & VHF Triage Protocol', count: '5 Protocols', cpd: '6 Points', assignedTo: 'Dr. Emmanuel K. Quaye' },
+          { name: 'Cholera Outbreak Management', count: '3 Protocols', cpd: '4 Points', assignedTo: 'Dr. Emmanuel K. Quaye' }
+        ]
+      },
+      {
+        id: 'cat-emergency',
+        title: 'Emergency Medicine & Triage',
+        icon: 'stethoscope',
+        spaces: [
+          { name: 'South African Triage Scale (SATS) GHS Adapt', count: '4 Protocols', cpd: '5 Points', assignedTo: 'Dr. Kwame Nkrumah' }
+        ]
+      },
+      {
+        id: 'cat-ethics',
+        title: 'Clinical Governance & Medical Ethics',
+        icon: 'scale',
+        spaces: [
+          { name: 'Patients Charter & Medico-Legal Practice', count: '2 Protocols', cpd: '3 Points', assignedTo: 'Kofi Mensah' }
+        ]
+      }
+    ];
+
+    // Enterprise Security Audit Stream
+    let auditLogs = [
+      { time: '12:01:44 PM', actor: 'GHS-884920 (Kofi Mensah)', action: 'USER_ROLE_MUTATED', resource: 'GHS-102938 -> LEARNER', ip: '102.176.45.12 (Accra HQ)' },
+      { time: '11:42:10 AM', actor: 'GHS-449102 (Dr. Quaye)', action: 'CPD_CREDIT_VERIFIED', resource: 'Nurse Perpetual Addo (+5 PTS)', ip: '102.176.88.90 (Korle Bu)' },
+      { time: '10:15:02 AM', actor: 'GHS-102938 (Nurse Addo)', action: 'PROTOCOL_DOWNLOADED', resource: 'EmONC_PPH_Guidelines_2026.pdf', ip: '41.215.160.4 (Ridge Hosp)' },
+      { time: '09:00:00 AM', actor: 'GHS-884920 (Kofi Mensah)', action: 'BROADCAST_DISPATCHED', resource: 'EmONC Protocol 2026 Revision', ip: '102.176.45.12 (Accra HQ)' }
+    ];
+
+    // INITIALIZATION ON LOAD
+    window.onload = function() {
+      lucide.createIcons();
+      setUserRole('learner');
+      renderLearnerCategories();
+      renderAuditLogs();
+      renderAdminCategoryTree();
+      initRegionalChart();
+    };
+
+    // THEME TOGGLE ENGINE
+    function toggleTheme() {
+      const html = document.documentElement;
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        html.classList.add('light');
+        currentTheme = 'light';
+      } else {
+        html.classList.remove('light');
+        html.classList.add('dark');
+        currentTheme = 'dark';
+      }
+      showToast(`Theme switched to ${currentTheme.toUpperCase()} mode`);
+    }
+
+    // ROLE SWITCHER ENGINE
+    function setUserRole(role) {
+      currentRole = role;
+      
+      // Update Role Buttons
+      document.querySelectorAll('.role-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-700', 'text-white', 'shadow');
+        btn.classList.add('text-slate-400');
+      });
+      document.getElementById(`role-btn-${role}`).classList.add('bg-emerald-700', 'text-white', 'shadow');
+      document.getElementById(`role-btn-${role}`).classList.remove('text-slate-400');
+
+      // Update Header Avatar & Identity
+      const p = userProfiles[role];
+      document.getElementById('user-name').innerText = p.name;
+      document.getElementById('user-detail').innerText = p.detail;
+      document.getElementById('user-avatar').src = p.avatar;
+      document.getElementById('role-context-tag').innerText = p.tag;
+      document.getElementById('role-license-tag').innerText = p.license;
+      document.getElementById('role-description').innerText = p.desc;
+
+      // Re-render Sidebar Nav Navigation according to Active Role
+      renderSidebarNav();
+
+      // Show Default Landing View
+      if (role === 'learner') switchView('learner-dashboard');
+      else if (role === 'facilitator') switchView('facilitator-workspace');
+      else if (role === 'admin') switchView('admin-dashboard');
+
+      showToast(`Role permissions set to: ${p.tag}`);
+      logAuditEvent(p.detail.split(' ')[0], 'MUTATE_ACTIVE_CONTEXT', `Role: ${role.toUpperCase()}`);
+    }
+
+    // SIDEBAR NAV BUILDER
+    function renderSidebarNav() {
+      const container = document.getElementById('sidebar-nav');
+      let navHTML = '';
+
+      if (currentRole === 'learner') {
+        navHTML = `
+          <button onclick="switchView('learner-dashboard')" id="snav-learner-dashboard" class="snav-btn w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-700 text-white shadow">
+            <i data-lucide="layout-grid" class="w-4 h-4"></i>
+            <span>CPD Dashboard & Catalog</span>
+          </button>
+          <button onclick="switchView('learner-reader')" id="snav-learner-reader" class="snav-btn w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/60">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+            <span>Active Lesson Reader</span>
+          </button>
+        `;
+      } else if (currentRole === 'facilitator') {
+        navHTML = `
+          <button onclick="switchView('facilitator-workspace')" id="snav-facilitator-workspace" class="snav-btn w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-700 text-white shadow">
+            <i data-lucide="folder-kanban" class="w-4 h-4"></i>
+            <span>Assessment Scoring Queue</span>
+          </button>
+          <button onclick="openModal('modal-upload-material')" class="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/60">
+            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+            <span>Upload Protocol Document</span>
+          </button>
+          <button onclick="switchView('learner-reader')" class="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/60">
+            <i data-lucide="messages-square" class="w-4 h-4"></i>
+            <span>Moderate Peer Forum</span>
+          </button>
+        `;
+      } else if (currentRole === 'admin') {
+        navHTML = `
+          <button onclick="switchView('admin-dashboard')" id="snav-admin-dashboard" class="snav-btn w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-700 text-white shadow">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>HQ Regional Analytics</span>
+          </button>
+          <button onclick="switchAdminTab('users'); switchView('admin-dashboard');" class="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/60">
+            <i data-lucide="users" class="w-4 h-4"></i>
+            <span>RBAC User Directory</span>
+          </button>
+          <button onclick="switchAdminTab('audit'); switchView('admin-dashboard');" class="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/60">
+            <i data-lucide="file-key-2" class="w-4 h-4"></i>
+            <span>Security Audit Trail</span>
+          </button>
+          <button onclick="openModal('modal-broadcast')" class="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-amber-400 hover:bg-amber-500/10">
+            <i data-lucide="radio" class="w-4 h-4"></i>
+            <span>System Broadcast</span>
+          </button>
+        `;
+      }
+
+      container.innerHTML = navHTML;
+      lucide.createIcons();
+    }
+
+    // VIEW SWITCHER
+    function switchView(viewId) {
+      document.querySelectorAll('.app-view').forEach(v => v.classList.add('hidden'));
+      const target = document.getElementById(`view-${viewId}`);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.snav-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-700', 'text-white', 'shadow');
+        btn.classList.add('text-slate-400');
+      });
+      const activeBtn = document.getElementById(`snav-${viewId}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-emerald-700', 'text-white', 'shadow');
+        activeBtn.classList.remove('text-slate-400');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // RENDER LEARNER CATEGORIES
+    function renderLearnerCategories() {
+      const container = document.getElementById('learner-category-grid');
+      let html = '';
+
+      categoriesData.forEach(cat => {
+        html += `
+          <div class="ghs-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                <i data-lucide="${cat.icon}" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold dark:text-white text-slate-900">${cat.title}</h3>
+                <p class="text-xs text-slate-400">${cat.spaces.length} Accredited Clinical Spaces</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        `;
+
+        cat.spaces.forEach(sp => {
+          html += `
+            <div onclick="switchView('learner-reader')" class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition space-y-3 group">
+              <div class="flex justify-between items-start">
+                <h4 class="text-xs font-bold text-white group-hover:text-emerald-400 transition">${sp.name}</h4>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold badge-ghs-gold">${sp.cpd}</span>
+              </div>
+              <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+                <span>${sp.count}</span>
+                <span class="text-emerald-400 group-hover:translate-x-1 transition flex items-center gap-1 font-semibold">
+                  Open Space <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                </span>
+              </div>
+            </div>
+          `;
+        });
+
+        html += `</div></div>`;
+      });
+
+      container.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    // READER SUB-TABS
+    function switchReaderTab(tabKey) {
+      ['text', 'pdf', 'video', 'forum'].forEach(k => {
+        document.getElementById(`reader-content-${k}`).classList.add('hidden');
+        document.getElementById(`rtab-${k}`).classList.remove('bg-emerald-700', 'text-white');
+        document.getElementById(`rtab-${k}`).classList.add('text-slate-400');
+      });
+
+      document.getElementById(`reader-content-${tabKey}`).classList.remove('hidden');
+      document.getElementById(`rtab-${tabKey}`).classList.add('bg-emerald-700', 'text-white');
+      document.getElementById(`rtab-${tabKey}`).classList.remove('text-slate-400');
+    }
+
+    // ADMIN SUB-TABS
+    function switchAdminTab(tabKey) {
+      ['users', 'categories', 'audit'].forEach(k => {
+        document.getElementById(`admin-sec-${k}`).classList.add('hidden');
+        document.getElementById(`atab-${k}`).classList.remove('bg-emerald-700', 'text-white');
+        document.getElementById(`atab-${k}`).classList.add('text-slate-400');
+      });
+
+      document.getElementById(`admin-sec-${tabKey}`).classList.remove('hidden');
+      document.getElementById(`atab-${tabKey}`).classList.add('bg-emerald-700', 'text-white');
+      document.getElementById(`atab-${tabKey}`).classList.remove('text-slate-400');
+    }
+
+    // FORUM COMMENT POSTING
+    function postForumComment() {
+      const input = document.getElementById('forum-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const thread = document.getElementById('forum-thread-list');
+      const p = userProfiles[currentRole];
+
+      thread.innerHTML = `
+        <div class="ghs-panel p-4 rounded-xl border border-slate-800 space-y-2 animate-in fade-in">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <img src="${p.avatar}" class="w-6 h-6 rounded-full object-cover">
+              <span class="text-xs font-bold dark:text-white text-slate-900">${p.name}</span>
+            </div>
+            <span class="text-[10px] text-slate-500">Just now</span>
+          </div>
+          <p class="text-xs text-slate-300">${text}</p>
+        </div>
+      ` + thread.innerHTML;
+
+      input.value = '';
+      showToast('Question posted to peer forum!');
+      logAuditEvent(p.detail.split(' ')[0], 'POST_FORUM_COMMENT', 'EmONC Space');
+    }
+
+    // DIRECT MESSAGING
+    function sendDirectMessage() {
+      const input = document.getElementById('chat-input');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      const stream = document.getElementById('messages-stream');
+      const p = userProfiles[currentRole];
+
+      stream.innerHTML += `
+        <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/20 space-y-1 ml-4 text-xs">
+          <div class="flex justify-between text-[10px] text-slate-400">
+            <span class="font-bold text-white">${p.name}</span>
+            <span>Just now</span>
+          </div>
+          <p class="text-slate-200">${msg}</p>
+        </div>
+      `;
+
+      input.value = '';
+      stream.scrollTop = stream.scrollHeight;
+      showToast('Message sent to specialist');
+    }
+
+    // SUBMIT BROADCAST
+    function submitBroadcast() {
+      const header = document.getElementById('broadcast-header').value || "EmONC Protocol 2026 Revision Release";
+      const body = document.getElementById('broadcast-body').value || "Mandatory dosage matrix updated by ICD Directorate.";
+      const severity = document.getElementById('broadcast-severity').value;
+
+      const feed = document.getElementById('notifications-feed');
+      feed.innerHTML = `
+        <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="font-bold text-amber-400">${severity}</span>
+            <span class="text-slate-500">Just now</span>
+          </div>
+          <h4 class="text-xs font-bold text-white">${header}</h4>
+          <p class="text-[11px] text-slate-300">${body}</p>
+        </div>
+      ` + feed.innerHTML;
+
+      closeModal('modal-broadcast');
+      showToast('📢 Emergency System Broadcast Dispatched!');
+      logAuditEvent('GHS-884920', 'DISPATCH_BROADCAST', header);
+    }
+
+    // SUBMIT UPLOAD MATERIAL
+    function submitUploadMaterial() {
+      const title = document.getElementById('mat-title').value || "EmONC PPH Guidelines 2026";
+      const space = document.getElementById('mat-space').value;
+
+      closeModal('modal-upload-material');
+      showToast(`Protocol document "${title}" published to ${space}`);
+      logAuditEvent(userProfiles[currentRole].detail.split(' ')[0], 'PUBLISH_PROTOCOL', `${space} -> ${title}`);
+    }
+
+    // SUBMIT ADD SPACE
+    function submitAddSpace() {
+      const spaceName = document.getElementById('space-name-input').value || "Neonatal Resuscitation";
+      const parentCat = document.getElementById('space-parent-cat').value;
+
+      const targetCat = categoriesData.find(c => c.title === parentCat);
+      if (targetCat) {
+        targetCat.spaces.push({ name: spaceName, count: '1 Protocol', cpd: '4 Points', assignedTo: userProfiles[currentRole].name });
+        renderLearnerCategories();
+        renderAdminCategoryTree();
+      }
+
+      closeModal('modal-add-space');
+      showToast(`Sub-space "${spaceName}" created!`);
+      logAuditEvent(userProfiles[currentRole].detail.split(' ')[0], 'CREATE_SUBSPACE', spaceName);
+    }
+
+    // FACILITATOR ASSESSMENT GRADING
+    function openGradeModal(staffId, name, space) {
+      document.getElementById('grade-target-id').innerText = staffId;
+      document.getElementById('grade-target-name').innerText = name;
+      document.getElementById('grade-target-space').innerText = space;
+      openModal('modal-grade-submission');
+    }
+
+    function submitGrading() {
+      const points = document.getElementById('grade-points-select').value;
+      const staffId = document.getElementById('grade-target-id').innerText;
+      
+      closeModal('modal-grade-submission');
+      showToast(`Evaluation complete: +${points} CPD Credits awarded to ${staffId}`);
+      logAuditEvent('GHS-449102', 'VERIFY_CPD_CREDITS', `${staffId} awarded ${points} PTS`);
+    }
+
+    // RBAC ROLE MUTATION MODAL
+    function editUserRole(staffId, name, role) {
+      document.getElementById('edit-role-staffid').innerText = staffId;
+      document.getElementById('edit-role-name').innerText = name;
+      document.getElementById('edit-role-select').value = role;
+      openModal('modal-edit-role');
+    }
+
+    function saveRoleMutation() {
+      const staffId = document.getElementById('edit-role-staffid').innerText;
+      const role = document.getElementById('edit-role-select').value;
+      closeModal('modal-edit-role');
+      showToast(`RBAC permissions mutated: ${staffId} -> ${role}`);
+      logAuditEvent('GHS-884920', 'USER_ROLE_MUTATED', `${staffId} set to ${role}`);
+    }
+
+    function submitNewUser() {
+      const id = document.getElementById('new-staff-id').value || "GHS-994012";
+      const name = document.getElementById('new-staff-name').value || "Dr. Ama Serwaa";
+      closeModal('modal-add-user');
+      showToast(`GHS Personnel Account registered: ${id} (${name})`);
+      logAuditEvent('GHS-884920', 'CREATE_USER_ACCOUNT', `${id} - ${name}`);
+    }
+
+    function markProtocolComplete() {
+      showToast('🎉 Protocol Complete! +5 NMC CPD Credits Verified & Synchronized with Council Registry.');
+      logAuditEvent('GHS-102938', 'CLAIM_CPD_CREDITS', 'EmONC Protocol 2026 (+5 PTS)');
+    }
+
+    function downloadPDFSimulated() {
+      showToast('Downloading GHS_EmONC_PPH_Guidelines_2026_Official.pdf...');
+      logAuditEvent(userProfiles[currentRole].detail.split(' ')[0], 'DOWNLOAD_PDF', 'EmONC_Guidelines_2026.pdf');
+    }
+
+    // RENDER ADMIN CATEGORY TREE
+    function renderAdminCategoryTree() {
+      const container = document.getElementById('admin-category-tree');
+      let html = '';
+
+      categoriesData.forEach(c => {
+        html += `
+          <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2 text-xs">
+            <div class="flex justify-between items-center font-bold text-white">
+              <span class="flex items-center gap-2"><i data-lucide="folder" class="w-4 h-4 text-emerald-400"></i> ${c.title}</span>
+              <span class="text-[10px] text-slate-500 font-mono">${c.spaces.length} Spaces</span>
+            </div>
+            <div class="pl-6 space-y-1 text-slate-400 text-[11px]">
+        `;
+        c.spaces.forEach(s => {
+          html += `<div class="flex justify-between py-1 border-t border-slate-800/60"><span>• ${s.name}</span><span class="text-amber-400 font-bold font-mono">${s.cpd}</span></div>`;
+        });
+        html += `</div></div>`;
+      });
+
+      container.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    // AUDIT LOG MANAGEMENT
+    function logAuditEvent(actor, action, resource) {
+      const time = new Date().toLocaleTimeString();
+      auditLogs.unshift({
+        time: time,
+        actor: actor,
+        action: action,
+        resource: resource,
+        ip: '102.176.45.12 (Accra HQ)'
+      });
+      renderAuditLogs();
+    }
+
+    function renderAuditLogs() {
+      const body = document.getElementById('audit-logs-body');
+      let html = '';
+      auditLogs.forEach(l => {
+        html += `
+          <tr class="hover:bg-slate-800/40">
+            <td class="p-3 text-slate-400">${l.time}</td>
+            <td class="p-3 font-semibold text-cyan-300">${l.actor}</td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold text-[10px]">${l.action}</span></td>
+            <td class="p-3 text-slate-200">${l.resource}</td>
+            <td class="p-3 text-slate-500">${l.ip}</td>
+          </tr>
+        `;
+      });
+      body.innerHTML = html;
+    }
+
+    function filterUserTable() {
+      const query = document.getElementById('user-search-input').value.toLowerCase();
+      const rows = document.querySelectorAll('#admin-user-table tbody tr');
+      let count = 0;
+      rows.forEach(r => {
+        const text = r.innerText.toLowerCase();
+        if (text.includes(query)) {
+          r.style.display = '';
+          count++;
+        } else {
+          r.style.display = 'none';
+        }
+      });
+      document.getElementById('user-count-label').innerText = count;
+    }
+
+    // UTILITIES
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function toggleDrawer(id) {
+      const drawer = document.getElementById(id);
+      if (drawer.classList.contains('translate-x-full')) {
+        drawer.classList.remove('translate-x-full');
+      } else {
+        drawer.classList.add('translate-x-full');
+      }
+    }
+
+    function clearNotifications() {
+      document.getElementById('unread-count-badge').innerText = '0';
+      showToast('Notifications marked as read');
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'ghs-panel px-4 py-3 rounded-2xl text-xs font-semibold dark:text-white text-slate-900 shadow-2xl border border-emerald-500/40 flex items-center space-x-2 animate-in fade-in duration-200';
+      toast.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i><span>${msg}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => toast.remove(), 3500);
+    }
+
+    // INITIALIZE CHART.JS FOR REGIONAL COMPLIANCE
+    function initRegionalChart() {
+      const ctx = document.getElementById('adminRegionalChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Gr. Accra', 'Ashanti', 'Western', 'Northern', 'Volta', 'Central', 'Eastern', 'Upper East'],
+          datasets: [{
+            label: '% Staff CPD Compliant',
+            data: [92, 84, 78, 69, 81, 86, 75, 68],
+            backgroundColor: '#006B3F',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#64748b' }, grid: { display: false } },
+            y: { max: 100, ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

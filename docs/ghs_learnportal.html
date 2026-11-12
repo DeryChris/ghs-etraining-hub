@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GHS LearnPortal - Ghana Health Service Continuous Learning</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ghs: {
+              emerald: '#00875A',
+              darkGreen: '#004B32',
+              teal: '#06b6d4',
+              gold: '#FCD116',
+              red: '#CE1126',
+              dark: '#080d14',
+              surface: '#0f172a',
+              card: 'rgba(15, 23, 42, 0.75)',
+              border: 'rgba(255, 255, 255, 0.08)'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Chart.js for Regional Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #06090f;
+      color: #f3f4f6;
+      overflow-x: hidden;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b111e;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00875A;
+    }
+
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-panel-ghs {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 135, 90, 0.3);
+      box-shadow: 0 0 25px -5px rgba(0, 135, 90, 0.15);
+    }
+
+    .bg-mesh-ghs {
+      background-image: 
+        radial-gradient(at 10% 10%, rgba(0, 135, 90, 0.18) 0px, transparent 50%),
+        radial-gradient(at 90% 10%, rgba(252, 209, 22, 0.08) 0px, transparent 50%),
+        radial-gradient(at 50% 90%, rgba(6, 182, 212, 0.12) 0px, transparent 50%);
+    }
+
+    .badge-ghs-gold {
+      background: rgba(252, 209, 22, 0.15);
+      color: #facc15;
+      border: 1px solid rgba(252, 209, 22, 0.3);
+    }
+    
+    .badge-ghs-emerald {
+      background: rgba(0, 135, 90, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(0, 135, 90, 0.4);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-mesh-ghs text-slate-100 flex flex-col antialiased">
+
+  <!-- ================================================================= -->
+  <!-- TOP GLOBAL ROLE SWITCHER BAR & HEADER -->
+  <!-- ================================================================= -->
+  <header class="sticky top-0 z-40 glass-panel border-b border-slate-800 px-4 lg:px-8 py-2.5 transition-all">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <!-- Brand & Official Badge -->
+      <div class="flex items-center space-x-3 w-full md:w-auto justify-between md:justify-start">
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('dashboard')">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 via-teal-700 to-amber-500 flex items-center justify-center shadow-lg shadow-emerald-900/40 border border-emerald-400/30">
+            <i data-lucide="cross" class="w-6 h-6 text-white stroke-[2.5]"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-lg font-extrabold bg-gradient-to-r from-white via-emerald-100 to-teal-200 bg-clip-text text-transparent tracking-tight">GHS LearnPortal</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full badge-ghs-gold">HQ CPD</span>
+            </div>
+            <p class="text-[10px] text-emerald-400 font-medium tracking-wide">GHANA HEALTH SERVICE • CONTINUOUS EDUCATION</p>
+          </div>
+        </div>
+
+        <!-- Mobile drawer triggers -->
+        <div class="flex items-center space-x-2 md:hidden">
+          <button onclick="toggleDrawer('notifications-drawer')" class="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 relative">
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ROLE SWITCHER TOOLBAR -->
+      <div class="flex items-center space-x-2 bg-slate-900/90 p-1 rounded-xl border border-slate-800 w-full md:w-auto justify-center">
+        <span class="text-[11px] font-bold text-slate-400 px-2 uppercase tracking-wider hidden lg:inline">Active User Role:</span>
+        
+        <button onclick="setUserRole('learner')" id="role-btn-learner" class="role-btn text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center space-x-1.5 bg-emerald-600 text-white shadow">
+          <i data-lucide="user" class="w-3.5 h-3.5"></i>
+          <span>Learner</span>
+        </button>
+
+        <button onclick="setUserRole('facilitator')" id="role-btn-facilitator" class="role-btn text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center space-x-1.5 text-slate-400 hover:text-slate-200">
+          <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+          <span>Facilitator</span>
+        </button>
+
+        <button onclick="setUserRole('admin')" id="role-btn-admin" class="role-btn text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center space-x-1.5 text-slate-400 hover:text-slate-200">
+          <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+          <span>Super Admin</span>
+        </button>
+      </div>
+
+      <!-- User Profile & Action Drawers -->
+      <div class="hidden md:flex items-center space-x-3">
+        
+        <!-- Direct Messages Trigger -->
+        <button onclick="toggleDrawer('messages-drawer')" class="p-2 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition relative">
+          <i data-lucide="message-square" class="w-4.5 h-4.5"></i>
+          <span class="absolute top-1 right-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+        </button>
+
+        <!-- System Notifications Trigger -->
+        <button onclick="toggleDrawer('notifications-drawer')" class="p-2 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition relative">
+          <i data-lucide="bell" class="w-4.5 h-4.5"></i>
+          <span id="unread-count-badge" class="absolute -top-1 -right-1 px-1.5 py-0.2 bg-emerald-500 text-slate-950 font-bold text-[10px] rounded-full">3</span>
+        </button>
+
+        <!-- Dynamic User Identity Pill -->
+        <div class="flex items-center space-x-2.5 pl-2 border-l border-slate-800">
+          <img id="user-avatar" src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=120" alt="Avatar" class="w-8 h-8 rounded-full object-cover border border-emerald-500/50">
+          <div class="text-left leading-tight hidden lg:block">
+            <div id="user-name" class="text-xs font-bold text-white">Nurse Abena Osei</div>
+            <div id="user-detail" class="text-[10px] text-slate-400">GHS-NUR-8892 • Ridge Hospital</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <div class="max-w-7xl w-full mx-auto flex-grow flex flex-col md:flex-row gap-6 p-4 sm:p-6 lg:p-8">
+    
+    <!-- SIDEBAR NAVIGATION PANEL -->
+    <aside class="w-full md:w-64 flex-shrink-0 space-y-4">
+      
+      <!-- Role Badge Summary Card -->
+      <div class="glass-panel p-4 rounded-2xl border border-slate-800 space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <span class="text-slate-400">Current Context</span>
+          <span id="role-context-tag" class="px-2 py-0.5 rounded text-[10px] font-bold badge-ghs-emerald uppercase">Learner</span>
+        </div>
+        <div id="role-description" class="text-xs font-medium text-slate-300">
+          Full material access, interactive Q&A discussion, certificate logging.
+        </div>
+      </div>
+
+      <!-- Navigation Links Container (Dynamically rendered based on active role) -->
+      <nav id="sidebar-nav" class="glass-panel p-2 rounded-2xl border border-slate-800 space-y-1">
+        <!-- JS dynamically injects items here -->
+      </nav>
+
+      <!-- GHS Quick Support Banner -->
+      <div class="glass-panel p-4 rounded-2xl border border-slate-800 space-y-3 bg-gradient-to-br from-emerald-950/40 to-slate-900">
+        <div class="flex items-center space-x-2 text-emerald-400 text-xs font-bold">
+          <i data-lucide="help-circle" class="w-4 h-4"></i>
+          <span>GHS CPD Helpdesk</span>
+        </div>
+        <p class="text-[11px] text-slate-400 leading-relaxed">
+          Need points verification or staff transfer assistance? Contact National CPD Secretariat.
+        </p>
+        <button onclick="toggleDrawer('messages-drawer')" class="w-full py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-xs font-semibold border border-emerald-500/30 transition">
+          Direct Support Message
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- MAIN VIEW AREA -->
+    <main class="flex-grow space-y-6 overflow-hidden">
+
+      <!-- ================================================================= -->
+      <!-- VIEW 1: LEARNER - CATEGORY & SUB-SPACE EXPLORER -->
+      <!-- ================================================================= -->
+      <section id="view-learner-catalog" class="app-view space-y-6">
+        
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-extrabold text-white tracking-tight">GHS Training Categories & Spaces</h1>
+            <p class="text-xs text-slate-400">Browse Continuous Professional Development modules by clinical specialization</p>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <span class="px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold flex items-center gap-1.5">
+              <i data-lucide="award" class="w-4 h-4"></i>
+              <span>Your Earned CPD: 28 / 30 Points</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Filter Cadre Tabs -->
+        <div class="flex items-center space-x-2 overflow-x-auto pb-2 border-b border-slate-800 text-xs">
+          <button class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow">All Specializations</button>
+          <button class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium border border-slate-800">Nursing & Midwifery</button>
+          <button class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium border border-slate-800">Medical Practice</button>
+          <button class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium border border-slate-800">Public Health</button>
+          <button class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-medium border border-slate-800">Health Informatics</button>
+        </div>
+
+        <!-- Categories and Child Sub-spaces Grid -->
+        <div class="space-y-6" id="categories-container">
+          <!-- Dynamic rendering via JS -->
+        </div>
+
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- VIEW 2: LEARNER - MATERIAL & LESSON READER (WITH THREADED FORUM) -->
+      <!-- ================================================================= -->
+      <section id="view-learner-reader" class="app-view hidden space-y-6">
+        
+        <!-- Reader Navigation Header -->
+        <div class="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <button onclick="switchView('learner-catalog')" class="p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition">
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            </button>
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-bold text-emerald-400">Public Health & Epidemiology</span>
+                <span class="text-slate-600">•</span>
+                <span class="text-xs text-slate-400">Infection Prevention & Control (IPC)</span>
+              </div>
+              <h2 class="text-base font-bold text-white">GHS 2026 National IPC Protocols & Cholera Management Guidelines</h2>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-1 rounded-lg badge-ghs-gold text-xs font-bold flex items-center gap-1">
+              <i data-lucide="award" class="w-3.5 h-3.5"></i> 5 CPD Credits
+            </span>
+            <button onclick="markMaterialComplete()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition">
+              Mark Complete
+            </button>
+          </div>
+        </div>
+
+        <!-- Reader Main Split Workstation -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- Content Reader Main Box (8 cols) -->
+          <div class="lg:col-span-8 space-y-4">
+            
+            <!-- Interactive Tabs: Lesson Content, PDF Guidelines, Video, Discussion -->
+            <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
+              <div class="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center space-x-2 overflow-x-auto text-xs">
+                <button onclick="switchReaderTab('text')" id="rtab-text" class="reader-tab-btn px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-semibold flex items-center gap-1.5">
+                  <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Protocol Document
+                </button>
+                <button onclick="switchReaderTab('pdf')" id="rtab-pdf" class="reader-tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-semibold flex items-center gap-1.5">
+                  <i data-lucide="file" class="w-3.5 h-3.5"></i> Official PDF Annex
+                </button>
+                <button onclick="switchReaderTab('video')" id="rtab-video" class="reader-tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-semibold flex items-center gap-1.5">
+                  <i data-lucide="video" class="w-3.5 h-3.5"></i> Video Briefing
+                </button>
+                <button onclick="switchReaderTab('forum')" id="rtab-forum" class="reader-tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white font-semibold flex items-center gap-1.5">
+                  <i data-lucide="messages-square" class="w-3.5 h-3.5"></i> Discussion Forum <span class="px-1.5 py-0.2 bg-emerald-500/20 text-emerald-400 rounded-full text-[10px]">6</span>
+                </button>
+              </div>
+
+              <!-- Tab View 1: Text Lesson Protocol -->
+              <div id="reader-content-text" class="p-6 space-y-4 text-xs text-slate-300 leading-relaxed">
+                <div class="p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/20 flex items-start space-x-3">
+                  <i data-lucide="info" class="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5"></i>
+                  <div>
+                    <span class="font-bold text-emerald-300 block">Mandatory Protocol Compliance Notice</span>
+                    <p class="text-[11px] text-slate-400">Issued by the Director-General, Ghana Health Service. Applies to all regional teaching hospitals, district facilities, and CHPS compounds.</p>
+                  </div>
+                </div>
+
+                <h3 class="text-sm font-bold text-white">1. Standard Hand Hygiene & Barrier Precautions</h3>
+                <p>All clinical personnel must adhere strictly to the 5 Moments for Hand Hygiene using alcohol-based hand rub or WHO-formulated soap formulations. In high-density outpatient departments (OPD), PPE usage must align with hazard level tiers.</p>
+                
+                <h3 class="text-sm font-bold text-white">2. Isolation & Waterborne Outbreak Triage Workflow</h3>
+                <p>When suspected cases are flagged at reception, isolate immediately in designated Holding Bay B. Ensure rapid diagnostic test (RDT) kits are drawn within 15 minutes of intake.</p>
+                
+                <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
+                  <span class="text-xs font-bold text-amber-400">Clinical Case Definition Threshold:</span>
+                  <ul class="list-disc list-inside space-y-1 text-slate-400 text-[11px]">
+                    <li>Acute watery diarrhea in patients aged 5 years or older.</li>
+                    <li>Severe dehydration with rapid onset in endemic districts.</li>
+                    <li>Required notification time to District Health Directorate: &lt; 2 Hours.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Tab View 2: Simulated PDF Viewer -->
+              <div id="reader-content-pdf" class="hidden p-6 text-center space-y-4">
+                <div class="h-64 bg-slate-950 border border-slate-800 rounded-xl flex flex-col items-center justify-center p-6 space-y-3">
+                  <i data-lucide="file-text" class="w-12 h-12 text-emerald-400"></i>
+                  <div class="text-xs text-slate-300 font-semibold">GHS_IPC_Guidelines_2026_Official_Directive.pdf</div>
+                  <span class="text-[11px] text-slate-500">File Size: 4.8 MB • Verified Digital Signature by HQ Director</span>
+                  <button class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-2">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i> Download PDF Document
+                  </button>
+                </div>
+              </div>
+
+              <!-- Tab View 3: Video Lecture -->
+              <div id="reader-content-video" class="hidden p-6 space-y-4">
+                <div class="relative aspect-video bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center group cursor-pointer">
+                  <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=800" class="w-full h-full object-cover opacity-60">
+                  <div class="absolute w-16 h-16 rounded-full bg-emerald-600/90 flex items-center justify-center group-hover:scale-110 transition shadow-xl shadow-emerald-950">
+                    <i data-lucide="play" class="w-8 h-8 text-white fill-white ml-1"></i>
+                  </div>
+                  <div class="absolute bottom-3 left-3 bg-slate-900/90 px-3 py-1 rounded-lg text-xs font-semibold text-white">
+                    Clinical Briefing by Dr. Kwesi Mensah (14 mins)
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab View 4: Threaded Discussion Forum -->
+              <div id="reader-content-forum" class="hidden p-6 space-y-6">
+                
+                <!-- Comment Input Form -->
+                <div class="space-y-3">
+                  <label class="text-xs font-bold text-white flex items-center justify-between">
+                    <span>Ask a Question or Post Clinical Feedback</span>
+                    <span class="text-[11px] text-slate-400 font-normal">Tag facilitator using <code class="text-emerald-400">@Dr.Mensah</code></span>
+                  </label>
+                  <textarea id="forum-comment-input" rows="3" placeholder="Share your experience or clarify protocol guidelines..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition"></textarea>
+                  <div class="flex justify-end">
+                    <button onclick="postForumComment()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition flex items-center gap-1.5">
+                      <i data-lucide="send" class="w-3.5 h-3.5"></i> Post Comment
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Existing Threaded Comments List -->
+                <div id="forum-comments-list" class="space-y-4 pt-4 border-t border-slate-800">
+                  
+                  <!-- Comment Item 1 -->
+                  <div class="glass-panel p-4 rounded-xl border border-slate-800/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-2.5">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" class="w-7 h-7 rounded-full object-cover">
+                        <div>
+                          <div class="text-xs font-bold text-white">Midwife Comfort Appiah</div>
+                          <div class="text-[10px] text-slate-400">Greater Accra Regional Hospital • 2 hours ago</div>
+                        </div>
+                      </div>
+                      <span class="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">Learner</span>
+                    </div>
+                    <p class="text-xs text-slate-300">
+                      Does the new RDT sampling directive apply to maternity ward admissions who present with mild symptoms? <span class="text-emerald-400">@Dr.Mensah</span>
+                    </p>
+                    
+                    <!-- Facilitator Verified Reply -->
+                    <div class="ml-4 pl-4 border-l-2 border-emerald-500 bg-emerald-950/20 p-3 rounded-r-xl space-y-1.5">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                          <span class="text-xs font-bold text-emerald-300">Dr. Kwesi Mensah</span>
+                          <span class="px-2 py-0.2 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">FACILITATOR</span>
+                        </div>
+                        <span class="text-[10px] text-slate-500">1 hour ago</span>
+                      </div>
+                      <p class="text-[11px] text-slate-300">
+                        Yes, Midwife Comfort. Any patient in high-density wards presenting with acute gastrointestinal symptoms must undergo mandatory triage screening before ward transfer.
+                      </p>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Space Sidebar Modules (4 cols) -->
+          <div class="lg:col-span-4 space-y-4">
+            <div class="glass-panel p-4 rounded-2xl border border-slate-800 space-y-3">
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider">Sub-Space Modules</h3>
+              <div class="space-y-2 text-xs">
+                <div class="p-3 rounded-xl bg-emerald-600/20 border border-emerald-500/30 text-white font-medium flex items-center justify-between">
+                  <span class="flex items-center gap-2"><i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> Module 1: IPC Protocols</span>
+                  <span class="text-[10px] text-emerald-400 font-bold">Active</span>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer flex items-center justify-between">
+                  <span class="flex items-center gap-2"><i data-lucide="circle" class="w-4 h-4 text-slate-600"></i> Module 2: Cold Chain Storage</span>
+                  <span class="text-[10px] text-slate-500">3 CPD pts</span>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer flex items-center justify-between">
+                  <span class="flex items-center gap-2"><i data-lucide="circle" class="w-4 h-4 text-slate-600"></i> Module 3: Disease Surveillance</span>
+                  <span class="text-[10px] text-slate-500">4 CPD pts</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Instructor Profile Card -->
+            <div class="glass-panel p-4 rounded-2xl border border-slate-800 space-y-3">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Assigned Facilitator</span>
+              <div class="flex items-center space-x-3">
+                <img src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=120" class="w-10 h-10 rounded-xl object-cover border border-emerald-500/40">
+                <div>
+                  <h4 class="text-xs font-bold text-white">Dr. Kwesi Mensah</h4>
+                  <p class="text-[10px] text-slate-400">Public Health Specialist • Greater Accra</p>
+                </div>
+              </div>
+              <button onclick="toggleDrawer('messages-drawer')" class="w-full py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center justify-center gap-1.5">
+                <i data-lucide="message-square" class="w-3.5 h-3.5"></i> Direct Message Facilitator
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- VIEW 3: FACILITATOR - MANAGED SPACES & MATERIAL CREATOR -->
+      <!-- ================================================================= -->
+      <section id="view-facilitator-dashboard" class="app-view hidden space-y-6">
+        
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-extrabold text-white tracking-tight">Facilitator Control Board</h1>
+            <p class="text-xs text-slate-400">Manage assigned GHS categories, add sub-spaces, upload materials & award CPD points</p>
+          </div>
+
+          <div class="flex items-center space-x-3">
+            <button onclick="openModal('modal-add-space')" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+              <i data-lucide="folder-plus" class="w-4 h-4 text-emerald-400"></i> Add Sub-Space
+            </button>
+            <button onclick="openModal('modal-upload-material')" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5">
+              <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload Learning Material
+            </button>
+          </div>
+        </div>
+
+        <!-- Assigned Categories Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="glass-panel p-5 rounded-2xl border border-slate-800 space-y-2">
+            <div class="flex justify-between items-center text-xs text-slate-400">
+              <span>Assigned Main Category</span>
+              <span class="px-2 py-0.5 rounded badge-ghs-emerald text-[10px] font-bold">PRIMARY</span>
+            </div>
+            <div class="text-lg font-bold text-white">Public Health & Epidemiology</div>
+            <p class="text-xs text-slate-400">3 Managed Sub-spaces • 1,240 Enrolled GHS Personnel</p>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl border border-slate-800 space-y-2">
+            <div class="flex justify-between items-center text-xs text-slate-400">
+              <span>Pending Q&A Queries</span>
+              <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-bold">ACTION REQ</span>
+            </div>
+            <div class="text-2xl font-bold text-white">4 Unanswered</div>
+            <p class="text-xs text-slate-400">Learners awaiting clinical protocol clarification</p>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl border border-slate-800 space-y-2">
+            <div class="flex justify-between items-center text-xs text-slate-400">
+              <span>Issued CPD Certificates</span>
+              <span class="text-emerald-400 font-bold text-xs">+14% this month</span>
+            </div>
+            <div class="text-2xl font-bold text-white">892 Issued</div>
+            <p class="text-xs text-slate-400">Verified by Medical & Dental Council API</p>
+          </div>
+        </div>
+
+        <!-- Facilitator Managed Sub-Spaces Table -->
+        <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden space-y-4">
+          <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-bold text-white">Assigned Sub-Spaces & Course Modules</h3>
+              <p class="text-xs text-slate-400">Modules you have permission to curate and update</p>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900/80 text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-800">
+                <tr>
+                  <th class="p-4 pl-6">Sub-Space Name</th>
+                  <th class="p-4">Parent Category</th>
+                  <th class="p-4">Materials</th>
+                  <th class="p-4">CPD Weight</th>
+                  <th class="p-4">Learners</th>
+                  <th class="p-4 text-right pr-6">Management</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60 text-slate-300">
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="p-4 pl-6 font-semibold text-white flex items-center gap-2.5">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
+                    Infection Prevention Control (IPC)
+                  </td>
+                  <td class="p-4 text-slate-400">Public Health & Epidemiology</td>
+                  <td class="p-4">4 Files (PDF, MP4)</td>
+                  <td class="p-4 font-bold text-amber-400">5 Points</td>
+                  <td class="p-4 font-mono">1,420</td>
+                  <td class="p-4 text-right pr-6 space-x-2">
+                    <button onclick="openModal('modal-upload-material')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">Add Material</button>
+                  </td>
+                </tr>
+
+                <tr class="hover:bg-slate-800/40 transition">
+                  <td class="p-4 pl-6 font-semibold text-white flex items-center gap-2.5">
+                    <i data-lucide="thermometer-snowflake" class="w-4 h-4 text-cyan-400"></i>
+                    Vaccine Cold Chain Mgmt
+                  </td>
+                  <td class="p-4 text-slate-400">Public Health & Epidemiology</td>
+                  <td class="p-4">2 Files</td>
+                  <td class="p-4 font-bold text-amber-400">3 Points</td>
+                  <td class="p-4 font-mono">890</td>
+                  <td class="p-4 text-right pr-6 space-x-2">
+                    <button onclick="openModal('modal-upload-material')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">Add Material</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- VIEW 4: SUPER ADMIN - REGIONAL STATS, RBAC, AUDIT LOG & BROADCAST -->
+      <!-- ================================================================= -->
+      <section id="view-admin-overview" class="app-view hidden space-y-6">
+        
+        <!-- Admin Command Header -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h1 class="text-2xl font-extrabold text-white tracking-tight">HQ Administrative Control Panel</h1>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">SUPER ADMIN</span>
+            </div>
+            <p class="text-xs text-slate-400">Full CRUD operations, Role-Based Access Control (RBAC), regional reporting & security audits</p>
+          </div>
+
+          <div class="flex items-center space-x-3">
+            <button onclick="openModal('modal-broadcast')" class="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold transition flex items-center gap-2">
+              <i data-lucide="radio" class="w-4 h-4 text-amber-400"></i> System Broadcast
+            </button>
+            <button onclick="openModal('modal-add-user')" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md transition flex items-center gap-1.5">
+              <i data-lucide="user-plus" class="w-4 h-4"></i> Create User Account
+            </button>
+          </div>
+        </div>
+
+        <!-- Regional CPD Completion Chart (Chart.js) & National Stats -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- Bar Chart (8 cols) -->
+          <div class="lg:col-span-8 glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-base font-bold text-white">GHS Regional CPD Completion Rate (%)</h3>
+                <p class="text-xs text-slate-400">Tracking personnel compliance across 16 Ghana Health Service regions</p>
+              </div>
+              <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">Target: 80%</span>
+            </div>
+            <div class="h-64">
+              <canvas id="adminRegionalChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Quick Metrics (4 cols) -->
+          <div class="lg:col-span-4 space-y-4">
+            <div class="glass-panel p-5 rounded-2xl border border-slate-800 space-y-1">
+              <span class="text-xs text-slate-400">Registered GHS Staff</span>
+              <div class="text-2xl font-bold text-white">45,820 Personnel</div>
+              <span class="text-[11px] text-emerald-400">Active accounts across 260 districts</span>
+            </div>
+
+            <div class="glass-panel p-5 rounded-2xl border border-slate-800 space-y-1">
+              <span class="text-xs text-slate-400">Active Facilitator Accounts</span>
+              <div class="text-2xl font-bold text-white">340 Facilitators</div>
+              <span class="text-[11px] text-cyan-400">Assigned by Directorates</span>
+            </div>
+
+            <div class="glass-panel p-5 rounded-2xl border border-slate-800 space-y-1">
+              <span class="text-xs text-slate-400">Security Audit Logs (24h)</span>
+              <div class="text-2xl font-bold text-white">1,480 Events</div>
+              <span class="text-[11px] text-slate-400">0 Critical Security Violations</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- TABBED ADMIN MANAGEMENT SECTIONS: User RBAC, Category Hierarchy, Audit Logs -->
+        <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden">
+          
+          <!-- Admin Sub-tabs Header -->
+          <div class="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center space-x-2 text-xs">
+            <button onclick="switchAdminTab('users')" id="atab-users" class="admin-tab-btn px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold">
+              RBAC & User Management
+            </button>
+            <button onclick="switchAdminTab('categories')" id="atab-categories" class="admin-tab-btn px-4 py-2 rounded-xl text-slate-400 hover:text-white font-semibold">
+              Category & Space Manager
+            </button>
+            <button onclick="switchAdminTab('audit')" id="atab-audit" class="admin-tab-btn px-4 py-2 rounded-xl text-slate-400 hover:text-white font-semibold">
+              Live Security Audit Logs
+            </button>
+          </div>
+
+          <!-- ADMIN TAB 1: RBAC USER TABLE -->
+          <div id="admin-sec-users" class="p-6 space-y-4">
+            <div class="flex items-center justify-between gap-4">
+              <input type="text" id="user-search-input" onkeyup="filterUserTable()" placeholder="Search staff ID, name, hospital..." class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-xs text-slate-200 w-full sm:w-72 focus:outline-none">
+              <span class="text-xs text-slate-400">Showing <span class="text-white font-bold" id="user-count-label">5</span> GHS Personnel</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table id="admin-user-table" class="w-full text-left text-xs">
+                <thead class="bg-slate-900/80 text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-800">
+                  <tr>
+                    <th class="p-3 pl-4">Staff ID & Name</th>
+                    <th class="p-3">Cadre / Designation</th>
+                    <th class="p-3">Facility & Region</th>
+                    <th class="p-3">Role</th>
+                    <th class="p-3">Status</th>
+                    <th class="p-3 text-right pr-4">Actions (RBAC)</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 text-slate-300">
+                  <!-- User Row 1 -->
+                  <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-3 pl-4 font-semibold text-white">
+                      <div class="font-mono text-cyan-400 text-[11px]">GHS-NUR-8892</div>
+                      Nurse Abena Osei
+                    </td>
+                    <td class="p-3 text-slate-300">Senior Nursing Officer</td>
+                    <td class="p-3 text-slate-400">Ridge Hospital, Greater Accra</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded badge-ghs-emerald text-[10px] font-bold">LEARNER</span></td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">ACTIVE</span></td>
+                    <td class="p-3 text-right pr-4 space-x-2">
+                      <button onclick="editUserRole('GHS-NUR-8892', 'Nurse Abena Osei', 'Learner')" class="text-xs text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded-lg">Edit Role</button>
+                      <button onclick="toggleUserStatus(this)" class="text-xs text-red-400 hover:text-red-300 bg-red-500/10 px-2 py-1 rounded-lg">Suspend</button>
+                    </td>
+                  </tr>
+
+                  <!-- User Row 2 -->
+                  <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-3 pl-4 font-semibold text-white">
+                      <div class="font-mono text-cyan-400 text-[11px]">GHS-FAC-042</div>
+                      Dr. Kwesi Mensah
+                    </td>
+                    <td class="p-3 text-slate-300">Public Health Specialist</td>
+                    <td class="p-3 text-slate-400">Regional Directorate, Accra</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold">FACILITATOR</span></td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">ACTIVE</span></td>
+                    <td class="p-3 text-right pr-4 space-x-2">
+                      <button onclick="editUserRole('GHS-FAC-042', 'Dr. Kwesi Mensah', 'Facilitator')" class="text-xs text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded-lg">Edit Role</button>
+                      <button onclick="toggleUserStatus(this)" class="text-xs text-red-400 hover:text-red-300 bg-red-500/10 px-2 py-1 rounded-lg">Suspend</button>
+                    </td>
+                  </tr>
+
+                  <!-- User Row 3 -->
+                  <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-3 pl-4 font-semibold text-white">
+                      <div class="font-mono text-cyan-400 text-[11px]">GHS-DOC-1104</div>
+                      Dr. Emmanuel Kbo
+                    </td>
+                    <td class="p-3 text-slate-300">Medical Officer (Obstetrics)</td>
+                    <td class="p-3 text-slate-400">Korle Bu Teaching Hospital</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded badge-ghs-emerald text-[10px] font-bold">LEARNER</span></td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">ACTIVE</span></td>
+                    <td class="p-3 text-right pr-4 space-x-2">
+                      <button onclick="editUserRole('GHS-DOC-1104', 'Dr. Emmanuel Kbo', 'Learner')" class="text-xs text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded-lg">Edit Role</button>
+                      <button onclick="toggleUserStatus(this)" class="text-xs text-red-400 hover:text-red-300 bg-red-500/10 px-2 py-1 rounded-lg">Suspend</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ADMIN TAB 2: CATEGORY & SPACE BUILDER -->
+          <div id="admin-sec-categories" class="hidden p-6 space-y-4">
+            <div class="flex justify-between items-center">
+              <h3 class="text-sm font-bold text-white">Platform Main Categories & Child Spaces Hierarchy</h3>
+              <button onclick="openModal('modal-add-space')" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold">+ Add Primary Category</button>
+            </div>
+            <div class="space-y-3" id="admin-category-tree">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- ADMIN TAB 3: AUDIT LOG TRACKER -->
+          <div id="admin-sec-audit" class="hidden p-6 space-y-4">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-400">Live Immutable System Audit Trail (RBAC Monitored)</span>
+              <button onclick="clearAuditLogFilter()" class="text-emerald-400 hover:underline">Refresh Stream</button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs font-mono">
+                <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                  <tr>
+                    <th class="p-3">Timestamp</th>
+                    <th class="p-3">Actor Staff ID</th>
+                    <th class="p-3">Operation / Action</th>
+                    <th class="p-3">Resource Target</th>
+                    <th class="p-3">Origin Location / IP</th>
+                  </tr>
+                </thead>
+                <tbody id="audit-logs-body" class="divide-y divide-slate-800/60 text-slate-300 text-[11px]">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- DRAWERS: NOTIFICATIONS & DIRECT MESSAGES -->
+  <!-- ================================================================= -->
+
+  <!-- NOTIFICATIONS DRAWER -->
+  <div id="notifications-drawer" class="fixed inset-y-0 right-0 z-50 w-full sm:w-96 glass-panel-ghs border-l border-slate-800 translate-x-full transition-transform duration-300 p-6 flex flex-col justify-between">
+    <div class="space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="bell" class="w-4 h-4 text-emerald-400"></i>
+          <h3 class="text-sm font-bold text-white">System Notifications & Alerts</h3>
+        </div>
+        <button onclick="toggleDrawer('notifications-drawer')" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="notifications-feed" class="space-y-3 overflow-y-auto max-h-[75vh]">
+        <!-- Notification Items -->
+        <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="font-bold text-amber-400">URGENT HEALTH BROADCAST</span>
+            <span class="text-slate-500">10 mins ago</span>
+          </div>
+          <h4 class="text-xs font-bold text-white">Cholera Surveillance Protocol Update 2026</h4>
+          <p class="text-[11px] text-slate-300">New diagnostic guidelines posted under Public Health Space.</p>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="font-bold text-emerald-400">CPD CREDIT AWARDED</span>
+            <span class="text-slate-500">2 hours ago</span>
+          </div>
+          <h4 class="text-xs font-bold text-white">+5 CPD Points Credited</h4>
+          <p class="text-[11px] text-slate-400">Infection Prevention Control module verified by Nursing Council.</p>
+        </div>
+      </div>
+    </div>
+
+    <button onclick="clearNotifications()" class="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs text-slate-400 font-semibold border border-slate-800">
+      Mark All as Read
+    </button>
+  </div>
+
+  <!-- DIRECT MESSAGES DRAWER -->
+  <div id="messages-drawer" class="fixed inset-y-0 right-0 z-50 w-full sm:w-96 glass-panel-ghs border-l border-slate-800 translate-x-full transition-transform duration-300 p-6 flex flex-col justify-between">
+    <div class="space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="message-square" class="w-4 h-4 text-cyan-400"></i>
+          <h3 class="text-sm font-bold text-white">GHS Staff Direct Chat</h3>
+        </div>
+        <button onclick="toggleDrawer('messages-drawer')" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Messages Thread Stream -->
+      <div id="messages-stream" class="space-y-3 overflow-y-auto max-h-[65vh] text-xs">
+        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+          <div class="flex justify-between text-[10px] text-slate-400">
+            <span class="font-bold text-emerald-400">Dr. Kwesi Mensah (Facilitator)</span>
+            <span>Yesterday</span>
+          </div>
+          <p class="text-slate-300">Hello Abena, I noticed your question regarding the IPC guidelines. I have updated the reference PDF in Module 1.</p>
+        </div>
+
+        <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/20 space-y-1 ml-4">
+          <div class="flex justify-between text-[10px] text-slate-400">
+            <span class="font-bold text-white">You (Nurse Abena Osei)</span>
+            <span>10:15 AM</span>
+          </div>
+          <p class="text-slate-200">Thank you Doctor! We have reviewed it at Ridge Hospital triage team.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-2 pt-2 border-t border-slate-800">
+      <div class="flex gap-2">
+        <input type="text" id="chat-input" placeholder="Type message to facilitator..." class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none">
+        <button onclick="sendDirectMessage()" class="px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL DIALOGS -->
+  <!-- ================================================================= -->
+
+  <!-- MODAL 1: SYSTEM BROADCAST GENERATOR -->
+  <div id="modal-broadcast" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="glass-panel-ghs w-full max-w-md rounded-3xl p-6 border border-slate-700 space-y-5">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="radio" class="w-4 h-4 text-amber-400"></i> Compose System Broadcast Alert
+        </h3>
+        <button onclick="closeModal('modal-broadcast')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Target Recipient Cadre</label>
+          <select id="broadcast-cadre" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+            <option>All Ghana Health Service Personnel</option>
+            <option>Medical Doctors & Specialists</option>
+            <option>Nurses & Midwives</option>
+            <option>Public Health Officers</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Alert Severity Level</label>
+          <select id="broadcast-level" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+            <option value="urgent">Urgent Health Directive (Red Badge)</option>
+            <option value="maintenance">System Maintenance Alert</option>
+            <option value="course">New Course Release Notice</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Announcement Title</label>
+          <input type="text" id="broadcast-title" placeholder="e.g., Mandatory Disease Surveillance Protocol 2026" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Directive Message Content</label>
+          <textarea id="broadcast-body" rows="3" placeholder="Specify clinical directive details..." class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none"></textarea>
+        </div>
+      </div>
+
+      <button onclick="triggerBroadcastSend()" class="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 text-slate-950 font-bold text-xs uppercase tracking-wider shadow">
+        Dispatch Broadcast Alert
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 2: UPLOAD MATERIAL (FACILITATOR/ADMIN) -->
+  <div id="modal-upload-material" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="glass-panel-ghs w-full max-w-md rounded-3xl p-6 border border-slate-700 space-y-5">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="upload-cloud" class="w-4 h-4 text-emerald-400"></i> Add Learning Material / Protocol
+        </h3>
+        <button onclick="closeModal('modal-upload-material')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Target Sub-Space</label>
+          <select id="mat-space" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+            <option>Infection Prevention Control (IPC)</option>
+            <option>Vaccine Cold Chain Mgmt</option>
+            <option>Maternal & Child Health</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Material Document Title</label>
+          <input type="text" id="mat-title" placeholder="e.g. 2026 Cholera Triage Guidelines PDF" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Format Type</label>
+            <select class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+              <option>PDF Guideline</option>
+              <option>Video Briefing (MP4)</option>
+              <option>Interactive Case Reader</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">CPD Credits</label>
+            <input type="number" value="5" min="1" max="15" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+          </div>
+        </div>
+      </div>
+
+      <button onclick="submitMaterialUpload()" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow">
+        Publish to GHS Learners
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 3: ADD SUB-SPACE CREATOR -->
+  <div id="modal-add-space" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="glass-panel-ghs w-full max-w-md rounded-3xl p-6 border border-slate-700 space-y-5">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="folder-plus" class="w-4 h-4 text-cyan-400"></i> Create Training Sub-Space
+        </h3>
+        <button onclick="closeModal('modal-add-space')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Parent Category</label>
+          <select id="space-parent-cat" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+            <option>Public Health & Epidemiology</option>
+            <option>Clinical Care & Therapeutics</option>
+            <option>Nursing & Midwifery Practice</option>
+            <option>Health Information Systems</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">New Sub-space Name</label>
+          <input type="text" id="space-name-input" placeholder="e.g. Telemedicine & Remote Triage Workflow" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+        </div>
+      </div>
+
+      <button onclick="submitNewSpace()" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow">
+        Create Sub-Space
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 4: EDIT USER RBAC ROLE -->
+  <div id="modal-edit-role" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="glass-panel-ghs w-full max-w-md rounded-3xl p-6 border border-slate-700 space-y-5">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="shield" class="w-4 h-4 text-emerald-400"></i> Update User RBAC Role
+        </h3>
+        <button onclick="closeModal('modal-edit-role')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="p-3 bg-slate-900 rounded-xl border border-slate-800">
+          <div id="modal-target-staffid" class="font-mono text-cyan-400 text-[11px]">GHS-NUR-8892</div>
+          <div id="modal-target-name" class="font-bold text-white">Nurse Abena Osei</div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Assign System Role</label>
+          <select id="modal-role-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+            <option value="Learner">Learner (Content Access Only)</option>
+            <option value="Facilitator">Facilitator (Course Creator)</option>
+            <option value="Admin">Super Admin (Full HQ Control)</option>
+          </select>
+        </div>
+      </div>
+
+      <button onclick="saveUserRoleChange()" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow">
+        Save Permissions & Audit Log
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 5: ADD NEW USER ACCOUNT -->
+  <div id="modal-add-user" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+    <div class="glass-panel-ghs w-full max-w-md rounded-3xl p-6 border border-slate-700 space-y-5">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="user-plus" class="w-4 h-4 text-emerald-400"></i> Create GHS Personnel Account
+        </h3>
+        <button onclick="closeModal('modal-add-user')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">GHS Staff ID</label>
+          <input type="text" id="new-user-staffid" placeholder="GHS-DOC-2026" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-slate-200 focus:outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Full Name</label>
+          <input type="text" id="new-user-fullname" placeholder="Dr. Kwame Nkrumah" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-slate-200 focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Role</label>
+            <select id="new-user-role" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-slate-200 focus:outline-none">
+              <option value="Learner">Learner</option>
+              <option value="Facilitator">Facilitator</option>
+              <option value="Admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Facility Region</label>
+            <select class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-slate-200 focus:outline-none">
+              <option>Greater Accra</option>
+              <option>Ashanti</option>
+              <option>Northern</option>
+              <option>Volta</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="submitNewUser()" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider shadow">
+        Create Account & Log Audit
+      </button>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION FLOATER -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- ================================================================= -->
+  <!-- JAVASCRIPT LOGIC & STATE ENGINE -->
+  <!-- ================================================================= -->
+  <script>
+    // System State Engine
+    let currentRole = 'learner'; // 'learner' | 'facilitator' | 'admin'
+    
+    // User Role Profiles
+    const userProfiles = {
+      learner: {
+        name: "Nurse Abena Osei",
+        detail: "GHS-NUR-8892 • Ridge Hospital",
+        avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=120",
+        tag: "Learner",
+        desc: "Full material access, interactive Q&A discussion, certificate logging."
+      },
+      facilitator: {
+        name: "Dr. Kwesi Mensah",
+        detail: "GHS-FAC-042 • Regional Directorate",
+        avatar: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=120",
+        tag: "Facilitator",
+        desc: "Manage assigned categories, create sub-spaces, upload materials, moderate Q&A."
+      },
+      admin: {
+        name: "Kofi Annan",
+        detail: "GHS-HQ-001 • HQ IT Directorate",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=120",
+        tag: "Super Admin",
+        desc: "Full CRUD power across users, RBAC, categories, system audit logs, and global broadcasts."
+      }
+    };
+
+    // Categories Data Hierarchy
+    let categoriesData = [
+      {
+        id: 'cat-1',
+        title: 'Public Health & Epidemiology',
+        icon: 'activity',
+        color: 'emerald',
+        spaces: [
+          { name: 'Infection Prevention Control (IPC)', count: '4 Materials', cpd: '5 Points', assignedTo: 'Dr. Kwesi Mensah' },
+          { name: 'Vaccine Cold Chain Mgmt', count: '2 Materials', cpd: '3 Points', assignedTo: 'Dr. Kwesi Mensah' },
+          { name: 'Maternal & Cholera Surveillance', count: '3 Materials', cpd: '4 Points', assignedTo: 'Dr. Kwesi Mensah' }
+        ]
+      },
+      {
+        id: 'cat-2',
+        title: 'Clinical Care & Therapeutics',
+        icon: 'heart-pulse',
+        color: 'red',
+        spaces: [
+          { name: 'Emergency Triage Protocols', count: '5 Materials', cpd: '6 Points', assignedTo: 'Dr. E. Kbo' },
+          { name: 'Rational Antibiotic Prescribing', count: '3 Materials', cpd: '4 Points', assignedTo: 'Dr. E. Kbo' }
+        ]
+      },
+      {
+        id: 'cat-3',
+        title: 'Nursing & Midwifery Practice',
+        icon: 'stethoscope',
+        color: 'cyan',
+        spaces: [
+          { name: 'Neonatal Resuscitation Workflow', count: '3 Materials', cpd: '5 Points', assignedTo: 'Nurse Abena Osei' },
+          { name: 'Obstetric Hemorrhage Mgmt', count: '4 Materials', cpd: '5 Points', assignedTo: 'Nurse Abena Osei' }
+        ]
+      },
+      {
+        id: 'cat-4',
+        title: 'Health Information Systems',
+        icon: 'database',
+        color: 'amber',
+        spaces: [
+          { name: 'Lightwave EHR System Training', count: '6 Materials', cpd: '8 Points', assignedTo: 'Kofi Annan' },
+          { name: 'DHIS2 Data Quality Standards', count: '2 Materials', cpd: '3 Points', assignedTo: 'Kofi Annan' }
+        ]
+      }
+    ];
+
+    // Audit Log Data Stream
+    let auditLogs = [
+      { time: '11:15:02 AM', actor: 'GHS-HQ-001 (Kofi Annan)', action: 'ROLE_UPDATE', resource: 'GHS-NUR-8892 -> LEARNER', location: '102.176.45.12 (Accra HQ)' },
+      { time: '10:42:19 AM', actor: 'GHS-FAC-042 (Dr. Mensah)', action: 'UPLOAD_MATERIAL', resource: 'IPC_Protocol_2026.pdf', location: '102.176.88.90 (Accra West)' },
+      { time: '09:30:11 AM', actor: 'GHS-NUR-8892 (Abena Osei)', action: 'COURSE_COMPLETE', resource: 'Infection Prevention Control', location: '41.215.160.4 (Ridge Hosp)' },
+      { time: '08:14:50 AM', actor: 'GHS-HQ-001 (Kofi Annan)', action: 'SYSTEM_BROADCAST', resource: 'Urgent Health Notice: Cholera', location: '102.176.45.12 (Accra HQ)' }
+    ];
+
+    // INITIALIZATION ON LOAD
+    window.onload = function() {
+      lucide.createIcons();
+      setUserRole('learner');
+      renderCategories();
+      renderAuditLogs();
+      renderCategoryTreeAdmin();
+      initRegionalChart();
+    };
+
+    // ROLE SWITCHER ENGINE
+    function setUserRole(role) {
+      currentRole = role;
+      
+      // Update UI button highlights
+      document.querySelectorAll('.role-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-600', 'text-white', 'shadow');
+        btn.classList.add('text-slate-400');
+      });
+      document.getElementById(`role-btn-${role}`).classList.add('bg-emerald-600', 'text-white', 'shadow');
+      document.getElementById(`role-btn-${role}`).classList.remove('text-slate-400');
+
+      // Update User profile details in header
+      const profile = userProfiles[role];
+      document.getElementById('user-name').innerText = profile.name;
+      document.getElementById('user-detail').innerText = profile.detail;
+      document.getElementById('user-avatar').src = profile.avatar;
+      document.getElementById('role-context-tag').innerText = profile.tag;
+      document.getElementById('role-description').innerText = profile.desc;
+
+      // Re-render Navigation Sidebar according to Role
+      renderSidebarNav();
+
+      // Show default landing view per role
+      if (role === 'learner') switchView('learner-catalog');
+      else if (role === 'facilitator') switchView('facilitator-dashboard');
+      else if (role === 'admin') switchView('admin-overview');
+
+      showToast(`Switched active context to: ${profile.tag} (${profile.name})`);
+      logAuditAction(profile.detail.split(' ')[0], 'SWITCH_ROLE_CONTEXT', `Active Role: ${role.toUpperCase()}`);
+    }
+
+    // RENDER SIDEBAR NAV BASED ON ROLE PERMISSIONS
+    function renderSidebarNav() {
+      const navContainer = document.getElementById('sidebar-nav');
+      let navHTML = '';
+
+      if (currentRole === 'learner') {
+        navHTML = `
+          <button onclick="switchView('learner-catalog')" id="snav-learner-catalog" class="snav-btn w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white shadow">
+            <i data-lucide="layout-grid" class="w-4 h-4"></i>
+            <span>Categories & Spaces</span>
+          </button>
+          <button onclick="switchView('learner-reader')" id="snav-learner-reader" class="snav-btn w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900">
+            <i data-lucide="book-open" class="w-4 h-4"></i>
+            <span>Active Learning Reader</span>
+          </button>
+        `;
+      } else if (currentRole === 'facilitator') {
+        navHTML = `
+          <button onclick="switchView('facilitator-dashboard')" id="snav-facilitator-dashboard" class="snav-btn w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white shadow">
+            <i data-lucide="folder-kanban" class="w-4 h-4"></i>
+            <span>Managed Spaces</span>
+          </button>
+          <button onclick="openModal('modal-upload-material')" class="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900">
+            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+            <span>Upload Material</span>
+          </button>
+          <button onclick="switchView('learner-reader')" id="snav-learner-reader" class="snav-btn w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900">
+            <i data-lucide="messages-square" class="w-4 h-4"></i>
+            <span>Moderate Discussion</span>
+          </button>
+        `;
+      } else if (currentRole === 'admin') {
+        navHTML = `
+          <button onclick="switchView('admin-overview')" id="snav-admin-overview" class="snav-btn w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white shadow">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>HQ Command & Stats</span>
+          </button>
+          <button onclick="switchAdminTab('users'); switchView('admin-overview');" class="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900">
+            <i data-lucide="users" class="w-4 h-4"></i>
+            <span>RBAC User Management</span>
+          </button>
+          <button onclick="switchAdminTab('audit'); switchView('admin-overview');" class="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900">
+            <i data-lucide="file-key-2" class="w-4 h-4"></i>
+            <span>Audit Trail Logs</span>
+          </button>
+          <button onclick="openModal('modal-broadcast')" class="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-amber-400 hover:bg-amber-500/10">
+            <i data-lucide="radio" class="w-4 h-4"></i>
+            <span>System Broadcast</span>
+          </button>
+        `;
+      }
+
+      navContainer.innerHTML = navHTML;
+      lucide.createIcons();
+    }
+
+    // VIEW SWITCHER
+    function switchView(viewId) {
+      document.querySelectorAll('.app-view').forEach(v => v.classList.add('hidden'));
+      const target = document.getElementById(`view-${viewId}`);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.snav-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-600', 'text-white', 'shadow');
+        btn.classList.add('text-slate-400');
+      });
+      const activeBtn = document.getElementById(`snav-${viewId}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-emerald-600', 'text-white', 'shadow');
+        activeBtn.classList.remove('text-slate-400');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // RENDER CATEGORIES & SUBSPACES IN LEARNER VIEW
+    function renderCategories() {
+      const container = document.getElementById('categories-container');
+      let html = '';
+
+      categoriesData.forEach(cat => {
+        html += `
+          <div class="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                <i data-lucide="${cat.icon}" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-bold text-white">${cat.title}</h3>
+                <p class="text-xs text-slate-400">${cat.spaces.length} Sub-spaces Curated for CPD Credit</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        `;
+
+        cat.spaces.forEach(sp => {
+          html += `
+            <div onclick="switchView('learner-reader')" class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition space-y-3 group">
+              <div class="flex justify-between items-start">
+                <h4 class="text-xs font-bold text-white group-hover:text-emerald-400 transition">${sp.name}</h4>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold badge-ghs-gold">${sp.cpd}</span>
+              </div>
+              <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+                <span>${sp.count}</span>
+                <span class="text-emerald-400 group-hover:translate-x-1 transition flex items-center gap-1 font-semibold">
+                  Open Space <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                </span>
+              </div>
+            </div>
+          `;
+        });
+
+        html += `
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    // READER SUB-TABS (Text, PDF, Video, Forum)
+    function switchReaderTab(tabKey) {
+      ['text', 'pdf', 'video', 'forum'].forEach(k => {
+        document.getElementById(`reader-content-${k}`).classList.add('hidden');
+        document.getElementById(`rtab-${k}`).classList.remove('bg-emerald-600', 'text-white');
+        document.getElementById(`rtab-${k}`).classList.add('text-slate-400');
+      });
+
+      document.getElementById(`reader-content-${tabKey}`).classList.remove('hidden');
+      document.getElementById(`rtab-${tabKey}`).classList.add('bg-emerald-600', 'text-white');
+      document.getElementById(`rtab-${tabKey}`).classList.remove('text-slate-400');
+    }
+
+    // ADMIN SUB-TABS (Users, Categories, Audit)
+    function switchAdminTab(tabKey) {
+      ['users', 'categories', 'audit'].forEach(k => {
+        document.getElementById(`admin-sec-${k}`).classList.add('hidden');
+        document.getElementById(`atab-${k}`).classList.remove('bg-emerald-600', 'text-white');
+        document.getElementById(`atab-${k}`).classList.add('text-slate-400');
+      });
+
+      document.getElementById(`admin-sec-${tabKey}`).classList.remove('hidden');
+      document.getElementById(`atab-${tabKey}`).classList.add('bg-emerald-600', 'text-white');
+      document.getElementById(`atab-${tabKey}`).classList.remove('text-slate-400');
+    }
+
+    // INTERACTIVE FORUM COMMENT POST
+    function postForumComment() {
+      const input = document.getElementById('forum-comment-input');
+      const val = input.value.trim();
+      if (!val) return;
+
+      const list = document.getElementById('forum-comments-list');
+      const profile = userProfiles[currentRole];
+
+      const commentHTML = `
+        <div class="glass-panel p-4 rounded-xl border border-slate-800 space-y-2 animate-in fade-in">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <img src="${profile.avatar}" class="w-6 h-6 rounded-full object-cover">
+              <span class="text-xs font-bold text-white">${profile.name}</span>
+            </div>
+            <span class="text-[10px] text-slate-500">Just now</span>
+          </div>
+          <p class="text-xs text-slate-300">${val}</p>
+        </div>
+      `;
+
+      list.innerHTML = commentHTML + list.innerHTML;
+      input.value = '';
+      showToast('Comment posted to space discussion!');
+      logAuditAction(profile.detail.split(' ')[0], 'POST_SPACE_COMMENT', 'IPC Protocol Discussion');
+    }
+
+    // DIRECT MESSAGING SENDER
+    function sendDirectMessage() {
+      const input = document.getElementById('chat-input');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      const stream = document.getElementById('messages-stream');
+      const profile = userProfiles[currentRole];
+
+      stream.innerHTML += `
+        <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/20 space-y-1 ml-4 text-xs">
+          <div class="flex justify-between text-[10px] text-slate-400">
+            <span class="font-bold text-white">${profile.name}</span>
+            <span>Just now</span>
+          </div>
+          <p class="text-slate-200">${msg}</p>
+        </div>
+      `;
+
+      input.value = '';
+      stream.scrollTop = stream.scrollHeight;
+      showToast('Direct message sent');
+    }
+
+    // BROADCAST SEND TRIGGER
+    function triggerBroadcastSend() {
+      const title = document.getElementById('broadcast-title').value || "Urgent Clinical Protocol Directive";
+      const body = document.getElementById('broadcast-body').value || "New guidelines issued by Director-General.";
+      
+      const feed = document.getElementById('notifications-feed');
+      feed.innerHTML = `
+        <div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 space-y-1">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="font-bold text-amber-400">HQ BROADCAST ALERT</span>
+            <span class="text-slate-500">Just now</span>
+          </div>
+          <h4 class="text-xs font-bold text-white">${title}</h4>
+          <p class="text-[11px] text-slate-300">${body}</p>
+        </div>
+      ` + feed.innerHTML;
+
+      closeModal('modal-broadcast');
+      showToast('📢 Global System Broadcast Dispatched to All GHS Staff!');
+      logAuditAction('GHS-HQ-001', 'DISPATCH_BROADCAST', title);
+    }
+
+    // SUBMIT MATERIAL UPLOAD
+    function submitMaterialUpload() {
+      const title = document.getElementById('mat-title').value || "2026 Clinical Care Guidelines";
+      const space = document.getElementById('mat-space').value;
+
+      closeModal('modal-upload-material');
+      showToast(`Material "${title}" published under space: ${space}`);
+      logAuditAction(userProfiles[currentRole].detail.split(' ')[0], 'PUBLISH_MATERIAL', `${space} -> ${title}`);
+    }
+
+    // SUBMIT NEW SPACE
+    function submitNewSpace() {
+      const name = document.getElementById('space-name-input').value || "New Sub-space Module";
+      const parent = document.getElementById('space-parent-cat').value;
+
+      const catObj = categoriesData.find(c => c.title === parent);
+      if (catObj) {
+        catObj.spaces.push({ name: name, count: '1 Material', cpd: '4 Points', assignedTo: userProfiles[currentRole].name });
+        renderCategories();
+        renderCategoryTreeAdmin();
+      }
+
+      closeModal('modal-add-space');
+      showToast(`Sub-space "${name}" created under ${parent}!`);
+      logAuditAction(userProfiles[currentRole].detail.split(' ')[0], 'CREATE_SUBSPACE', name);
+    }
+
+    // RBAC ROLE EDITING MODAL
+    function editUserRole(staffId, name, role) {
+      document.getElementById('modal-target-staffid').innerText = staffId;
+      document.getElementById('modal-target-name').innerText = name;
+      document.getElementById('modal-role-select').value = role;
+      openModal('modal-edit-role');
+    }
+
+    function saveUserRoleChange() {
+      const staffId = document.getElementById('modal-target-staffid').innerText;
+      const newRole = document.getElementById('modal-role-select').value;
+      closeModal('modal-edit-role');
+      showToast(`RBAC permissions updated for ${staffId} -> ${newRole}`);
+      logAuditAction('GHS-HQ-001', 'UPDATE_USER_RBAC', `${staffId} assigned ${newRole}`);
+    }
+
+    function toggleUserStatus(btn) {
+      if (btn.innerText === 'Suspend') {
+        btn.innerText = 'Reactivate';
+        btn.className = 'text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-lg';
+        showToast('User account suspended.');
+      } else {
+        btn.innerText = 'Suspend';
+        btn.className = 'text-xs text-red-400 bg-red-500/10 px-2 py-1 rounded-lg';
+        showToast('User account reactivated.');
+      }
+    }
+
+    function submitNewUser() {
+      const staffId = document.getElementById('new-user-staffid').value || "GHS-DOC-2026";
+      const name = document.getElementById('new-user-fullname').value || "Dr. Kwame Nkrumah";
+      const role = document.getElementById('new-user-role').value;
+
+      closeModal('modal-add-user');
+      showToast(`User Account Created: ${staffId} (${name})`);
+      logAuditAction('GHS-HQ-001', 'CREATE_USER_ACCOUNT', `${staffId} - ${role}`);
+    }
+
+    function markMaterialComplete() {
+      showToast('🎉 Course Module Completed! +5 CPD Credits Logged to your GHS Record.');
+      logAuditAction('GHS-NUR-8892', 'COMPLETE_MODULE', 'Infection Prevention Control (IPC)');
+    }
+
+    // RENDER ADMIN CATEGORY TREE
+    function renderCategoryTreeAdmin() {
+      const container = document.getElementById('admin-category-tree');
+      let html = '';
+
+      categoriesData.forEach(c => {
+        html += `
+          <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2 text-xs">
+            <div class="flex justify-between items-center font-bold text-white">
+              <span class="flex items-center gap-2"><i data-lucide="folder" class="w-4 h-4 text-emerald-400"></i> ${c.title}</span>
+              <span class="text-[10px] text-slate-500">${c.spaces.length} Sub-spaces</span>
+            </div>
+            <div class="pl-6 space-y-1 text-slate-400 text-[11px]">
+        `;
+        c.spaces.forEach(s => {
+          html += `<div class="flex justify-between py-1 border-t border-slate-800/60"><span>• ${s.name}</span><span class="text-amber-400 font-bold">${s.cpd}</span></div>`;
+        });
+        html += `</div></div>`;
+      });
+
+      container.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    // AUDIT LOG MANAGEMENT
+    function logAuditAction(actor, action, resource) {
+      const time = new Date().toLocaleTimeString();
+      auditLogs.unshift({
+        time: time,
+        actor: actor,
+        action: action,
+        resource: resource,
+        location: '102.176.45.12 (Accra Directorate)'
+      });
+      renderAuditLogs();
+    }
+
+    function renderAuditLogs() {
+      const body = document.getElementById('audit-logs-body');
+      let html = '';
+      auditLogs.forEach(l => {
+        html += `
+          <tr class="hover:bg-slate-800/40">
+            <td class="p-3 text-slate-400">${l.time}</td>
+            <td class="p-3 font-semibold text-cyan-300">${l.actor}</td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold text-[10px]">${l.action}</span></td>
+            <td class="p-3 text-slate-200">${l.resource}</td>
+            <td class="p-3 text-slate-500">${l.location}</td>
+          </tr>
+        `;
+      });
+      body.innerHTML = html;
+    }
+
+    function clearAuditLogFilter() {
+      renderAuditLogs();
+      showToast('Audit log stream updated.');
+    }
+
+    function filterUserTable() {
+      const query = document.getElementById('user-search-input').value.toLowerCase();
+      const rows = document.querySelectorAll('#admin-user-table tbody tr');
+      let count = 0;
+      rows.forEach(r => {
+        const text = r.innerText.toLowerCase();
+        if (text.includes(query)) {
+          r.style.display = '';
+          count++;
+        } else {
+          r.style.display = 'none';
+        }
+      });
+      document.getElementById('user-count-label').innerText = count;
+    }
+
+    // UTILITY: MODAL & DRAWER TOGGLES
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function toggleDrawer(id) {
+      const drawer = document.getElementById(id);
+      if (drawer.classList.contains('translate-x-full')) {
+        drawer.classList.remove('translate-x-full');
+      } else {
+        drawer.classList.add('translate-x-full');
+      }
+    }
+
+    function clearNotifications() {
+      document.getElementById('unread-count-badge').innerText = '0';
+      showToast('Notifications marked as read');
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'glass-panel-ghs px-4 py-3 rounded-2xl text-xs font-semibold text-white shadow-xl border border-emerald-500/40 flex items-center space-x-2 animate-in fade-in slide-in-from-bottom duration-200';
+      toast.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i><span>${msg}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => toast.remove(), 3500);
+    }
+
+    // REGIONAL CHART.JS INITIALIZATION
+    function initRegionalChart() {
+      const ctx = document.getElementById('adminRegionalChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Gr. Accra', 'Ashanti', 'Western', 'Northern', 'Volta', 'Central', 'Eastern', 'Upper East'],
+          datasets: [{
+            label: '% Personnel CPD Compliant',
+            data: [88, 79, 72, 65, 76, 81, 74, 62],
+            backgroundColor: '#00875A',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#64748b' }, grid: { display: false } },
+            y: { max: 100, ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

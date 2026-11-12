@@ -1,0 +1,221 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  SYSTEM_ADMIN
+  FACILITATOR
+  LEARNER
+}
+
+enum PriorityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum NotificationType {
+  SYSTEM_MAINTENANCE
+  MATERIAL_UPDATE
+  SPACE_ANNOUNCEMENT
+  COMMENT_REPLY
+  DIRECT_MESSAGE
+}
+
+model User {
+  id                String                 @id @default(uuid())
+  ghsStaffId        String                 @unique // GHS Staff PIN (e.g., GHS-884920)
+  email             String                 @unique
+  fullName          String
+  phone             String?
+  role              UserRole               @default(LEARNER)
+  directorate       String?                // e.g., "Institutional Care Division"
+  region            String?                // e.g., "Greater Accra Region"
+  facility          String?                // e.g., "Ridge Regional Hospital"
+  councilLicenseNo  String?                // e.g., "NMC/RNR-2024-8849", "MDC/PE-11029"
+  accumulatedCpdPoints Int               @default(0)
+  isActive          Boolean                @default(true)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  // Relationships
+  assignedCategories CategoryFacilitator[]
+  createdSpaces      Space[]               @relation("SpaceCreator")
+  createdMaterials   Material[]            @relation("MaterialAuthor")
+  auditLogs          AuditLog[]
+  comments           Comment[]
+  sentMessages       DirectMessage[]       @relation("MessageSender")
+  receivedMessages   DirectMessage[]       @relation("MessageRecipient")
+  notifications      NotificationRecipient[]
+  labSubmissions     LabSubmission[]
+  cpdCompletions     CpdCompletion[]
+}
+
+model Category {
+  id          String                @id @default(uuid())
+  code        String                @unique // e.g., "CAT-IPC-01"
+  name        String                // e.g., "Infection Prevention & Control"
+  description String?               @db.Text
+  isArchived  Boolean               @default(false)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  spaces       Space[]
+  facilitators CategoryFacilitator[]
+}
+
+model CategoryFacilitator {
+  id         String   @id @default(uuid())
+  categoryId String
+  userId     String
+  assignedAt DateTime @default(now())
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, userId])
+}
+
+model Space {
+  id          String     @id @default(uuid())
+  slug        String     @unique // e.g., "cold-chain-logistics"
+  title       String     // e.g., "Cold Chain Maintenance & Protocol"
+  description String?    @db.Text
+  cpdPointsValue Int      @default(1)
+  categoryId  String
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  category  Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdBy User       @relation("SpaceCreator", fields: [createdById], references: [id])
+  materials Material[]
+  cpdCompletions CpdCompletion[]
+}
+
+model Material {
+  id          String         @id @default(uuid())
+  title       String
+  summary     String?        @db.Text
+  fileUrl     String?        // Supabase storage bucket object key
+  mimeType    String?        // e.g., "application/pdf", "video/mp4"
+  formatType  String?        // e.g., "PDF", "VIDEO", "TEXT_PROTOCOL", "CASE_STUDY"
+  version     Int            @default(1)
+  isPublished Boolean        @default(true)
+  spaceId     String
+  authorId    String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  space    Space           @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  author   User            @relation("MaterialAuthor", fields: [authorId], references: [id])
+  comments Comment[]
+  labs     LabEnvironment[]
+}
+
+model LabEnvironment {
+  id           String          @id @default(uuid())
+  materialId   String
+  material     Material        @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  instructions String          @db.Text
+  starterCode  String          @db.Text
+  language     String          // e.g., "javascript", "python", "json"
+  submissions  LabSubmission[]
+}
+
+model LabSubmission {
+  id        String         @id @default(uuid())
+  labId     String
+  lab       LabEnvironment @relation(fields: [labId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id])
+  code      String         @db.Text
+  passed    Boolean
+  createdAt DateTime       @default(now())
+}
+
+model Comment {
+  id         String    @id @default(uuid())
+  content    String    @db.Text
+  materialId String
+  authorId   String
+  parentId   String?   // Self-referential thread link
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  material Material  @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  author   User      @relation(fields: [authorId], references: [id])
+  parent   Comment?  @relation("ThreadReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("ThreadReplies")
+}
+
+model DirectMessage {
+  id          String   @id @default(uuid())
+  senderId    String
+  recipientId String
+  body        String   @db.Text
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  sender    User @relation("MessageSender", fields: [senderId], references: [id])
+  recipient User @relation("MessageRecipient", fields: [recipientId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  title     String
+  body      String           @db.Text
+  type      NotificationType
+  priority  PriorityLevel    @default(MEDIUM)
+  linkUrl   String?
+  createdAt DateTime         @default(now())
+
+  recipients NotificationRecipient[]
+}
+
+model NotificationRecipient {
+  id             String       @id @default(uuid())
+  notificationId String
+  userId         String
+  isRead         Boolean      @default(false)
+  readAt         DateTime?
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String
+  action      String   // e.g., "CATEGORY_CREATED", "USER_ROLE_UPDATED"
+  entity      String   // e.g., "Category", "User", "Material"
+  entityId    String
+  metadata    Json?    // Detailed diff snapshot
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model CpdCompletion {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spaceId   String
+  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  pointsAwarded Int
+  verifiedBy  String?
+  completedAt DateTime @default(now())
+
+  @@unique([userId, spaceId])
+}

@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LearnPulse - Next-Gen eLearning Platform</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              cyan: '#06b6d4',
+              purple: '#8b5cf6',
+              pink: '#ec4899',
+              dark: '#0B0F19',
+              card: 'rgba(17, 24, 39, 0.7)',
+              border: 'rgba(255, 255, 255, 0.1)'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Chart.js for Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #07090e;
+      color: #f3f4f6;
+      overflow-x: hidden;
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* Glassmorphism utility */
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-panel-glow {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      box-shadow: 0 0 25px -5px rgba(59, 130, 246, 0.15);
+    }
+
+    /* Mesh Gradients */
+    .bg-mesh {
+      background-image: 
+        radial-gradient(at 10% 10%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 90% 10%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 50% 90%, rgba(6, 182, 212, 0.12) 0px, transparent 50%);
+    }
+
+    /* Code Editor Line Numbers */
+    .code-editor-bg {
+      background: #0d1117;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-mesh text-slate-100 flex flex-col antialiased">
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="sticky top-0 z-40 glass-panel border-b border-slate-800/80 px-4 lg:px-8 py-3 transition-all duration-200">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      
+      <!-- Logo & Brand -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('dashboard')">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
+          <i data-lucide="zap" class="w-6 h-6 text-white stroke-[2.5]"></i>
+        </div>
+        <div>
+          <span class="text-xl font-extrabold bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent tracking-tight">LearnPulse</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 ml-1.5">PRO</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="hidden md:flex items-center space-x-1 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 text-white bg-blue-600 shadow-md">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+          <span>Dashboard</span>
+        </button>
+
+        <button onclick="switchTab('lab')" id="nav-lab" class="nav-btn flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="code-2" class="w-4 h-4"></i>
+          <span>Dev Lab</span>
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        </button>
+
+        <button onclick="switchTab('catalog')" id="nav-catalog" class="nav-btn flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="compass" class="w-4 h-4"></i>
+          <span>Catalog</span>
+        </button>
+
+        <button onclick="switchTab('admin')" id="nav-admin" class="nav-btn flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="shield-check" class="w-4 h-4"></i>
+          <span>Admin</span>
+        </button>
+      </nav>
+
+      <!-- Right Action Items -->
+      <div class="flex items-center space-x-4">
+        <!-- Search trigger -->
+        <div class="relative hidden sm:block w-48 lg:w-64">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          <input type="text" placeholder="Search courses, labs..." class="w-full bg-slate-900/90 border border-slate-700/60 rounded-xl pl-9 pr-4 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
+        </div>
+
+        <!-- Quick Streak Badge -->
+        <div class="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold">
+          <i data-lucide="flame" class="w-4 h-4 text-amber-500 fill-amber-500"></i>
+          <span>14 Days</span>
+        </div>
+
+        <!-- User Profile Dropdown Toggle / Signup trigger -->
+        <button onclick="switchTab('onboarding')" class="flex items-center space-x-3 p-1 rounded-full bg-slate-900 border border-slate-800 hover:border-slate-700 transition">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" alt="Avatar" class="w-8 h-8 rounded-full object-cover border border-blue-500/50">
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Mobile Navigation Tab Bar -->
+    <div class="flex md:hidden items-center justify-around mt-3 pt-2 border-t border-slate-800 text-xs">
+      <button onclick="switchTab('dashboard')" class="flex flex-col items-center space-y-1 text-blue-400">
+        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+        <span>Dashboard</span>
+      </button>
+      <button onclick="switchTab('lab')" class="flex flex-col items-center space-y-1 text-slate-400">
+        <i data-lucide="code-2" class="w-5 h-5"></i>
+        <span>Lab</span>
+      </button>
+      <button onclick="switchTab('catalog')" class="flex flex-col items-center space-y-1 text-slate-400">
+        <i data-lucide="compass" class="w-5 h-5"></i>
+        <span>Catalog</span>
+      </button>
+      <button onclick="switchTab('admin')" class="flex flex-col items-center space-y-1 text-slate-400">
+        <i data-lucide="shield-check" class="w-5 h-5"></i>
+        <span>Admin</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER WITH DYNAMIC VIEW SWITCHING -->
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- ================================================================= -->
+    <!-- VIEW 1: STUDENT DASHBOARD -->
+    <!-- ================================================================= -->
+    <section id="view-dashboard" class="tab-content space-y-8">
+      
+      <!-- Welcome Hero Banner -->
+      <div class="relative overflow-hidden rounded-3xl glass-panel p-6 sm:p-8 border border-slate-800">
+        <div class="absolute -right-10 -bottom-10 w-72 h-72 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute right-40 -top-10 w-48 h-48 bg-purple-600/20 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div class="space-y-2">
+            <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>AI Study Mentor Active</span>
+            </div>
+            <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">Welcome back, Sarah! 👋</h1>
+            <p class="text-slate-400 text-sm sm:text-base max-w-2xl">
+              You've completed <span class="text-blue-400 font-semibold">82%</span> of your target learning goals for this week. Keep up the momentum!
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3 w-full sm:w-auto">
+            <button onclick="switchTab('lab')" class="flex-1 sm:flex-initial px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-95 transition shadow-lg shadow-blue-500/25 flex items-center justify-center space-x-2">
+              <i data-lucide="play-circle" class="w-4 h-4"></i>
+              <span>Resume Code Lab</span>
+            </button>
+            <button onclick="switchTab('catalog')" class="px-5 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-semibold text-sm transition border border-slate-700">
+              Explore Courses
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Metric 1 -->
+        <div class="glass-panel p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between">
+          <div class="space-y-1">
+            <span class="text-xs font-medium text-slate-400">Total Learning Time</span>
+            <div class="text-2xl font-bold text-white">48.5 <span class="text-xs font-normal text-slate-400">hrs</span></div>
+            <span class="text-xs text-emerald-400 flex items-center gap-1">
+              <i data-lucide="trending-up" class="w-3 h-3"></i> +12% from last week
+            </span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+            <i data-lucide="clock" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Metric 2 -->
+        <div class="glass-panel p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between">
+          <div class="space-y-1">
+            <span class="text-xs font-medium text-slate-400">Completed Labs</span>
+            <div class="text-2xl font-bold text-white">24 / 30</div>
+            <span class="text-xs text-emerald-400 flex items-center gap-1">
+              <i data-lucide="check-circle-2" class="w-3 h-3"></i> 80% completion rate
+            </span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+            <i data-lucide="terminal" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Metric 3 -->
+        <div class="glass-panel p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between">
+          <div class="space-y-1">
+            <span class="text-xs font-medium text-slate-400">Skill Score</span>
+            <div class="text-2xl font-bold text-white">1,840 <span class="text-xs font-normal text-slate-400">XP</span></div>
+            <span class="text-xs text-purple-400 flex items-center gap-1">
+              <i data-lucide="award" class="w-3 h-3"></i> Top 5% of Cohort
+            </span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <i data-lucide="trophy" class="w-6 h-6"></i>
+          </div>
+        </div>
+
+        <!-- Metric 4 -->
+        <div class="glass-panel p-5 rounded-2xl border border-slate-800/80 flex items-center justify-between">
+          <div class="space-y-1">
+            <span class="text-xs font-medium text-slate-400">Active Certificates</span>
+            <div class="text-2xl font-bold text-white">4 Verified</div>
+            <span class="text-xs text-blue-400 flex items-center gap-1">
+              <i data-lucide="shield-check" class="w-3 h-3"></i> React & Node Master
+            </span>
+          </div>
+          <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+            <i data-lucide="badge-check" class="w-6 h-6"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts & Progress Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Weekly Learning Velocity (Chart.js) -->
+        <div class="lg:col-span-2 glass-panel p-6 rounded-2xl border border-slate-800">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-lg font-bold text-white">Learning Activity & Hours</h3>
+              <p class="text-xs text-slate-400">Weekly breakdown of interactive lab time vs theory</p>
+            </div>
+            <select class="bg-slate-900 text-xs text-slate-300 border border-slate-700 rounded-lg px-3 py-1.5 focus:outline-none">
+              <option>This Week</option>
+              <option>Last Week</option>
+              <option>This Month</option>
+            </select>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="studentActivityChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Skill Mastery Radar Graph -->
+        <div class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-white mb-1">Skill Matrix Breakdown</h3>
+            <p class="text-xs text-slate-400 mb-4">AI estimated mastery across core stack</p>
+          </div>
+          <div class="h-60 relative flex items-center justify-center">
+            <canvas id="skillRadarChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Active Enrolled Courses Section -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-bold text-white">In-Progress Learning Tracks</h2>
+          <button onclick="switchTab('catalog')" class="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1">
+            View All <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <!-- Course Card 1 -->
+          <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden group hover:border-slate-700 transition">
+            <div class="relative h-40 bg-slate-900">
+              <img src="https://images.unsplash.com/photo-1633356122544-f134324a6cee?auto=format&fit=crop&q=80&w=600" alt="React" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <span class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs font-semibold text-cyan-400 border border-cyan-500/30">Frontend</span>
+            </div>
+            <div class="p-5 space-y-4">
+              <div class="space-y-1">
+                <h4 class="font-bold text-white group-hover:text-blue-400 transition">Advanced React 19 & Architecture</h4>
+                <p class="text-xs text-slate-400">Module 4: Server Components & Suspense</p>
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Progress</span>
+                  <span class="text-blue-400 font-semibold">78%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                  <div class="bg-gradient-to-r from-blue-500 to-cyan-400 h-2 rounded-full" style="width: 78%"></div>
+                </div>
+              </div>
+              <button onclick="switchTab('lab')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition flex items-center justify-center space-x-2 border border-slate-700">
+                <span>Continue Lesson</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Course Card 2 -->
+          <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden group hover:border-slate-700 transition">
+            <div class="relative h-40 bg-slate-900">
+              <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=600" alt="Python" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <span class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs font-semibold text-purple-400 border border-purple-500/30">Data Science</span>
+            </div>
+            <div class="p-5 space-y-4">
+              <div class="space-y-1">
+                <h4 class="font-bold text-white group-hover:text-blue-400 transition">Full-Stack Python & FastAPI Lab</h4>
+                <p class="text-xs text-slate-400">Module 2: Async Endpoints & Postgres</p>
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Progress</span>
+                  <span class="text-purple-400 font-semibold">45%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                  <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full" style="width: 45%"></div>
+                </div>
+              </div>
+              <button onclick="switchTab('lab')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition flex items-center justify-center space-x-2 border border-slate-700">
+                <span>Continue Lesson</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Course Card 3 -->
+          <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden group hover:border-slate-700 transition">
+            <div class="relative h-40 bg-slate-900">
+              <img src="https://images.unsplash.com/photo-1618788372246-79faff0c3742?auto=format&fit=crop&q=80&w=600" alt="System Design" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+              <span class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-400 border border-emerald-500/30">Backend</span>
+            </div>
+            <div class="p-5 space-y-4">
+              <div class="space-y-1">
+                <h4 class="font-bold text-white group-hover:text-blue-400 transition">Cloud Native & Distributed Systems</h4>
+                <p class="text-xs text-slate-400">Module 6: Microservices & Event Loops</p>
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Progress</span>
+                  <span class="text-emerald-400 font-semibold">92%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                  <div class="bg-gradient-to-r from-emerald-500 to-teal-400 h-2 rounded-full" style="width: 92%"></div>
+                </div>
+              </div>
+              <button onclick="switchTab('lab')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition flex items-center justify-center space-x-2 border border-slate-700">
+                <span>Continue Lesson</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VIEW 2: INTERACTIVE PRACTICE & DEV LAB -->
+    <!-- ================================================================= -->
+    <section id="view-lab" class="tab-content hidden space-y-4">
+      
+      <!-- Lab Header Control Bar -->
+      <div class="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+            <i data-lucide="code" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-white">Lab #042: Dynamic Event Handlers & State</h2>
+            <p class="text-xs text-slate-400">Target Track: React & JavaScript Fundamentals</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
+          <button onclick="resetLabCode()" class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-700 transition flex items-center space-x-1.5">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>Reset Code</span>
+          </button>
+          
+          <button onclick="runLabCode()" class="px-5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:opacity-90 text-white text-xs font-semibold transition shadow-md shadow-emerald-600/20 flex items-center space-x-2">
+            <i data-lucide="play" class="w-4 h-4 fill-white"></i>
+            <span>Run Code</span>
+          </button>
+
+          <button onclick="submitLabSolution()" class="px-5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition shadow-md shadow-blue-600/20">
+            Submit Exercise
+          </button>
+        </div>
+      </div>
+
+      <!-- IDE Workstation Split Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[680px]">
+        
+        <!-- Left Panel: Problem Prompt & Instructions (4 cols) -->
+        <div class="lg:col-span-4 glass-panel rounded-2xl border border-slate-800 flex flex-col overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-slate-800/80 bg-slate-900/60 flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <i data-lucide="book-open" class="w-4 h-4 text-blue-400"></i> Task Overview
+            </span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">MEDIUM</span>
+          </div>
+
+          <div class="p-5 overflow-y-auto space-y-5 text-xs text-slate-300 flex-grow">
+            <div class="space-y-2">
+              <h3 class="text-sm font-bold text-white">Objective</h3>
+              <p class="leading-relaxed text-slate-400">
+                In this challenge, you are required to write JavaScript logic that dynamic update counter state and updates the status indicator when clicked.
+              </p>
+            </div>
+
+            <div class="space-y-2 bg-slate-900/80 p-3.5 rounded-xl border border-slate-800">
+              <h4 class="font-semibold text-slate-200">Requirements:</h4>
+              <ul class="list-disc list-inside space-y-1.5 text-slate-400">
+                <li>Target the DOM element with ID <code class="text-cyan-400 bg-slate-800 px-1 rounded">count-val</code>.</li>
+                <li>Add an event listener to the increment button.</li>
+                <li>When count reaches 5, set state message to "Goal Reached!".</li>
+              </ul>
+            </div>
+
+            <!-- Interactive Hint Accordion -->
+            <div class="border border-blue-500/20 rounded-xl bg-blue-500/5 p-3.5 space-y-2">
+              <div class="flex items-center justify-between cursor-pointer" onclick="document.getElementById('hint-box').classList.toggle('hidden')">
+                <span class="font-semibold text-blue-400 flex items-center gap-1.5">
+                  <i data-lucide="lightbulb" class="w-4 h-4"></i> Need a Hint?
+                </span>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-blue-400"></i>
+              </div>
+              <p id="hint-box" class="hidden text-slate-400 text-[11px] leading-relaxed pt-1 border-t border-blue-500/10">
+                Use <code class="text-cyan-400">document.getElementById('btn-add')</code> and attach <code class="text-cyan-400">addEventListener('click', fn)</code>.
+              </p>
+            </div>
+
+            <!-- Test Cases Feedback Panel -->
+            <div class="space-y-2 pt-2 border-t border-slate-800">
+              <span class="font-bold text-slate-300 block">Automated Test Suites</span>
+              <div class="space-y-1.5">
+                <div id="test-1" class="flex items-center justify-between p-2 rounded-lg bg-slate-900/50 border border-slate-800 text-[11px]">
+                  <span class="text-slate-400">1. Button click listener binds</span>
+                  <span class="text-emerald-400 font-semibold flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i> Passed</span>
+                </div>
+                <div id="test-2" class="flex items-center justify-between p-2 rounded-lg bg-slate-900/50 border border-slate-800 text-[11px]">
+                  <span class="text-slate-400">2. Counter increments properly</span>
+                  <span class="text-emerald-400 font-semibold flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i> Passed</span>
+                </div>
+                <div id="test-3" class="flex items-center justify-between p-2 rounded-lg bg-slate-900/50 border border-slate-800 text-[11px]">
+                  <span class="text-slate-400">3. Goal threshold reached trigger</span>
+                  <span id="test-3-status" class="text-slate-500 font-semibold">Pending Run</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Code Editor Mock & Live Output (8 cols) -->
+        <div class="lg:col-span-8 flex flex-col gap-4">
+          
+          <!-- Code Editor Pane -->
+          <div class="glass-panel rounded-2xl border border-slate-800 flex-grow flex flex-col overflow-hidden">
+            <!-- Code Tab Header -->
+            <div class="bg-slate-900/90 px-4 py-2 border-b border-slate-800 flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="px-3 py-1 rounded-lg bg-slate-800 text-blue-400 text-xs font-mono font-semibold border border-slate-700 flex items-center gap-1.5">
+                  <i data-lucide="file-code" class="w-3.5 h-3.5"></i> main.js
+                </span>
+                <span class="text-xs text-slate-500">UTF-8</span>
+              </div>
+              <span class="text-[11px] text-slate-500 font-mono">JavaScript ES6</span>
+            </div>
+
+            <!-- Code Input Box -->
+            <div class="relative flex-grow code-editor-bg p-4 font-mono text-xs flex">
+              <!-- Line Numbers -->
+              <div class="select-none text-slate-600 text-right pr-4 space-y-1 font-mono text-xs">
+                <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div><div>11</div><div>12</div>
+              </div>
+              <!-- Code Textarea -->
+              <textarea id="lab-code-input" class="w-full h-full bg-transparent text-slate-200 resize-none focus:outline-none font-mono text-xs leading-relaxed" spellcheck="false">// Interactive JavaScript Learning Environment
+let count = 0;
+const countEl = document.getElementById('count-val');
+const msgEl = document.getElementById('status-msg');
+
+function increment() {
+    count++;
+    console.log("Current Count Updated:", count);
+    if(count >= 5) {
+        msgEl.innerText = "Goal Reached! Mastery Unlocked.";
+    }
+}
+increment();</textarea>
+            </div>
+          </div>
+
+          <!-- Bottom Split: Interactive Preview & Console Output -->
+          <div class="h-56 grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <!-- Live Preview Render -->
+            <div class="glass-panel rounded-2xl border border-slate-800 p-4 flex flex-col justify-between">
+              <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="eye" class="w-3.5 h-3.5 text-cyan-400"></i> Rendered Output
+                </span>
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              </div>
+              <div class="flex flex-col items-center justify-center space-y-3 py-3">
+                <div class="text-xs text-slate-400">Counter Value: <span id="counter-render-val" class="text-2xl font-bold text-cyan-400 ml-1">1</span></div>
+                <div id="status-msg" class="text-xs text-amber-400 font-medium">Keep clicking to reach 5...</div>
+                <button onclick="triggerSimulatedClick()" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow transition">
+                  Click Interactive Button
+                </button>
+              </div>
+            </div>
+
+            <!-- Terminal Output Console -->
+            <div class="glass-panel rounded-2xl border border-slate-800 p-4 flex flex-col justify-between font-mono bg-slate-950">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="terminal" class="w-3.5 h-3.5 text-slate-400"></i> Terminal Console
+                </span>
+                <button onclick="clearConsole()" class="text-[10px] text-slate-500 hover:text-slate-300">Clear</button>
+              </div>
+              <div id="terminal-logs" class="text-[11px] space-y-1 text-slate-300 overflow-y-auto h-32 py-1">
+                <div class="text-slate-500">[System]: Environment initialized successfully.</div>
+                <div class="text-emerald-400">[Console]: Current Count Updated: 1</div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VIEW 3: COURSE CATALOG & ENROLLMENT MODAL -->
+    <!-- ================================================================= -->
+    <section id="view-catalog" class="tab-content hidden space-y-8">
+      
+      <!-- Catalog Header & Search Filter Bar -->
+      <div class="space-y-6">
+        <div class="space-y-2">
+          <h1 class="text-3xl font-extrabold text-white tracking-tight">Explore Learning Paths</h1>
+          <p class="text-slate-400 text-sm">Master production-grade skills through hands-on cloud labs and real projects.</p>
+        </div>
+
+        <!-- Filter Controls Bar -->
+        <div class="flex flex-col md:flex-row gap-4 items-center justify-between glass-panel p-4 rounded-2xl border border-slate-800">
+          
+          <!-- Filter Category Pills -->
+          <div class="flex items-center space-x-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+            <button class="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold whitespace-nowrap shadow">All Tracks</button>
+            <button class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-medium border border-slate-700 whitespace-nowrap">Frontend Dev</button>
+            <button class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-medium border border-slate-700 whitespace-nowrap">Backend & Cloud</button>
+            <button class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-medium border border-slate-700 whitespace-nowrap">AI & Machine Learning</button>
+            <button class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-medium border border-slate-700 whitespace-nowrap">Cybersecurity</button>
+          </div>
+
+          <!-- Difficulty Dropdown -->
+          <div class="flex items-center space-x-3 w-full md:w-auto justify-end">
+            <select class="bg-slate-900 text-xs text-slate-300 border border-slate-700 rounded-xl px-4 py-2 focus:outline-none">
+              <option>All Skill Levels</option>
+              <option>Beginner</option>
+              <option>Intermediate</option>
+              <option>Advanced</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Course Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- Course 1 -->
+        <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden flex flex-col justify-between group hover:border-blue-500/50 transition duration-300">
+          <div>
+            <div class="relative h-48 overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&q=80&w=600" alt="Cybersecurity" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+              <span class="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-semibold text-emerald-400 border border-emerald-500/30">Cybersecurity</span>
+            </div>
+            <div class="p-6 space-y-3">
+              <div class="flex items-center justify-between text-xs text-slate-400">
+                <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> 24 Hours</span>
+                <span class="flex items-center gap-1 text-amber-400"><i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400"></i> 4.9 (1.2k reviews)</span>
+              </div>
+              <h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition">Ethical Hacking & Network Security</h3>
+              <p class="text-xs text-slate-400 leading-relaxed">Learn offensive security strategies, vulnerability testing, and defense frameworks in isolated sandboxes.</p>
+            </div>
+          </div>
+          <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/60 mt-4">
+            <div>
+              <span class="text-xs text-slate-500 block">Price</span>
+              <span class="text-lg font-extrabold text-white">$89.99</span>
+            </div>
+            <button onclick="openEnrollModal('Ethical Hacking & Network Security', '$89.99')" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition shadow-md shadow-blue-600/20">
+              Enroll Track
+            </button>
+          </div>
+        </div>
+
+        <!-- Course 2 -->
+        <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden flex flex-col justify-between group hover:border-blue-500/50 transition duration-300">
+          <div>
+            <div class="relative h-48 overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=600" alt="AI & LLMs" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+              <span class="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-semibold text-purple-400 border border-purple-500/30">AI Engineering</span>
+            </div>
+            <div class="p-6 space-y-3">
+              <div class="flex items-center justify-between text-xs text-slate-400">
+                <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> 36 Hours</span>
+                <span class="flex items-center gap-1 text-amber-400"><i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400"></i> 4.98 (3.4k reviews)</span>
+              </div>
+              <h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition">LLM Engineering & RAG Pipelines</h3>
+              <p class="text-xs text-slate-400 leading-relaxed">Build production LLM applications using LangChain, Vector Databases, and fine-tuned open weights models.</p>
+            </div>
+          </div>
+          <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/60 mt-4">
+            <div>
+              <span class="text-xs text-slate-500 block">Price</span>
+              <span class="text-lg font-extrabold text-white">$129.99</span>
+            </div>
+            <button onclick="openEnrollModal('LLM Engineering & RAG Pipelines', '$129.99')" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition shadow-md shadow-blue-600/20">
+              Enroll Track
+            </button>
+          </div>
+        </div>
+
+        <!-- Course 3 -->
+        <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden flex flex-col justify-between group hover:border-blue-500/50 transition duration-300">
+          <div>
+            <div class="relative h-48 overflow-hidden">
+              <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&q=80&w=600" alt="DevOps" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+              <span class="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-3 py-1 rounded-lg text-xs font-semibold text-cyan-400 border border-cyan-500/30">Cloud & DevOps</span>
+            </div>
+            <div class="p-6 space-y-3">
+              <div class="flex items-center justify-between text-xs text-slate-400">
+                <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> 18 Hours</span>
+                <span class="flex items-center gap-1 text-amber-400"><i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400"></i> 4.85 (890 reviews)</span>
+              </div>
+              <h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition">Kubernetes, Docker & CI/CD Mastery</h3>
+              <p class="text-xs text-slate-400 leading-relaxed">Architect enterprise Kubernetes clusters, automated pipelines, and cloud observability metrics.</p>
+            </div>
+          </div>
+          <div class="p-6 pt-0 flex items-center justify-between border-t border-slate-800/60 mt-4">
+            <div>
+              <span class="text-xs text-slate-500 block">Price</span>
+              <span class="text-lg font-extrabold text-white">$94.99</span>
+            </div>
+            <button onclick="openEnrollModal('Kubernetes, Docker & CI/CD Mastery', '$94.99')" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition shadow-md shadow-blue-600/20">
+              Enroll Track
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Course Enrollment Modal -->
+      <div id="enroll-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md hidden">
+        <div class="glass-panel-glow w-full max-w-md rounded-3xl p-6 border border-slate-700 space-y-6 relative animate-in fade-in zoom-in duration-200">
+          <button onclick="closeEnrollModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+
+          <div class="space-y-2">
+            <span class="px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-semibold border border-blue-500/30">Instant Access</span>
+            <h3 id="modal-course-title" class="text-xl font-bold text-white">Course Title Placeholder</h3>
+            <p class="text-xs text-slate-400">Gain immediate access to interactive cloud environments, 24/7 AI mentoring, and verified certificate.</p>
+          </div>
+
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex justify-between items-center">
+            <span class="text-xs text-slate-300">Total Price Due:</span>
+            <span id="modal-course-price" class="text-2xl font-extrabold text-cyan-400">$0.00</span>
+          </div>
+
+          <div class="space-y-3">
+            <button onclick="confirmEnrollment()" class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold text-sm hover:opacity-95 transition shadow-lg shadow-blue-600/30">
+              Confirm Enrollment
+            </button>
+            <p class="text-[11px] text-slate-500 text-center">30-day money-back guarantee. Cancel anytime.</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VIEW 4: ADMIN ANALYTICS & CONTENT MANAGEMENT -->
+    <!-- ================================================================= -->
+    <section id="view-admin" class="tab-content hidden space-y-8">
+      
+      <!-- Admin Hero Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Executive Admin Dashboard</h1>
+          <p class="text-xs sm:text-sm text-slate-400">Platform revenue metrics, active user distribution, and content authoring</p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <button class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs text-slate-300 font-semibold border border-slate-700 flex items-center gap-2">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> Export Report
+          </button>
+          <button class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs text-white font-semibold shadow-md shadow-blue-600/20 flex items-center gap-2">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Create Course
+          </button>
+        </div>
+      </div>
+
+      <!-- Key Admin Stats -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="glass-panel p-5 rounded-2xl border border-slate-800">
+          <span class="text-xs text-slate-400">Monthly Recurring Revenue</span>
+          <div class="text-2xl font-bold text-white mt-1">$128,450</div>
+          <span class="text-xs text-emerald-400 flex items-center gap-1 mt-1">
+            <i data-lucide="trending-up" class="w-3 h-3"></i> +18.4% this month
+          </span>
+        </div>
+
+        <div class="glass-panel p-5 rounded-2xl border border-slate-800">
+          <span class="text-xs text-slate-400">Total Active Learners</span>
+          <div class="text-2xl font-bold text-white mt-1">14,290</div>
+          <span class="text-xs text-emerald-400 flex items-center gap-1 mt-1">
+            <i data-lucide="user-plus" class="w-3 h-3"></i> +1,240 new signups
+          </span>
+        </div>
+
+        <div class="glass-panel p-5 rounded-2xl border border-slate-800">
+          <span class="text-xs text-slate-400">Lab Execution Hours</span>
+          <div class="text-2xl font-bold text-white mt-1">94,120 hrs</div>
+          <span class="text-xs text-cyan-400 flex items-center gap-1 mt-1">
+            <i data-lucide="activity" class="w-3 h-3"></i> 99.98% Uptime
+          </span>
+        </div>
+
+        <div class="glass-panel p-5 rounded-2xl border border-slate-800">
+          <span class="text-xs text-slate-400">Avg. Course Completion</span>
+          <div class="text-2xl font-bold text-white mt-1">76.8%</div>
+          <span class="text-xs text-purple-400 flex items-center gap-1 mt-1">
+            <i data-lucide="award" class="w-3 h-3"></i> +4.2% engagement rate
+          </span>
+        </div>
+      </div>
+
+      <!-- Analytics Charts Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Platform Revenue Chart (8 cols) -->
+        <div class="lg:col-span-8 glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-bold text-white">Platform Revenue & Subscriptions</h3>
+              <p class="text-xs text-slate-400">Comparison of Enterprise vs Individual Plans</p>
+            </div>
+            <div class="flex items-center space-x-2 text-xs">
+              <span class="flex items-center gap-1 text-blue-400"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Subscriptions</span>
+              <span class="flex items-center gap-1 text-cyan-400"><span class="w-2 h-2 rounded-full bg-cyan-400"></span> Enterprise</span>
+            </div>
+          </div>
+          <div class="h-64">
+            <canvas id="adminRevenueChart"></canvas>
+          </div>
+        </div>
+
+        <!-- User Demographics Distribution (4 cols) -->
+        <div class="lg:col-span-4 glass-panel p-6 rounded-2xl border border-slate-800 space-y-4 flex flex-col justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white">Learner Specialization</h3>
+            <p class="text-xs text-slate-400">Active distribution by domain</p>
+          </div>
+          <div class="h-56 relative flex items-center justify-center">
+            <canvas id="adminDistributionChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Content Management Data Table -->
+      <div class="glass-panel rounded-2xl border border-slate-800 overflow-hidden space-y-4">
+        <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white">Course & Lab Management</h3>
+            <p class="text-xs text-slate-400">Publish, update and review platform curriculum</p>
+          </div>
+          <input type="text" placeholder="Filter courses..." class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-300 focus:outline-none">
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/80 text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="p-4 pl-6">Course Name</th>
+                <th class="p-4">Author</th>
+                <th class="p-4">Enrolled</th>
+                <th class="p-4">Rating</th>
+                <th class="p-4">Status</th>
+                <th class="p-4 text-right pr-6">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60 text-slate-300">
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="p-4 pl-6 font-semibold text-white flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                    <i data-lucide="layers" class="w-4 h-4"></i>
+                  </div>
+                  Advanced React 19 Architecture
+                </td>
+                <td class="p-4 text-slate-400">Dr. Sarah Jenkins</td>
+                <td class="p-4 font-mono">4,120</td>
+                <td class="p-4 text-amber-400 flex items-center gap-1"><i data-lucide="star" class="w-3 h-3 fill-amber-400"></i> 4.9</td>
+                <td class="p-4"><span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">LIVE</span></td>
+                <td class="p-4 text-right pr-6 space-x-2">
+                  <button class="text-slate-400 hover:text-white"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                  <button class="text-slate-400 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="p-4 pl-6 font-semibold text-white flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30">
+                    <i data-lucide="brain-circuit" class="w-4 h-4"></i>
+                  </div>
+                  LLM Engineering & RAG Systems
+                </td>
+                <td class="p-4 text-slate-400">Alex Rivera</td>
+                <td class="p-4 font-mono">3,490</td>
+                <td class="p-4 text-amber-400 flex items-center gap-1"><i data-lucide="star" class="w-3 h-3 fill-amber-400"></i> 4.98</td>
+                <td class="p-4"><span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">LIVE</span></td>
+                <td class="p-4 text-right pr-6 space-x-2">
+                  <button class="text-slate-400 hover:text-white"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                  <button class="text-slate-400 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="p-4 pl-6 font-semibold text-white flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                    <i data-lucide="shield" class="w-4 h-4"></i>
+                  </div>
+                  Zero-Trust Architecture Lab
+                </td>
+                <td class="p-4 text-slate-400">Marcus Vance</td>
+                <td class="p-4 font-mono">820</td>
+                <td class="p-4 text-slate-400">--</td>
+                <td class="p-4"><span class="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold">REVIEW</span></td>
+                <td class="p-4 text-right pr-6 space-x-2">
+                  <button class="text-slate-400 hover:text-white"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                  <button class="text-slate-400 hover:text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VIEW 5: INTERACTIVE ONBOARDING & AUTHENTICATION WIZARD -->
+    <!-- ================================================================= -->
+    <section id="view-onboarding" class="tab-content hidden max-w-2xl mx-auto py-6">
+      
+      <div class="glass-panel-glow p-8 rounded-3xl border border-slate-800 space-y-8">
+        
+        <!-- Header -->
+        <div class="text-center space-y-2">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center mx-auto shadow-lg shadow-blue-500/30 mb-3">
+            <i data-lucide="user-plus" class="w-6 h-6 text-white"></i>
+          </div>
+          <h2 class="text-2xl font-extrabold text-white">Create Your Account</h2>
+          <p class="text-slate-400 text-xs">Personalize your AI-assisted learning journey in under 60 seconds.</p>
+        </div>
+
+        <!-- Progress Steps Bar -->
+        <div class="flex items-center justify-between max-w-xs mx-auto text-xs text-slate-400">
+          <div class="flex items-center space-x-2 text-blue-400 font-semibold">
+            <span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">1</span>
+            <span>Profile</span>
+          </div>
+          <div class="w-8 h-0.5 bg-slate-800"></div>
+          <div class="flex items-center space-x-2">
+            <span class="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-[10px]">2</span>
+            <span>Goals</span>
+          </div>
+        </div>
+
+        <!-- Form Elements -->
+        <form onsubmit="handleOnboardingSubmit(event)" class="space-y-4">
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-slate-300">First Name</label>
+              <input type="text" required placeholder="Sarah" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 transition">
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-slate-300">Last Name</label>
+              <input type="text" required placeholder="Jenkins" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 transition">
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-slate-300">Email Address</label>
+            <input type="email" required placeholder="sarah@example.com" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 transition">
+          </div>
+
+          <!-- Select Primary Goal Card Options -->
+          <div class="space-y-2 pt-2">
+            <label class="text-xs font-semibold text-slate-300">Primary Career Goal</label>
+            <div class="grid grid-cols-2 gap-3">
+              <div onclick="selectGoalCard(this)" class="goal-card border border-blue-500 bg-blue-500/10 p-3.5 rounded-xl cursor-pointer transition">
+                <i data-lucide="code" class="w-4 h-4 text-blue-400 mb-1"></i>
+                <div class="text-xs font-bold text-white">Full-Stack Dev</div>
+                <div class="text-[10px] text-slate-400">Master modern web web applications</div>
+              </div>
+
+              <div onclick="selectGoalCard(this)" class="goal-card border border-slate-800 bg-slate-900/60 p-3.5 rounded-xl cursor-pointer hover:border-slate-700 transition">
+                <i data-lucide="cpu" class="w-4 h-4 text-purple-400 mb-1"></i>
+                <div class="text-xs font-bold text-white">AI Engineer</div>
+                <div class="text-[10px] text-slate-400">LLMs & Machine Learning</div>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white font-bold text-xs uppercase tracking-wider hover:opacity-95 transition shadow-lg shadow-blue-600/30">
+            Complete Registration & Launch Platform
+          </button>
+        </form>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-800/80 bg-slate-950/60 py-6 px-4 mt-12 text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center space-x-2">
+        <i data-lucide="zap" class="w-4 h-4 text-blue-500"></i>
+        <span class="font-bold text-slate-300">LearnPulse AI Platform</span>
+        <span>&copy; 2026 All Rights Reserved.</span>
+      </div>
+      <div class="flex space-x-6">
+        <a href="#" class="hover:text-slate-300">Privacy Policy</a>
+        <a href="#" class="hover:text-slate-300">Terms of Service</a>
+        <a href="#" class="hover:text-slate-300">API Documentation</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- SCRIPT CONTROLLERS -->
+  <script>
+    // Initialize Icons
+    lucide.createIcons();
+
+    // Navigation Tab Switching Engine
+    function switchTab(tabId) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      
+      // Reset active nav button styling
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
+        btn.classList.add('text-slate-400');
+      });
+
+      // Show targeted tab
+      const targetView = document.getElementById(`view-${tabId}`);
+      if(targetView) {
+        targetView.classList.remove('hidden');
+      }
+
+      // Highlight corresponding Nav button
+      const activeNavBtn = document.getElementById(`nav-${tabId}`);
+      if(activeNavBtn) {
+        activeNavBtn.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+        activeNavBtn.classList.remove('text-slate-400');
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Interactive Dev Lab Controller
+    function runLabCode() {
+      const code = document.getElementById('lab-code-input').value;
+      const logsContainer = document.getElementById('terminal-logs');
+      
+      // Append execution log
+      const time = new Date().toLocaleTimeString();
+      logsContainer.innerHTML += `<div class="text-cyan-400">[${time}] Running script execution...</div>`;
+      
+      // Dynamic simulated execution
+      setTimeout(() => {
+        if(code.includes('count++') || code.includes('count + 1')) {
+          logsContainer.innerHTML += `<div class="text-emerald-400">[Console]: Test step passed! State update valid.</div>`;
+          document.getElementById('test-3-status').innerHTML = `<span class="text-emerald-400 font-semibold flex items-center gap-1"><i data-lucide="check" class="w-3 h-3"></i> Passed</span>`;
+          lucide.createIcons();
+        } else {
+          logsContainer.innerHTML += `<div class="text-amber-400">[Warn]: Counter logic not detected properly.</div>`;
+        }
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }, 400);
+    }
+
+    function triggerSimulatedClick() {
+      const valEl = document.getElementById('counter-render-val');
+      let current = parseInt(valEl.innerText);
+      current++;
+      valEl.innerText = current;
+
+      const logsContainer = document.getElementById('terminal-logs');
+      logsContainer.innerHTML += `<div class="text-slate-300">[User Action]: Button Clicked -> New Count = ${current}</div>`;
+      
+      if(current >= 5) {
+        document.getElementById('status-msg').innerText = "🎉 Goal Reached! Mastery Unlocked.";
+        document.getElementById('status-msg').className = "text-xs text-emerald-400 font-bold animate-bounce";
+      }
+      logsContainer.scrollTop = logsContainer.scrollHeight;
+    }
+
+    function resetLabCode() {
+      document.getElementById('lab-code-input').value = `// Reset code state\nlet count = 0;\nfunction increment() {\n    count++;\n}\nincrement();`;
+      document.getElementById('counter-render-val').innerText = '0';
+      document.getElementById('status-msg').innerText = "Keep clicking to reach 5...";
+      document.getElementById('status-msg').className = "text-xs text-amber-400 font-medium";
+    }
+
+    function clearConsole() {
+      document.getElementById('terminal-logs').innerHTML = `<div class="text-slate-500">[Console cleared]</div>`;
+    }
+
+    function submitLabSolution() {
+      alert("Congratulations! Lab solution verified and submitted successfully.");
+    }
+
+    // Modal Handlers
+    function openEnrollModal(title, price) {
+      document.getElementById('modal-course-title').innerText = title;
+      document.getElementById('modal-course-price').innerText = price;
+      document.getElementById('enroll-modal').classList.remove('hidden');
+    }
+
+    function closeEnrollModal() {
+      document.getElementById('enroll-modal').classList.add('hidden');
+    }
+
+    function confirmEnrollment() {
+      closeEnrollModal();
+      switchTab('dashboard');
+    }
+
+    // Onboarding Card Selection
+    function selectGoalCard(cardEl) {
+      document.querySelectorAll('.goal-card').forEach(el => {
+        el.classList.remove('border-blue-500', 'bg-blue-500/10');
+        el.classList.add('border-slate-800', 'bg-slate-900/60');
+      });
+      cardEl.classList.add('border-blue-500', 'bg-blue-500/10');
+      cardEl.classList.remove('border-slate-800', 'bg-slate-900/60');
+    }
+
+    function handleOnboardingSubmit(e) {
+      e.preventDefault();
+      switchTab('dashboard');
+    }
+
+    // CHART.JS INITIALIZATIONS
+    window.onload = function() {
+      
+      // 1. Student Activity Chart
+      const studentCtx = document.getElementById('studentActivityChart').getContext('2d');
+      new Chart(studentCtx, {
+        type: 'line',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [
+            {
+              label: 'Interactive Lab Hours',
+              data: [2.5, 4.0, 3.2, 5.5, 4.8, 6.2, 3.9],
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              fill: true,
+              tension: 0.4
+            },
+            {
+              label: 'Theory & Video Watch',
+              data: [1.2, 2.1, 1.8, 2.4, 1.9, 3.0, 2.2],
+              borderColor: '#06b6d4',
+              backgroundColor: 'transparent',
+              borderDash: [5, 5],
+              tension: 0.4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#94a3b8' } } },
+          scales: {
+            x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+
+      // 2. Skill Radar Chart
+      const radarCtx = document.getElementById('skillRadarChart').getContext('2d');
+      new Chart(radarCtx, {
+        type: 'radar',
+        data: {
+          labels: ['React/JS', 'Python', 'System Design', 'Cloud/Docker', 'AI/LLM', 'Security'],
+          datasets: [{
+            label: 'Proficiency Level',
+            data: [90, 75, 82, 68, 85, 60],
+            backgroundColor: 'rgba(139, 92, 246, 0.2)',
+            borderColor: '#8b5cf6',
+            pointBackgroundColor: '#8b5cf6'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            r: {
+              angleLines: { color: 'rgba(255,255,255,0.1)' },
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              pointLabels: { color: '#94a3b8', font: { size: 10 } },
+              ticks: { display: false }
+            }
+          }
+        }
+      });
+
+      // 3. Admin Revenue Bar Chart
+      const revenueCtx = document.getElementById('adminRevenueChart').getContext('2d');
+      new Chart(revenueCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+          datasets: [
+            {
+              label: 'Individual Plan',
+              data: [42000, 48000, 55000, 62000, 71000, 83000, 92000, 104000],
+              backgroundColor: '#3b82f6',
+              borderRadius: 6
+            },
+            {
+              label: 'Enterprise Cohorts',
+              data: [12000, 15000, 18000, 21000, 24000, 27000, 31000, 38000],
+              backgroundColor: '#06b6d4',
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#94a3b8' } } },
+          scales: {
+            x: { stacked: true, ticks: { color: '#64748b' }, grid: { display: false } },
+            y: { stacked: true, ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+
+      // 4. Admin Domain Distribution Doughnut
+      const distCtx = document.getElementById('adminDistributionChart').getContext('2d');
+      new Chart(distCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Frontend', 'AI Engineering', 'Backend', 'Security'],
+          datasets: [{
+            data: [40, 28, 20, 12],
+            backgroundColor: ['#3b82f6', '#8b5cf6', '#06b6d4', '#10b981'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12 } } }
+        }
+      });
+
+    };
+  </script>
+</body>
+</html>
