@@ -1,62 +1,55 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  :root {
-    --background: 0 0 100 / 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0 100 / 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0 100 / 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 142 71% 25%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 142 71% 25%;
-    --radius: 0.75rem;
-
-    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --font-mono: "Fira Code", "JetBrains Mono", monospace;
-  }
-
-  .dark {
-    --background: 7 13 22 / 100%;
-    --foreground: 240 4.8% 95.9%;
-    --card: 15 23 42 / 85%;
-    --card-foreground: 240 4.8% 95.9%;
-    --popover: 15 23 42 / 85%;
-    --popover-foreground: 240 4.8% 95.9%;
-    --primary: 142 71% 25%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 240 4.8% 95.9%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 240 4.8% 95.9%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 142 71% 25%;
-  }
+@theme {
+  --color-canvas: #020617;
+  --color-surface: rgba(15, 23, 42, 0.85);
+  --color-surface-2: rgba(30, 41, 59, 0.9);
+  --color-ink: #f8fafc;
+  --color-ink-muted: #94a3b8;
+  --color-hairline: rgba(255, 255, 255, 0.08);
+  --color-primary: #22c55e;
+  --color-primary-ink: #064e3b;
+  --color-accent: #34d399;
+  --color-warn: #fbbf24;
+  --color-danger: #fb7185;
+  --color-ghs-red: #cf2027;
+  --color-ghs-gold: #fcd116;
+  --color-ghs-green: #006b3f;
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 24px rgba(2, 6, 23, 0.45);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Fira Code", "JetBrains Mono", monospace;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground font-sans antialiased;
-  }
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #006b3f;
 }

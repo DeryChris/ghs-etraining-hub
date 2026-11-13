@@ -1,0 +1,18 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "DATABASE_URL": "@ghs-eln-database-url",
+    "DIRECT_URL": "@ghs-eln-direct-url",
+    "SESSION_SECRET": "@ghs-eln-session-secret",
+    "SUPABASE_URL": "@ghs-eln-supabase-url",
+    "SUPABASE_ANON_KEY": "@ghs-eln-supabase-anon-key",
+    "SUPABASE_SERVICE_ROLE_KEY": "@ghs-eln-supabase-service-role-key",
+    "NEXT_PUBLIC_APP_URL": "@ghs-eln-app-url"
+  },
+  "crons": []
+}

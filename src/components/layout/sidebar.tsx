@@ -1,71 +1,66 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { LayoutGrid, BookOpen, FolderKanban, UploadCloud, MessagesSquare, ShieldCheck, Users, FileKey2, Radio } from "lucide-react";
+import { useState } from "react";
+import { LayoutGrid, BookOpen, FolderKanban, Users, ShieldCheck, Radio, MessageSquare, Bell, FileKey2, User } from "lucide-react";
+
+import type { SupabaseUser } from "@/lib/ghs-constants";
 
 interface SidebarProps {
-  role: string;
+  user: SupabaseUser | null;
+  onClose: () => void;
 }
 
-export default function Sidebar({ role }: SidebarProps) {
-  const [navItems, setNavItems] = useState<React.ReactNode[]>([]);
+const navItems = [
+  { href: "/dashboard", icon: LayoutGrid, label: "Dashboard" },
+  { href: "/directorates", icon: FolderKanban, label: "Directorates" },
+  { href: "/library", icon: BookOpen, label: "Library" },
+  { href: "/messages", icon: MessageSquare, label: "Messages" },
+  { href: "/notifications", icon: Bell, label: "Notifications" },
+  { href: "/analytics", icon: ShieldCheck, label: "Analytics" },
+];
 
-  useEffect(() => {
-    let items: React.ReactNode[] = [];
-
-    if (role === "learner") {
-      items = [
-        <button key="learner-dashboard" onClick={() => window.location.replace("/dashboard")} className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-700 text-white shadow">
-          <LayoutGrid className="w-4 h-4" />
-          <span>CPD Dashboard & Catalog</span>
-        </button>,
-        <button key="learner-reader" onClick={() => window.location.replace("/reader")} className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/60">
-          <BookOpen className="w-4 h-4" />
-          <span>Active Lesson Reader</span>
-        </button>,
-      ];
-    } else if (role === "facilitator") {
-      items = [
-        <button key="facilitator-workspace" onClick={() => window.location.replace("/facilitator/assigned-categories")} className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-700 text-white shadow">
-          <FolderKanban className="w-4 h-4" />
-          <span>Assessment Scoring Queue</span>
-        </button>,
-        <button key="upload-material" className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/60">
-          <UploadCloud className="w-4 h-4" />
-          <span>Upload Protocol Document</span>
-        </button>,
-        <button key="moderate-forum" onClick={() => window.location.replace("/reader")} className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/60">
-          <MessagesSquare className="w-4 h-4" />
-          <span>Moderate Peer Forum</span>
-        </button>,
-      ];
-    } else if (role === "admin") {
-      items = [
-        <button key="admin-dashboard" onClick={() => window.location.replace("/admin")} className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-700 text-white shadow">
-          <ShieldCheck className="w-4 h-4" />
-          <span>HQ Regional Analytics</span>
-        </button>,
-        <button key="rbac-users" onClick={() => window.location.replace("/admin/users")} className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/60">
-          <Users className="w-4 h-4" />
-          <span>RBAC User Directory</span>
-        </button>,
-        <button key="audit-trail" onClick={() => window.location.replace("/admin/audit-logs")} className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-900/60">
-          <FileKey2 className="w-4 h-4" />
-          <span>Security Audit Trail</span>
-        </button>,
-        <button key="broadcast" className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-amber-400 hover:bg-amber-500/10">
-          <Radio className="w-4 h-4" />
-          <span>System Broadcast</span>
-        </button>,
-      ];
-    }
-
-    setNavItems(items);
-  }, [role]);
+export default function Sidebar({ user, onClose }: SidebarProps) {
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="ghs-panel p-2 rounded-2xl space-y-1" id="sidebar-nav">
-      {navItems}
+    <div className="flex h-full flex-col">
+      <div className="flex h-16 items-center justify-between px-4 border-b border-hairline">
+        <h2 className="text-sm font-bold text-ink">GHS-ELN</h2>
+        <button
+          onClick={onClose}
+          className="md:hidden p-1 text-ink-muted hover:text-ink"
+          aria-label="Close navigation"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto p-4 space-y-2" aria-label="Primary">
+        {navItems.map((item) => (
+          <a
+            key={item.href}
+            href={item.href}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-card text-sm text-ink-muted hover:bg-surface-2 hover:text-ink transition"
+          >
+            <item.icon className="w-5 h-5" />
+            {item.label}
+          </a>
+        ))}
+      </nav>
+
+      <div className="p-4 border-t border-hairline">
+        <div className="flex items-center gap-3 px-3 py-2 rounded-card bg-surface-2 border border-hairline text-xs">
+          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+            <User className="w-4 h-4" />
+          </div>
+          <div className="leading-tight">
+            <div className="font-semibold text-ink">{user?.user_metadata?.full_name || "GHS Staff"}</div>
+            <div className="text-ink-muted">{user?.user_metadata?.role || "Learner"}</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
