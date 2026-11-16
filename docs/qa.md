@@ -6,13 +6,16 @@ the human/agent script library.
 ## 1. Command sequence
 
 ```bash
-npx next typegen
 npm exec tsc -- --noEmit
 npm run lint
-npm run build
+npm test
+npm run db:check                         # migration/snapshot consistency
+npm run build                            # hermetic: no Google Fonts / CDN fetch
+npm run test:e2e:public                  # needs NEXT_PUBLIC_SUPABASE_* in .env.local
 curl -s localhost:3000/api/health        # expect {"ok":true,...}
-npx drizzle-kit push                     # sandbox only
-npm run db:seed                          # idempotent
+npm run db:migrate                       # not drizzle-kit push
+npm run db:seed                          # idempotent: run twice, counts must not change
+npm run db:verify-chain                  # audit chain intact
 ```
 
 ## 2. RBAC sweep (run after every capability change)
@@ -56,12 +59,35 @@ mobile, and a 200 % zoom check for horizontal scrolling.
 
 ## 6. Content‑lifecycle drill
 
-1. Facilitator uploads a PDF → version 1 `DRAFT`, scan `PENDING`.
-2. Submits for review → reviewer ≠ author required.
-3. Publish → `currentVersionId` flips, learners see v1, audit `PUBLISH_MATERIAL` recorded.
+1. Facilitator uploads a PDF from `/authoring/<id>` → version 1 `DRAFT`, scan `PENDING`; the bytes go
+   straight to storage via the signed slot (watch the network tab: no request body reaches Next.js).
+2. Submits for review → `/review` lists it for colleagues; the uploader sees "You uploaded this
+   version" instead of Approve/Send back.
+3. Publish with no approval → refused by `publishBlockers()` with a named blocker. After a colleague
+   approves, publish → `currentVersionId` flips, learners see v1, audit `MATERIAL_PUBLISHED` recorded.
+   A `SYSTEM_ADMIN` override without a reason ≥ 10 characters is still refused.
 4. Upload v2 → v1 becomes `SUPERSEDED`, learners still see v1 until v2 is published.
 5. Re‑open a learner's progress record → it still points at v1 (`material_version_id`).
 6. Old version shows the "This version has been replaced" banner and remains readable.
+
+### 6a. Notice targeting drill
+
+1. As a facilitator, send a notice to a space whose audience is one directorate.
+2. Sign in as a learner in a different directorate → the notice is absent from `/notifications` and
+   from the sidebar count; as a learner in that directorate → it is present.
+3. Learner with a blank directorate → absent (a narrowed notice never leaks to "unknown").
+4. Mark all as read → only visible notices get read cursors; re-open as the other cohort and the
+   notice is still unread.
+5. `NOTIFICATION_BROADCAST` appears in the audit log with the audience filter.
+
+### 6b. Certificate print drill
+
+1. Complete a material with CPD points → the transcript row shows a serial.
+2. Open `/certificates/<code>` as the holder → full name and staff id print; check the serial and
+   the verification URL are on the page.
+3. Open the same URL signed in as another learner → 404 (not your certificate).
+4. `/verify?code=<code>` still shows only "First L." — the public page never reveals the full name.
+5. Browser print preview at A4 → no navigation chrome, nothing clipped, serial legible in mono.
 
 ## 7. Assessment integrity drill
 

@@ -5,8 +5,8 @@ import { listCategories } from "@/lib/server/learning-queries";
 import { requireSession } from "@/lib/server/rbac";
 
 export default async function DirectoratesPage() {
-  await requireSession();
-  const categories = await listCategories();
+  const session = await requireSession();
+  const categories = await listCategories(session);
 
   return (
     <div className="space-y-8">

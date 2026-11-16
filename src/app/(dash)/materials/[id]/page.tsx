@@ -29,7 +29,7 @@ export default async function MaterialPage({
   if (!isUuid(id)) notFound();
 
   const { notice } = await searchParams;
-  const detail = await getMaterialDetail(id, session.sub);
+  const detail = await getMaterialDetail(id, session);
   if (!detail) notFound();
 
   const { material, space, category, authorName, version, progress } = detail;

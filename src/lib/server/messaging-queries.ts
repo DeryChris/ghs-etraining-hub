@@ -1,7 +1,10 @@
 import "server-only";
-import { and, asc, count, desc, eq, inArray, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, lt, ne, or } from "drizzle-orm";
 import { db } from "@/db/index";
 import { directMessages, users } from "@/db/schema";
+
+export const MAX_CONVERSATIONS = 50;
+export const THREAD_PAGE_SIZE = 50;
 
 export interface ConversationSummary {
   counterpartId: string;
@@ -25,7 +28,9 @@ export async function listConversations(userId: string): Promise<ConversationSum
     .from(directMessages)
     .where(or(eq(directMessages.senderId, userId), eq(directMessages.recipientId, userId)))
     .orderBy(desc(directMessages.createdAt))
-    .limit(400);
+    // The inbox is a recency list, not an archive: the newest 300 messages cover
+    // far more threads than the 50 shown, and both sides of the thread are indexed.
+    .limit(300);
 
   const counterpartIds = [...new Set(messages.map((m) => (m.senderId === userId ? m.recipientId : m.senderId)))];
   if (counterpartIds.length === 0) return [];
@@ -58,10 +63,14 @@ export async function listConversations(userId: string): Promise<ConversationSum
       unread: unreadHere,
     });
   }
-  return [...summaries.values()];
+  return [...summaries.values()].slice(0, MAX_CONVERSATIONS);
 }
 
-export async function getThread(userId: string, counterpartId: string) {
+/**
+ * The newest page of a conversation. `before` walks backwards through history so
+ * a long thread is never sent in one response; the page is rendered oldest-first.
+ */
+export async function getThread(userId: string, counterpartId: string, options: { before?: Date } = {}) {
   const [person] = await db
     .select({ id: users.id, fullName: users.fullName, role: users.role, facility: users.facility, isActive: users.isActive })
     .from(users)
@@ -69,7 +78,7 @@ export async function getThread(userId: string, counterpartId: string) {
     .limit(1);
   if (!person) return null;
 
-  const messages = await db
+  const rows = await db
     .select({
       id: directMessages.id,
       senderId: directMessages.senderId,
@@ -79,15 +88,25 @@ export async function getThread(userId: string, counterpartId: string) {
     })
     .from(directMessages)
     .where(
-      or(
-        and(eq(directMessages.senderId, userId), eq(directMessages.recipientId, counterpartId)),
-        and(eq(directMessages.senderId, counterpartId), eq(directMessages.recipientId, userId)),
+      and(
+        or(
+          and(eq(directMessages.senderId, userId), eq(directMessages.recipientId, counterpartId)),
+          and(eq(directMessages.senderId, counterpartId), eq(directMessages.recipientId, userId)),
+        ),
+        options.before ? lt(directMessages.createdAt, options.before) : undefined,
       ),
     )
-    .orderBy(asc(directMessages.createdAt))
-    .limit(300);
+    .orderBy(desc(directMessages.createdAt))
+    .limit(THREAD_PAGE_SIZE + 1);
 
-  return { counterpart: person, messages };
+  const hasMore = rows.length > THREAD_PAGE_SIZE;
+  const messages = rows.slice(0, THREAD_PAGE_SIZE).reverse();
+  return {
+    counterpart: person,
+    messages,
+    hasMore,
+    oldestAt: messages[0]?.createdAt ?? null,
+  };
 }
 
 export async function countUnreadMessages(userId: string): Promise<number> {

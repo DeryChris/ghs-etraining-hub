@@ -10,14 +10,25 @@ import { firstNameOf } from "@/lib/names";
 import { getThread, listConversations, listDirectory } from "@/lib/server/messaging-queries";
 import { requireSession } from "@/lib/server/rbac";
 
-export default async function MessagesPage({ searchParams }: { searchParams: Promise<{ with?: string }> }) {
+function parseBefore(value: string | undefined): Date | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ with?: string; before?: string }>;
+}) {
   const session = await requireSession();
   const params = await searchParams;
   const withParam = params.with;
+  const before = parseBefore(params.before);
 
   const [conversations, directory] = await Promise.all([listConversations(session.sub), listDirectory(session.sub)]);
   const activeId = isUuid(withParam) ? withParam : null;
-  const thread = activeId ? await getThread(session.sub, activeId) : null;
+  const thread = activeId ? await getThread(session.sub, activeId, { before }) : null;
 
   const recipients: Recipient[] = directory.map((person) => ({
     id: person.id,
@@ -89,6 +100,17 @@ export default async function MessagesPage({ searchParams }: { searchParams: Pro
                   {thread.counterpart.facility ? ` · ${thread.counterpart.facility}` : ""}
                 </p>
               </header>
+
+              {thread.hasMore && thread.oldestAt && (
+                <div className="border-b border-hairline px-5 py-3 text-center">
+                  <Link
+                    href={`/messages?with=${thread.counterpart.id}&before=${encodeURIComponent(thread.oldestAt.toISOString())}`}
+                    className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                  >
+                    Load earlier messages
+                  </Link>
+                </div>
+              )}
 
               <ol className="flex-1 space-y-3 overflow-y-auto p-5" aria-live="polite">
                 {thread.messages.length === 0 && (

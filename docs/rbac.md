@@ -23,6 +23,7 @@ row.** Any change here is a `ROLE_CHANGE` audit event and requires an ADR.
 | `material.create` | ✅ | ✅ (assigned category) | ❌ |
 | `material.upload_version` | ✅ | ✅ (assigned category) | ❌ |
 | `material.submit_review` | ✅ | ✅ (authored draft) | ❌ |
+| `material.review` | ✅ | ✅ (assigned category, **reviewer ≠ uploader**, ADR‑0008) | ❌ |
 | `material.publish` | ✅ | ✅ (assigned category, **reviewer ≠ author**) | ❌ |
 | `material.archive` | ✅ | ✅ (assigned category) | ❌ |
 | `material.read_draft` | ✅ | ✅ (assigned category) | ❌ |
@@ -36,7 +37,7 @@ row.** Any change here is a `ROLE_CHANGE` audit event and requires an ADR.
 | `comment.create` / `comment.edit_own` | ✅ | ✅ | ✅ |
 | `comment.moderate` | ✅ (any) | ✅ (assigned spaces) | ❌ |
 | `message.send` | ✅ | ✅ (assigned learners, admins, peers in category) | ✅ (peers, facilitators, admins) |
-| `message.read_thread` | ✅ (only with DPO‑approved investigation, audited) | own threads | own threads |
+| `message.read_any_thread` | ✅ (only with DPO‑approved investigation, audited) | ❌ | ❌ |
 | `notification.broadcast` | ✅ | ✅ (space announcement, assigned space) | ❌ |
 | `notification.view` | ✅ | ✅ | ✅ (own) |
 | `analytics.view_personal` | ✅ | ✅ | ✅ (own) |
@@ -44,17 +45,23 @@ row.** Any change here is a `ROLE_CHANGE` audit event and requires an ADR.
 | `analytics.export` | ✅ (audited) | ✅ (assigned scope, audited) | ❌ |
 | `audit_log.read` | ✅ (all, reading is audited) | ✅ (own space events only) | ❌ |
 | `maintenance_banner.manage` | ✅ | ❌ | view only |
-| `certificate.verify` | public (no session) | public | public |
+| `certificate.verify` | public (no session, rate-limited per connection) | public | public |
 | `certificate.revoke` | ✅ (audited) | ❌ | ❌ |
 
 ## 2. Scope resolution
 
-`scopeFor(action, target)` must be resolved **from the database**, never from the request payload:
+`scopeFor(action, target)` must be resolved **from the database**, never from the request payload.
+`checkCapability(action, scope)` → `src/lib/server/rbac.ts` enforces the category-scoped half of
+this rule for facilitators by querying `category_facilitators`; the caller's `scope.categoryId` is
+only a hint, never proof of assignment.
 
 * Facilitator scope = `categoryIds` from `category_facilitators` (+ `region` if regional).
 * Space scope inherits its category; material inherits its space.
 * Audience match for learners = `audienceRegion IS NULL OR audienceRegion = user.region` (and the
-  same for directorate/cadre).
+  same for directorate/cadre). This is enforced in SQL by `audienceFor()` in
+  `src/lib/server/learning-queries.ts`, not in the UI: staff are exempt, a viewer with no cohort
+  attribute matches untargeted content only, and `categories.isRestricted` hides the directorate
+  from learners entirely.
 * A facilitator who is also the author of a version **cannot** approve/publish that version alone —
   the reviewer must differ from the author (clinical two‑person rule).
 
@@ -75,6 +82,8 @@ row.** Any change here is a `ROLE_CHANGE` audit event and requires an ADR.
 const vectors: Vector[] = [
   { role: "LEARNER", action: "material.publish", scope: assigned, expect: false },
   { role: "FACILITATOR", action: "material.publish", scope: assigned, reviewerIsAuthor: true, expect: false },
+  { role: "FACILITATOR", action: "material.review", scope: assigned, reviewerIsAuthor: true, expect: false },
+  { role: "LEARNER", action: "material.review", scope: assigned, expect: false },
   { role: "FACILITATOR", action: "material.publish", scope: otherCategory, expect: false },
   { role: "SYSTEM_ADMIN", action: "audit_log.read", expect: true, mustAudit: true },
   { role: "LEARNER", action: "material.read_published", scope: { audienceRegion: "Volta", userRegion: "Ashanti" }, expect: false },

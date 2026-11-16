@@ -10,6 +10,8 @@ import { getLearnerDashboard, listCompletions } from "@/lib/server/learning-quer
 import { requireSession } from "@/lib/server/rbac";
 
 const MONTHS = 6;
+/** The transcript renders the most recent completions; the rest stay in the record. */
+const TRANSCRIPT_ROWS = 25;
 
 function monthBuckets(now: Date) {
   return Array.from({ length: MONTHS }, (_, index) => {
@@ -29,7 +31,7 @@ function monthKey(date: Date): string {
 export default async function AnalyticsPage() {
   const session = await requireSession();
   const now = new Date();
-  const [dashboard, completions] = await Promise.all([getLearnerDashboard(session.sub), listCompletions(session.sub)]);
+  const [dashboard, completions] = await Promise.all([getLearnerDashboard(session), listCompletions(session.sub)]);
 
   const buckets = monthBuckets(now);
   for (const completion of completions) {
@@ -45,6 +47,7 @@ export default async function AnalyticsPage() {
   }));
   const totalCompletions = completions.length;
 
+  const transcript = completions.slice(0, TRANSCRIPT_ROWS);
   const points = pointsFromCreditsX10(dashboard.creditsX10);
   const pointsPercent = (points / CPD_CYCLE_TARGET_POINTS) * 100;
   const mandatoryDone = dashboard.mandatoryTotal - dashboard.mandatoryOutstanding.length;
@@ -144,7 +147,12 @@ export default async function AnalyticsPage() {
             <h2 id="transcript-heading" className="text-lg font-bold text-ink">
               CPD transcript
             </h2>
-            <p className="text-sm text-ink-muted">Each completed material, with the points it earned.</p>
+            <p className="text-sm text-ink-muted">
+              Each completed material, with the points it earned.
+              {completions.length > TRANSCRIPT_ROWS
+                ? ` Showing the ${TRANSCRIPT_ROWS} most recent of ${completions.length}.`
+                : ""}
+            </p>
           </div>
         </div>
 
@@ -156,7 +164,7 @@ export default async function AnalyticsPage() {
         ) : (
           <>
             <ul className="space-y-3 sm:hidden">
-              {completions.map((row) => (
+              {transcript.map((row) => (
                 <li key={row.materialId} className="rounded-card border border-hairline bg-surface p-4">
                   <Link href={`/materials/${row.materialId}`} className="font-semibold text-ink hover:text-primary">
                     {row.title}
@@ -164,7 +172,14 @@ export default async function AnalyticsPage() {
                   <p className="mt-1 text-xs text-ink-muted">
                     {row.spaceTitle} · {formatDate(row.completedAt)}
                   </p>
-                  <p className="mt-2 text-sm font-semibold text-primary">{formatCredits(row.creditsX10)}</p>
+                  <p className="mt-2 flex flex-wrap items-center gap-3 text-sm font-semibold text-primary">
+                    {formatCredits(row.creditsX10)}
+                    {row.certificateCode && (
+                      <Link href={`/certificates/${row.certificateCode}`} className="text-xs font-semibold text-primary underline-offset-4 hover:underline">
+                        Certificate
+                      </Link>
+                    )}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -176,11 +191,12 @@ export default async function AnalyticsPage() {
                     <th scope="col" className="px-4 py-3 font-semibold">Completed</th>
                     <th scope="col" className="px-4 py-3 font-semibold">Material</th>
                     <th scope="col" className="px-4 py-3 font-semibold">Space</th>
+                    <th scope="col" className="px-4 py-3 font-semibold">Certificate</th>
                     <th scope="col" className="px-4 py-3 text-right font-semibold">CPD points</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
-                  {completions.map((row) => (
+                  {transcript.map((row) => (
                     <tr key={row.materialId} className="hover:bg-surface-2/60">
                       <td className="px-4 py-3 text-ink-muted">{formatDate(row.completedAt)}</td>
                       <td className="px-4 py-3">
@@ -189,6 +205,18 @@ export default async function AnalyticsPage() {
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-ink-muted">{row.spaceTitle}</td>
+                      <td className="px-4 py-3">
+                        {row.certificateCode ? (
+                          <Link
+                            href={`/certificates/${row.certificateCode}`}
+                            className="font-mono text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                          >
+                            {row.certificateCode}
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-ink-muted">Not issued</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right font-semibold tabular-nums text-primary">{formatCredits(row.creditsX10)}</td>
                     </tr>
                   ))}

@@ -19,10 +19,23 @@ export async function markAllNotificationsReadAction(): Promise<void> {
     select ${session.sub}::uuid, n.id
     from notifications n
     where (n.expires_at is null or n.expires_at > now())
-      and (n.audience = 'ALL' or exists (
-        select 1 from notification_recipients nr
-        where nr.notification_id = n.id and nr.user_id = ${session.sub}::uuid
-      ))
+      and (
+        exists (
+          select 1 from notification_recipients nr
+          where nr.notification_id = n.id and nr.user_id = ${session.sub}::uuid
+        )
+        or (
+          n.audience = 'ALL'
+          and (
+            n.audience_filter is null
+            or (
+              (n.audience_filter->>'region' is null or n.audience_filter->>'region' = ${session.region})
+              and (n.audience_filter->>'directorate' is null or n.audience_filter->>'directorate' = ${session.directorate})
+              and (n.audience_filter->>'cadre' is null or n.audience_filter->>'cadre' = ${session.cadre})
+            )
+          )
+        )
+      )
     on conflict (user_id, notification_id) do nothing
   `);
 

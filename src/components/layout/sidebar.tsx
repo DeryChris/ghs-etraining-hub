@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BarChart3, Bell, BookOpen, FolderKanban, LayoutGrid, MessageSquare, X, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, BookOpen, ClipboardCheck, FolderKanban, LayoutGrid, Megaphone, MessageSquare, PenLine, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId } from "react";
@@ -41,6 +41,20 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
+/** Authoring surfaces exist only for staff, so the group is added per role. */
+const AUTHORING_GROUP: { label: string; items: NavItem[] } = {
+  label: "Author",
+  items: [
+    { href: "/authoring", label: "My materials", icon: PenLine },
+    { href: "/review", label: "Review queue", icon: ClipboardCheck },
+    { href: "/notices", label: "Send notice", icon: Megaphone },
+  ],
+};
+
+function navGroupsFor(role: ShellUser["role"]): { label: string; items: NavItem[] }[] {
+  return role === "LEARNER" ? NAV_GROUPS : [...NAV_GROUPS, AUTHORING_GROUP];
+}
+
 interface SidebarProps {
   user: ShellUser;
   unreadMessages: number;
@@ -74,7 +88,7 @@ export function Sidebar({ user, unreadMessages, unreadNotifications, onNavigate,
       <div className="flag-stripe mx-5 h-0.5 rounded-full opacity-80" aria-hidden />
 
       <nav aria-label="Primary" className="flex-1 space-y-7 overflow-y-auto px-3 py-6">
-        {NAV_GROUPS.map((group) => (
+        {navGroupsFor(user.role).map((group) => (
           <div key={group.label} className="space-y-1">
             <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">{group.label}</p>
             {group.items.map((item) => {
