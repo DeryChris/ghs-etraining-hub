@@ -130,6 +130,21 @@ the browser `PUT`s the file, then a second Action re‑reads the object metadata
 version (ADR‑0008). The key holds no version number because the version is assigned when the object
 is finalised.
 
+## 8a. Certificates
+
+Issued in the same transaction as completion (random Crockford serial, unique per user/material/
+version). Three surfaces, deliberately different:
+
+| Surface | Who | What it shows |
+| --- | --- | --- |
+| `/verify?code=…` | anyone, rate-limited | Yes/no, masked holder name, material, points, dates |
+| `/certificates/<code>` | holder or staff only | The printable award: full name, staff id, serial, verification URL |
+| `/analytics` transcript | the learner | Every completion with its certificate serial (or "Not issued") |
+
+The award is HTML with `print:` styles rather than a generated PDF, so "save as PDF" is the
+browser's print dialogue: no server-side renderer, no font hunt, and the same page prints on A4.
+Server-side PDF generation and e-mail delivery are still open (see `REPO_ANALYSIS.md`).
+
 ## 9. Material authoring pipeline
 
 | Step | Where | Rule |

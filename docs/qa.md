@@ -80,6 +80,15 @@ mobile, and a 200 % zoom check for horizontal scrolling.
    notice is still unread.
 5. `NOTIFICATION_BROADCAST` appears in the audit log with the audience filter.
 
+### 6b. Certificate print drill
+
+1. Complete a material with CPD points → the transcript row shows a serial.
+2. Open `/certificates/<code>` as the holder → full name and staff id print; check the serial and
+   the verification URL are on the page.
+3. Open the same URL signed in as another learner → 404 (not your certificate).
+4. `/verify?code=<code>` still shows only "First L." — the public page never reveals the full name.
+5. Browser print preview at A4 → no navigation chrome, nothing clipped, serial legible in mono.
+
 ## 7. Assessment integrity drill
 
 * Intercept the take‑assessment request → the response must contain no `correctIndex`.

@@ -2,7 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { and, asc, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { categories, materialProgress, materialVersions, materials, spaces, users } from "@/db/schema";
+import { categories, certificates, materialProgress, materialVersions, materials, spaces, users } from "@/db/schema";
 import { PRIORITY_RANK, type MaterialType, type PriorityLevel, type ProgressStatus } from "@/lib/labels";
 import { log } from "@/lib/server/logger";
 import { isStaffRole, type Viewer } from "@/lib/viewer";
@@ -471,6 +471,8 @@ export interface CompletionRecord {
   creditsX10: number;
   completedAt: Date | null;
   spaceTitle: string;
+  /** Null when the material earned no CPD points, so nothing was issued. */
+  certificateCode: string | null;
 }
 
 /*
@@ -486,11 +488,70 @@ export async function listCompletions(userId: string, limit = 500): Promise<Comp
       creditsX10: materials.cpdCreditsX10,
       completedAt: materialProgress.completedAt,
       spaceTitle: spaces.title,
+      // The certificate for the version that was actually completed, if one was issued.
+      certificateCode: certificates.code,
     })
     .from(materialProgress)
     .innerJoin(materials, eq(materials.id, materialProgress.materialId))
     .innerJoin(spaces, eq(spaces.id, materials.spaceId))
+    .leftJoin(
+      certificates,
+      and(
+        eq(certificates.userId, materialProgress.userId),
+        eq(certificates.materialVersionId, materialProgress.materialVersionId),
+      ),
+    )
     .where(and(eq(materialProgress.userId, userId), eq(materialProgress.status, "COMPLETED")))
     .orderBy(desc(materialProgress.completedAt))
     .limit(limit);
+}
+
+/* ── Printable award ────────────────────────────────────────────────────── */
+
+export interface CertificateAward {
+  id: string;
+  code: string;
+  userId: string;
+  holderName: string;
+  staffId: string;
+  title: string;
+  spaceTitle: string;
+  categoryName: string;
+  creditsX10: number;
+  issuedAt: Date;
+  expiresAt: Date | null;
+  /** Decided here so the page stays a pure render. */
+  expired: boolean;
+}
+
+/**
+ * Loads a certificate for the printable award. The caller decides who may print
+ * it: the holder, or staff supporting them. The public `/verify` page keeps using
+ * the masked name — printing a full name needs a session.
+ */
+export async function getCertificateAward(code: string): Promise<CertificateAward | null> {
+  const [row] = await db
+    .select({
+      id: certificates.id,
+      code: certificates.code,
+      userId: certificates.userId,
+      holderName: users.fullName,
+      staffId: users.ghsStaffId,
+      title: materials.title,
+      spaceTitle: spaces.title,
+      categoryName: categories.name,
+      creditsX10: certificates.cpdCreditsX10,
+      issuedAt: certificates.issuedAt,
+      expiresAt: certificates.expiresAt,
+    })
+    .from(certificates)
+    .innerJoin(users, eq(users.id, certificates.userId))
+    .innerJoin(materials, eq(materials.id, certificates.materialId))
+    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
+    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .where(eq(certificates.code, code))
+    .limit(1);
+
+  if (!row) return null;
+  return { ...row, expired: row.expiresAt !== null && row.expiresAt.getTime() < Date.now() };
 }

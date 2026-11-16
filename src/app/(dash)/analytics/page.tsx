@@ -172,7 +172,14 @@ export default async function AnalyticsPage() {
                   <p className="mt-1 text-xs text-ink-muted">
                     {row.spaceTitle} · {formatDate(row.completedAt)}
                   </p>
-                  <p className="mt-2 text-sm font-semibold text-primary">{formatCredits(row.creditsX10)}</p>
+                  <p className="mt-2 flex flex-wrap items-center gap-3 text-sm font-semibold text-primary">
+                    {formatCredits(row.creditsX10)}
+                    {row.certificateCode && (
+                      <Link href={`/certificates/${row.certificateCode}`} className="text-xs font-semibold text-primary underline-offset-4 hover:underline">
+                        Certificate
+                      </Link>
+                    )}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -184,6 +191,7 @@ export default async function AnalyticsPage() {
                     <th scope="col" className="px-4 py-3 font-semibold">Completed</th>
                     <th scope="col" className="px-4 py-3 font-semibold">Material</th>
                     <th scope="col" className="px-4 py-3 font-semibold">Space</th>
+                    <th scope="col" className="px-4 py-3 font-semibold">Certificate</th>
                     <th scope="col" className="px-4 py-3 text-right font-semibold">CPD points</th>
                   </tr>
                 </thead>
@@ -197,6 +205,18 @@ export default async function AnalyticsPage() {
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-ink-muted">{row.spaceTitle}</td>
+                      <td className="px-4 py-3">
+                        {row.certificateCode ? (
+                          <Link
+                            href={`/certificates/${row.certificateCode}`}
+                            className="font-mono text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                          >
+                            {row.certificateCode}
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-ink-muted">Not issued</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right font-semibold tabular-nums text-primary">{formatCredits(row.creditsX10)}</td>
                     </tr>
                   ))}

@@ -136,7 +136,7 @@ migration, CI and Drizzle migrations are versioned in this repository.
 | Present and working | Not built yet (next milestones) |
 | --- | --- |
 | `src/app/(auth)/**`, `(dash)/**`, `(marketing)/**` | Remaining admin surfaces: create category/space, broadcast notices, read the audit log |
-| `(dash)/authoring/**`, `(dash)/review/**`, `(dash)/notices/**` — draft, upload, review, publish, archive, targeted notices | Comments/discussion threads; assessments and grading; message reporting |
+| `(dash)/authoring/**`, `(dash)/review/**`, `(dash)/notices/**`, `(award)/certificates/**` — draft, upload, review, publish, archive, targeted notices, printable award | Comments/discussion threads; assessments and grading; message reporting |
 | `src/db/schema.ts` + `drizzle/**` migrations | Virus-scanning worker (versions sit at `scanStatus = PENDING`) |
 | `src/lib/server/{session,rbac,audit,file-storage,authoring-queries,*-queries,rate-limit,certificates}.ts`, `src/lib/material-workflow.ts` | Category/space CRUD actions |
 | Capability matrix, hash-chained audit, cohort visibility, CPD certificates | Cohort notices (`notifications.audience_filter`), MFA enforcement, lockout |

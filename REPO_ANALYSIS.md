@@ -1,7 +1,7 @@
 # GHS-ELN — Repository Analysis
 
 > **Remediation status — 16 November 2026.** The findings below have been worked in priority
-> order across seven commits; this document is kept as the original assessment so the reasoning is
+> order across eight commits; this document is kept as the original assessment so the reasoning is
 > auditable. Status per item is recorded in §12.
 >
 > | Commit | Scope |
@@ -14,6 +14,7 @@
 > | `feat(authoring)` | Draft → signed upload → review → publish → supersede → archive, the two-person rule, and its ADR (0008) |
 > | `fix(errors)` | One error vocabulary, request ids forwarded downstream and quoted by both error boundaries |
 > | `feat(notices)` | Cohort-targeted notices (`audience_filter`), a staff composer, and truthful read cursors |
+> | `feat(certificates)` | Printable award for the holder, serial column on the transcript, public page still masked |
 
 **Repository:** `DeryChris/ghs-etraining-hub` · **Branch:** `arena/28c03ab6-ghs-etraining-hub` · **Commit:** `f717cb6 feat(platform): launch GHS-ELN learning experience` (single commit, no upstream history)
 **Analysed:** 16 November 2026 · **Method:** full read of source + docs, dependency install, typecheck, lint, unit tests, production build attempt, `npm audit`, schema/query/mutation review.
@@ -270,6 +271,7 @@ grep -rn "\.insert(\|\.update(" src       # 6 mutation sites in app code (2 acti
 | 25 | The two-person rule was documented but unenforced | `publishBlockers()` + new `material.review` capability + `scopeAllows(reviewerIsAuthor)`; reason required to reject; audited `SYSTEM_ADMIN` override (14 + 8 unit tests) |
 | 26 | Uploads could not work through the app server (body limits) | browser → storage signed slots; server re-verifies type/size from storage metadata and removes rejected objects |
 | 27 | `src/lib/server/errors.ts` referenced by the docs did not exist; errors surfaced as stack traces or bare digests | one `AppError` vocabulary with statuses + `toFieldErrors`, request id forwarded downstream, mirrored into `ghs_rid` and quoted by both error boundaries (7 tests) |
+| 29 | Certificates could be verified but never produced — no printable award and no serial on the transcript | `/certificates/<code>` print-first award (holder or staff only), serial column on the transcript, masked name kept on the public page |
 | 28 | `notifications.audience_filter` was unused — every notice reached everyone, and there was no way to send one | `/notices` composer for staff, cohort filter resolved from the space's audience, strict matching (blank dimension never matches), "mark all read" honours the filter (6 tests) |
 
 ### Deliberately not done in this pass
@@ -280,4 +282,4 @@ grep -rn "\.insert(\|\.update(" src       # 6 mutation sites in app code (2 acti
 | C | MFA enforcement and account lockout | Needs an ICT policy decision (Supabase MFA enrolment flow) before code. |
 | D | Per-request CSP nonce | Tracked in ADR-0007; forces dynamic rendering on every route. |
 | E | Authenticated E2E suite executed in CI | Spec exists (`tests/e2e/learner.spec.ts`) and skips without credentials; CI needs a seeded database + Supabase project to run it. |
-| F | Certificate PDF rendering and transcript certificate column | Issuance and verification exist; the printable artefact does not. |
+| F | Server-rendered certificate PDF + e-mail delivery | The printable award now exists as HTML (`/certificates/<code>`, browser print → PDF) and the transcript carries the serial; generating the file server-side and mailing it is still open. |
