@@ -271,6 +271,7 @@ grep -rn "\.insert(\|\.update(" src       # 6 mutation sites in app code (2 acti
 | 25 | The two-person rule was documented but unenforced | `publishBlockers()` + new `material.review` capability + `scopeAllows(reviewerIsAuthor)`; reason required to reject; audited `SYSTEM_ADMIN` override (14 + 8 unit tests) |
 | 26 | Uploads could not work through the app server (body limits) | browser → storage signed slots; server re-verifies type/size from storage metadata and removes rejected objects |
 | 27 | `src/lib/server/errors.ts` referenced by the docs did not exist; errors surfaced as stack traces or bare digests | one `AppError` vocabulary with statuses + `toFieldErrors`, request id forwarded downstream, mirrored into `ghs_rid` and quoted by both error boundaries (7 tests) |
+| 30 | ~174 KB of duplicate HTML mock-ups sat in `docs/` as if they documented the build | moved to `docs/reference/` with a README that states they are design references, not a specification |
 | 29 | Certificates could be verified but never produced — no printable award and no serial on the transcript | `/certificates/<code>` print-first award (holder or staff only), serial column on the transcript, masked name kept on the public page |
 | 28 | `notifications.audience_filter` was unused — every notice reached everyone, and there was no way to send one | `/notices` composer for staff, cohort filter resolved from the space's audience, strict matching (blank dimension never matches), "mark all read" honours the filter (6 tests) |
 
