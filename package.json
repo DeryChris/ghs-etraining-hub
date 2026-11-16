@@ -16,7 +16,9 @@
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:e2e": "playwright test",
-    "analyze": "ANALYZE=1 next build"
+    "analyze": "ANALYZE=1 next build",
+    "db:migrate": "drizzle-kit migrate",
+    "db:check": "drizzle-kit check"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

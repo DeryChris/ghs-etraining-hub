@@ -86,19 +86,33 @@ async function main() {
   // Upsert materials
   const ipcSpace = await db.select().from(spaces).where(eq(spaces.slug, "infection-prevention-control")).limit(1);
   if (ipcSpace[0]) {
-    await db.insert(materials).values({
+    const seededMaterial = {
       title: "IPC Core Protocol 2026",
       summary: "Core infection prevention and control standard operating procedure",
-      type: "DOCUMENT",
-      priority: "CRITICAL",
+      type: "DOCUMENT" as const,
+      priority: "CRITICAL" as const,
       requiresAcknowledgement: true,
       estimatedMinutes: 45,
       cpdCreditsX10: 50,
       spaceId: ipcSpace[0].id,
       authorId: admin.id,
-      state: "PUBLISHED",
+      state: "PUBLISHED" as const,
       isPublished: true,
-    }).onConflictDoNothing();
+    };
+    // The unique key (space_id, title) makes a second run an update, not a duplicate.
+    await db.insert(materials).values(seededMaterial).onConflictDoUpdate({
+      target: [materials.spaceId, materials.title],
+      set: {
+        summary: seededMaterial.summary,
+        priority: seededMaterial.priority,
+        requiresAcknowledgement: seededMaterial.requiresAcknowledgement,
+        estimatedMinutes: seededMaterial.estimatedMinutes,
+        cpdCreditsX10: seededMaterial.cpdCreditsX10,
+        state: seededMaterial.state,
+        isPublished: seededMaterial.isPublished,
+        updatedAt: new Date(),
+      },
+    });
   }
 
   console.log("✅ Seed complete");

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { appOrigin } from "@/lib/app-origin";
+import { downloadFileName } from "@/lib/file-name";
 import { isUuid } from "@/lib/ids";
 import { logAudit } from "@/lib/server/audit";
 import { createMaterialSignedUrl } from "@/lib/server/file-storage";
@@ -31,7 +32,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   }
 
   const download = request.nextUrl.searchParams.get("download") === "1";
-  const fileName = `${material.material.title.replace(/[^\w.-]+/g, "_").slice(0, 80)}.pdf`;
+  // The name comes from the trusted title plus the stored MIME type, so a video
+  // does not arrive as "Title.pdf".
+  const fileName = downloadFileName(material.material.title, material.version?.mimeType);
   const signed = await createMaterialSignedUrl(storageKey, download ? fileName : undefined);
   if (!signed.ok) {
     return NextResponse.redirect(new URL(`/materials/${id}?notice=file-unavailable`, origin), 303);
