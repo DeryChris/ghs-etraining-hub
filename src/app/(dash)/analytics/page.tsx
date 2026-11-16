@@ -10,6 +10,8 @@ import { getLearnerDashboard, listCompletions } from "@/lib/server/learning-quer
 import { requireSession } from "@/lib/server/rbac";
 
 const MONTHS = 6;
+/** The transcript renders the most recent completions; the rest stay in the record. */
+const TRANSCRIPT_ROWS = 25;
 
 function monthBuckets(now: Date) {
   return Array.from({ length: MONTHS }, (_, index) => {
@@ -45,6 +47,7 @@ export default async function AnalyticsPage() {
   }));
   const totalCompletions = completions.length;
 
+  const transcript = completions.slice(0, TRANSCRIPT_ROWS);
   const points = pointsFromCreditsX10(dashboard.creditsX10);
   const pointsPercent = (points / CPD_CYCLE_TARGET_POINTS) * 100;
   const mandatoryDone = dashboard.mandatoryTotal - dashboard.mandatoryOutstanding.length;
@@ -144,7 +147,12 @@ export default async function AnalyticsPage() {
             <h2 id="transcript-heading" className="text-lg font-bold text-ink">
               CPD transcript
             </h2>
-            <p className="text-sm text-ink-muted">Each completed material, with the points it earned.</p>
+            <p className="text-sm text-ink-muted">
+              Each completed material, with the points it earned.
+              {completions.length > TRANSCRIPT_ROWS
+                ? ` Showing the ${TRANSCRIPT_ROWS} most recent of ${completions.length}.`
+                : ""}
+            </p>
           </div>
         </div>
 
@@ -156,7 +164,7 @@ export default async function AnalyticsPage() {
         ) : (
           <>
             <ul className="space-y-3 sm:hidden">
-              {completions.map((row) => (
+              {transcript.map((row) => (
                 <li key={row.materialId} className="rounded-card border border-hairline bg-surface p-4">
                   <Link href={`/materials/${row.materialId}`} className="font-semibold text-ink hover:text-primary">
                     {row.title}
@@ -180,7 +188,7 @@ export default async function AnalyticsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
-                  {completions.map((row) => (
+                  {transcript.map((row) => (
                     <tr key={row.materialId} className="hover:bg-surface-2/60">
                       <td className="px-4 py-3 text-ink-muted">{formatDate(row.completedAt)}</td>
                       <td className="px-4 py-3">

@@ -223,15 +223,55 @@ export interface LibraryItem extends MaterialListItem {
   categoryName: string;
 }
 
+export const LIBRARY_PAGE_SIZE = 24;
+
+export interface LibraryPage {
+  items: LibraryItem[];
+  total: number;
+  page: number;
+  pageCount: number;
+  pageSize: number;
+}
+
+function libraryFilters(input: { query: string; type: MaterialType | null; viewer: Viewer }) {
+  const term = input.query.trim().slice(0, 120);
+  const pattern = `%${escapeLike(term)}%`;
+  return and(
+    publishedMaterial,
+    liveSpace,
+    liveCategory,
+    categoryFor(input.viewer),
+    audienceFor(input.viewer),
+    input.type ? eq(materials.type, input.type) : undefined,
+    term ? or(ilike(materials.title, pattern), ilike(materials.summary, pattern)) : undefined,
+  );
+}
+
+/**
+ * One page of results (24 cards) plus the total, so the UI shows "1–24 of 87"
+ * and a next link rather than 120 cards in one document. Pagination is part of
+ * the bandwidth contract (AGENTS.md §2.6).
+ */
 export async function searchLibrary(input: {
   query: string;
   type: MaterialType | null;
   viewer: Viewer;
-}): Promise<LibraryItem[]> {
-  const term = input.query.trim().slice(0, 120);
-  const pattern = `%${escapeLike(term)}%`;
+  page?: number;
+}): Promise<LibraryPage> {
+  const where = libraryFilters(input);
 
-  return db
+  const [countRow] = await db
+    .select({ n: count() })
+    .from(materials)
+    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
+    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .where(where);
+
+  const total = countRow?.n ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / LIBRARY_PAGE_SIZE));
+  const page = Math.min(Math.max(1, Math.trunc(input.page ?? 1)), pageCount);
+
+  const rows = await db
     .select({
       id: materials.id,
       title: materials.title,
@@ -254,19 +294,12 @@ export async function searchLibrary(input: {
     .innerJoin(spaces, eq(spaces.id, materials.spaceId))
     .innerJoin(categories, eq(categories.id, spaces.categoryId))
     .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, input.viewer.id)))
-    .where(
-      and(
-        publishedMaterial,
-        liveSpace,
-        liveCategory,
-        categoryFor(input.viewer),
-        audienceFor(input.viewer),
-        input.type ? eq(materials.type, input.type) : undefined,
-        term ? or(ilike(materials.title, pattern), ilike(materials.summary, pattern)) : undefined,
-      ),
-    )
+    .where(where)
     .orderBy(asc(materials.title))
-    .limit(120);
+    .limit(LIBRARY_PAGE_SIZE)
+    .offset((page - 1) * LIBRARY_PAGE_SIZE);
+
+  return { items: rows, total, page, pageCount, pageSize: LIBRARY_PAGE_SIZE };
 }
 
 export async function getMaterialDetail(materialId: string, viewer: Viewer) {
