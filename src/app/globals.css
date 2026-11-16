@@ -1,55 +1,228 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   GHS-ELN design system · "Clinical Ledger" v3
+   Brand: GHS flag palette (red #CF2027 · gold #FCD116 · green #006B3F) plus the
+   Ghana star. Every colour is a CSS variable so light and dark themes share one
+   set of utilities. Components never hard-code colours.
+   ───────────────────────────────────────────────────────────────────────────── */
+
 @theme {
-  --color-canvas: #020617;
-  --color-surface: rgba(15, 23, 42, 0.85);
-  --color-surface-2: rgba(30, 41, 59, 0.9);
-  --color-ink: #f8fafc;
-  --color-ink-muted: #94a3b8;
-  --color-hairline: rgba(255, 255, 255, 0.08);
-  --color-primary: #22c55e;
-  --color-primary-ink: #064e3b;
-  --color-accent: #34d399;
-  --color-warn: #fbbf24;
-  --color-danger: #fb7185;
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-hairline: var(--hairline);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+
+  /* Brand constants (never change between themes). */
   --color-ghs-red: #cf2027;
   --color-ghs-gold: #fcd116;
   --color-ghs-green: #006b3f;
-  --radius-card: 14px;
-  --radius-control: 10px;
-  --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 24px rgba(2, 6, 23, 0.45);
-  --duration-fast: 120ms;
-  --duration-base: 200ms;
+
+  --radius-card: 1.125rem;
+  --radius-control: 0.75rem;
+  --radius-pill: 999px;
+  --radius-hero: 1.75rem;
+
+  --shadow-panel: var(--elevation);
+  --shadow-lift: var(--elevation-lift);
+
+  --duration-fast: 150ms;
+  --duration-base: 260ms;
+  --duration-slow: 640ms;
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "Fira Code", "JetBrains Mono", monospace;
+
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-html {
-  scroll-behavior: smooth;
+/* Light theme (default when no preference or stored choice). */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --canvas: #f6f7f3;
+  --surface: #ffffff;
+  --surface-2: #eef3ee;
+  --ink: #0f1f17;
+  --ink-muted: #4e6358;
+  --hairline: #dbe4dc;
+  --primary: #006b3f;
+  --primary-ink: #ffffff;
+  --accent: #fcd116;
+  --accent-ink: #1a1400;
+  --warn: #8f6200;
+  --danger: #b42318;
+  --elevation: 0 1px 2px rgb(15 31 23 / 0.06), 0 12px 32px -14px rgb(15 31 23 / 0.2);
+  --elevation-lift: 0 2px 6px rgb(15 31 23 / 0.08), 0 28px 56px -18px rgb(15 31 23 / 0.32);
+  --glow-a: rgb(0 107 63 / 0.14);
+  --glow-b: rgb(252 209 22 / 0.22);
+  --grid-line: rgb(15 31 23 / 0.05);
 }
 
-body {
-  background-color: var(--color-canvas);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  font-feature-settings: "rlig" 1, "calt" 1;
+/* Dark theme, chosen explicitly. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #050d09;
+  --surface: #0b1812;
+  --surface-2: #112218;
+  --ink: #eef6f0;
+  --ink-muted: #9ab5a5;
+  --hairline: #1d3528;
+  --primary: #34c784;
+  --primary-ink: #04190f;
+  --accent: #fcd116;
+  --accent-ink: #1a1400;
+  --warn: #f5c451;
+  --danger: #ff7a70;
+  --elevation: 0 0 0 1px rgb(255 255 255 / 0.03), 0 16px 40px -16px rgb(0 0 0 / 0.75);
+  --elevation-lift: 0 0 0 1px rgb(52 199 132 / 0.22), 0 28px 64px -20px rgb(0 0 0 / 0.85);
+  --glow-a: rgb(52 199 132 / 0.2);
+  --glow-b: rgb(252 209 22 / 0.09);
+  --grid-line: rgb(154 181 165 / 0.06);
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* System preference, used only when the visitor has not chosen a theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --canvas: #050d09;
+    --surface: #0b1812;
+    --surface-2: #112218;
+    --ink: #eef6f0;
+    --ink-muted: #9ab5a5;
+    --hairline: #1d3528;
+    --primary: #34c784;
+    --primary-ink: #04190f;
+    --accent: #fcd116;
+    --accent-ink: #1a1400;
+    --warn: #f5c451;
+    --danger: #ff7a70;
+    --elevation: 0 0 0 1px rgb(255 255 255 / 0.03), 0 16px 40px -16px rgb(0 0 0 / 0.75);
+    --elevation-lift: 0 0 0 1px rgb(52 199 132 / 0.22), 0 28px 64px -20px rgb(0 0 0 / 0.85);
+    --glow-a: rgb(52 199 132 / 0.2);
+    --glow-b: rgb(252 209 22 / 0.09);
+    --grid-line: rgb(154 181 165 / 0.06);
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+    font-feature-settings: "ss01" 1, "cv11" 1;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 28%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 9999px;
+@layer components {
+  .hero-glow {
+    background:
+      radial-gradient(60% 55% at 12% 0%, var(--glow-a), transparent 70%),
+      radial-gradient(45% 45% at 96% 12%, var(--glow-b), transparent 70%);
+  }
+  .grid-texture {
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse at top, black 30%, transparent 75%);
+  }
+  .flag-stripe {
+    background: linear-gradient(90deg, #cf2027 0 33.33%, #fcd116 33.33% 66.66%, #006b3f 66.66% 100%);
+  }
+  .glass {
+    background: color-mix(in oklab, var(--surface) 78%, transparent);
+    backdrop-filter: saturate(140%) blur(14px);
+    -webkit-backdrop-filter: saturate(140%) blur(14px);
+  }
+  .surface-card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-panel);
+  }
+  /* Gold is a decorative accent only: it fails contrast as text on white. The gradient
+     ends on the theme's danger red, which passes contrast in both themes. */
+  .text-gradient-brand {
+    background: linear-gradient(100deg, var(--primary) 0%, var(--primary) 45%, var(--danger) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface-2) 0%, var(--hairline) 50%, var(--surface-2) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #006b3f;
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes region-pulse {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.65;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+.region-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: region-pulse 2.6s var(--ease-out-quint) infinite;
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+.drift {
+  animation: drift 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
 }

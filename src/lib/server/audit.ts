@@ -1,105 +1,117 @@
 import "server-only";
-import { createHash } from "crypto";
+import { headers } from "next/headers";
+import { asc, desc, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { auditLogs } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { computeAuditHash, redactMetadata } from "@/lib/audit-hash";
+
+export interface AuditActor {
+  sub: string;
+  role: string;
+  name: string;
+  staffId: string;
+}
 
 export interface AuditInput {
-  actor: { sub: string; role: string; name: string; staffId: string };
-  action: string;
+  actor: AuditActor;
+  action: string; // SCREAMING_SNAKE, past tense: "MATERIAL_COMPLETED"
   entity: string;
   entityId: string;
   metadata?: Record<string, unknown>;
-  ip?: string;
-  userAgent?: string;
 }
 
-const PII_KEYS = /pass|token|secret|otp|phone|email|staffid/i;
+/** A database handle or an open transaction. */
+export type AuditExecutor = Pick<typeof db, "execute" | "insert" | "select">;
 
-function redactMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
-  const redacted: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(metadata)) {
-    if (PII_KEYS.test(key)) {
-      redacted[key] = "[REDACTED]";
-    } else if (typeof value === "object" && value !== null) {
-      redacted[key] = redactMetadata(value as Record<string, unknown>);
-    } else {
-      redacted[key] = value;
-    }
+/** Constant key for pg_advisory_xact_lock: one writer extends the chain at a time. */
+const CHAIN_LOCK_KEY = 74201;
+
+async function requestContext(): Promise<{ ipAddress: string | null; userAgent: string | null }> {
+  try {
+    const requestHeaders = await headers();
+    const forwarded = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim();
+    return {
+      ipAddress: forwarded || requestHeaders.get("x-real-ip") || null,
+      userAgent: requestHeaders.get("user-agent"),
+    };
+  } catch {
+    // Outside a request (seed scripts, tests): there is no client context to record.
+    return { ipAddress: null, userAgent: null };
   }
-  return redacted;
 }
 
-export async function computeHash(prevHash: string | null, input: {
-  actor: string; action: string; entity: string; entityId: string; metadata?: string | null; createdAt: string; prevHash: string | null;
-}): Promise<string> {
-  const canonical = JSON.stringify({
-    actor: input.actor,
-    action: input.action,
-    entity: input.entity,
-    entityId: input.entityId,
-    metadata: input.metadata,
-    createdAt: input.createdAt,
-    prevHash: input.prevHash,
-  });
-  return createHash("sha256").update(canonical).digest("hex");
-}
-
-export async function logAudit(input: AuditInput): Promise<void> {
-  const last = await db
-    .select({ hash: auditLogs.hash })
+async function appendEntry(exec: AuditExecutor, input: AuditInput): Promise<void> {
+  // Serialise writers, then read the *newest* entry (the previous version read the oldest).
+  await exec.execute(sql`select pg_advisory_xact_lock(${CHAIN_LOCK_KEY})`);
+  const [latest] = await exec
+    .select({ hash: auditLogs.hash, createdAt: auditLogs.createdAt })
     .from(auditLogs)
-    .orderBy(auditLogs.createdAt)
+    .orderBy(desc(auditLogs.createdAt))
     .limit(1);
 
-  const prevHash = last[0]?.hash ?? null;
-  const createdAt = new Date().toISOString();
+  // Strictly increasing timestamps keep "latest" unambiguous within one millisecond.
+  const now = Date.now();
+  const createdAtMs = latest && latest.createdAt.getTime() >= now ? latest.createdAt.getTime() + 1 : now;
+  const createdAt = new Date(createdAtMs);
 
-  const metadata = input.metadata ? redactMetadata(input.metadata) : undefined;
-
-  const hash = await computeHash(prevHash, {
-    actor: input.actor.staffId,
+  const prevHash = latest?.hash ?? null;
+  const metadata = input.metadata ? redactMetadata(input.metadata) : null;
+  const hash = computeAuditHash({
+    prevHash,
+    actorId: input.actor.sub,
     action: input.action,
     entity: input.entity,
     entityId: input.entityId,
-    metadata: metadata ? JSON.stringify(metadata) : undefined,
-    createdAt,
-    prevHash,
+    metadata,
+    createdAt: createdAt.toISOString(),
   });
 
-  await db.insert(auditLogs).values({
+  const context = await requestContext();
+  await exec.insert(auditLogs).values({
     userId: input.actor.sub,
     action: input.action,
     entity: input.entity,
     entityId: input.entityId,
-    metadata: metadata ? JSON.stringify(metadata) : null,
-    ipAddress: input.ip,
-    userAgent: input.userAgent,
+    metadata,
+    ipAddress: context.ipAddress,
+    userAgent: context.userAgent,
     prevHash,
     hash,
-    createdAt: new Date(createdAt),
+    createdAt,
   });
 }
 
-export async function verifyAuditChain(): Promise<{ valid: boolean; breaks: number }> {
-  const rows = await db.select().from(auditLogs).orderBy(auditLogs.createdAt);
-  let breaks = 0;
+/**
+ * Appends one tamper-evident entry. Pass the caller's transaction as `tx` so the
+ * audit row commits or rolls back together with the change it describes.
+ */
+export async function logAudit(input: AuditInput, tx?: AuditExecutor): Promise<void> {
+  if (tx) {
+    await appendEntry(tx, input);
+    return;
+  }
+  await db.transaction((t) => appendEntry(t, input));
+}
+
+/** Recomputes the whole chain. Any mismatch means a row was edited or removed. */
+export async function verifyAuditChain(): Promise<{ valid: boolean; checked: number; breaks: number }> {
+  const rows = await db.select().from(auditLogs).orderBy(asc(auditLogs.createdAt));
   let prevHash: string | null = null;
+  let breaks = 0;
 
   for (const row of rows) {
-    const expected = await computeHash(prevHash, {
-      actor: row.userId ?? "SYSTEM",
+    const expected = computeAuditHash({
+      prevHash,
+      actorId: row.userId ?? "SYSTEM",
       action: row.action,
       entity: row.entity,
       entityId: row.entityId,
-      metadata: row.metadata ? JSON.stringify(row.metadata) : null,
+      metadata: row.metadata ?? null,
       createdAt: row.createdAt.toISOString(),
-      prevHash,
     });
-
-    if (row.hash !== expected) breaks++;
+    if (row.hash !== expected || row.prevHash !== prevHash) breaks++;
     prevHash = row.hash;
   }
 
-  return { valid: breaks === 0, breaks };
+  return { valid: breaks === 0, checked: rows.length, breaks };
 }

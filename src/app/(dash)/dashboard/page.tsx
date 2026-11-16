@@ -1,96 +1,254 @@
-import { getSession } from "@/lib/server/session";
-import { notFound } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Stat } from "@/components/ui/stat";
+import Link from "next/link";
+import { ArrowRight, BadgeCheck, BookOpen, Bell, ShieldAlert, Target } from "lucide-react";
+import { CpdRing } from "@/components/analytics/cpd-ring";
+import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
+import { PriorityChip } from "@/components/ui/priority-chip";
+import { ProgressBar } from "@/components/ui/progress-bar";
+import { CPD_CYCLE_TARGET_POINTS, pointsFromCreditsX10 } from "@/lib/cpd";
+import { formatDate, formatDateTime, formatMinutes } from "@/lib/format";
+import { safeAppLink } from "@/lib/links";
+import { MATERIAL_TYPE_LABELS, ROLE_LABELS, notificationTypeLabel } from "@/lib/labels";
+import { firstNameOf } from "@/lib/names";
+import { getLearnerDashboard } from "@/lib/server/learning-queries";
+import { listNotifications } from "@/lib/server/notification-queries";
+import { requireSession } from "@/lib/server/rbac";
 
-export const dynamic = "force-dynamic";
+const NOTICES: Record<string, string> = {
+  forbidden: "That page is not available for your role.",
+  "password-updated": "Your password has been updated.",
+};
 
-async function getDashboardData() {
-  const session = await getSession();
-  if (!session) {
-    notFound();
-  }
-  return {
-    user: session,
-    cpdCredits: 28,
-    cpdRequired: 30,
-    mandatoryModules: 2,
-    inProgress: 3,
-    completed: 5,
-  };
+function greetingFor(now: Date): string {
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Accra", hour: "numeric", hour12: false }).format(now)) % 24;
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
 }
 
-export default async function DashboardPage() {
-  const data = await getDashboardData();
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+  hint,
+  tone = "default",
+}: {
+  icon: typeof Target;
+  label: string;
+  value: string;
+  hint: string;
+  tone?: "default" | "warn" | "success";
+}) {
+  const valueClass = tone === "warn" ? "text-warn" : tone === "success" ? "text-primary" : "text-ink";
+  const iconClass = tone === "warn" ? "bg-warn/12 text-warn" : "bg-primary/10 text-primary";
+  return (
+    <div className="surface-card group p-5 transition-transform duration-base ease-out-quint hover:-translate-y-0.5">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{label}</p>
+        <span className={`flex h-9 w-9 items-center justify-center rounded-control ${iconClass}`}>
+          <Icon className="h-4 w-4" aria-hidden />
+        </span>
+      </div>
+      <p className={`mt-4 text-3xl font-extrabold tabular-nums ${valueClass}`}>{value}</p>
+      <p className="mt-1 text-xs text-ink-muted">{hint}</p>
+    </div>
+  );
+}
+
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ notice?: string }> }) {
+  const session = await requireSession();
+  const { notice } = await searchParams;
+  const now = new Date();
+
+  const [dashboard, announcements] = await Promise.all([getLearnerDashboard(session.sub), listNotifications(session.sub, 4)]);
+
+  const points = pointsFromCreditsX10(dashboard.creditsX10);
+  const outstanding = dashboard.mandatoryOutstanding;
+  const noticeText = notice ? NOTICES[notice] : undefined;
+  const nextUp = dashboard.continueLearning[0] ?? outstanding[0] ?? null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ink">Dashboard</h1>
-          <p className="text-ink-muted text-sm">
-            Welcome back, {data.user.name}. Here is your CPD progress for this renewal cycle.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-10">
+      {noticeText && (
+        <p role="status" className="rounded-control border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-medium text-primary">
+          {noticeText}
+        </p>
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>CPD Credits</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold text-ink">{data.cpdCredits} / {data.cpdRequired}</div>
-            <p className="text-ink-muted text-xs">Credits accrued this cycle</p>
-          </CardContent>
-          <CardFooter>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="bg-ghs-green/10 border-ghs-green/30 text-ghs-green">
-                {(data.cpdCredits / data.cpdRequired) * 100 >= 90 ? "On Track" : "Due Soon"}
-              </Badge>
+      {/* Hero */}
+      <section aria-labelledby="dash-title" className="surface-card hero-glow relative overflow-hidden p-7 sm:p-10">
+        <div className="grid items-center gap-10 lg:grid-cols-[1fr_auto]">
+          <div className="space-y-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+              {ROLE_LABELS[session.role]} · {formatDate(now)}
+            </p>
+            <h1 id="dash-title" className="text-balance text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">
+              {greetingFor(now)}, {firstNameOf(session.name)}.
+            </h1>
+            <p className="max-w-xl text-base leading-relaxed text-ink-muted">
+              {outstanding.length > 0
+                ? `${outstanding.length} mandatory ${outstanding.length === 1 ? "protocol needs" : "protocols need"} your attention. Start with the first one.`
+                : "Nothing mandatory is waiting for you. Keep your CPD moving with the next material."}
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              {nextUp ? (
+                <Link href={`/materials/${nextUp.id}`} className={buttonClass({ className: "h-12 rounded-[var(--radius-pill)] px-6" })}>
+                  {dashboard.continueLearning[0] ? "Continue learning" : "Open the next protocol"}
+                  <ArrowRight className="h-4 w-4" aria-hidden />
+                </Link>
+              ) : null}
+              <Link href="/library" className={buttonClass({ variant: "secondary", className: "h-12 rounded-[var(--radius-pill)] px-6" })}>
+                Browse library
+              </Link>
             </div>
-          </CardFooter>
-        </Card>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Mandatory Modules</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold text-ink">{data.mandatoryModules}</div>
-            <p className="text-ink-muted text-xs">Require acknowledgement</p>
-          </CardContent>
-        </Card>
+          <div className="flex flex-col items-center gap-4 rounded-hero border border-hairline bg-canvas/60 p-6 backdrop-blur">
+            <CpdRing value={points} max={CPD_CYCLE_TARGET_POINTS} />
+            <p className="text-center text-sm text-ink-muted">
+              {points >= CPD_CYCLE_TARGET_POINTS
+                ? "Your CPD target for this cycle is met."
+                : `${(CPD_CYCLE_TARGET_POINTS - points).toFixed(1)} points to your cycle target.`}
+            </p>
+          </div>
+        </div>
+      </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>In Progress</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="text-3xl font-bold text-ink">{data.inProgress}</div>
-            <p className="text-ink-muted text-xs">Modules started</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="space-y-4">
-        <h2 className="text-lg font-bold text-ink">Continue where you left off</h2>
-        <ListEmptyState
-          title="No in-progress modules"
-          description="Browse the library to find modules relevant to your role."
-          actionText="Browse Library"
-          actionHref="/library"
+      {/* Stats */}
+      <section aria-label="Summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile
+          icon={ShieldAlert}
+          label="Mandatory to do"
+          value={String(outstanding.length)}
+          hint={dashboard.mandatoryTotal === 0 ? "None assigned" : `of ${dashboard.mandatoryTotal} mandatory protocols`}
+          tone={outstanding.length > 0 ? "warn" : "success"}
         />
-      </div>
+        <StatTile icon={Target} label="CPD points" value={points.toFixed(1)} hint={`of ${CPD_CYCLE_TARGET_POINTS} this cycle`} tone="success" />
+        <StatTile icon={BookOpen} label="In progress" value={String(dashboard.inProgressCount)} hint="Materials you have started" />
+        <StatTile icon={BadgeCheck} label="Completed" value={String(dashboard.completedCount)} hint="Recorded on your transcript" />
+      </section>
 
-      <div className="space-y-4">
-        <h2 className="text-lg font-bold text-ink">Announcements</h2>
-        <ListEmptyState
-          title="No announcements"
-          description="Check back later for updates from your directorate."
-        />
+      <div className="grid gap-10 lg:grid-cols-3">
+        <div className="space-y-10 lg:col-span-2">
+          <section aria-labelledby="mandatory-heading" className="space-y-4">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <h2 id="mandatory-heading" className="text-lg font-bold text-ink">
+                  Mandatory protocols
+                </h2>
+                <p className="text-sm text-ink-muted">Acknowledge and complete these to keep your record current.</p>
+              </div>
+            </div>
+            {outstanding.length === 0 ? (
+              <ListEmptyState
+                art="certificate"
+                title="You are up to date"
+                description="No mandatory protocols are waiting for you. New ones appear here as soon as they are published."
+              />
+            ) : (
+              <ul className="space-y-3">
+                {outstanding.map((item) => (
+                  <li key={item.id}>
+                    <Link
+                      href={`/materials/${item.id}`}
+                      className="group surface-card flex flex-col gap-4 p-5 transition-[transform,border-color] duration-base ease-out-quint hover:-translate-y-0.5 hover:border-primary/40 sm:flex-row sm:items-center"
+                    >
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <PriorityChip priority={item.priority} />
+                          {item.reacknowledgementRequired && <span className="text-xs font-semibold text-warn">New version: acknowledge again</span>}
+                        </div>
+                        <p className="font-semibold text-ink group-hover:text-primary">{item.title}</p>
+                        <p className="text-xs text-ink-muted">
+                          {item.spaceTitle}
+                          {item.estimatedMinutes !== null ? ` · ${formatMinutes(item.estimatedMinutes)}` : ""}
+                        </p>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
+                        Open
+                        <ArrowRight className="h-4 w-4 transition-transform duration-base group-hover:translate-x-1" aria-hidden />
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section aria-labelledby="continue-heading" className="space-y-4">
+            <h2 id="continue-heading" className="text-lg font-bold text-ink">
+              Continue where you left off
+            </h2>
+            {dashboard.continueLearning.length === 0 ? (
+              <ListEmptyState
+                art="search"
+                title="Nothing in progress"
+                description="Open the library to start a material. Your progress is saved as you go."
+                actionText="Browse the library"
+                actionHref="/library"
+              />
+            ) : (
+              <ul className="surface-card divide-y divide-hairline overflow-hidden">
+                {dashboard.continueLearning.map((item) => (
+                  <li key={item.id}>
+                    <Link href={`/materials/${item.id}`} className="block p-5 transition-colors duration-fast hover:bg-surface-2">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                        {MATERIAL_TYPE_LABELS[item.type]} · {item.spaceTitle}
+                      </p>
+                      <p className="mt-1 font-semibold text-ink">{item.title}</p>
+                      <div className="mt-3">
+                        <ProgressBar value={item.watchedPercent} label={`Progress on ${item.title}`} />
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        <aside aria-labelledby="announcements-heading" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 id="announcements-heading" className="text-lg font-bold text-ink">
+              Announcements
+            </h2>
+            <Bell className="h-4 w-4 text-ink-muted" aria-hidden />
+          </div>
+          {announcements.length === 0 ? (
+            <ListEmptyState art="bell" title="No announcements" description="Notices from your directorate appear here." />
+          ) : (
+            <ul className="space-y-3">
+              {announcements.map((notice) => {
+                const link = safeAppLink(notice.linkUrl);
+                return (
+                  <li key={notice.id} className="surface-card p-5">
+                    <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
+                      {!notice.isRead && <span className="h-2 w-2 rounded-full bg-primary" aria-hidden />}
+                      {!notice.isRead && <span className="sr-only">Unread:</span>}
+                      {notificationTypeLabel(notice.type)}
+                    </p>
+                    <p className="mt-2 font-semibold leading-snug text-ink">{notice.title}</p>
+                    <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink-muted">{notice.body}</p>
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <time className="text-xs text-ink-muted" dateTime={notice.publishedAt.toISOString()}>
+                        {formatDateTime(notice.publishedAt)}
+                      </time>
+                      {link && (
+                        <Link href={link} className="text-sm font-semibold text-primary underline-offset-4 hover:underline">
+                          Open
+                        </Link>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <Link href="/notifications" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">
+            All notifications
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </aside>
       </div>
     </div>
   );

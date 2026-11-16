@@ -1,54 +1,36 @@
 import "server-only";
-import { getSession } from "@/lib/server/session";
-import { can, scopeAllows, type Action, type Role } from "@/lib/rbac/capabilities";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
+import { can, scopeAllows, type Action, type Role, type Scope } from "@/lib/rbac/capabilities";
+import { getSession, type Session } from "@/lib/server/session";
 
-export class UnauthenticatedError extends Error {}
-export class ForbiddenError extends Error {}
-
-export async function requireSession(): Promise<{
-  sub: string; role: Role; name: string; staffId: string;
-}> {
+/** Pages: unauthenticated visitors are sent to sign-in. */
+export async function requireSession(): Promise<Session> {
   const session = await getSession();
-  return {
-    sub: session.sub,
-    role: session.role as Role,
-    name: session.name,
-    staffId: session.staffId,
-  };
-}
-
-export async function requireCapability(action: Action, scope?: Record<string, unknown>) {
-  const session = await requireSession();
-  const allowed = can(session.role, action);
-  if (!allowed) {
-    throw new ForbiddenError(`Insufficient capability: ${action}`);
-  }
-  const scopeAllowed = scopeAllows(session.role, action, scope as never);
-  if (!scopeAllowed) {
-    throw new ForbiddenError(`Scope mismatch for: ${action}`);
-  }
+  if (!session) redirect("/login");
   return session;
 }
 
-export function requireSessionOr404(): never {
-  notFound();
+/**
+ * Pages: a role gate for surfaces whose existence is already known to the user.
+ * Wrong role → dashboard with a notice, never a redirect loop.
+ */
+export async function requireRole(roles: Role[]): Promise<Session> {
+  const session = await requireSession();
+  if (!roles.includes(session.role)) redirect("/dashboard?notice=forbidden");
+  return session;
 }
 
-export function requireSessionOr403(): never {
-  throw new ForbiddenError("Forbidden");
-}
+export type CapabilityCheck = { ok: true; session: Session } | { ok: false; message: string };
 
-export function requireRoleOrRedirect(allowedRoles: Role[]) {
-  return async () => {
-    try {
-      const session = await requireSession();
-      if (!allowedRoles.includes(session.role)) {
-        redirect("/dashboard?error=unauthorized");
-      }
-      return session;
-    } catch {
-      redirect("/login");
-    }
-  };
+/**
+ * Actions: returns a plain-English refusal instead of throwing, so forms can
+ * show it inline. Decisions use the role from the database, never the client.
+ */
+export async function checkCapability(action: Action, scope: Scope = {}): Promise<CapabilityCheck> {
+  const session = await getSession();
+  if (!session) return { ok: false, message: "Your session has ended. Sign in again to continue." };
+  if (!can(session.role, action) || !scopeAllows(session.role, action, scope)) {
+    return { ok: false, message: "Your role does not allow this action." };
+  }
+  return { ok: true, session };
 }

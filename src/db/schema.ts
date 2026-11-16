@@ -259,7 +259,7 @@ export const auditLogs = pgTable("audit_logs", {
   action: text("action").notNull(),
   entity: text("entity").notNull(),
   entityId: text("entity_id").notNull(),
-  metadata: jsonb("metadata"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   prevHash: text("prev_hash"),

@@ -1,73 +1,60 @@
 import "server-only";
-import { createHash } from "crypto";
-import { cookies } from "next/headers";
-
-const SESSION_SECRET = process.env.SESSION_SECRET;
-
-if (!SESSION_SECRET || SESSION_SECRET.length < 32) {
-  throw new Error("SESSION_SECRET must be at least 32 characters");
-}
+import { cache } from "react";
+import { eq, sql } from "drizzle-orm";
+import { db } from "@/db/index";
+import { users } from "@/db/schema";
+import type { Role } from "@/lib/rbac/capabilities";
+import { createSupabaseServerClient } from "@/lib/server/supabase-server";
 
 export interface Session {
+  /** public.users.id — the identity every foreign key and audit row uses. */
   sub: string;
-  role: "SYSTEM_ADMIN" | "FACILITATOR" | "LEARNER";
+  role: Role;
   name: string;
   staffId: string;
-  exp: number;
+  email: string;
 }
 
-const COOKIE_NAME = "ghs_session";
+export type AccountState =
+  | { state: "anonymous" }
+  | { state: "unprovisioned"; email: string }
+  | { state: "inactive"; email: string }
+  | { state: "active"; session: Session };
 
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
+/**
+ * Identity comes from Supabase Auth ("who you are"). Authority comes from
+ * public.users ("what you may do"). user_metadata is writable by the user
+ * themselves, so it is never consulted for role or access.
+ */
+export const resolveAccount = cache(async (): Promise<AccountState> => {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.getUser();
+  const authUser = data.user;
+  if (error || !authUser?.email) return { state: "anonymous" };
 
-export function createSessionToken(session: Session): string {
-  const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
-  const sig = createHash("sha256")
-    .update(`${payload}.${SESSION_SECRET}`)
-    .digest("hex");
-  return `${payload}.${sig}`;
-}
+  const email = authUser.email.toLowerCase();
+  const [row] = await db
+    .select({
+      id: users.id,
+      role: users.role,
+      fullName: users.fullName,
+      ghsStaffId: users.ghsStaffId,
+      isActive: users.isActive,
+    })
+    .from(users)
+    .where(eq(sql`lower(${users.email})`, email))
+    .limit(1);
 
-export function verifySessionToken(token: string): Session | null {
-  try {
-    const [payload, sig] = token.split(".");
-    if (!payload || !sig) return null;
-    const expected = createHash("sha256")
-      .update(`${payload}.${SESSION_SECRET}`)
-      .digest("hex");
-    if (sig !== expected) return null;
-    const session: Session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    if (session.exp < Date.now()) return null;
-    return session;
-  } catch {
-    return null;
-  }
-}
+  if (!row) return { state: "unprovisioned", email };
+  if (!row.isActive) return { state: "inactive", email };
 
-export async function getSession(): Promise<Session> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!token) throw new Error("UNAUTHENTICATED");
-  const session = verifySessionToken(token);
-  if (!session) throw new Error("UNAUTHENTICATED");
-  return session;
-}
+  return {
+    state: "active",
+    session: { sub: row.id, role: row.role, name: row.fullName, staffId: row.ghsStaffId, email },
+  };
+});
 
-export async function setSessionCookie(session: Session, maxAgeSeconds: number) {
-  const token = createSessionToken(session);
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: maxAgeSeconds,
-    path: "/",
-  });
-}
-
-export async function clearSessionCookie() {
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, "", { maxAge: 0, path: "/" });
+export async function getSession(): Promise<Session | null> {
+  const account = await resolveAccount();
+  return account.state === "active" ? account.session : null;
 }

@@ -39,6 +39,9 @@ next-env.d.ts
 # Drizzle
 drizzle/
 *.sql
+# Supabase SQL migrations are versioned; generated drizzle/ output stays ignored
+!supabase/migrations/
+!supabase/migrations/*.sql
 
 # IDE
 .idea/
@@ -48,3 +51,8 @@ drizzle/
 
 # Claude
 .claude
+
+# Scripts/Tests/Outputs
+scripts/
+tests/
+outputs/

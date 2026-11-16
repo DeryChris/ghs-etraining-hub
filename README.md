@@ -179,6 +179,41 @@ When connecting Supabase in Vercel:
 
 ---
 
+## Authentication & Pilot Access
+
+Sign-in is **Supabase Auth** (email + password) via the browser client; the edge gate
+(`src/proxy.ts`) verifies the session cookie and server components enrich the role from the
+`public.users` directory through `src/lib/server/session.ts`. Never trust `user_metadata.role`
+for authorization — server capabilities (`src/lib/server/rbac.ts`) are the enforcement point.
+
+A pilot `SYSTEM_ADMIN` account exists for smoke-testing (credentials were issued out-of-band;
+rotate after first sign-in):
+
+- Email: `admin@ghs.gov.gh` → matches `public.users.ghs_staff_id = GHS-000001`
+
+To add more staff: create the Supabase Auth user (Dashboard → Authentication → Add User, or the
+Admin API), then insert the matching row in `public.users` (same email). Roles must exist in
+both places; the DB role wins.
+
+Common pitfall (resolved): the app previously shipped a custom `ghs_session` cookie that no
+login flow ever set — every protected page threw `UNAUTHENTICATED`. `session.ts` is now
+Supabase-unified and returns `null` instead of throwing; callers `redirect("/login")`.
+
+---
+
+## Operations
+
+- **Security migration:** `supabase/migrations/20260113000000_lock_public_api.sql` locks the public
+  API (RLS on, anon/authenticated revoked). Apply it to every environment. See ADR-0002.
+- **Staff logins:** create the directory row in `public.users` first, then run
+  `npx tsx scripts/provision-auth-user.ts <email>` (add `--reset` to issue a new temporary password).
+- **Storage:** create a private bucket named `ghs-materials`. Controlled files are served only through
+  15-minute signed URLs.
+- **Auth redirects:** allow `<origin>/auth/callback` in Supabase → Authentication → URL configuration.
+- **Smoke tests:** `E2E_LEARNER_EMAIL=… E2E_LEARNER_PASSWORD=… npx playwright test`.
+
+---
+
 ## Verification Gates (before claiming done)
 
 ```powershell

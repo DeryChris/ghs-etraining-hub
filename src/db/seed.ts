@@ -4,7 +4,7 @@ import { users, categories, spaces, materials } from "./schema";
 import { eq } from "drizzle-orm";
 
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "admin@ghs.gov.gh";
-const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "change-me-12345";
+// The seeded admin has no password here. Provision its login with scripts/provision-auth-user.ts.
 
 async function main() {
   if (process.env.NODE_ENV === "production" && !process.env.ALLOW_PROD_SEED) {

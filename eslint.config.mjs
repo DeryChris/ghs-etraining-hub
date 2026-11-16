@@ -1,21 +1,20 @@
-import parser from "@typescript-eslint/parser";
-import plugin from "@typescript-eslint/eslint-plugin";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
 
-export default [
+// Flat config built from the rule sets that ship with eslint-config-next (no extra
+// parser packages to install). Project rules tighten what the defaults allow.
+const config = [
   {
-    ignores: ["drizzle/**", ".next/**", "node_modules/**"],
+    ignores: [".next/**", "node_modules/**", "drizzle/**", "next-env.d.ts", "supabase/**"],
   },
+  ...nextVitals,
+  ...nextTypescript,
   {
-    files: ["**/*.{ts,tsx}"],
-    languageOptions: {
-      parser,
-    },
-    plugins: {
-      "@typescript-eslint": plugin,
-    },
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-non-null-assertion": "error",
     },
   },
 ];
+
+export default config;

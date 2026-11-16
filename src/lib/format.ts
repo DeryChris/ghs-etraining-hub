@@ -1,3 +1,7 @@
+/**
+ * Display formatting for GHS-ELN. Everything is shown in Africa/Accra time, 24-hour
+ * clock, with the en-GB conventions the UI copy uses (docs/ui-ux.md §5).
+ */
 const ACCRA_TZ = "Africa/Accra";
 
 export function formatDateTime(
@@ -6,13 +10,14 @@ export function formatDateTime(
 ): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
-  return new Intl.DateTimeFormat("en-GH", {
+  return new Intl.DateTimeFormat("en-GB", {
     timeZone: ACCRA_TZ,
-    day: "2-digit",
+    day: "numeric",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
     timeZoneName: "short",
     ...opts,
   }).format(d);
@@ -21,9 +26,9 @@ export function formatDateTime(
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;
-  return new Intl.DateTimeFormat("en-GH", {
+  return new Intl.DateTimeFormat("en-GB", {
     timeZone: ACCRA_TZ,
-    day: "2-digit",
+    day: "numeric",
     month: "short",
     year: "numeric",
   }).format(d);
@@ -52,6 +57,19 @@ export function formatMinutes(minutes: number | null | undefined): string {
 export function formatCredits(cpdCreditsX10: number | null | undefined): string {
   if (!cpdCreditsX10 && cpdCreditsX10 !== 0) return "0 pts";
   return `${(cpdCreditsX10 / 10).toFixed(1)} pts`;
+}
+
+/** Friendly file-type label for a stored MIME type, e.g. "PDF document". */
+export function formatMimeType(mime: string | null | undefined): string {
+  const labels: Record<string, string> = {
+    "application/pdf": "PDF document",
+    "text/markdown": "Markdown document",
+    "video/mp4": "MP4 video",
+    "image/png": "PNG image",
+    "image/jpeg": "JPEG image",
+  };
+  if (!mime) return "Document";
+  return labels[mime] ?? "Document";
 }
 
 export function maskStaffPin(pin: string): string {

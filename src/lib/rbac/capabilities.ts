@@ -204,6 +204,20 @@ export function scopeAllows(
 
   if (role === "FACILITATOR") {
     if (action === "material.publish" && scope.reviewerIsAuthor === true) return false;
+    // Self-service and messaging actions are global; everything else is category-bound.
+    const globalForFacilitators: Action[] = [
+      "material.read_published",
+      "material.download",
+      "assessment.take",
+      "enrollment.self",
+      "comment.create",
+      "comment.edit_own",
+      "message.send",
+      "notification.view",
+      "analytics.view_personal",
+      "certificate.verify",
+    ];
+    if (globalForFacilitators.includes(action)) return true;
     if (!scope.categoryId) return false;
     return true;
   }
