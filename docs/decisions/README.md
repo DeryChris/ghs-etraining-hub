@@ -124,3 +124,14 @@ locked down, COOP/CORP, Permissions-Policy), narrow `img-src` to the real allowl
 typeface, and keep `script-src 'unsafe-inline'` until a per-request nonce migration lands. Follows
 ADR‑0006 (staff are deactivated, never deleted), which lets the audit chain rely on an immutable
 actor id.
+
+---
+
+## ADR‑0008 — Signed upload slots and the two‑person publish rule
+
+**Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0008-signed-uploads-and-two-person-publish.md`](./0008-signed-uploads-and-two-person-publish.md)
+
+**Decision.** Files go straight from the browser to Supabase Storage through server‑minted signed
+upload slots (body limits make proxying impossible), and publishing a version requires a colleague
+who did not upload it to approve it first, with an audited `SYSTEM_ADMIN` override as the only escape
+hatch.

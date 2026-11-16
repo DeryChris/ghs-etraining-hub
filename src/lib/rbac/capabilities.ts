@@ -17,6 +17,7 @@ export type Action =
   | "material.create"
   | "material.upload_version"
   | "material.submit_review"
+  | "material.review"
   | "material.publish"
   | "material.archive"
   | "material.read_draft"
@@ -71,6 +72,7 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.create": true,
     "material.upload_version": true,
     "material.submit_review": true,
+    "material.review": true,
     "material.publish": true,
     "material.archive": true,
     "material.read_draft": true,
@@ -113,6 +115,7 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.create": true,
     "material.upload_version": true,
     "material.submit_review": true,
+    "material.review": true,
     "material.publish": true,
     "material.archive": true,
     "material.read_draft": true,
@@ -155,6 +158,7 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.create": false,
     "material.upload_version": false,
     "material.submit_review": false,
+    "material.review": false,
     "material.publish": false,
     "material.archive": false,
     "material.read_draft": false,
@@ -236,7 +240,10 @@ export function scopeAllows(
   }
 
   if (role === "FACILITATOR") {
-    if (action === "material.publish" && scope.reviewerIsAuthor === true) return false;
+    // Two-person rule: the author of a version never reviews or publishes it.
+    if ((action === "material.publish" || action === "material.review") && scope.reviewerIsAuthor === true) {
+      return false;
+    }
     // Self-service and messaging actions are global; everything else is category-bound.
     if (isGlobalForFacilitators(action)) return true;
     if (!scope.categoryId) return false;

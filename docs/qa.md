@@ -59,9 +59,13 @@ mobile, and a 200 % zoom check for horizontal scrolling.
 
 ## 6. Content‑lifecycle drill
 
-1. Facilitator uploads a PDF → version 1 `DRAFT`, scan `PENDING`.
-2. Submits for review → reviewer ≠ author required.
-3. Publish → `currentVersionId` flips, learners see v1, audit `PUBLISH_MATERIAL` recorded.
+1. Facilitator uploads a PDF from `/authoring/<id>` → version 1 `DRAFT`, scan `PENDING`; the bytes go
+   straight to storage via the signed slot (watch the network tab: no request body reaches Next.js).
+2. Submits for review → `/review` lists it for colleagues; the uploader sees "You uploaded this
+   version" instead of Approve/Send back.
+3. Publish with no approval → refused by `publishBlockers()` with a named blocker. After a colleague
+   approves, publish → `currentVersionId` flips, learners see v1, audit `MATERIAL_PUBLISHED` recorded.
+   A `SYSTEM_ADMIN` override without a reason ≥ 10 characters is still refused.
 4. Upload v2 → v1 becomes `SUPERSEDED`, learners still see v1 until v2 is published.
 5. Re‑open a learner's progress record → it still points at v1 (`material_version_id`).
 6. Old version shows the "This version has been replaced" banner and remains readable.

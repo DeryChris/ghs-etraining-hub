@@ -129,14 +129,16 @@ Northern, Oti, Savannah, Upper East, Upper West, Volta, Western, Western North),
 The learner-facing platform is live: sign-in (Supabase Auth), dashboard, directorates →
 spaces → material viewer, library search with pagination, progress (start / acknowledge /
 complete) with certificate issuance, personal CPD analytics, staff messaging, notifications,
-public certificate verification, and the marketing site. Schema, RLS migration, CI and
-Drizzle migrations are versioned in this repository.
+public certificate verification, the marketing site, and the material authoring pipeline
+(draft → signed upload → review → publish → supersede → archive, ADR‑0008). Schema, RLS
+migration, CI and Drizzle migrations are versioned in this repository.
 
 | Present and working | Not built yet (next milestones) |
 | --- | --- |
-| `src/app/(auth)/**`, `(dash)/**`, `(marketing)/**` | Facilitator/admin surfaces: create category/space/material, upload, submit for review, publish, broadcast, read the audit log |
-| `src/db/schema.ts` + `drizzle/**` migrations | Comments/discussion threads; assessments and grading; message reporting |
-| `src/lib/server/{session,rbac,audit,file-storage,*-queries,rate-limit,certificates}.ts` | Upload path (storage currently signs read URLs only) |
+| `src/app/(auth)/**`, `(dash)/**`, `(marketing)/**` | Remaining admin surfaces: create category/space, broadcast notices, read the audit log |
+| `(dash)/authoring/**`, `(dash)/review/**` — draft, upload, review, publish, archive | Comments/discussion threads; assessments and grading; message reporting |
+| `src/db/schema.ts` + `drizzle/**` migrations | Virus-scanning worker (versions sit at `scanStatus = PENDING`) |
+| `src/lib/server/{session,rbac,audit,file-storage,authoring-queries,*-queries,rate-limit,certificates}.ts`, `src/lib/material-workflow.ts` | Category/space CRUD actions |
 | Capability matrix, hash-chained audit, cohort visibility, CPD certificates | Cohort notices (`notifications.audience_filter`), MFA enforcement, lockout |
 | `tests/e2e/**` (public + optional credentialled smoke), CI workflow | Per-request CSP nonce (see docs/decisions/0003) |
 

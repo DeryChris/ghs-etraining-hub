@@ -1,7 +1,7 @@
 # GHS-ELN — Repository Analysis
 
 > **Remediation status — 16 November 2026.** The findings below have been worked in priority
-> order across four commits; this document is kept as the original assessment so the reasoning is
+> order across six commits; this document is kept as the original assessment so the reasoning is
 > auditable. Status per item is recorded in §12.
 >
 > | Commit | Scope |
@@ -10,6 +10,8 @@
 > | `fix(data)` | Versioned Drizzle migrations, immutable audit actor, idempotent seeder, unique keys, missing indexes, MIME-correct downloads |
 > | `feat(learning)` | Cohort/restricted visibility enforced everywhere, certificate issuance with random serials, rate limiting, DB-verified facilitator scope, capability test sweep |
 > | `perf(ui)` | Library pagination, paginated threads, bounded inbox/transcript |
+> | `fix(resilience)` | Public pages and certificate verification degrade instead of crashing when the database is unreachable |
+> | `feat(authoring)` | Draft → signed upload → review → publish → supersede → archive, the two-person rule, and its ADR (0008) |
 
 **Repository:** `DeryChris/ghs-etraining-hub` · **Branch:** `arena/28c03ab6-ghs-etraining-hub` · **Commit:** `f717cb6 feat(platform): launch GHS-ELN learning experience` (single commit, no upstream history)
 **Analysed:** 16 November 2026 · **Method:** full read of source + docs, dependency install, typecheck, lint, unit tests, production build attempt, `npm audit`, schema/query/mutation review.
@@ -260,15 +262,16 @@ grep -rn "\.insert(\|\.update(" src       # 6 mutation sites in app code (2 acti
 | 19 | No CI / dependency scanning | `.github/workflows/ci.yml` + Dependabot |
 | 20 | Docs drift (README/AGENTS/architecture/qa) | rewritten against the real tree; ADR-0007 added; `docs/migrations.md` created |
 | 21 | No observability | `logEvent()` JSON lines with PII redaction, `x-request-id` on every response |
-| 22 | Capability test coverage | sweep over every action × role (33 unit tests total) |
-
+| 22 | Capability test coverage | sweep over every action × role (55 unit tests total) |
 | 23 | Public pages fell over when the database was unavailable | marketing counters/taxonomy and certificate verification now degrade with a friendly message; outage is logged as a structured event |
+| 24 | No authoring/publish pipeline (the lifecycle existed only in the docs and schema) | `/authoring` + `/authoring/[id]` + `/review`: draft → signed upload → review → publish → supersede → archive, with audit rows at every step (ADR‑0008) |
+| 25 | The two-person rule was documented but unenforced | `publishBlockers()` + new `material.review` capability + `scopeAllows(reviewerIsAuthor)`; reason required to reject; audited `SYSTEM_ADMIN` override (14 + 8 unit tests) |
+| 26 | Uploads could not work through the app server (body limits) | browser → storage signed slots; server re-verifies type/size from storage metadata and removes rejected objects |
 
 ### Deliberately not done in this pass
 
 | # | Finding | Why / next step |
 | --- | --- | --- |
-| A | No authoring/publish pipeline (upload → review → publish → supersede) | Largest remaining feature; needs UI, storage writes, approval workflow and its own ADR. Until then the marketing copy's "controlled/versioned documents" describes the data model, not a shipped workflow. |
 | B | Assessments, comments, message reporting, notifications targeting | Tables exist, flows do not. Each is a feature slice with its own UI and tests. |
 | C | MFA enforcement and account lockout | Needs an ICT policy decision (Supabase MFA enrolment flow) before code. |
 | D | Per-request CSP nonce | Tracked in ADR-0007; forces dynamic rendering on every route. |

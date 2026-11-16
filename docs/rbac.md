@@ -23,6 +23,7 @@ row.** Any change here is a `ROLE_CHANGE` audit event and requires an ADR.
 | `material.create` | ✅ | ✅ (assigned category) | ❌ |
 | `material.upload_version` | ✅ | ✅ (assigned category) | ❌ |
 | `material.submit_review` | ✅ | ✅ (authored draft) | ❌ |
+| `material.review` | ✅ | ✅ (assigned category, **reviewer ≠ uploader**, ADR‑0008) | ❌ |
 | `material.publish` | ✅ | ✅ (assigned category, **reviewer ≠ author**) | ❌ |
 | `material.archive` | ✅ | ✅ (assigned category) | ❌ |
 | `material.read_draft` | ✅ | ✅ (assigned category) | ❌ |
@@ -81,6 +82,8 @@ only a hint, never proof of assignment.
 const vectors: Vector[] = [
   { role: "LEARNER", action: "material.publish", scope: assigned, expect: false },
   { role: "FACILITATOR", action: "material.publish", scope: assigned, reviewerIsAuthor: true, expect: false },
+  { role: "FACILITATOR", action: "material.review", scope: assigned, reviewerIsAuthor: true, expect: false },
+  { role: "LEARNER", action: "material.review", scope: assigned, expect: false },
   { role: "FACILITATOR", action: "material.publish", scope: otherCategory, expect: false },
   { role: "SYSTEM_ADMIN", action: "audit_log.read", expect: true, mustAudit: true },
   { role: "LEARNER", action: "material.read_published", scope: { audienceRegion: "Volta", userRegion: "Ashanti" }, expect: false },

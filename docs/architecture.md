@@ -109,10 +109,32 @@ Two streams, applied in order: `drizzle/` (generated from `src/db/schema.ts`) th
 
 ```
 private bucket: ghs-materials
-  materials/<materialId>/v<version>/<uuid>.<ext>     # immutable, checksum in DB
+  materials/<materialId>/<uuid>.<ext>               # immutable; version number assigned at finalise
   certificates/<certificateId>.pdf
   avatars/<userId>/<uuid>.<ext>
 ```
 
 Keys are never derived from user input. Signed URLs are minted per request with a 15‑minute TTL,
 `Content-Disposition: attachment` for downloads and `inline` only for the in‑app viewer.
+
+Uploads use a signed **write** slot rather than a proxy: `POST`‑style Server Action mints the target,
+the browser `PUT`s the file, then a second Action re‑reads the object metadata and records the
+version (ADR‑0008). The key holds no version number because the version is assigned when the object
+is finalised.
+
+## 9. Material authoring pipeline
+
+| Step | Where | Rule |
+| --- | --- | --- |
+| Draft | `createDraftAction` → `materials` row, state `DRAFT` | `material.create`, category scope |
+| Upload | `requestUploadAction` → signed slot; `finaliseUploadAction` → `material_versions` row | `material.upload_version`, MIME/size allowlist, checksum recorded |
+| Submit | `submitForReviewAction` → version `IN_REVIEW` | `material.submit_review`, transition checked by `canTransition` |
+| Review | `recordReviewDecisionAction` → `review_assignments` row | `material.review`, reviewer ≠ uploader, reason required to reject |
+| Publish | `publishVersionAction` → version `PUBLISHED`, previous version `SUPERSEDED`, `materials.currentVersionId` flipped | `material.publish` + `publishBlockers()` (two‑person rule) |
+| Archive | `archiveMaterialAction` → `ARCHIVED` | `material.archive`; versions and audit entries retained |
+
+Pure rules live in `src/lib/material-workflow.ts` (14 unit tests); input shapes in
+`src/lib/schemas/authoring.ts` (8 unit tests); database access in `src/lib/server/authoring-queries.ts`.
+Surfaces: `/authoring` (my materials + new draft), `/authoring/[id]` (version history and actions),
+`/review` (review queue). All three are staff‑only (`requireRole`) and the sidebar only shows the
+`Author` group to staff.

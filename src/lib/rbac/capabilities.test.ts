@@ -24,6 +24,8 @@ describe("capability matrix", () => {
 
   it("lets facilitators author in scope but not run category governance", () => {
     expect(can("FACILITATOR", "material.create")).toBe(true);
+    expect(can("FACILITATOR", "material.review")).toBe(true);
+    expect(can("LEARNER", "material.review")).toBe(false);
     expect(can("FACILITATOR", "category.assign_facilitator")).toBe(false);
   });
 
@@ -67,6 +69,7 @@ describe("capability matrix", () => {
 describe("scope resolution", () => {
   it("blocks a facilitator from publishing their own version", () => {
     expect(scopeAllows("FACILITATOR", "material.publish", { categoryId: "c1", reviewerIsAuthor: true })).toBe(false);
+    expect(scopeAllows("FACILITATOR", "material.review", { categoryId: "c1", reviewerIsAuthor: true })).toBe(false);
   });
 
   it("requires a category for facilitator governance actions", () => {
