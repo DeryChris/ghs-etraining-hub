@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { and, count, eq } from "drizzle-orm";
 import { db } from "@/db/index";
 import { categories, certificates, materials, spaces, users } from "@/db/schema";
@@ -19,6 +20,16 @@ export async function getPublicStats(): Promise<{ directorates: number; spaces: 
     materials: materialRows[0]?.n ?? 0,
   };
 }
+
+/**
+ * Public counters, cached for five minutes. The marketing site is the only
+ * caller, and a stale-by-minutes count is preferable to three aggregates on
+ * every visit from a metered mobile connection.
+ */
+export const getPublicStatsCached = unstable_cache(getPublicStats, ["public-stats"], {
+  revalidate: 300,
+  tags: ["taxonomy"],
+});
 
 /** "Ama Serwaa Mensah" → "Ama M." Public verification shows the minimum needed to confirm identity. */
 function maskHolderName(fullName: string): string {

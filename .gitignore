@@ -6,6 +6,10 @@ node_modules/
 # Testing
 coverage/
 *.lcov
+playwright-report/
+test-results/
+blob-report/
+.e2e-auth/
 
 # Next.js
 .next/
@@ -36,12 +40,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Drizzle
-drizzle/
-*.sql
-# Supabase SQL migrations are versioned; generated drizzle/ output stays ignored
-!supabase/migrations/
-!supabase/migrations/*.sql
+# Drizzle: generated migrations under drizzle/ ARE versioned (see docs/decisions).
+# Only drizzle-kit scratch output is ignored.
+.drizzle-local/
+drizzle/**/journal.json.bak
+drizzle/**/*.tmp
 
 # IDE
 .idea/
@@ -52,7 +55,5 @@ drizzle/
 # Claude
 .claude
 
-# Scripts/Tests/Outputs
-scripts/
-tests/
+# Local generator output
 outputs/

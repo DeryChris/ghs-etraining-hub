@@ -5,7 +5,7 @@ import { EmptyArt } from "@/components/brand/illustrations";
 import { Reveal } from "@/components/marketing/reveal";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { buttonClass } from "@/components/ui/button";
-import { listCategories } from "@/lib/server/learning-queries";
+import { listPublicCategories } from "@/lib/server/learning-queries";
 
 export const metadata: Metadata = {
   title: "Programmes",
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ProgrammesPage() {
-  const directorates = await listCategories();
+  const directorates = await listPublicCategories();
 
   return (
     <>

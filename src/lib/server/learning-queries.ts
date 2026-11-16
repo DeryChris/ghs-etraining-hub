@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { categories, materialProgress, materialVersions, materials, spaces, users } from "@/db/schema";
@@ -53,6 +54,15 @@ export async function listCategories(): Promise<CategoryCard[]> {
     .where(liveCategory)
     .orderBy(asc(categories.name));
 }
+
+/**
+ * The public directorate list, cached for five minutes. Signed-in pages use the
+ * uncached listCategories() so a facilitator's publish is visible immediately.
+ */
+export const listPublicCategories = unstable_cache(listCategories, ["public-categories"], {
+  revalidate: 300,
+  tags: ["taxonomy"],
+});
 
 export async function getCategory(id: string) {
   const [row] = await db
