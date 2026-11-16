@@ -267,6 +267,7 @@ grep -rn "\.insert(\|\.update(" src       # 6 mutation sites in app code (2 acti
 | 24 | No authoring/publish pipeline (the lifecycle existed only in the docs and schema) | `/authoring` + `/authoring/[id]` + `/review`: draft → signed upload → review → publish → supersede → archive, with audit rows at every step (ADR‑0008) |
 | 25 | The two-person rule was documented but unenforced | `publishBlockers()` + new `material.review` capability + `scopeAllows(reviewerIsAuthor)`; reason required to reject; audited `SYSTEM_ADMIN` override (14 + 8 unit tests) |
 | 26 | Uploads could not work through the app server (body limits) | browser → storage signed slots; server re-verifies type/size from storage metadata and removes rejected objects |
+| 27 | `src/lib/server/errors.ts` referenced by the docs did not exist; errors surfaced as stack traces or bare digests | one `AppError` vocabulary with statuses + `toFieldErrors`, request id forwarded downstream, mirrored into `ghs_rid` and quoted by both error boundaries (7 tests) |
 
 ### Deliberately not done in this pass
 

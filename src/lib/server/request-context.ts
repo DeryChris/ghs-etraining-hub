@@ -4,6 +4,16 @@ import { headers } from "next/headers";
 export interface RequestContext {
   ipAddress: string | null;
   userAgent: string | null;
+  requestId: string | null;
+}
+
+/** The id `src/proxy.ts` mints for this request, or null outside a request. */
+export async function currentRequestId(): Promise<string | null> {
+  try {
+    return (await headers()).get("x-request-id");
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -17,9 +27,10 @@ export async function requestContext(): Promise<RequestContext> {
     return {
       ipAddress: forwarded || requestHeaders.get("x-real-ip") || null,
       userAgent: requestHeaders.get("user-agent"),
+      requestId: requestHeaders.get("x-request-id"),
     };
   } catch {
-    return { ipAddress: null, userAgent: null };
+    return { ipAddress: null, userAgent: null, requestId: null };
   }
 }
 

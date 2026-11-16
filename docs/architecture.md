@@ -59,14 +59,22 @@ Server Actions return a discriminated result (`{ ok, message }`) rather than thr
 can render the refusal next to the field that caused it. Pages call `notFound()` when the
 resource must not be revealed, and `redirect()` when the surface is already known to the user.
 
-Every response carries an `x-request-id` (set in `src/proxy.ts`); `src/lib/server/logger.ts`
-emits one JSON line per event with the same id where available. `error.tsx` shows Next's digest —
-the matching value is in the server log. No stack trace is ever sent to the browser.
+`src/lib/server/errors.ts` is the one vocabulary: `AppError(code, publicMessage, { details, cause })`
+with an HTTP status per code, `toFieldErrors(zodError)` for field-level messages, and
+`publicMessageOf()` which collapses anything unexpected to "Something went wrong on our side" so a
+pg error or table name can never reach a learner. Route handlers catch, log, and answer in that
+shape.
+
+Every response carries `x-request-id` (set in `src/proxy.ts`), forwarded downstream on the same
+header, mirrored into the readable `ghs_rid` cookie, and echoed in `/api/health`. `error.tsx` and
+`global-error.tsx` show that id (first 8 characters) as the reference to quote; the server log line
+carries the full id plus Next's digest. No stack trace is ever sent to the browser.
 
 ## 5. Observability
 
-* `GET /api/health` → `{ ok, version, uptime, checks: { db }, latencyMs }`; returns 503 when the
-  database is unreachable so the platform can act on it.
+* `GET /api/health` → `{ ok, version, uptime, checks: { db }, latencyMs, requestId }`, plus
+  `error: { code: "UPSTREAM_UNAVAILABLE", message }` when the database is unreachable; returns 503 so
+  the platform can act on it and logs `health.db_unavailable`.
 * Structured logs: `logEvent()` in `src/lib/server/logger.ts` writes one JSON line
   (`{ level, time, event, userId?, role?, … }`) that a log drain can index. Keys matching the PII
   pattern are redacted by `redactMetadata()` before the line is written, so message bodies,

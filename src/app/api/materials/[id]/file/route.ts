@@ -7,6 +7,7 @@ import { logAudit } from "@/lib/server/audit";
 import { createMaterialSignedUrl } from "@/lib/server/file-storage";
 import { getMaterialDetail } from "@/lib/server/learning-queries";
 import { log } from "@/lib/server/logger";
+import { currentRequestId } from "@/lib/server/request-context";
 import { getSession } from "@/lib/server/session";
 
 /**
@@ -18,6 +19,17 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const { id } = await context.params;
   const origin = appOrigin(request);
 
+  try {
+    return await issueFile(request, id, origin);
+  } catch (error) {
+    // A failed lookup or audit write must not surface a stack trace to the
+    // learner; the page shows a plain notice and the log keeps the detail.
+    log.error({ event: "material.file_failed", requestId: await currentRequestId(), materialId: id, error });
+    return NextResponse.redirect(new URL(`/materials/${id}?notice=file-unavailable`, origin), 303);
+  }
+}
+
+async function issueFile(request: NextRequest, id: string, origin: string) {
   if (!isUuid(id)) return new NextResponse("Not found", { status: 404 });
 
   const session = await getSession();
@@ -54,7 +66,14 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     metadata: { versionId: material.version?.id ?? null, download },
   });
 
-  log.info({ event: "material.file_issued", userId: session.sub, role: session.role, materialId: id, download });
+  log.info({
+    event: "material.file_issued",
+    requestId: await currentRequestId(),
+    userId: session.sub,
+    role: session.role,
+    materialId: id,
+    download,
+  });
 
   return NextResponse.redirect(signed.url, {
     status: 302,

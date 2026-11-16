@@ -1,3 +1,4 @@
+import { REQUEST_ID_COOKIE } from "@/lib/request-id";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -30,12 +31,23 @@ function isPublic(pathname: string): boolean {
 
 function withRequestId(response: NextResponse, requestId: string): NextResponse {
   response.headers.set("x-request-id", requestId);
+  // Mirrored into a readable cookie so the client-side error boundary can show
+  // the same reference the log line carries. It is an opaque uuid, not a secret.
+  response.cookies.set(REQUEST_ID_COOKIE, requestId, {
+    path: "/",
+    sameSite: "lax",
+    httpOnly: false,
+    maxAge: 60 * 60,
+  });
   return response;
 }
 
 export async function proxy(request: NextRequest) {
   // Correlates this request with the JSON log lines and the error boundary's digest.
   const requestId = crypto.randomUUID();
+  // Downstream server code (logger, error boundary, actions) logs the same id that
+  // the browser receives in the response header, so one reference finds everything.
+  request.headers.set("x-request-id", requestId);
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !anonKey) {
