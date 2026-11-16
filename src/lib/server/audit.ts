@@ -1,9 +1,9 @@
 import "server-only";
-import { headers } from "next/headers";
 import { asc, desc, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { auditLogs } from "@/db/schema";
 import { computeAuditHash, redactMetadata } from "@/lib/audit-hash";
+import { requestContext } from "@/lib/server/request-context";
 
 export interface AuditActor {
   sub: string;
@@ -25,20 +25,6 @@ export type AuditExecutor = Pick<typeof db, "execute" | "insert" | "select">;
 
 /** Constant key for pg_advisory_xact_lock: one writer extends the chain at a time. */
 const CHAIN_LOCK_KEY = 74201;
-
-async function requestContext(): Promise<{ ipAddress: string | null; userAgent: string | null }> {
-  try {
-    const requestHeaders = await headers();
-    const forwarded = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim();
-    return {
-      ipAddress: forwarded || requestHeaders.get("x-real-ip") || null,
-      userAgent: requestHeaders.get("user-agent"),
-    };
-  } catch {
-    // Outside a request (seed scripts, tests): there is no client context to record.
-    return { ipAddress: null, userAgent: null };
-  }
-}
 
 async function appendEntry(exec: AuditExecutor, input: AuditInput): Promise<void> {
   // Serialise writers, then read the *newest* entry (the previous version read the oldest).

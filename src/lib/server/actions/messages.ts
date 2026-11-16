@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/db/index";
 import { directMessages, users } from "@/db/schema";
 import { logAudit } from "@/lib/server/audit";
+import { consumeRateLimit, rateLimitKey, retryAfterText } from "@/lib/server/rate-limit";
 import { checkCapability } from "@/lib/server/rbac";
 import { getSession } from "@/lib/server/session";
 
@@ -40,6 +41,11 @@ export async function sendMessageAction(
   const { recipientId, body } = parsed.data;
 
   if (recipientId === session.sub) return { ok: false, message: "You cannot send a message to yourself." };
+
+  const limit = await consumeRateLimit(rateLimitKey("message", session.sub), 30, 5 * 60);
+  if (!limit.allowed) {
+    return { ok: false, message: `You are sending messages very quickly. Try again in ${retryAfterText(limit.retryAfterSeconds)}.` };
+  }
 
   const [recipient] = await db
     .select({ id: users.id, isActive: users.isActive })

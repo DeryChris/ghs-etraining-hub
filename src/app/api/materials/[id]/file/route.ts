@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { appOrigin } from "@/lib/app-origin";
 import { downloadFileName } from "@/lib/file-name";
 import { isUuid } from "@/lib/ids";
+import { can } from "@/lib/rbac/capabilities";
 import { logAudit } from "@/lib/server/audit";
 import { createMaterialSignedUrl } from "@/lib/server/file-storage";
 import { getMaterialDetail } from "@/lib/server/learning-queries";
@@ -23,7 +24,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(`/materials/${id}`)}`, origin), 303);
   }
 
-  const material = await getMaterialDetail(id, session.sub);
+  if (!can(session.role, "material.download")) {
+    return new NextResponse("Forbidden", { status: 403 });
+  }
+
+  const material = await getMaterialDetail(id, session);
   if (!material) return new NextResponse("Not found", { status: 404 });
 
   const storageKey = material.version?.storageKey;

@@ -29,7 +29,7 @@ function monthKey(date: Date): string {
 export default async function AnalyticsPage() {
   const session = await requireSession();
   const now = new Date();
-  const [dashboard, completions] = await Promise.all([getLearnerDashboard(session.sub), listCompletions(session.sub)]);
+  const [dashboard, completions] = await Promise.all([getLearnerDashboard(session), listCompletions(session.sub)]);
 
   const buckets = monthBuckets(now);
   for (const completion of completions) {

@@ -1,6 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
+import { isCertificateCode } from "@/lib/certificate-code";
 import { db } from "@/db/index";
 import { categories, certificates, materials, spaces, users } from "@/db/schema";
 
@@ -51,9 +52,13 @@ export interface CertificateCheck {
 }
 
 /** Looks up a certificate by its public serial. Returns null for unknown codes. */
-export async function verifyCertificate(code: string): Promise<CertificateCheck | null> {
+export async function verifyCertificate(input: string): Promise<CertificateCheck | null> {
+  const code = input.trim().toUpperCase();
+  if (!isCertificateCode(code)) return null;
+
   const [row] = await db
     .select({
+      id: certificates.id,
       code: certificates.code,
       issuedAt: certificates.issuedAt,
       expiresAt: certificates.expiresAt,
@@ -69,6 +74,21 @@ export async function verifyCertificate(code: string): Promise<CertificateCheck 
     .limit(1);
 
   if (!row) return null;
+
+  // Verification is an auditable event in itself: record that someone checked.
+  // A failure here must never hide a valid certificate, so it is best-effort.
+  try {
+    await db
+      .update(certificates)
+      .set({
+        verificationCount: sql`${certificates.verificationCount} + 1`,
+        lastVerifiedAt: new Date(),
+      })
+      .where(eq(certificates.id, row.id));
+  } catch {
+    // Counters are telemetry; the verification result stands either way.
+  }
+
   const expired = row.expiresAt !== null && row.expiresAt.getTime() < Date.now();
   return {
     valid: !expired && row.isActive,

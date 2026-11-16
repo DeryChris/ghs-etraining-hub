@@ -3,13 +3,17 @@ import { cache } from "react";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { users } from "@/db/schema";
-import type { Role } from "@/lib/rbac/capabilities";
+import type { Viewer } from "@/lib/viewer";
 import { createSupabaseServerClient } from "@/lib/server/supabase-server";
 
-export interface Session {
+/**
+ * The signed-in identity. It carries the cohort attributes (region, directorate,
+ * cadre) that content visibility depends on, so a page never has to re-read the
+ * user row to decide whether a material is meant for this learner.
+ */
+export interface Session extends Viewer {
   /** public.users.id — the identity every foreign key and audit row uses. */
   sub: string;
-  role: Role;
   name: string;
   staffId: string;
   email: string;
@@ -40,6 +44,9 @@ export const resolveAccount = cache(async (): Promise<AccountState> => {
       fullName: users.fullName,
       ghsStaffId: users.ghsStaffId,
       isActive: users.isActive,
+      region: users.region,
+      directorate: users.directorate,
+      cadre: users.cadre,
     })
     .from(users)
     .where(eq(sql`lower(${users.email})`, email))
@@ -50,7 +57,17 @@ export const resolveAccount = cache(async (): Promise<AccountState> => {
 
   return {
     state: "active",
-    session: { sub: row.id, role: row.role, name: row.fullName, staffId: row.ghsStaffId, email },
+    session: {
+      sub: row.id,
+      id: row.id,
+      role: row.role,
+      name: row.fullName,
+      staffId: row.ghsStaffId,
+      email,
+      region: row.region,
+      directorate: row.directorate,
+      cadre: row.cadre,
+    },
   };
 });
 

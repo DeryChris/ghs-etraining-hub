@@ -13,11 +13,11 @@ export default async function SpacePage({ params }: { params: Promise<{ slug: st
   const { slug } = await params;
   if (!/^[a-z0-9-]{1,100}$/.test(slug)) notFound();
 
-  const found = await getSpaceBySlug(slug);
+  const found = await getSpaceBySlug(slug, session);
   if (!found) notFound();
   const { space, category } = found;
 
-  const materials = await listMaterialsInSpace(space.id, session.sub);
+  const materials = await listMaterialsInSpace(space.id, session);
   const completed = materials.filter((m) => m.status === "COMPLETED").length;
   const percent = materials.length > 0 ? (completed / materials.length) * 100 : 0;
   const groups = MATERIAL_TYPES.map((type) => ({ type, items: materials.filter((m) => m.type === type) })).filter(

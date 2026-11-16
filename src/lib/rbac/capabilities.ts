@@ -31,7 +31,7 @@ export type Action =
   | "comment.edit_own"
   | "comment.moderate"
   | "message.send"
-  | "message.read_thread"
+  | "message.read_any_thread"
   | "notification.broadcast"
   | "notification.view"
   | "analytics.view_personal"
@@ -85,7 +85,7 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "comment.edit_own": true,
     "comment.moderate": true,
     "message.send": true,
-    "message.read_thread": true,
+    "message.read_any_thread": true,
     "notification.broadcast": true,
     "notification.view": true,
     "analytics.view_personal": true,
@@ -127,7 +127,7 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "comment.edit_own": true,
     "comment.moderate": true,
     "message.send": true,
-    "message.read_thread": false,
+    "message.read_any_thread": false,
     "notification.broadcast": true,
     "notification.view": true,
     "analytics.view_personal": true,
@@ -169,7 +169,7 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "comment.edit_own": true,
     "comment.moderate": false,
     "message.send": true,
-    "message.read_thread": false,
+    "message.read_any_thread": false,
     "notification.broadcast": false,
     "notification.view": true,
     "analytics.view_personal": true,
@@ -182,7 +182,37 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
   },
 };
 
+/**
+ * Actions that need no session at all. `certificate.verify` is served by a public
+ * page, so it is allowed for anonymous visitors by definition — keeping it in the
+ * matrix (for every role) documents that, and this set keeps `can(null, …)` honest.
+ */
+export const PUBLIC_ACTIONS: ReadonlySet<Action> = new Set<Action>(["certificate.verify"]);
+
+/**
+ * Self-service and messaging actions a facilitator may perform outside their
+ * assigned categories. Everything else they do is category-scoped, and
+ * src/lib/server/rbac.ts verifies the assignment against category_facilitators.
+ */
+export const FACILITATOR_GLOBAL_ACTIONS: readonly Action[] = [
+  "material.read_published",
+  "material.download",
+  "assessment.take",
+  "enrollment.self",
+  "comment.create",
+  "comment.edit_own",
+  "message.send",
+  "notification.view",
+  "analytics.view_personal",
+  "certificate.verify",
+];
+
+export function isGlobalForFacilitators(action: Action): boolean {
+  return FACILITATOR_GLOBAL_ACTIONS.includes(action);
+}
+
 export function can(role: Role | null | undefined, action: Action): boolean {
+  if (PUBLIC_ACTIONS.has(action)) return true;
   if (!role) return false;
   return CAPABILITY_MATRIX[role][action] ?? false;
 }
@@ -197,7 +227,10 @@ export function scopeAllows(
   if (!CAPABILITY_MATRIX[role][action]) return false;
 
   if (role === "LEARNER") {
-    if (action === "material.read_published" && scope.audienceMatch === false) return false;
+    // docs/rbac.md §1: both reading and downloading require an audience match.
+    if ((action === "material.read_published" || action === "material.download") && scope.audienceMatch === false) {
+      return false;
+    }
     if (action === "assessment.take" && (scope.enrolled === false || scope.attemptsLeft === false)) return false;
     return true;
   }
@@ -205,19 +238,7 @@ export function scopeAllows(
   if (role === "FACILITATOR") {
     if (action === "material.publish" && scope.reviewerIsAuthor === true) return false;
     // Self-service and messaging actions are global; everything else is category-bound.
-    const globalForFacilitators: Action[] = [
-      "material.read_published",
-      "material.download",
-      "assessment.take",
-      "enrollment.self",
-      "comment.create",
-      "comment.edit_own",
-      "message.send",
-      "notification.view",
-      "analytics.view_personal",
-      "certificate.verify",
-    ];
-    if (globalForFacilitators.includes(action)) return true;
+    if (isGlobalForFacilitators(action)) return true;
     if (!scope.categoryId) return false;
     return true;
   }

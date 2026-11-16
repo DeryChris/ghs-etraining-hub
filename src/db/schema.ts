@@ -210,7 +210,13 @@ export const certificates = pgTable("certificates", {
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   verificationCount: integer("verification_count").notNull().default(0),
   lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
-}, (t) => [index("certificates_user_idx").on(t.userId), index("certificates_material_idx").on(t.materialId)]);
+}, (t) => [
+  index("certificates_user_idx").on(t.userId),
+  index("certificates_material_idx").on(t.materialId),
+  // One certificate per learner, material and published version: re-completing a
+  // superseded version must not mint a second serial.
+  unique("certificates_user_material_version_key").on(t.userId, t.materialId, t.materialVersionId),
+]);
 
 export const comments = pgTable("comments", {
   id: uuid("id").primaryKey().defaultRandom(),

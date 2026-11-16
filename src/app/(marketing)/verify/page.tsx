@@ -4,8 +4,11 @@ import { CertificateSeal } from "@/components/brand/illustrations";
 import { Reveal } from "@/components/marketing/reveal";
 import { buttonClass } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/input";
+import { isCertificateCode } from "@/lib/certificate-code";
 import { formatDate, formatCredits } from "@/lib/format";
 import { verifyCertificate } from "@/lib/server/public-queries";
+import { consumeRateLimit, rateLimitKey, retryAfterText } from "@/lib/server/rate-limit";
+import { clientAddress } from "@/lib/server/request-context";
 
 export const metadata: Metadata = {
   title: "Verify a certificate",
@@ -14,8 +17,14 @@ export const metadata: Metadata = {
 
 export default async function VerifyPage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
   const params = await searchParams;
-  const code = (params.code ?? "").trim().toUpperCase().slice(0, 60);
-  const result = code ? await verifyCertificate(code) : null;
+  const submitted = (params.code ?? "").trim().toUpperCase().slice(0, 60);
+  const code = isCertificateCode(submitted) ? submitted : "";
+
+  // Public, unauthenticated lookup: bound how many serials one connection can try
+  // so the page cannot be used to harvest holder names.
+  const limit = code ? await consumeRateLimit(rateLimitKey("verify", await clientAddress()), 20, 5 * 60) : null;
+  const rateLimited = limit !== null && !limit.allowed;
+  const result = code && !rateLimited ? await verifyCertificate(code) : null;
 
   return (
     <>
@@ -50,7 +59,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
                   name="code"
                   type="text"
                   defaultValue={code}
-                  placeholder="e.g. GHS-CPD-2026-000184"
+                  placeholder="e.g. GHS-CPD-2026-7K3M9QP2X4"
                   autoComplete="off"
                   spellCheck={false}
                   className={`${inputClass} h-12 font-mono tracking-wide`}
@@ -108,7 +117,17 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
             </Reveal>
           )}
 
-          {code && !result && (
+          {rateLimited && (
+            <div role="status" className="surface-card flex flex-col items-center gap-3 p-8 text-center">
+              <ShieldX className="h-8 w-8 text-warn" aria-hidden />
+              <p className="font-semibold text-ink">Too many checks from this connection.</p>
+              <p className="max-w-md text-sm leading-relaxed text-ink-muted">
+                To protect staff records, certificate checks are limited. Try again in {retryAfterText(limit?.retryAfterSeconds ?? 60)}.
+              </p>
+            </div>
+          )}
+
+          {code && !result && !rateLimited && (
             <div role="status" className="surface-card flex flex-col items-center gap-3 p-8 text-center">
               <ShieldX className="h-8 w-8 text-danger" aria-hidden />
               <p className="font-semibold text-ink">No certificate matches that code.</p>

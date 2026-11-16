@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { can, scopeAllows } from "./capabilities";
+import {
+  CAPABILITY_MATRIX,
+  FACILITATOR_GLOBAL_ACTIONS,
+  PUBLIC_ACTIONS,
+  can,
+  isGlobalForFacilitators,
+  scopeAllows,
+  type Action,
+  type Role,
+} from "./capabilities";
+
+const ROLES: Role[] = ["SYSTEM_ADMIN", "FACILITATOR", "LEARNER"];
+const ACTIONS = Object.keys(CAPABILITY_MATRIX.SYSTEM_ADMIN) as Action[];
 
 // Spot checks against the authoritative matrix in docs/rbac.md (section 1).
 describe("capability matrix", () => {
@@ -15,14 +27,40 @@ describe("capability matrix", () => {
     expect(can("FACILITATOR", "category.assign_facilitator")).toBe(false);
   });
 
-  it("denies learners the thread-reading capability", () => {
-    expect(can("LEARNER", "message.read_thread")).toBe(false);
+  it("reserves reading other people's threads for SYSTEM_ADMIN", () => {
+    expect(can("LEARNER", "message.read_any_thread")).toBe(false);
+    expect(can("FACILITATOR", "message.read_any_thread")).toBe(false);
+    expect(can("SYSTEM_ADMIN", "message.read_any_thread")).toBe(true);
     expect(can("LEARNER", "message.send")).toBe(true);
   });
 
   it("returns false for unknown roles", () => {
     expect(can(null, "message.send")).toBe(false);
     expect(can(undefined, "message.send")).toBe(false);
+  });
+
+  // docs/rbac.md §4: "CI must also assert that every action string in
+  // capabilities.ts appears in the vectors file" — this is that assertion,
+  // expressed as a self-consistency sweep so a new action cannot ship untested.
+  it("answers for every documented action and every role", () => {
+    expect(ACTIONS.length).toBeGreaterThanOrEqual(40);
+    for (const role of ROLES) {
+      for (const action of ACTIONS) {
+        expect(CAPABILITY_MATRIX[role][action], `${role} → ${action}`).toBeTypeOf("boolean");
+        expect(can(role, action), `${role} → ${action}`).toBe(CAPABILITY_MATRIX[role][action]);
+      }
+    }
+  });
+
+  it("treats certificate verification as public, as the matrix documents", () => {
+    expect(PUBLIC_ACTIONS.has("certificate.verify")).toBe(true);
+    expect(can(null, "certificate.verify")).toBe(true);
+    expect(can("LEARNER", "certificate.verify")).toBe(true);
+    // …and nothing else is public.
+    for (const action of ACTIONS) {
+      if (action === "certificate.verify") continue;
+      expect(can(null, action), action).toBe(false);
+    }
   });
 });
 
@@ -37,13 +75,21 @@ describe("scope resolution", () => {
   });
 
   it("allows facilitators global self-service actions without a category", () => {
-    expect(scopeAllows("FACILITATOR", "message.send", {})).toBe(true);
-    expect(scopeAllows("FACILITATOR", "enrollment.self", {})).toBe(true);
-    expect(scopeAllows("FACILITATOR", "analytics.view_personal", {})).toBe(true);
+    for (const action of FACILITATOR_GLOBAL_ACTIONS) {
+      expect(scopeAllows("FACILITATOR", action, {}), action).toBe(true);
+      expect(isGlobalForFacilitators(action), action).toBe(true);
+    }
+    expect(isGlobalForFacilitators("material.publish")).toBe(false);
   });
 
   it("denies learners a locked assessment", () => {
     expect(scopeAllows("LEARNER", "assessment.take", { enrolled: false })).toBe(false);
     expect(scopeAllows("LEARNER", "assessment.take", { enrolled: true, attemptsLeft: true })).toBe(true);
+  });
+
+  it("denies learners material aimed at another cohort", () => {
+    expect(scopeAllows("LEARNER", "material.read_published", { audienceMatch: false })).toBe(false);
+    expect(scopeAllows("LEARNER", "material.download", { audienceMatch: false })).toBe(false);
+    expect(scopeAllows("LEARNER", "material.read_published", { audienceMatch: true })).toBe(true);
   });
 });

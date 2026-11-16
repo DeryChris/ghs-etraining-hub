@@ -4,9 +4,12 @@ import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/index";
-import { enrollments, materialProgress, materials, spaces } from "@/db/schema";
+import { enrollments, materialProgress } from "@/db/schema";
 import { formatCredits } from "@/lib/format";
 import { logAudit } from "@/lib/server/audit";
+import { issueCertificate } from "@/lib/server/certificates";
+import { getMaterialDetail } from "@/lib/server/learning-queries";
+import { consumeRateLimit, rateLimitKey, retryAfterText } from "@/lib/server/rate-limit";
 import { checkCapability } from "@/lib/server/rbac";
 
 export interface ProgressActionState {
@@ -21,15 +24,17 @@ const progressInput = z
   })
   .strict();
 
-function successMessage(intent: "start" | "acknowledge" | "complete", creditsX10: number): string {
+function successMessage(intent: "start" | "acknowledge" | "complete", creditsX10: number, code: string | null): string {
   if (intent === "start") return "Started. Your progress is saved.";
   if (intent === "acknowledge") return "Acknowledged. Mark the material complete when you have finished it.";
-  return `Completed. ${formatCredits(creditsX10)} added to your CPD transcript.`;
+  const base = `Completed. ${formatCredits(creditsX10)} added to your CPD transcript.`;
+  return code ? `${base} Certificate ${code} — anyone can check it on the verification page.` : base;
 }
 
 /**
  * One action covers the learner's journey: start → acknowledge (mandatory
- * protocols) → complete. Each step is written atomically with its audit row.
+ * protocols) → complete. Each step is written atomically with its audit row,
+ * and completion issues the CPD certificate in the same transaction.
  */
 export async function updateMaterialProgressAction(
   _previous: ProgressActionState,
@@ -46,32 +51,28 @@ export async function updateMaterialProgressAction(
   if (!parsed.success) return { ok: false, message: "We could not save that step. Refresh the page and try again." };
   const { materialId, intent } = parsed.data;
 
-  const [material] = await db
-    .select({
-      spaceId: materials.spaceId,
-      spaceSlug: spaces.slug,
-      title: materials.title,
-      versionId: materials.currentVersionId,
-      requiresAcknowledgement: materials.requiresAcknowledgement,
-      cpdCreditsX10: materials.cpdCreditsX10,
-    })
-    .from(materials)
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .where(and(eq(materials.id, materialId), eq(materials.isPublished, true), eq(materials.state, "PUBLISHED")))
-    .limit(1);
-
-  if (!material || !material.versionId) {
+  // A learner can post this action directly, so the cohort rules are re-applied
+  // here: restricted directorates and other cohorts' material are not reachable
+  // by guessing a material id.
+  const detail = await getMaterialDetail(materialId, session);
+  if (!detail?.material.currentVersionId || !detail.version) {
     return { ok: false, message: "This material is no longer available." };
   }
-  const versionId = material.versionId;
+
+  const limit = await consumeRateLimit(rateLimitKey("progress", session.sub), 60, 5 * 60);
+  if (!limit.allowed) {
+    return { ok: false, message: `Too many updates in a short time. Try again in ${retryAfterText(limit.retryAfterSeconds)}.` };
+  }
+
+  const material = detail.material;
+  const versionId = detail.material.currentVersionId;
+  const spaceId = material.spaceId;
+  const spaceSlug = detail.space.slug;
   const actor = { sub: session.sub, role: session.role, name: session.name, staffId: session.staffId };
 
   const result: ProgressActionState = await db.transaction(async (tx) => {
     // Recording progress enrols the learner in the space (idempotent).
-    await tx
-      .insert(enrollments)
-      .values({ userId: session.sub, spaceId: material.spaceId, source: "SELF" })
-      .onConflictDoNothing();
+    await tx.insert(enrollments).values({ userId: session.sub, spaceId, source: "SELF" }).onConflictDoNothing();
 
     const [row] = await tx
       .select()
@@ -140,7 +141,38 @@ export async function updateMaterialProgressAction(
       tx,
     );
 
-    return { ok: true, message: successMessage(intent, material.cpdCreditsX10) };
+    let certificateCode: string | null = null;
+    if (intent === "complete") {
+      const certificate = await issueCertificate(tx, {
+        userId: session.sub,
+        materialId,
+        materialVersionId: versionId,
+        cpdCreditsX10: material.cpdCreditsX10,
+        recertificationMonths: material.recertificationMonths,
+      });
+      certificateCode = certificate.issued ? certificate.code : certificate.existingCode;
+      if (certificate.issued) {
+        await logAudit(
+          {
+            actor,
+            action: "CERTIFICATE_ISSUED",
+            entity: "Certificate",
+            entityId: certificate.code,
+            metadata: {
+              materialId,
+              versionId,
+              cpdCreditsX10: material.cpdCreditsX10,
+              expiresAt: material.recertificationMonths
+                ? new Date(now.getTime() + material.recertificationMonths * 30 * 24 * 60 * 60 * 1000).toISOString()
+                : null,
+            },
+          },
+          tx,
+        );
+      }
+    }
+
+    return { ok: true, message: successMessage(intent, material.cpdCreditsX10, certificateCode) };
   });
 
   if (result.ok) {
@@ -148,7 +180,7 @@ export async function updateMaterialProgressAction(
     revalidatePath("/library");
     revalidatePath("/analytics");
     revalidatePath(`/materials/${materialId}`);
-    revalidatePath(`/spaces/${material.spaceSlug}`);
+    revalidatePath(`/spaces/${spaceSlug}`);
   }
   return result;
 }

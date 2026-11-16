@@ -1,18 +1,42 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { categories, materialProgress, materialVersions, materials, spaces, users } from "@/db/schema";
 import { PRIORITY_RANK, type MaterialType, type PriorityLevel, type ProgressStatus } from "@/lib/labels";
+import { isStaffRole, type Viewer } from "@/lib/viewer";
 
 /*
- * Learners only ever see published, live content.
+ * Learners only ever see published, live content that is meant for them.
  * Every condition is built with eq()/and() so columns are table-qualified. Raw column
  * references inside sql`` can render unqualified, which breaks correlated subqueries.
  */
 const publishedMaterial = and(eq(materials.isPublished, true), eq(materials.state, "PUBLISHED"));
 const liveSpace = eq(spaces.isArchived, false);
 const liveCategory = eq(categories.isArchived, false);
+
+/**
+ * Audience targeting: a space with no audience is for everyone; a space that names
+ * a region, directorate or cadre is for that cohort only.
+ *
+ * Staff are exempt (they review content outside their own cohort). A viewer without
+ * a given attribute is compared against "" so it matches untargeted content only —
+ * an anonymous marketing visitor therefore never sees targeted material.
+ */
+function audienceFor(viewer: Viewer | null) {
+  if (viewer && isStaffRole(viewer.role)) return undefined;
+  return and(
+    or(isNull(spaces.audienceRegion), eq(spaces.audienceRegion, viewer?.region ?? "")),
+    or(isNull(spaces.audienceDirectorate), eq(spaces.audienceDirectorate, viewer?.directorate ?? "")),
+    or(isNull(spaces.audienceCadre), eq(spaces.audienceCadre, viewer?.cadre ?? "")),
+  );
+}
+
+/** Restricted directorates (e.g. sensitive clinical programmes) are staff-only. */
+function categoryFor(viewer: Viewer | null) {
+  if (viewer && isStaffRole(viewer.role)) return undefined;
+  return eq(categories.isRestricted, false);
+}
 
 function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`);
@@ -29,17 +53,17 @@ export interface CategoryCard {
   materialCount: number;
 }
 
-export async function listCategories(): Promise<CategoryCard[]> {
+export async function listCategories(viewer: Viewer | null): Promise<CategoryCard[]> {
   const spaceTotal = db
     .select({ n: count() })
     .from(spaces)
-    .where(and(eq(spaces.categoryId, categories.id), liveSpace));
+    .where(and(eq(spaces.categoryId, categories.id), liveSpace, audienceFor(viewer)));
 
   const materialTotal = db
     .select({ n: count() })
     .from(materials)
     .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .where(and(eq(spaces.categoryId, categories.id), liveSpace, publishedMaterial));
+    .where(and(eq(spaces.categoryId, categories.id), liveSpace, publishedMaterial, audienceFor(viewer)));
 
   return db
     .select({
@@ -51,7 +75,7 @@ export async function listCategories(): Promise<CategoryCard[]> {
       materialCount: sql<number>`coalesce((${materialTotal}), 0)::int`,
     })
     .from(categories)
-    .where(liveCategory)
+    .where(and(liveCategory, categoryFor(viewer)))
     .orderBy(asc(categories.name));
 }
 
@@ -59,16 +83,16 @@ export async function listCategories(): Promise<CategoryCard[]> {
  * The public directorate list, cached for five minutes. Signed-in pages use the
  * uncached listCategories() so a facilitator's publish is visible immediately.
  */
-export const listPublicCategories = unstable_cache(listCategories, ["public-categories"], {
+export const listPublicCategories = unstable_cache(() => listCategories(null), ["public-categories"], {
   revalidate: 300,
   tags: ["taxonomy"],
 });
 
-export async function getCategory(id: string) {
+export async function getCategory(id: string, viewer: Viewer | null) {
   const [row] = await db
     .select()
     .from(categories)
-    .where(and(eq(categories.id, id), liveCategory))
+    .where(and(eq(categories.id, id), liveCategory, categoryFor(viewer)))
     .limit(1);
   return row ?? null;
 }
@@ -82,7 +106,7 @@ export interface SpaceCard {
   completedCount: number;
 }
 
-export async function listSpacesInCategory(categoryId: string, userId: string): Promise<SpaceCard[]> {
+export async function listSpacesInCategory(categoryId: string, viewer: Viewer): Promise<SpaceCard[]> {
   const materialTotal = db
     .select({ n: count() })
     .from(materials)
@@ -95,7 +119,7 @@ export async function listSpacesInCategory(categoryId: string, userId: string): 
     .where(
       and(
         eq(materials.spaceId, spaces.id),
-        eq(materialProgress.userId, userId),
+        eq(materialProgress.userId, viewer.id),
         eq(materialProgress.status, "COMPLETED"),
         publishedMaterial,
       ),
@@ -111,16 +135,33 @@ export async function listSpacesInCategory(categoryId: string, userId: string): 
       completedCount: sql<number>`coalesce((${completedTotal}), 0)::int`,
     })
     .from(spaces)
-    .where(and(eq(spaces.categoryId, categoryId), liveSpace))
+    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .where(
+      and(
+        eq(spaces.categoryId, categoryId),
+        liveSpace,
+        liveCategory,
+        categoryFor(viewer),
+        audienceFor(viewer),
+      ),
+    )
     .orderBy(asc(spaces.title));
 }
 
-export async function getSpaceBySlug(slug: string) {
+export async function getSpaceBySlug(slug: string, viewer: Viewer | null) {
   const [row] = await db
     .select({ space: spaces, category: categories })
     .from(spaces)
     .innerJoin(categories, eq(categories.id, spaces.categoryId))
-    .where(and(eq(spaces.slug, slug), liveSpace, liveCategory))
+    .where(
+      and(
+        eq(spaces.slug, slug),
+        liveSpace,
+        liveCategory,
+        categoryFor(viewer),
+        audienceFor(viewer),
+      ),
+    )
     .limit(1);
   return row ?? null;
 }
@@ -142,7 +183,7 @@ export interface MaterialListItem {
   acknowledgedAt: Date | null;
 }
 
-export async function listMaterialsInSpace(spaceId: string, userId: string): Promise<MaterialListItem[]> {
+export async function listMaterialsInSpace(spaceId: string, viewer: Viewer): Promise<MaterialListItem[]> {
   return db
     .select({
       id: materials.id,
@@ -160,8 +201,19 @@ export async function listMaterialsInSpace(spaceId: string, userId: string): Pro
     })
     .from(materials)
     .innerJoin(users, eq(users.id, materials.authorId))
-    .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, userId)))
-    .where(and(eq(materials.spaceId, spaceId), publishedMaterial))
+    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
+    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, viewer.id)))
+    .where(
+      and(
+        eq(materials.spaceId, spaceId),
+        publishedMaterial,
+        liveSpace,
+        liveCategory,
+        categoryFor(viewer),
+        audienceFor(viewer),
+      ),
+    )
     .orderBy(asc(materials.title));
 }
 
@@ -174,7 +226,7 @@ export interface LibraryItem extends MaterialListItem {
 export async function searchLibrary(input: {
   query: string;
   type: MaterialType | null;
-  userId: string;
+  viewer: Viewer;
 }): Promise<LibraryItem[]> {
   const term = input.query.trim().slice(0, 120);
   const pattern = `%${escapeLike(term)}%`;
@@ -201,12 +253,14 @@ export async function searchLibrary(input: {
     .innerJoin(users, eq(users.id, materials.authorId))
     .innerJoin(spaces, eq(spaces.id, materials.spaceId))
     .innerJoin(categories, eq(categories.id, spaces.categoryId))
-    .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, input.userId)))
+    .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, input.viewer.id)))
     .where(
       and(
         publishedMaterial,
         liveSpace,
         liveCategory,
+        categoryFor(input.viewer),
+        audienceFor(input.viewer),
         input.type ? eq(materials.type, input.type) : undefined,
         term ? or(ilike(materials.title, pattern), ilike(materials.summary, pattern)) : undefined,
       ),
@@ -215,7 +269,7 @@ export async function searchLibrary(input: {
     .limit(120);
 }
 
-export async function getMaterialDetail(materialId: string, userId: string) {
+export async function getMaterialDetail(materialId: string, viewer: Viewer) {
   const [row] = await db
     .select({
       material: materials,
@@ -230,8 +284,17 @@ export async function getMaterialDetail(materialId: string, userId: string) {
     .innerJoin(categories, eq(categories.id, spaces.categoryId))
     .innerJoin(users, eq(users.id, materials.authorId))
     .leftJoin(materialVersions, eq(materialVersions.id, materials.currentVersionId))
-    .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, userId)))
-    .where(and(eq(materials.id, materialId), publishedMaterial, liveSpace, liveCategory))
+    .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, viewer.id)))
+    .where(
+      and(
+        eq(materials.id, materialId),
+        publishedMaterial,
+        liveSpace,
+        liveCategory,
+        categoryFor(viewer),
+        audienceFor(viewer),
+      ),
+    )
     .limit(1);
   return row ?? null;
 }
@@ -267,7 +330,7 @@ export interface LearnerDashboard {
   continueLearning: ContinueItem[];
 }
 
-export async function getLearnerDashboard(userId: string): Promise<LearnerDashboard> {
+export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashboard> {
   const [totalsRows, mandatoryRows, continueRows] = await Promise.all([
     db
       .select({
@@ -277,7 +340,7 @@ export async function getLearnerDashboard(userId: string): Promise<LearnerDashbo
       })
       .from(materialProgress)
       .innerJoin(materials, eq(materials.id, materialProgress.materialId))
-      .where(eq(materialProgress.userId, userId)),
+      .where(eq(materialProgress.userId, viewer.id)),
     db
       .select({
         id: materials.id,
@@ -293,8 +356,17 @@ export async function getLearnerDashboard(userId: string): Promise<LearnerDashbo
       .from(materials)
       .innerJoin(spaces, eq(spaces.id, materials.spaceId))
       .innerJoin(categories, eq(categories.id, spaces.categoryId))
-      .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, userId)))
-      .where(and(publishedMaterial, liveSpace, liveCategory, eq(materials.requiresAcknowledgement, true))),
+      .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, viewer.id)))
+      .where(
+        and(
+          publishedMaterial,
+          liveSpace,
+          liveCategory,
+          categoryFor(viewer),
+          audienceFor(viewer),
+          eq(materials.requiresAcknowledgement, true),
+        ),
+      ),
     db
       .select({
         id: materials.id,
@@ -310,11 +382,13 @@ export async function getLearnerDashboard(userId: string): Promise<LearnerDashbo
       .innerJoin(categories, eq(categories.id, spaces.categoryId))
       .where(
         and(
-          eq(materialProgress.userId, userId),
+          eq(materialProgress.userId, viewer.id),
           eq(materialProgress.status, "IN_PROGRESS"),
           publishedMaterial,
           liveSpace,
           liveCategory,
+          categoryFor(viewer),
+          audienceFor(viewer),
         ),
       )
       .orderBy(desc(materialProgress.updatedAt))
@@ -356,6 +430,10 @@ export interface CompletionRecord {
   spaceTitle: string;
 }
 
+/*
+ * The transcript is a record of what the learner actually completed, so it is not
+ * filtered by today's audience rules: revoking a cohort must never erase history.
+ */
 export async function listCompletions(userId: string, limit = 500): Promise<CompletionRecord[]> {
   return db
     .select({

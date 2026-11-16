@@ -15,6 +15,13 @@
       "when": 1794845496388,
       "tag": "0001_integrity_and_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794845707888,
+      "tag": "0002_certificates_unique",
+      "breakpoints": true
     }
   ]
 }

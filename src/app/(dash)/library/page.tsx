@@ -13,7 +13,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
   const query = (params.q ?? "").trim().slice(0, 120);
   const type = isMaterialType(params.type) ? params.type : null;
 
-  const items = await searchLibrary({ query, type, userId: session.sub });
+  const items = await searchLibrary({ query, type, viewer: session });
   const filtered = query.length > 0 || type !== null;
 
   return (
