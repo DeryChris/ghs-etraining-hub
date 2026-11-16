@@ -1,7 +1,8 @@
 # Architecture Decision Records
 
-Any deviation from `docs/PRD.md` or `AGENTS.md` requires an ADR here **and** an entry in the
-console at `/decisions` (same content, so agents working in a browser session can see it).
+Any deviation from `docs/PRD.md` or `AGENTS.md` requires an ADR in this directory, reviewed in the
+same pull request as the change it justifies. (The old in-app `/decisions` console was never shipped
+with the product; this directory is the record.)
 
 Format: `ADR-NNN — Title`, then **Status** (proposed | accepted | superseded by ADR-NNN),
 **Context**, **Decision**, **Consequences** (positive and negative), **Date**.
@@ -111,3 +112,15 @@ authorship is preserved under the anonymised label.
 
 **Consequences.** (+) Evidence and audit chain survive; erasure is satisfiable. (−) Unique email
 constraints need a tombstone strategy; reporting must exclude deactivated users by default.
+
+---
+
+## ADR‑0007 — CSP and security headers
+
+**Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0007-csp-and-headers.md`](./0007-csp-and-headers.md)
+
+**Decision.** Harden the header set (CSP with `object-src`/`base-uri`/`frame-ancestors`/`form-action`
+locked down, COOP/CORP, Permissions-Policy), narrow `img-src` to the real allowlist, self-host the
+typeface, and keep `script-src 'unsafe-inline'` until a per-request nonce migration lands. Follows
+ADR‑0006 (staff are deactivated, never deleted), which lets the audit chain rely on an immutable
+actor id.

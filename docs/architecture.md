@@ -49,21 +49,32 @@ point `DATABASE_URL` at the transaction pooler (port 6543). `DIRECT_URL` is used
 ## 4. Error handling
 
 ```
-throw new AppError("MATERIAL_NOT_FOUND", 404)      → renders not-found, no detail leak
-throw new AppError("FORBIDDEN", 403)               → generic message + correlation id
-throw new ZodError                                 → field map to inline form errors
-throw new Error                                    → 500, logged server-side with correlation id
+notFound()                                         → renders not-found, no detail leak
+redirect("/dashboard?notice=forbidden")            → wrong role on a known surface
+checkCapability() → { ok: false, message }          → plain-English refusal shown inline
+throw new Error                                    → 500, logged server-side with a correlation id
 ```
 
-`src/lib/server/errors.ts` defines `AppError` and `toFieldErrors(zodError)`. Every `error.tsx`
-shows the correlation id (`crypto.randomUUID()` propagated via `headers()`), never a stack trace.
+Server Actions return a discriminated result (`{ ok, message }`) rather than throwing, so forms
+can render the refusal next to the field that caused it. Pages call `notFound()` when the
+resource must not be revealed, and `redirect()` when the surface is already known to the user.
+
+Every response carries an `x-request-id` (set in `src/proxy.ts`); `src/lib/server/logger.ts`
+emits one JSON line per event with the same id where available. `error.tsx` shows Next's digest —
+the matching value is in the server log. No stack trace is ever sent to the browser.
 
 ## 5. Observability
 
-* `GET /api/health` → `{ ok, checks: { db, storage, migrations } , uptime, version }`; returns 503
-  if `db` fails so the platform can act on it.
-* Structured logs: one line per request `{ requestId, route, userId?, role?, ms, status }`.
-* Alert thresholds: p95 > 1.5 s for 10 min, error rate > 1 %, login failures > 20/min per account.
+* `GET /api/health` → `{ ok, version, uptime, checks: { db }, latencyMs }`; returns 503 when the
+  database is unreachable so the platform can act on it.
+* Structured logs: `logEvent()` in `src/lib/server/logger.ts` writes one JSON line
+  (`{ level, time, event, userId?, role?, … }`) that a log drain can index. Keys matching the PII
+  pattern are redacted by `redactMetadata()` before the line is written, so message bodies,
+  e-mails and staff PINs never reach stdout.
+* Correlated events: `material.file_issued`, `message.sent`, `progress.recorded`,
+  `progress.rate_limited`, `certificate.verify_rate_limited`.
+* Alert thresholds (to wire in the hosting platform): p95 > 1.5 s for 10 min, error rate > 1 %,
+  `*.rate_limited` spikes, and any `db:verify-chain` failure.
 
 ## 6. Environments
 
@@ -83,9 +94,16 @@ shows the correlation id (`crypto.randomUUID()` propagated via `headers()`), nev
 | --- | --- | --- |
 | Dashboard aggregates | none (dynamic) | n/a |
 | Published material metadata | tagged `material:{id}` | `revalidateTag` on publish |
-| Region/directorate lists | `unstable_cache` 24 h | `revalidateTag("taxonomy")` on category write |
+| Public directorate list + counters | `unstable_cache` 5 min, tag `taxonomy` | `revalidateTag("taxonomy")` on category/material write |
+| Signed-in directorate/space/material views | none (dynamic, per-viewer cohort) | n/a |
 | Certificate lookup | `unstable_cache` 1 h | `revalidateTag("certificate:{code}")` on verification |
 | Static assets / media | CDN, immutable keys (version‑prefixed) | never — new version = new key |
+
+## 7a. Schema migrations
+
+Two streams, applied in order: `drizzle/` (generated from `src/db/schema.ts`) then
+`supabase/migrations/` (RLS, grants). Operational detail lives in `docs/migrations.md`.
+`drizzle-kit push` is a sandbox convenience and must never run against a real environment.
 
 ## 8. File storage layout
 

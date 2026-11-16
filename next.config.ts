@@ -8,7 +8,7 @@ import type { NextConfig } from "next";
  *  - `script-src` still needs 'unsafe-inline' because Next injects its own
  *    inline bootstrap/flight scripts and the theme boot script must run before
  *    first paint. Migrating to a per-request nonce is tracked in
- *    docs/decisions/0003-csp-and-headers.md; it costs a dynamic render on every
+ *    docs/decisions/0007-csp-and-headers.md; it costs a dynamic render on every
  *    route, so it is a deliberate, documented trade-off rather than an oversight.
  *  - `img-src` is limited to the hosts actually allowed in `images.remotePatterns`.
  *  - `object-src`, `base-uri`, `form-action` and `frame-ancestors` are locked to

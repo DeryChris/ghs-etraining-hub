@@ -6,6 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { isCertificateCode } from "@/lib/certificate-code";
 import { formatDate, formatCredits } from "@/lib/format";
+import { log } from "@/lib/server/logger";
 import { verifyCertificate } from "@/lib/server/public-queries";
 import { consumeRateLimit, rateLimitKey, retryAfterText } from "@/lib/server/rate-limit";
 import { clientAddress } from "@/lib/server/request-context";
@@ -24,6 +25,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
   // so the page cannot be used to harvest holder names.
   const limit = code ? await consumeRateLimit(rateLimitKey("verify", await clientAddress()), 20, 5 * 60) : null;
   const rateLimited = limit !== null && !limit.allowed;
+  if (rateLimited) log.warn({ event: "certificate.verify_rate_limited" });
   const result = code && !rateLimited ? await verifyCertificate(code) : null;
 
   return (

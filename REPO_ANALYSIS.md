@@ -1,5 +1,16 @@
 # GHS-ELN — Repository Analysis
 
+> **Remediation status — 16 November 2026.** The findings below have been worked in priority
+> order across four commits; this document is kept as the original assessment so the reasoning is
+> auditable. Status per item is recorded in §12.
+>
+> | Commit | Scope |
+> | --- | --- |
+> | `chore(platform)` | Dependency upgrades (production audit now clean), hermetic font, hardened headers, Vercel/env correctness, CI + Dependabot, real migration config |
+> | `fix(data)` | Versioned Drizzle migrations, immutable audit actor, idempotent seeder, unique keys, missing indexes, MIME-correct downloads |
+> | `feat(learning)` | Cohort/restricted visibility enforced everywhere, certificate issuance with random serials, rate limiting, DB-verified facilitator scope, capability test sweep |
+> | `perf(ui)` | Library pagination, paginated threads, bounded inbox/transcript |
+
 **Repository:** `DeryChris/ghs-etraining-hub` · **Branch:** `arena/28c03ab6-ghs-etraining-hub` · **Commit:** `f717cb6 feat(platform): launch GHS-ELN learning experience` (single commit, no upstream history)
 **Analysed:** 16 November 2026 · **Method:** full read of source + docs, dependency install, typecheck, lint, unit tests, production build attempt, `npm audit`, schema/query/mutation review.
 
@@ -219,3 +230,45 @@ git ls-files | wc -l                      # 137 tracked files
 grep -rn "process.env." src | …           # env surface vs .env.example / vercel.json
 grep -rn "\.insert(\|\.update(" src       # 6 mutation sites in app code (2 actions + 1 route)
 ```
+
+---
+
+## 12. Remediation status
+
+### Fixed in this pass
+
+| # | Finding | Where |
+| --- | --- | --- |
+| 1 | `next@16.0.0` critical advisories | upgraded to 16.4.6 (+ React 19.3.1); `npm audit --omit=dev` is **0** |
+| 2 | No versioned migrations | `drizzle/0000_baseline.sql`, `0001_integrity_and_indexes.sql`, `0002_certificates_unique.sql`, `docs/migrations.md`; `db:migrate` / `db:check` scripts |
+| 3 | `vercel.json` env names | now declares `NEXT_PUBLIC_SUPABASE_*`; `SESSION_SECRET`/bare `SUPABASE_*` removed |
+| 4 | Certificate enumeration | random 50-bit Crockford serials, format validation, 20/5 min per-connection limit, verification counted |
+| 5 | `tests/` + `scripts/` gitignored | both tracked; `scripts/provision-auth-user.ts` and `scripts/verify-audit-chain.ts` added |
+| 6 | Weak CSP / headers | `object-src`/`base-uri`/`frame-ancestors`/`form-action` locked, `img-src` narrowed, COOP/CORP/Permissions-Policy added; nonce migration tracked as ADR-0007 |
+| 7 | No rate limiting / lockout | fixed-window limiter over `rate_limit_windows` on progress, messages, verification (hashed keys, no raw IPs) |
+| 8 | Vulnerable ORM/validator | drizzle-orm 0.45.4, zod 4.6.7, @supabase/ssr 0.12.7, vitest 4.1.12 |
+| 9 | Download hard-coded `.pdf` | `src/lib/file-name.ts` derives the extension from the stored MIME type (8 tests) |
+| 10 | `material.download` unenforced | file route consults the matrix; audience rule added to `scopeAllows` |
+| 11 | Facilitator scope was a stub | `checkCapability()` verifies `category_facilitators` |
+| 12 | Audit chain broke on user deletion | FK is `ON DELETE RESTRICT` (ADR-0006), documented in the migration |
+| 13 | Non-idempotent seeder | `UNIQUE (space_id, title)` + upsert; running twice no longer duplicates |
+| 14 | Missing indexes | added for messages, notifications, visibility, progress, certificates, comments, enrollments, lower(email) |
+| 15 | No pagination | library (24/page with links), threads (50 with cursor), transcript (25 rendered), 50 conversations |
+| 16 | Restricted/audience columns unused | enforced in every learner-facing query **and** the progress action |
+| 17 | Certificates never issued | issued in the same transaction as completion + audit; unique (user, material, version) |
+| 18 | Build depends on Google Fonts | Plus Jakarta Sans self-hosted (SIL OFL) — build is hermetic |
+| 19 | No CI / dependency scanning | `.github/workflows/ci.yml` + Dependabot |
+| 20 | Docs drift (README/AGENTS/architecture/qa) | rewritten against the real tree; ADR-0007 added; `docs/migrations.md` created |
+| 21 | No observability | `logEvent()` JSON lines with PII redaction, `x-request-id` on every response |
+| 22 | Facilitation test coverage | capability sweep over every action × role (33 unit tests total) |
+
+### Deliberately not done in this pass
+
+| # | Finding | Why / next step |
+| --- | --- | --- |
+| A | No authoring/publish pipeline (upload → review → publish → supersede) | Largest remaining feature; needs UI, storage writes, approval workflow and its own ADR. Until then the marketing copy's "controlled/versioned documents" describes the data model, not a shipped workflow. |
+| B | Assessments, comments, message reporting, notifications targeting | Tables exist, flows do not. Each is a feature slice with its own UI and tests. |
+| C | MFA enforcement and account lockout | Needs an ICT policy decision (Supabase MFA enrolment flow) before code. |
+| D | Per-request CSP nonce | Tracked in ADR-0007; forces dynamic rendering on every route. |
+| E | Authenticated E2E suite executed in CI | Spec exists (`tests/e2e/learner.spec.ts`) and skips without credentials; CI needs a seeded database + Supabase project to run it. |
+| F | Certificate PDF rendering and transcript certificate column | Issuance and verification exist; the printable artefact does not. |

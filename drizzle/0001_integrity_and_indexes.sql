@@ -9,7 +9,7 @@
 -- The audit_logs foreign key changes from ON DELETE SET NULL to ON DELETE RESTRICT:
 -- deleting a staff member would otherwise null the actor id that the tamper-evident
 -- hash chain is computed over, turning every one of their events into a false
--- "chain broken" report. Off-board staff with users.is_active = false instead.
+-- "chain broken" report. Off-board staff with users.is_active = false instead (ADR-0006).
 -- Rows that are already null stay valid; the chain is only re-verified from now on.
 
 ALTER TABLE "audit_logs" DROP CONSTRAINT "audit_logs_user_id_users_id_fk";

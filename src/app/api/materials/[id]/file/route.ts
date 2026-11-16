@@ -6,6 +6,7 @@ import { can } from "@/lib/rbac/capabilities";
 import { logAudit } from "@/lib/server/audit";
 import { createMaterialSignedUrl } from "@/lib/server/file-storage";
 import { getMaterialDetail } from "@/lib/server/learning-queries";
+import { log } from "@/lib/server/logger";
 import { getSession } from "@/lib/server/session";
 
 /**
@@ -52,6 +53,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
     entityId: id,
     metadata: { versionId: material.version?.id ?? null, download },
   });
+
+  log.info({ event: "material.file_issued", userId: session.sub, role: session.role, materialId: id, download });
 
   return NextResponse.redirect(signed.url, {
     status: 302,

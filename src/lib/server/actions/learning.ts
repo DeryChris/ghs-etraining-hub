@@ -9,6 +9,7 @@ import { formatCredits } from "@/lib/format";
 import { logAudit } from "@/lib/server/audit";
 import { issueCertificate } from "@/lib/server/certificates";
 import { getMaterialDetail } from "@/lib/server/learning-queries";
+import { log } from "@/lib/server/logger";
 import { consumeRateLimit, rateLimitKey, retryAfterText } from "@/lib/server/rate-limit";
 import { checkCapability } from "@/lib/server/rbac";
 
@@ -61,6 +62,7 @@ export async function updateMaterialProgressAction(
 
   const limit = await consumeRateLimit(rateLimitKey("progress", session.sub), 60, 5 * 60);
   if (!limit.allowed) {
+    log.warn({ event: "progress.rate_limited", userId: session.sub, role: session.role, materialId, intent });
     return { ok: false, message: `Too many updates in a short time. Try again in ${retryAfterText(limit.retryAfterSeconds)}.` };
   }
 
@@ -176,6 +178,7 @@ export async function updateMaterialProgressAction(
   });
 
   if (result.ok) {
+    log.info({ event: "progress.recorded", userId: session.sub, role: session.role, materialId, intent });
     revalidatePath("/dashboard");
     revalidatePath("/library");
     revalidatePath("/analytics");

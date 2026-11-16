@@ -28,11 +28,21 @@ function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`)) || STATIC_FILE.test(pathname);
 }
 
+function withRequestId(response: NextResponse, requestId: string): NextResponse {
+  response.headers.set("x-request-id", requestId);
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
+  // Correlates this request with the JSON log lines and the error boundary's digest.
+  const requestId = crypto.randomUUID();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !anonKey) {
-    return new NextResponse("GHS-ELN is not configured. Contact the ICT helpdesk.", { status: 500 });
+    return withRequestId(
+      new NextResponse("GHS-ELN is not configured. Contact the ICT helpdesk.", { status: 500 }),
+      requestId,
+    );
   }
 
   let response = NextResponse.next({ request });
@@ -60,17 +70,17 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = `?next=${encodeURIComponent(`${pathname}${search}`)}`;
-    return NextResponse.redirect(url);
+    return withRequestId(NextResponse.redirect(url), requestId);
   }
 
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";
-    return NextResponse.redirect(url);
+    return withRequestId(NextResponse.redirect(url), requestId);
   }
 
-  return response;
+  return withRequestId(response, requestId);
 }
 
 export const config = {
