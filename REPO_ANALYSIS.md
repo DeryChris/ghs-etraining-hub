@@ -1,7 +1,7 @@
 # GHS-ELN — Repository Analysis
 
 > **Remediation status — 16 November 2026.** The findings below have been worked in priority
-> order across six commits; this document is kept as the original assessment so the reasoning is
+> order across seven commits; this document is kept as the original assessment so the reasoning is
 > auditable. Status per item is recorded in §12.
 >
 > | Commit | Scope |
@@ -12,6 +12,8 @@
 > | `perf(ui)` | Library pagination, paginated threads, bounded inbox/transcript |
 > | `fix(resilience)` | Public pages and certificate verification degrade instead of crashing when the database is unreachable |
 > | `feat(authoring)` | Draft → signed upload → review → publish → supersede → archive, the two-person rule, and its ADR (0008) |
+> | `fix(errors)` | One error vocabulary, request ids forwarded downstream and quoted by both error boundaries |
+> | `feat(notices)` | Cohort-targeted notices (`audience_filter`), a staff composer, and truthful read cursors |
 
 **Repository:** `DeryChris/ghs-etraining-hub` · **Branch:** `arena/28c03ab6-ghs-etraining-hub` · **Commit:** `f717cb6 feat(platform): launch GHS-ELN learning experience` (single commit, no upstream history)
 **Analysed:** 16 November 2026 · **Method:** full read of source + docs, dependency install, typecheck, lint, unit tests, production build attempt, `npm audit`, schema/query/mutation review.
@@ -268,6 +270,7 @@ grep -rn "\.insert(\|\.update(" src       # 6 mutation sites in app code (2 acti
 | 25 | The two-person rule was documented but unenforced | `publishBlockers()` + new `material.review` capability + `scopeAllows(reviewerIsAuthor)`; reason required to reject; audited `SYSTEM_ADMIN` override (14 + 8 unit tests) |
 | 26 | Uploads could not work through the app server (body limits) | browser → storage signed slots; server re-verifies type/size from storage metadata and removes rejected objects |
 | 27 | `src/lib/server/errors.ts` referenced by the docs did not exist; errors surfaced as stack traces or bare digests | one `AppError` vocabulary with statuses + `toFieldErrors`, request id forwarded downstream, mirrored into `ghs_rid` and quoted by both error boundaries (7 tests) |
+| 28 | `notifications.audience_filter` was unused — every notice reached everyone, and there was no way to send one | `/notices` composer for staff, cohort filter resolved from the space's audience, strict matching (blank dimension never matches), "mark all read" honours the filter (6 tests) |
 
 ### Deliberately not done in this pass
 

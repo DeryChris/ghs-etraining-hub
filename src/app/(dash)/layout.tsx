@@ -20,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { session } = account;
   const [unreadMessages, unreadNotifications] = await Promise.all([
     countUnreadMessages(session.sub),
-    countUnreadNotifications(session.sub),
+    countUnreadNotifications(session),
   ]);
 
   return (

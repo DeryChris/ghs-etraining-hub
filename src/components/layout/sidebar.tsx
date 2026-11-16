@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BarChart3, Bell, BookOpen, ClipboardCheck, FolderKanban, LayoutGrid, MessageSquare, PenLine, X, type LucideIcon } from "lucide-react";
+import { BarChart3, Bell, BookOpen, ClipboardCheck, FolderKanban, LayoutGrid, Megaphone, MessageSquare, PenLine, X, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId } from "react";
@@ -47,6 +47,7 @@ const AUTHORING_GROUP: { label: string; items: NavItem[] } = {
   items: [
     { href: "/authoring", label: "My materials", icon: PenLine },
     { href: "/review", label: "Review queue", icon: ClipboardCheck },
+    { href: "/notices", label: "Send notice", icon: Megaphone },
   ],
 };
 

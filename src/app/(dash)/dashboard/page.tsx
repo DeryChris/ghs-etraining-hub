@@ -60,7 +60,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { notice } = await searchParams;
   const now = new Date();
 
-  const [dashboard, announcements] = await Promise.all([getLearnerDashboard(session), listNotifications(session.sub, 4)]);
+  const [dashboard, announcements] = await Promise.all([getLearnerDashboard(session), listNotifications(session, 4)]);
 
   const points = pointsFromCreditsX10(dashboard.creditsX10);
   const outstanding = dashboard.mandatoryOutstanding;

@@ -70,6 +70,16 @@ mobile, and a 200 % zoom check for horizontal scrolling.
 5. Re‑open a learner's progress record → it still points at v1 (`material_version_id`).
 6. Old version shows the "This version has been replaced" banner and remains readable.
 
+### 6a. Notice targeting drill
+
+1. As a facilitator, send a notice to a space whose audience is one directorate.
+2. Sign in as a learner in a different directorate → the notice is absent from `/notifications` and
+   from the sidebar count; as a learner in that directorate → it is present.
+3. Learner with a blank directorate → absent (a narrowed notice never leaks to "unknown").
+4. Mark all as read → only visible notices get read cursors; re-open as the other cohort and the
+   notice is still unread.
+5. `NOTIFICATION_BROADCAST` appears in the audit log with the audience filter.
+
 ## 7. Assessment integrity drill
 
 * Intercept the take‑assessment request → the response must contain no `correctIndex`.

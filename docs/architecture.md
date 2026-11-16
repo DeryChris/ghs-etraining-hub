@@ -140,6 +140,13 @@ is finalised.
 | Review | `recordReviewDecisionAction` → `review_assignments` row | `material.review`, reviewer ≠ uploader, reason required to reject |
 | Publish | `publishVersionAction` → version `PUBLISHED`, previous version `SUPERSEDED`, `materials.currentVersionId` flipped | `material.publish` + `publishBlockers()` (two‑person rule) |
 | Archive | `archiveMaterialAction` → `ARCHIVED` | `material.archive`; versions and audit entries retained |
+| Notify | `broadcastNoticeAction` → `notifications` row with `audience_filter` | `notification.broadcast`; audited `NOTIFICATION_BROADCAST` |
+
+Notices share the same cohort vocabulary: `notifications.audience_filter` holds only the dimensions
+that were narrowed (`region`/`directorate`/`cadre`), and `src/lib/notification-audience.ts` decides
+whether a viewer matches. A space announcement copies the space's `audience_*` columns into that
+filter and links back to the space; only a `SYSTEM_ADMIN` may address everyone. "Mark all read"
+applies the same predicate, so a cursor is never written for a notice the person cannot see.
 
 Pure rules live in `src/lib/material-workflow.ts` (14 unit tests); input shapes in
 `src/lib/schemas/authoring.ts` (8 unit tests); database access in `src/lib/server/authoring-queries.ts`.
