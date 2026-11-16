@@ -2,6 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { and, count, eq, sql } from "drizzle-orm";
 import { isCertificateCode } from "@/lib/certificate-code";
+import { log } from "@/lib/server/logger";
 import { db } from "@/db/index";
 import { categories, certificates, materials, spaces, users } from "@/db/schema";
 
@@ -27,10 +28,25 @@ export async function getPublicStats(): Promise<{ directorates: number; spaces: 
  * caller, and a stale-by-minutes count is preferable to three aggregates on
  * every visit from a metered mobile connection.
  */
-export const getPublicStatsCached = unstable_cache(getPublicStats, ["public-stats"], {
-  revalidate: 300,
-  tags: ["taxonomy"],
-});
+export type PublicStats = { directorates: number; spaces: number; materials: number };
+
+/**
+ * Cached public counters, with a deliberate soft failure: if the database is
+ * unreachable the marketing page renders without numbers instead of an error
+ * page. The status is still visible to operators via /api/health and the log.
+ */
+export const getPublicStatsCached = unstable_cache(
+  async (): Promise<PublicStats | null> => {
+    try {
+      return await getPublicStats();
+    } catch (error) {
+      log.error({ event: "public_stats.unavailable", error });
+      return null;
+    }
+  },
+  ["public-stats"],
+  { revalidate: 300, tags: ["taxonomy"] },
+);
 
 /** "Ama Serwaa Mensah" → "Ama M." Public verification shows the minimum needed to confirm identity. */
 function maskHolderName(fullName: string): string {

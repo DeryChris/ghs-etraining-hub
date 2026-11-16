@@ -4,6 +4,7 @@ import { and, asc, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { categories, materialProgress, materialVersions, materials, spaces, users } from "@/db/schema";
 import { PRIORITY_RANK, type MaterialType, type PriorityLevel, type ProgressStatus } from "@/lib/labels";
+import { log } from "@/lib/server/logger";
 import { isStaffRole, type Viewer } from "@/lib/viewer";
 
 /*
@@ -83,10 +84,19 @@ export async function listCategories(viewer: Viewer | null): Promise<CategoryCar
  * The public directorate list, cached for five minutes. Signed-in pages use the
  * uncached listCategories() so a facilitator's publish is visible immediately.
  */
-export const listPublicCategories = unstable_cache(() => listCategories(null), ["public-categories"], {
-  revalidate: 300,
-  tags: ["taxonomy"],
-});
+export const listPublicCategories = unstable_cache(
+  async (): Promise<CategoryCard[]> => {
+    try {
+      return await listCategories(null);
+    } catch (error) {
+      // The public programme list must not take the whole marketing page down.
+      log.error({ event: "public_categories.unavailable", error });
+      return [];
+    }
+  },
+  ["public-categories"],
+  { revalidate: 300, tags: ["taxonomy"] },
+);
 
 export async function getCategory(id: string, viewer: Viewer | null) {
   const [row] = await db

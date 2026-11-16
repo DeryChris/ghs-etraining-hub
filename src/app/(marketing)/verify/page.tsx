@@ -22,11 +22,27 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
   const code = isCertificateCode(submitted) ? submitted : "";
 
   // Public, unauthenticated lookup: bound how many serials one connection can try
-  // so the page cannot be used to harvest holder names.
-  const limit = code ? await consumeRateLimit(rateLimitKey("verify", await clientAddress()), 20, 5 * 60) : null;
+  // so the page cannot be used to harvest holder names. A limiter outage must not
+  // take the page down (fail open), and a lookup outage is reported, not thrown.
+  const limit = code
+    ? await consumeRateLimit(rateLimitKey("verify", await clientAddress()), 20, 5 * 60).catch((error: unknown) => {
+        log.error({ event: "certificate.verify_limiter_unavailable", error });
+        return null;
+      })
+    : null;
   const rateLimited = limit !== null && !limit.allowed;
   if (rateLimited) log.warn({ event: "certificate.verify_rate_limited" });
-  const result = code && !rateLimited ? await verifyCertificate(code) : null;
+
+  let result: Awaited<ReturnType<typeof verifyCertificate>> = null;
+  let unavailable = false;
+  if (code && !rateLimited) {
+    try {
+      result = await verifyCertificate(code);
+    } catch (error) {
+      unavailable = true;
+      log.error({ event: "certificate.verify_unavailable", error });
+    }
+  }
 
   return (
     <>
@@ -129,7 +145,18 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
             </div>
           )}
 
-          {code && !result && !rateLimited && (
+          {unavailable && (
+            <div role="alert" className="surface-card flex flex-col items-center gap-3 p-8 text-center">
+              <ShieldX className="h-8 w-8 text-warn" aria-hidden />
+              <p className="font-semibold text-ink">We could not check that code right now.</p>
+              <p className="max-w-md text-sm leading-relaxed text-ink-muted">
+                The verification service is temporarily unavailable. No certificate was confirmed or denied. Try again in a few
+                minutes.
+              </p>
+            </div>
+          )}
+
+          {code && !result && !rateLimited && !unavailable && (
             <div role="status" className="surface-card flex flex-col items-center gap-3 p-8 text-center">
               <ShieldX className="h-8 w-8 text-danger" aria-hidden />
               <p className="font-semibold text-ink">No certificate matches that code.</p>

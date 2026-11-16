@@ -169,6 +169,7 @@ export default async function LandingPage() {
               </div>
             </Reveal>
 
+            {stats && (
             <Reveal delay={0.24}>
               <dl className="grid max-w-md grid-cols-3 gap-6 border-t border-hairline pt-7">
                 <div>
@@ -191,6 +192,7 @@ export default async function LandingPage() {
                 </div>
               </dl>
             </Reveal>
+            )}
           </div>
 
           <div className="relative lg:col-span-6">

@@ -260,7 +260,9 @@ grep -rn "\.insert(\|\.update(" src       # 6 mutation sites in app code (2 acti
 | 19 | No CI / dependency scanning | `.github/workflows/ci.yml` + Dependabot |
 | 20 | Docs drift (README/AGENTS/architecture/qa) | rewritten against the real tree; ADR-0007 added; `docs/migrations.md` created |
 | 21 | No observability | `logEvent()` JSON lines with PII redaction, `x-request-id` on every response |
-| 22 | Facilitation test coverage | capability sweep over every action × role (33 unit tests total) |
+| 22 | Capability test coverage | sweep over every action × role (33 unit tests total) |
+
+| 23 | Public pages fell over when the database was unavailable | marketing counters/taxonomy and certificate verification now degrade with a friendly message; outage is logged as a structured event |
 
 ### Deliberately not done in this pass
 

@@ -40,9 +40,19 @@ test.describe("public surface", () => {
     await expect(page.getByLabel("Serial code")).toBeVisible();
   });
 
-  test("unknown routes render the in-app 404, not a stack trace", async ({ page }) => {
-    const response = await page.goto("/this-route-does-not-exist");
-    expect(response?.status()).toBe(404);
-    await expect(page.getByRole("heading")).toBeVisible();
+  test("unknown routes are denied by default rather than disclosed", async ({ page }) => {
+    // The edge gate protects anything not on the public allowlist, so an unknown
+    // path looks exactly like a private one to an anonymous visitor.
+    await page.goto("/this-route-does-not-exist");
+    await expect(page).toHaveURL(/\/login\?next=%2Fthis-route-does-not-exist$/);
+  });
+
+  test("a malformed serial is rejected without a lookup", async ({ page }) => {
+    // Format is validated before the database is touched (and before the limiter
+    // counts a strike), so junk input cannot be used to probe codes.
+    const response = await page.goto("/verify?code=not-a-serial");
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: /check that a cpd certificate is genuine/i })).toBeVisible();
+    await expect(page.getByText(/no certificate matches that code/i)).toHaveCount(0);
   });
 });
