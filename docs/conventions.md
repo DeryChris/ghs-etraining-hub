@@ -1,4 +1,4 @@
-# Conventions — GHS‑ELN
+# Conventions — GHS-TL
 
 Everything not covered by `AGENTS.md` §4 (placement) and §5 (data). When two rules could apply,
 the stricter one wins.

@@ -3,18 +3,17 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState, type ReactNode } from "react";
 import { Header } from "@/components/layout/header";
-import { Sidebar } from "@/components/layout/sidebar";
+import { Sidebar, type SidebarCounts } from "@/components/layout/sidebar";
 import type { ShellUser } from "@/components/layout/types";
+import { SITE } from "@/lib/site";
 
 export function AppShell({
   user,
-  unreadMessages,
-  unreadNotifications,
+  counts,
   children,
 }: {
   user: ShellUser;
-  unreadMessages: number;
-  unreadNotifications: number;
+  counts: SidebarCounts;
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
@@ -30,7 +29,7 @@ export function AppShell({
   }, [navOpen]);
 
   const closeNav = () => setNavOpen(false);
-  const sidebarProps = { user, unreadMessages, unreadNotifications };
+  const sidebarProps = { user, counts };
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
@@ -72,12 +71,12 @@ export function AppShell({
       </motion.aside>
 
       <div className="md:pl-64">
-        <Header user={user} unreadNotifications={unreadNotifications} onOpenNav={() => setNavOpen(true)} />
+        <Header user={user} unreadNotifications={counts.notifications} onOpenNav={() => setNavOpen(true)} />
         <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1200px] px-4 py-6 focus:outline-none md:px-8 md:py-10">
           {children}
         </main>
         <footer className="mx-auto max-w-[1200px] px-4 pb-10 text-xs text-ink-muted md:px-8">
-          GHS-ELN · Internal platform. Access is monitored and recorded.
+          {SITE.name} · Internal platform. Access is monitored and recorded.
         </footer>
       </div>
     </div>

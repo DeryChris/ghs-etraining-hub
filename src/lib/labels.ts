@@ -7,6 +7,29 @@ import type { Role } from "@/lib/rbac/capabilities";
 export const MATERIAL_TYPES = ["DOCUMENT", "VIDEO", "LAB", "ASSESSMENT_LINK"] as const;
 export type MaterialType = (typeof MATERIAL_TYPES)[number];
 
+export const FACILITY_TYPES = [
+  "REGIONAL_HOSPITAL",
+  "MUNICIPAL_HOSPITAL",
+  "DISTRICT_HOSPITAL",
+  "POLYCLINIC",
+  "HEALTH_CENTRE",
+  "CLINIC",
+  "DIRECTORATE",
+  "OTHER",
+] as const;
+export type FacilityType = (typeof FACILITY_TYPES)[number];
+
+export const FACILITY_TYPE_LABELS: Record<FacilityType, string> = {
+  REGIONAL_HOSPITAL: "Regional hospital",
+  MUNICIPAL_HOSPITAL: "Municipal hospital",
+  DISTRICT_HOSPITAL: "District hospital",
+  POLYCLINIC: "Polyclinic",
+  HEALTH_CENTRE: "Health centre",
+  CLINIC: "Clinic",
+  DIRECTORATE: "Directorate",
+  OTHER: "Other",
+};
+
 export const PRIORITY_LEVELS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 export type PriorityLevel = (typeof PRIORITY_LEVELS)[number];
 

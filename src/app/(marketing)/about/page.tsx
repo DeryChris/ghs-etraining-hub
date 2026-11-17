@@ -10,13 +10,13 @@ import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "Why GHS-ELN exists, how it is governed and what comes next.",
+  description: `Why the ${SITE.name} exists, how it is governed and what comes next.`,
 };
 
 const VALUES = [
-  { icon: ShieldCheck, title: "Safety first", body: "Protocols are the most useful thing we publish. They have to be correct, current and easy to find." },
-  { icon: HeartHandshake, title: "Equity across regions", body: "A nurse in Nalerigu gets the same standard, the same speed of update and the same CPD as one in Accra." },
-  { icon: Eye, title: "Accountable by design", body: "Every privileged action is recorded in a tamper-evident audit trail. Nobody, including administrators, edits history quietly." },
+  { icon: ShieldCheck, title: "Material you can still find", body: "Training material is only useful if it survives the week. Every programme keeps its material here, with the version and the date it changed." },
+  { icon: HeartHandshake, title: "Equity across regions", body: "A nurse in Nalerigu opens the same document, at the same version, as one in Accra. Access does not depend on who was in the room." },
+  { icon: Eye, title: "Accountable by design", body: "Uploads, approvals, downloads and withdrawals are written to a tamper-evident audit trail. Nobody, including administrators, edits history quietly." },
   { icon: Lock, title: "Privacy by default", body: "We collect what the work needs. We do not handle patient information here, and personal data is protected under Act 843." },
 ];
 
@@ -25,19 +25,19 @@ const ROLES = [
     icon: Users,
     name: "Learners",
     who: "Ghana Health Service staff",
-    body: "Learn, acknowledge mandatory protocols, complete materials, earn CPD and talk to facilitators.",
+    body: "Find the material for every programme attended, read or download it, and acknowledge the protocols that require it.",
   },
   {
     icon: BookOpenCheck,
     name: "Facilitators",
     who: "Directorate subject experts",
-    body: "Publish and version content for the directorates they are assigned to, and moderate discussion there.",
+    body: "Upload and version material for the directorates they are assigned to, review a colleague's upload before it goes live, and archive what is retired.",
   },
   {
     icon: ShieldCheck,
     name: "System administrators",
     who: "ICT and directorate leads",
-    body: "Manage the staff directory, the taxonomy and platform notices, and review the audit trail.",
+    body: "Manage the staff directory, the programme taxonomy and official notices, and review the audit trail.",
   },
 ];
 
@@ -45,12 +45,12 @@ const ROADMAP = [
   {
     phase: "Live now",
     status: "done" as const,
-    items: ["Mandatory protocols and acknowledgement", "CPD transcript and verifiable certificates", "Library, directorates and spaces", "Staff messaging and notices", "Audit-logged administration"],
+    items: ["Programme catalogue with versioned material", "Reviewed uploads and two-person publishing", "A record of what you opened, downloaded and finished", "Search, library and cohort-targeted notices", "Every administrative action audited"],
   },
   {
     phase: "Next",
     status: "next" as const,
-    items: ["Signed, expiring access to controlled files", "Assessments with scoring and retakes", "Guided practical labs", "Facilitator authoring tools"],
+    items: ["Assessments with scoring and retakes", "Discussion on each material", "Attendance records for sessions", "Server-rendered certificate PDFs and e-mail delivery"],
   },
   {
     phase: "Later",
@@ -71,13 +71,14 @@ export default function AboutPage() {
       <section aria-labelledby="about-title" className="hero-glow relative overflow-hidden">
         <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-20 pt-16 sm:px-8 sm:pt-24 lg:grid-cols-12 lg:gap-12 lg:px-10">
           <Reveal className="space-y-7 lg:col-span-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">About GHS-ELN</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">About {SITE.code}</p>
             <h1 id="about-title" className="text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-ink sm:text-5xl lg:text-6xl">
-              Current knowledge should never depend on which district you serve.
+              Every training leaves material behind. This is where it lives.
             </h1>
             <p className="max-w-2xl text-lg leading-relaxed text-ink-muted">
-              GHS-ELN is the Ghana Health Service eTraining Network. It brings clinical protocols, practical training and continuing
-              professional development into one governed platform for every GHS staff member.
+              The {SITE.fullName} is the catalogue for GHS training programmes. When a directorate runs a session, the slides,
+              protocols and recordings are filed here — under that programme, with a version and a date, and open to staff wherever
+              they serve. Nothing is deleted, and nothing is edited without a record of who did it.
             </p>
           </Reveal>
           <Reveal delay={0.1} className="lg:col-span-5">
@@ -101,8 +102,8 @@ export default function AboutPage() {
             <Target className="h-7 w-7 text-primary" aria-hidden />
             <h2 id="mission-title" className="mt-6 text-2xl font-extrabold text-ink">Our mission</h2>
             <p className="mt-4 text-base leading-relaxed text-ink-muted">
-              Give every health worker in Ghana the same access to current clinical protocols and to professional development that can be
-              proven, wherever they serve.
+              Keep the material from every GHS training programme findable, current and accountable — so what was taught in a session is
+              still available to the people who attended it, months later.
             </p>
           </article>
         </Reveal>
@@ -111,8 +112,8 @@ export default function AboutPage() {
             <Eye className="h-7 w-7 text-accent" aria-hidden />
             <h2 className="mt-6 text-2xl font-extrabold">Our vision</h2>
             <p className="mt-4 text-base leading-relaxed text-primary-ink/85">
-              A health system where what a clinician knows today is what the protocol says today, and where that knowledge is recognised
-              wherever they practise.
+              A health service where no training output is lost to a chat thread, and where any worker can produce the material — and the
+              proof of their learning — long after the session ended.
             </p>
           </article>
         </Reveal>
@@ -150,7 +151,7 @@ export default function AboutPage() {
             <SectionHeading
               eyebrow="How it is governed"
               title={<span id="governance-title">Three roles, each with clear limits.</span> as unknown as string}
-              description="Access follows the job. Staff directory records decide what each person can do, and every change to that authority is itself recorded."
+              description="Access follows the job. Staff directory records decide what each person can do, a second reviewer has to approve new material, and every change to that authority is itself recorded."
             />
           </Reveal>
           <ul className="mt-14 grid gap-5 md:grid-cols-3">
@@ -182,8 +183,8 @@ export default function AboutPage() {
         <Reveal delay={0.08} className="space-y-5">
           <SectionHeading eyebrow="Reach" title={<span id="reach-title">Serving {SITE.regionCount} regions and every cadre.</span> as unknown as string} />
           <p className="text-base leading-relaxed text-ink-muted">
-            Pages are designed for mobile networks, video loads only on request, and controlled documents open straight in the browser. The
-            platform is meant to reach the district hospital and the health centre, not only the teaching hospital.
+            Pages are designed for mobile networks, video loads only on request, and files open straight in the browser. Material reaches
+            the district hospital and the health centre, not only the teaching hospital.
           </p>
         </Reveal>
       </section>
@@ -224,9 +225,9 @@ export default function AboutPage() {
       <section aria-labelledby="about-cta" className="mx-auto max-w-7xl px-5 py-24 text-center sm:px-8 lg:px-10">
         <Reveal className="mx-auto max-w-2xl space-y-6">
           <h2 id="about-cta" className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-            Ready to see what is current?
+            Looking for the material from a training?
           </h2>
-          <p className="text-base leading-relaxed text-ink-muted">Sign in with your GHS staff account, or ask your facility administrator to add you.</p>
+          <p className="text-base leading-relaxed text-ink-muted">Open the programme you were trained under, or ask your facility administrator for an account.</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link href="/login" className={buttonClass({ className: "h-12 rounded-[var(--radius-pill)] px-6" })}>
               Sign in

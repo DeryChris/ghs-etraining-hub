@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { MotionProvider } from "@/components/motion-provider";
+import { SITE } from "@/lib/site";
 import { themeBootScript } from "@/lib/theme";
 
 /*
@@ -25,18 +26,17 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: {
-    default: "GHS-ELN · Ghana Health Service eTraining Network",
-    template: "%s · GHS-ELN",
+    default: `${SITE.code} · ${SITE.fullName}`,
+    template: `%s · ${SITE.code}`,
   },
-  description:
-    "Clinical protocols, practical training and verifiable CPD for Ghana Health Service staff in every region.",
-  applicationName: "GHS-ELN",
+  description: SITE.description,
+  applicationName: SITE.code,
   // Internal government platform: keep it out of public search indexes.
   robots: { index: false, follow: false },
   openGraph: {
-    title: "GHS-ELN · Ghana Health Service eTraining Network",
-    description: "Clinical protocols, practical training and verifiable CPD for GHS staff.",
-    siteName: "GHS-ELN",
+    title: `${SITE.code} · ${SITE.fullName}`,
+    description: SITE.purpose,
+    siteName: SITE.code,
     locale: "en_GH",
     type: "website",
   },

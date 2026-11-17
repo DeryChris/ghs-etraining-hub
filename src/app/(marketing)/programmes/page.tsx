@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Layers } from "lucide-react";
 import { EmptyArt } from "@/components/brand/illustrations";
@@ -6,10 +6,11 @@ import { Reveal } from "@/components/marketing/reveal";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { buttonClass } from "@/components/ui/button";
 import { listPublicCategories } from "@/lib/server/learning-queries";
+import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Programmes",
-  description: "The directorates and programmes behind GHS-ELN learning.",
+  description: `The directorates and training programmes whose material is catalogued in the ${SITE.name}.`,
 };
 
 export default async function ProgrammesPage() {
@@ -28,7 +29,7 @@ export default async function ProgrammesPage() {
               Learning owned by the directorates that set the standards.
             </h1>
             <p className="max-w-2xl text-lg leading-relaxed text-ink-muted">
-              Each directorate publishes its own protocols, spaces and assessments. Sign in to open them, record your progress and earn CPD.
+              Each directorate publishes its own protocols, spaces and assessments. Sign in to open them and record what you have read.
             </p>
           </Reveal>
         </div>

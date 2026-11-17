@@ -14,7 +14,7 @@ const COLUMNS = [
   {
     title: "Organisation",
     links: [
-      { href: "/about", label: "About GHS-ELN" },
+      { href: "/about", label: `About ${SITE.code}` },
       { href: "/contact", label: "Contact and support" },
     ],
   },
@@ -36,13 +36,14 @@ export function SiteFooter() {
         <div className="space-y-5">
           <Wordmark size={40} />
           <p className="max-w-sm text-sm leading-relaxed text-ink-muted">
-            Clinical protocols, practical training and verifiable CPD for Ghana Health Service staff in all {SITE.regionCount} regions.
+            The material from every GHS training programme, catalogued by directorate and module, versioned, and open to
+            staff in all {SITE.regionCount} regions.
           </p>
           <Link
             href="/login"
             className="inline-flex min-h-11 items-center rounded-[var(--radius-pill)] border border-primary/40 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-primary-ink"
           >
-            Sign in to GHS-ELN
+            Sign in to {SITE.name}
           </Link>
         </div>
         {COLUMNS.map((column) => (
@@ -62,7 +63,9 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-hairline">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-6 text-xs text-ink-muted sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
-          <p>© {new Date().getFullYear()} Ghana Health Service · GHS-ELN</p>
+          <p>
+            © {new Date().getFullYear()} Ghana Health Service · {SITE.fullName}
+          </p>
           <p>Internal platform for GHS staff. Access is monitored and recorded.</p>
         </div>
       </div>

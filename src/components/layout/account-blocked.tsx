@@ -2,17 +2,18 @@ import { ShieldAlert, UserX } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { signOutAction } from "@/lib/server/actions/auth";
+import { SITE } from "@/lib/site";
 
 const COPY = {
   unprovisioned: {
     icon: ShieldAlert,
     title: "Your account is not set up yet",
-    body: "You have signed in, but your staff record is not on the GHS-ELN directory yet. Ask your facility administrator to add you, then sign in again.",
+    body: `You have signed in, but your staff record is not on the ${SITE.fullName} directory yet. Ask your facility administrator to add you, then sign in again.`,
   },
   inactive: {
     icon: UserX,
     title: "This account is inactive",
-    body: "Your GHS-ELN access has been paused. Contact your facility administrator or the GHS ICT helpdesk.",
+    body: `Your ${SITE.name} access has been paused. Contact your facility administrator or the GHS ICT helpdesk.`,
   },
 } as const;
 

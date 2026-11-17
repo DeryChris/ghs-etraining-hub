@@ -1,4 +1,4 @@
-# UI/UX — GHS‑ELN
+# UI/UX — GHS-TL
 
 Dark‑first, clinical, calm. The platform is read under fluorescent ward lighting and on a phone at
 night; the palette must never shout, and data density must never overwhelm a small screen.
@@ -33,6 +33,13 @@ and use the utility it generates.
 * Shell: fixed 264 px sidebar (collapsible to 72 px icons, persisted in a cookie, `<main>` shifts
   with a CSS grid template so there is no layout thrash), sticky 60 px header with global search,
   notification bell and avatar menu.
+* Navigation is **role‑aware and sectioned**, and its source is `src/lib/nav.ts` (ADR‑0010): *Learn*
+  (Dashboard · Programmes · Library · Pre/Post Test), *Community* (Messages · Notifications), *My record*
+  (My activity · Insights), *Author* (Sessions · My materials · Review queue · Send notice — assembled per
+  role) and
+  *Administration* (Users · Settings, administrators only). A section with nothing in it for a role does
+  not render, and an item's badge (unread messages, unread notifications, versions awaiting review) shows
+  only when it is above zero.
 * Mobile: sidebar becomes a focus‑trapped drawer, priority nav visible in the header; tables
   collapse to stacked definition lists at `< 720 px` (never horizontal scroll for clinical data).
 * Content column max width 1200 px; long‑form reading width 72 ch.
@@ -67,7 +74,20 @@ Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard opera
   assessment CTAs. No unrelated sidebars.
 * **Data tables (admin)** — server‑side pagination with a page‑size selector (25/50/100), saved
   filters in the URL (shareable, back‑button safe), row actions in a kebab menu, count in the
-  caption ("Showing 1–25 of 4,182 GHS staff").
+  caption ("Showing 1–25 of 4,182 GHS staff"). `/users` is the reference implementation: 25 per page,
+  filters in the URL, row actions inline (role select, deactivate/reactivate, reset link) with the
+  result of each action announced next to the row it changed.
+* **Insights** — headline numbers first (`/insights`), then charts: an area chart of opens vs
+  downloads by week, stacked bars of versions uploaded per month by programme, a monthly count of
+  sessions run, ranked bars for opens and for sessions per programme, and a donut of published material
+  by type. Charts are server-rendered SVG using the `--chart-1..8` / `--chart-grid` tokens in
+  `globals.css`; each one repeats its figures in a `<details>` table and in `<title>` tooltips. The
+  dashboard shows four headline numbers and a link, and nothing on the dashboard is a chart. Numbers are
+  always labelled with the window they cover ("Opens · 4 weeks"), because an unlabelled total is a claim
+  nobody can check.
+* **Sessions** — one training per row: title, programme (module optional), date, region → district →
+  sub-district → facility, facilitator and attendee count. Facilities exclude CHPS compounds. The
+  cascade narrows as you choose; every optional key is cross-checked against its parent on the server.
 
 ## 5. Copy style
 

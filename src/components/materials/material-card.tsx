@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, ClipboardCheck, Clock, Coins, FileText, FlaskConical, PlayCircle, type LucideIcon } from "lucide-react";
+import { ArrowRight, ClipboardCheck, Clock, FileText, FlaskConical, PlayCircle, type LucideIcon } from "lucide-react";
 import { ProgressStatusChip } from "@/components/materials/progress-status-chip";
 import { PriorityChip } from "@/components/ui/priority-chip";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { formatCredits, formatMinutes } from "@/lib/format";
+import { formatMinutes } from "@/lib/format";
 import { MATERIAL_TYPE_LABELS, type MaterialType, type PriorityLevel, type ProgressStatus } from "@/lib/labels";
 
 export interface MaterialSummary {
@@ -14,7 +14,6 @@ export interface MaterialSummary {
   priority: PriorityLevel;
   requiresAcknowledgement: boolean;
   estimatedMinutes: number | null;
-  cpdCreditsX10: number;
   status: ProgressStatus;
   watchedPercent: number;
 }
@@ -60,10 +59,6 @@ export function MaterialCard({ material, context }: { material: MaterialSummary;
             {formatMinutes(material.estimatedMinutes)}
           </span>
         )}
-        <span className="inline-flex items-center gap-1">
-          <Coins className="h-3.5 w-3.5" aria-hidden />
-          {formatCredits(material.cpdCreditsX10)}
-        </span>
         <ArrowRight className="ml-auto h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
       </div>
     </Link>

@@ -8,14 +8,14 @@ export default function TermsPage() {
   return (
     <LegalPage
       eyebrow="Terms of use"
-      title="Using GHS-ELN"
-      intro="These terms apply to every person who signs in to GHS-ELN. By using the platform you agree to them."
+      title={`Using the ${SITE.name}`}
+      intro={`These terms apply to every person who signs in to the ${SITE.fullName}. By using the service you agree to them.`}
       updated={SITE.policyUpdated}
       sections={[
         {
           heading: "Acceptable use",
           paragraphs: [
-            "Use GHS-ELN for your professional learning and for work tasks connected to your role. Do not try to access content, records or accounts that are not assigned to you.",
+            `Use the ${SITE.name} for your professional learning and for work tasks connected to your role. Do not try to access material, records or accounts that are not assigned to you.`,
           ],
         },
         {
@@ -27,25 +27,25 @@ export default function TermsPage() {
         {
           heading: "Controlled content",
           paragraphs: [
-            "Documents, videos and labs on GHS-ELN belong to the Ghana Health Service. Do not copy, republish or share controlled material outside GHS without authorisation. Access to controlled documents is recorded.",
+            `Material on the ${SITE.name} belongs to the Ghana Health Service and to the programme that produced it. Do not copy, republish or share it outside GHS without authorisation. Uploads, approvals, downloads and withdrawals are recorded.`,
           ],
         },
         {
-          heading: "Learning records and CPD",
+          heading: "What the library records",
           paragraphs: [
-            "Points and certificates are awarded when a material is completed under the rules of the relevant directorate. A certificate can be checked on the verification page. Records that were issued in error can be corrected by an administrator, and the correction is recorded.",
+            "The library records which material you opened, downloaded and marked as finished, against the version you saw. It does not award points, levels or certificates: it is an information service. Certificates issued before the CPD award was retired remain valid and checkable on the verification page, and they are not deleted. Records made in error can be corrected by an administrator, and the correction is recorded.",
           ],
         },
         {
           heading: "Messages and discussion",
           paragraphs: [
-            "Keep messages professional and about work. Do not include patient information. Facilitators may moderate discussion, and administrators may review messages reported as inappropriate.",
+            "Keep messages professional and about work. Do not include patient information. Messages can be reviewed when a complaint about conduct is raised.",
           ],
         },
         {
           heading: "Availability",
           paragraphs: [
-            "We aim to keep GHS-ELN available at all times. Planned maintenance is announced in advance on the platform. We do not guarantee uninterrupted access.",
+            `We aim to keep the ${SITE.name} available at all times. Planned maintenance is announced in advance on the platform. We do not guarantee uninterrupted access.`,
           ],
         },
         {

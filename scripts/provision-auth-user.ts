@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Provision (or re-provision) the Supabase Auth login for a staff member who
  * already exists in public.users.
  *
@@ -7,7 +7,7 @@
  *
  * Why a script and not a UI: onboarding is an ICT operation, not something a
  * facilitator should be able to do from the app. Authority (role, category
- * assignment) lives in public.users and category_facilitators — never in Auth
+ * assignment) lives in public.users and category_facilitators ΓÇö never in Auth
  * user metadata, which the account holder can edit themselves.
  *
  * Requires NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and DATABASE_URL.
@@ -33,7 +33,7 @@ function temporaryPassword(): string {
 }
 
 function fail(message: string): never {
-  console.error(`✖ ${message}`);
+  console.error(`Γ£û ${message}`);
   process.exit(1);
 }
 
@@ -81,29 +81,29 @@ async function main(): Promise<void> {
 
   if (existingId) {
     if (!reset) {
-      console.log(`ℹ A login already exists for ${email} (auth id ${existingId}).`);
+      console.log(`Γä╣ A login already exists for ${email} (auth id ${existingId}).`);
       console.log("  Pass --reset to issue a new temporary password.");
       return;
     }
     const { error } = await supabase.auth.admin.updateUserById(existingId, { password, email_confirm: true });
     if (error) fail(`Could not reset the password: ${error.message}`);
-    console.log(`✔ Password reset for ${directoryRow.fullName} <${email}>`);
+    console.log(`Γ£ö Password reset for ${directoryRow.fullName} <${email}>`);
   } else {
     const { error } = await supabase.auth.admin.createUser({ email, password, email_confirm: true });
     if (error) fail(`Could not create the login: ${error.message}`);
-    console.log(`✔ Login created for ${directoryRow.fullName} <${email}>`);
+    console.log(`Γ£ö Login created for ${directoryRow.fullName} <${email}>`);
   }
 
   console.log("");
   console.log(`  Role (from the directory, not Auth metadata): ${directoryRow.role}`);
   console.log(`  Temporary password: ${password}`);
   console.log("  Share it out-of-band and ask the staff member to change it at first sign-in.");
-  console.log("  This value is not stored anywhere by GHS-ELN.");
+  console.log("  This value is not stored anywhere by the training library.");
 }
 
 main()
   .catch((error: unknown) => {
-    console.error("✖ Provisioning failed:", error instanceof Error ? error.message : error);
+    console.error("Γ£û Provisioning failed:", error instanceof Error ? error.message : error);
     process.exitCode = 1;
   })
   .finally(async () => {

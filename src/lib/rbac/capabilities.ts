@@ -1,4 +1,4 @@
-export type Role = "SYSTEM_ADMIN" | "FACILITATOR" | "LEARNER";
+﻿export type Role = "SYSTEM_ADMIN" | "FACILITATOR" | "LEARNER";
 
 export type Action =
   | "user.create"
@@ -35,6 +35,7 @@ export type Action =
   | "message.read_any_thread"
   | "notification.broadcast"
   | "notification.view"
+  | "training.create"
   | "analytics.view_personal"
   | "analytics.view_cohort"
   | "analytics.export"
@@ -78,6 +79,7 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.read_draft": true,
     "material.read_published": true,
     "material.download": true,
+    "training.create": true,
     "assessment.configure": true,
     "assessment.take": true,
     "assessment.override_score": true,
@@ -121,6 +123,7 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.read_draft": true,
     "material.read_published": true,
     "material.download": true,
+    "training.create": false,
     "assessment.configure": true,
     "assessment.take": true,
     "assessment.override_score": false,
@@ -164,6 +167,7 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.read_draft": false,
     "material.read_published": true,
     "material.download": true,
+    "training.create": false,
     "assessment.configure": false,
     "assessment.take": true,
     "assessment.override_score": false,
@@ -188,8 +192,8 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
 
 /**
  * Actions that need no session at all. `certificate.verify` is served by a public
- * page, so it is allowed for anonymous visitors by definition — keeping it in the
- * matrix (for every role) documents that, and this set keeps `can(null, …)` honest.
+ * page, so it is allowed for anonymous visitors by definition ΓÇö keeping it in the
+ * matrix (for every role) documents that, and this set keeps `can(null, ΓÇª)` honest.
  */
 export const PUBLIC_ACTIONS: ReadonlySet<Action> = new Set<Action>(["certificate.verify"]);
 
@@ -215,6 +219,11 @@ export function isGlobalForFacilitators(action: Action): boolean {
   return FACILITATOR_GLOBAL_ACTIONS.includes(action);
 }
 
+/** Narrows an untrusted string (a search param, a form field) to a Role. */
+export function isRole(value: string | null | undefined): value is Role {
+  return value === "SYSTEM_ADMIN" || value === "FACILITATOR" || value === "LEARNER";
+}
+
 export function can(role: Role | null | undefined, action: Action): boolean {
   if (PUBLIC_ACTIONS.has(action)) return true;
   if (!role) return false;
@@ -231,7 +240,7 @@ export function scopeAllows(
   if (!CAPABILITY_MATRIX[role][action]) return false;
 
   if (role === "LEARNER") {
-    // docs/rbac.md §1: both reading and downloading require an audience match.
+    // docs/rbac.md ┬º1: both reading and downloading require an audience match.
     if ((action === "material.read_published" || action === "material.download") && scope.audienceMatch === false) {
       return false;
     }

@@ -1,7 +1,8 @@
-import "dotenv/config";
+﻿import "dotenv/config";
 import { db } from "./client";
-import { users, categories, spaces, materials } from "./schema";
+import { users, categories, spaces, materials, regions, districts, subDistricts, facilities } from "./schema";
 import { eq } from "drizzle-orm";
+import { REGIONS, UPPER_WEST_DISTRICTS, UPPER_WEST_REGION_CODE } from "./data/geography";
 
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "admin@ghs.gov.gh";
 // The seeded admin has no password here. Provision its login with scripts/provision-auth-user.ts.
@@ -11,7 +12,7 @@ async function main() {
     throw new Error("Seeder refused to run in production. Set ALLOW_PROD_SEED=true to override.");
   }
 
-  console.log("🌱 Seeding GHS-ELN database...");
+  console.log("≡ƒî▒ Seeding the training library database...");
 
   // Upsert admin user
   const [admin] = await db.insert(users).values({
@@ -115,11 +116,61 @@ async function main() {
     });
   }
 
-  console.log("✅ Seed complete");
+  // ΓöÇΓöÇ Reference geography ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // Upserted on the natural key, so re-running after GHS supplies a fuller
+  // facility list adds rows instead of duplicating them.
+  for (const region of REGIONS) {
+    await db
+      .insert(regions)
+      .values(region)
+      .onConflictDoUpdate({ target: regions.code, set: { name: region.name } });
+  }
+
+  const [upperWest] = await db.select().from(regions).where(eq(regions.code, UPPER_WEST_REGION_CODE)).limit(1);
+  if (upperWest) {
+    for (const district of UPPER_WEST_DISTRICTS) {
+      const [row] = await db
+        .insert(districts)
+        .values({ regionId: upperWest.id, name: district.name, kind: district.kind, capital: district.capital })
+        .onConflictDoUpdate({
+          target: [districts.regionId, districts.name],
+          set: { kind: district.kind, capital: district.capital },
+        })
+        .returning();
+
+      for (const name of district.subDistricts) {
+        await db
+          .insert(subDistricts)
+          .values({ districtId: row.id, name })
+          .onConflictDoUpdate({ target: [subDistricts.districtId, subDistricts.name], set: { name } });
+      }
+
+      for (const facility of district.facilities) {
+        await db
+          .insert(facilities)
+          .values({
+            districtId: row.id,
+            name: facility.name,
+            type: facility.type,
+            ownership: facility.ownership ?? "GHS",
+          })
+          .onConflictDoUpdate({
+            target: [facilities.districtId, facilities.name],
+            set: { type: facility.type, ownership: facility.ownership ?? "GHS" },
+          });
+      }
+    }
+    console.log(
+      `   Geography: ${REGIONS.length} regions, ${UPPER_WEST_DISTRICTS.length} Upper West districts, ` +
+        `${UPPER_WEST_DISTRICTS.reduce((n, d) => n + d.facilities.length, 0)} facilities`,
+    );
+  }
+
+  console.log("Γ£à Seed complete");
   console.log(`   Admin: ${ADMIN_EMAIL} (GHS-000001)`);
 }
 
 main().catch((e) => {
-  console.error("❌ Seed failed:", e.message);
+  console.error("Γ¥î Seed failed:", e.message);
   process.exit(1);
 });

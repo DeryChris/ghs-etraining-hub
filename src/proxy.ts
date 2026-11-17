@@ -1,3 +1,4 @@
+﻿import { SITE } from "@/lib/site";
 import { REQUEST_ID_COOKIE } from "@/lib/request-id";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
@@ -52,7 +53,7 @@ export async function proxy(request: NextRequest) {
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseUrl || !anonKey) {
     return withRequestId(
-      new NextResponse("GHS-ELN is not configured. Contact the ICT helpdesk.", { status: 500 }),
+      new NextResponse(`${SITE.name} is not configured. Contact the ICT helpdesk.`, { status: 500 }),
       requestId,
     );
   }

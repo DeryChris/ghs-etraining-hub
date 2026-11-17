@@ -8,30 +8,30 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       eyebrow="Privacy notice"
-      title="How GHS-ELN handles your personal data"
+      title={`How the ${SITE.name} handles your personal data`}
       intro="This notice explains what the platform records about you, why, who can see it, and how you can ask questions or make a request."
       updated={SITE.policyUpdated}
       sections={[
         {
           heading: "Who we are",
           paragraphs: [
-            "GHS-ELN is the Ghana Health Service eLearning Network. It is an internal platform for GHS staff to learn, acknowledge protocols and record continuing professional development.",
+            `The ${SITE.fullName} is an internal service for GHS staff. It stores the material from training programmes, records what each person opened, acknowledged or completed, and keeps the audit history that makes those records trustworthy.`,
           ],
         },
         {
           heading: "What we collect",
           paragraphs: [
             "Directory details: your staff ID, name, work email, role, directorate, region and facility.",
-            "Learning records: materials you open, acknowledgements, completions, CPD points and certificates.",
+            "Training records: material you open or download, acknowledgements and completions, against the version you saw. Views are counted once per person per day. Downloads are recorded because controlled material leaves the platform this way.",
             "Communication: messages you send and notices addressed to you.",
             "Security records: sign-in and sign-out events, the network address and browser used, and audit entries for privileged actions.",
-            "GHS-ELN does not hold patient information. Do not send it through messages or support requests.",
+            `The ${SITE.name} does not hold patient information. Do not send it through messages or support requests.`,
           ],
         },
         {
           heading: "Why we use it",
           paragraphs: [
-            "To deliver mandatory protocols and training, record CPD, let facilitators support learners, keep controlled documents current, and keep the platform secure and accountable.",
+            "To catalogue each training programme's material, keep superseded versions available, let staff find the version that applies to them, record what staff actually consulted, and keep the platform secure and accountable for what was uploaded, changed or withdrawn.",
           ],
         },
         {
@@ -43,13 +43,13 @@ export default function PrivacyPage() {
         {
           heading: "How long we keep it",
           paragraphs: [
-            "Audit records are kept for seven years. Learning and certificate records follow the GHS records retention schedule, which is being confirmed.",
+            "Audit records are kept for seven years. Learning records, and the certificates issued before the CPD award was retired, follow the GHS records retention schedule, which is being confirmed.",
           ],
         },
         {
           heading: "Who can see it",
           paragraphs: [
-            "You can see your own records. Facilitators see learning progress within their directorate. System administrators see directory records and the audit trail.",
+            "You can see your own records. Facilitators see learning progress within their directorate. System administrators see directory records, and every administrative action is written to the tamper-evident audit trail.",
             "Certificate verification shows only the holder's first name and last initial, the award, and the dates.",
           ],
         },

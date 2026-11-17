@@ -1,17 +1,10 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
   "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
   "installCommand": "npm ci",
   "outputDirectory": ".next",
-  "framework": "nextjs",
-  "regions": ["iad1"],
-  "env": {
-    "DATABASE_URL": "@ghs-eln-database-url",
-    "DIRECT_URL": "@ghs-eln-direct-url",
-    "NEXT_PUBLIC_SUPABASE_URL": "@ghs-eln-supabase-url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@ghs-eln-supabase-anon-key",
-    "SUPABASE_SERVICE_ROLE_KEY": "@ghs-eln-supabase-service-role-key",
-    "NEXT_PUBLIC_APP_URL": "@ghs-eln-app-url"
-  },
-  "crons": []
+  "github": {
+    "silent": true
+  }
 }

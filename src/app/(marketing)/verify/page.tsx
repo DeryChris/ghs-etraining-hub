@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Search, ShieldCheck, ShieldX } from "lucide-react";
 import { CertificateSeal } from "@/components/brand/illustrations";
 import { Reveal } from "@/components/marketing/reveal";
@@ -10,10 +10,11 @@ import { log } from "@/lib/server/logger";
 import { verifyCertificate } from "@/lib/server/public-queries";
 import { consumeRateLimit, rateLimitKey, retryAfterText } from "@/lib/server/rate-limit";
 import { clientAddress } from "@/lib/server/request-context";
+import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Verify a certificate",
-  description: "Check a GHS-ELN CPD certificate using its serial code.",
+  description: `Check a ${SITE.name} CPD certificate using its serial code.`,
 };
 
 export default async function VerifyPage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
@@ -115,7 +116,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
                     <dd className="mt-1 font-semibold text-ink">{result.holderName}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">CPD awarded</dt>
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Points recorded at issue</dt>
                     <dd className="mt-1 font-semibold text-ink">{formatCredits(result.cpdCreditsX10)}</dd>
                   </div>
                   <div className="sm:col-span-2">

@@ -1,27 +1,11 @@
-import "server-only";
-import { and, asc, eq, exists, inArray, sql } from "drizzle-orm";
+﻿import "server-only";
+import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { categories, categoryFacilitators, materialVersions, materials, reviewAssignments, spaces, users } from "@/db/schema";
+import { categories, materialVersions, materials, reviewAssignments, spaces, users } from "@/db/schema";
 import type { MaterialState, ReviewDecision } from "@/lib/material-workflow";
 import type { MaterialType, PriorityLevel } from "@/lib/labels";
-import { isStaffRole, type Viewer } from "@/lib/viewer";
-
-/*
- * Authoring surfaces show drafts, so unlike the learner queries these must not
- * filter on state — but they must be scoped. SYSTEM_ADMIN sees every category;
- * a facilitator sees only the categories they are assigned to in
- * category_facilitators (docs/rbac.md §2).
- */
-function scopeFor(viewer: Viewer) {
-  if (!isStaffRole(viewer.role)) return sql`false`;
-  if (viewer.role === "SYSTEM_ADMIN") return undefined;
-  return exists(
-    db
-      .select({ one: sql`1` })
-      .from(categoryFacilitators)
-      .where(and(eq(categoryFacilitators.categoryId, categories.id), eq(categoryFacilitators.userId, viewer.id))),
-  );
-}
+import { scopeFor } from "@/lib/server/scope";
+import type { Viewer } from "@/lib/viewer";
 
 export interface AuthoringMaterialRow {
   id: string;
@@ -224,7 +208,7 @@ export async function listAuthoringSpaces(viewer: Viewer): Promise<AuthoringSpac
     .orderBy(asc(categories.name), asc(spaces.title));
 }
 
-/** Category of the space a material lives in — the scope key for every authoring action. */
+/** Category of the space a material lives in ΓÇö the scope key for every authoring action. */
 export async function categoryIdForMaterial(materialId: string): Promise<string | null> {
   const [row] = await db
     .select({ categoryId: spaces.categoryId })
@@ -256,9 +240,24 @@ export interface ReviewQueueRow {
 
 /**
  * Versions waiting for a decision, limited to the categories the viewer is
- * assigned to. Versions they uploaded are included but flagged by the UI —
+ * assigned to. Versions they uploaded are included but flagged by the UI ΓÇö
  * the two-person rule is enforced again when they press a button.
  */
+/**
+ * How many versions are waiting for a decision ΓÇö the sidebar badge. It uses the
+ * same predicate as the queue itself, so the number always matches the page.
+ */
+export async function countReviewQueue(viewer: Viewer): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(materialVersions)
+    .innerJoin(materials, eq(materials.id, materialVersions.materialId))
+    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
+    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .where(and(eq(materialVersions.state, "IN_REVIEW"), scopeFor(viewer)));
+  return row?.n ?? 0;
+}
+
 export async function listReviewQueue(viewer: Viewer): Promise<ReviewQueueRow[]> {
   const approvalTotals = db
     .select({

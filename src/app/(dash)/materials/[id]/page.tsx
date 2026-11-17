@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MaterialProgressPanel } from "@/components/materials/material-progress-panel";
+import { ViewBeacon } from "@/components/materials/view-beacon";
 import { PriorityChip } from "@/components/ui/priority-chip";
 import { PageHeader } from "@/components/ui/page-header";
 import { buttonClass } from "@/components/ui/button";
@@ -40,6 +41,7 @@ export default async function MaterialPage({
 
   return (
     <div className="space-y-8">
+      <ViewBeacon materialId={material.id} />
       <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
@@ -178,10 +180,9 @@ export default async function MaterialPage({
             status={status}
             requiresAcknowledgement={material.requiresAcknowledgement}
             acknowledged={acknowledged}
-            cpdCreditsX10={material.cpdCreditsX10}
           />
           <p className="text-xs leading-relaxed text-ink-muted">
-            Your progress and CPD points are recorded against your staff record. Read-state and progress changes are kept for your transcript.
+            Your read-state and progress are recorded against your staff record, so you can pick up where you left off and see what you have finished.
           </p>
         </aside>
       </div>

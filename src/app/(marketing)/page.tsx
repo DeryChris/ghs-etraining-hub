@@ -6,15 +6,16 @@ import {
   BadgeCheck,
   BookOpenCheck,
   FileCheck2,
+  FolderKanban,
+  History,
   FlaskConical,
   GraduationCap,
   HeartPulse,
-  MessagesSquare,
   Pill,
+  Search,
   ShieldCheck,
   Smartphone,
   Stethoscope,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 import { CertificateSeal, EmptyArt, RegionMap } from "@/components/brand/illustrations";
@@ -29,89 +30,109 @@ import { listPublicCategories } from "@/lib/server/learning-queries";
 import { getPublicStatsCached } from "@/lib/server/public-queries";
 
 export const metadata: Metadata = {
-  title: "Clinical learning for every health worker",
-  description: SITE.fullName,
+  title: "Training material for every GHS programme",
+  description: SITE.description,
 };
 
 const FEATURES: { icon: LucideIcon; title: string; body: string; tone: string }[] = [
   {
-    icon: ShieldCheck,
-    title: "Mandatory protocols come first",
-    body: "New and revised protocols are flagged the moment they are published, with priority and the deadline your directorate sets.",
+    icon: FolderKanban,
+    title: "One home for every programme",
+    body: "Each directorate and unit that runs training gets its own place: the material, the date it last changed and who to ask about it.",
     tone: "bg-primary/10 text-primary",
   },
   {
-    icon: BadgeCheck,
-    title: "CPD you can prove",
-    body: "Each completed material adds points to your transcript. Certificates carry a serial code that anyone can verify.",
+    icon: History,
+    title: "Every version kept",
+    body: "A new file never overwrites the old one. The version you were trained on stays readable and clearly marked once it is replaced.",
     tone: "bg-accent/25 text-accent-ink dark:text-accent",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Reviewed before it goes live",
+    body: "A colleague who did not upload the file has to approve it first, so one person cannot publish clinical content on their own.",
+    tone: "bg-primary/10 text-primary",
   },
   {
     icon: FileCheck2,
-    title: "Controlled, versioned documents",
-    body: "Every version is kept. Opening or downloading a controlled document is recorded, so you always work from the current text.",
+    title: "Nothing disappears quietly",
+    body: "Uploads, edits, approvals, downloads and withdrawals are written to a tamper-evident audit trail. Material is archived, never silently deleted.",
     tone: "bg-primary/10 text-primary",
   },
   {
-    icon: MessagesSquare,
-    title: "Facilitator-led learning",
-    body: "Ask a clinical question, get a considered answer from the facilitator for your directorate, and keep the conversation on record.",
-    tone: "bg-primary/10 text-primary",
-  },
-  {
-    icon: Smartphone,
-    title: "Built for slow connections",
-    body: "Pages are light and text-first. Video loads only when you press play, so a phone on a weak network still works.",
+    icon: Search,
+    title: "Find it by programme, module or title",
+    body: "Search the whole catalogue, open the current version, or check what was in force when a session ran.",
     tone: "bg-accent/25 text-accent-ink dark:text-accent",
   },
   {
-    icon: Users,
-    title: "For every cadre and region",
-    body: "Nurses, midwives, medical officers, pharmacists and laboratory staff learn side by side, in the same standard, from any facility.",
+    icon: Smartphone,
+    title: "Light enough for a weak connection",
+    body: "Pages are text-first and video loads only when you press play, so a phone on a slow network still opens the document you need.",
     tone: "bg-primary/10 text-primary",
   },
 ];
 
 const STEPS = [
-  { icon: ShieldCheck, title: "Sign in", body: "Use your GHS staff account. Your facility administrator issues it." },
-  { icon: BookOpenCheck, title: "Choose your directorate", body: "Find the protocols, videos and practicals for your work." },
-  { icon: GraduationCap, title: "Learn and acknowledge", body: "Read the controlled document, watch the demonstration, confirm you understand." },
-  { icon: BadgeCheck, title: "Earn and verify CPD", body: "Points post to your transcript. Share the serial code when it is asked for." },
+  {
+    icon: ShieldCheck,
+    title: "Sign in",
+    body: "Use your GHS staff account. Your facility administrator issues it — there is no public sign-up.",
+  },
+  {
+    icon: BookOpenCheck,
+    title: "Open the programme",
+    body: "Find the directorate and the module that ran the training you attended.",
+  },
+  {
+    icon: FileCheck2,
+    title: "Read or download the material",
+    body: "Take the current version, or the copy that was in force when you were trained. Both stay available.",
+  },
+  {
+    icon: BadgeCheck,
+    title: "Record what you completed",
+    body: "The library keeps what you opened, downloaded and marked as finished, so you can find your way back to it.",
+  },
 ];
 
 const CADRES: { icon: LucideIcon; title: string; body: string }[] = [
-  { icon: HeartPulse, title: "Nurses and midwives", body: "Triage, maternal care, infection prevention and every shift protocol." },
-  { icon: Stethoscope, title: "Medical officers", body: "Clinical guidelines, outbreak case definitions and referral pathways." },
-  { icon: Pill, title: "Pharmacists", body: "Medicines safety, dispensing standards and the national formulary." },
-  { icon: FlaskConical, title: "Laboratory staff", body: "Specimen handling, quality control and result reporting." },
-  { icon: GraduationCap, title: "Facilitators and managers", body: "Publish, review and moderate content for the directorate you lead." },
+  { icon: HeartPulse, title: "Nurses and midwives", body: "Ward protocols, maternal care and IPC material from the sessions you attended." },
+  { icon: Stethoscope, title: "Medical officers", body: "Clinical guidelines and case definitions, with the version that was current at the time." },
+  { icon: Pill, title: "Pharmacists", body: "Medicines safety, dispensing standards and the national formulary as taught." },
+  { icon: FlaskConical, title: "Laboratory staff", body: "Specimen handling, quality control and result reporting, by programme." },
+  { icon: GraduationCap, title: "Facilitators and managers", body: "Upload, version, review and archive the material for the programmes you run." },
 ];
 
 const FAQ = [
   {
-    question: "Who can use GHS-ELN?",
-    answer:
-      "Current Ghana Health Service staff who have a record in the staff directory. There is no public sign-up. Accounts are issued through your facility or regional administrator.",
+    question: `What is the ${SITE.name}?`,
+    answer: `It is the ${SITE.fullName} — ${SITE.purpose} Material from a session is filed under the programme that ran it, with the date and the version, so a facilitator's slides are still findable a year later.`,
   },
   {
-    question: "How do I get an account?",
+    question: "Who can use it?",
     answer:
-      "Ask your facility administrator to add you to the staff directory. The ICT team issues your login, and you choose your own password the first time you sign in.",
+      "Current Ghana Health Service staff with a record in the staff directory. There is no public sign-up; accounts are issued through your facility or regional administrator.",
+  },
+  {
+    question: "What happens to the material we used to share on WhatsApp?",
+    answer:
+      "It is filed here instead — under the programme that ran the session, with the date and the version. A group chat can still carry the conversation, but the document of record lives in the library where it cannot be scrolled away.",
+  },
+  {
+    question: "Can I still open an older version?",
+    answer:
+      "Yes. Superseded versions stay readable and are clearly marked, so you can see exactly what was in force when you were trained or assessed.",
+  },
+  {
+    question: "Who can upload or remove material?",
+    answer:
+      "Facilitators assigned to the directorate upload and version it. Nothing is deleted: material is archived, and the audit trail keeps who uploaded, reviewed, published, downloaded or withdrew it.",
   },
   {
     question: "Is my learning record official?",
     answer:
-      "Completions, CPD points and certificates are recorded against your staff record. Certificates carry a serial code that the verification page can check.",
-  },
-  {
-    question: "Can I use it on a phone with a weak connection?",
-    answer:
-      "Yes. Pages are light, video loads only when you press play, and controlled documents open in your browser, so you do not need a special app.",
-  },
-  {
-    question: "What happens to my personal data?",
-    answer:
-      "Your data is processed under the Data Protection Act, 2012 (Act 843). Privileged actions are written to a tamper-evident audit trail. Read the privacy notice for the full picture.",
+      "The library records which material you opened, downloaded and marked as finished, always against the version you saw. Certificates issued before the CPD award was retired remain checkable on the verification page."
   },
   {
     question: "I forgot my password. What now?",
@@ -136,35 +157,36 @@ export default async function LandingPage() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
                 </span>
-                Ghana Health Service · Continuing professional development
+                Ghana Health Service · Training programme materials
               </p>
             </Reveal>
 
             <Reveal delay={0.06}>
               <h1 id="hero-title" className="text-balance text-[2.75rem] font-extrabold leading-[1.02] tracking-tight text-ink sm:text-6xl lg:text-[4.1rem]">
-                Clinical learning that keeps{" "}
-                <span className="text-gradient-brand">every health worker</span> current.
+                The material from every GHS training,{" "}
+                <span className="text-gradient-brand">kept and versioned</span>.
               </h1>
             </Reveal>
 
             <Reveal delay={0.12}>
               <p className="max-w-xl text-lg leading-relaxed text-ink-muted">
-                Protocols, practical training and verifiable CPD for GHS staff in every facility, from Accra to Nalerigu. Learn at
-                your own pace, acknowledge what is mandatory, and carry a record of your competence.
+                After a session, slides and protocols used to go into a WhatsApp group and sink under the next morning&apos;s
+                messages. Here they are filed under the programme that ran it — with the version, the date and the people who
+                uploaded, reviewed and used it.
               </p>
             </Reveal>
 
             <Reveal delay={0.18}>
               <div className="flex flex-wrap items-center gap-3">
                 <Link href="/login" className={buttonClass({ size: "md", className: "h-12 rounded-[var(--radius-pill)] px-6 text-[15px] shadow-lift" })}>
-                  Sign in to learn
+                  Sign in
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
                 <Link
                   href="/programmes"
                   className={buttonClass({ variant: "secondary", className: "h-12 rounded-[var(--radius-pill)] px-6 text-[15px]" })}
                 >
-                  Explore programmes
+                  Browse programmes
                 </Link>
               </div>
             </Reveal>
@@ -173,13 +195,13 @@ export default async function LandingPage() {
             <Reveal delay={0.24}>
               <dl className="grid max-w-md grid-cols-3 gap-6 border-t border-hairline pt-7">
                 <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Directorates</dt>
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Programmes</dt>
                   <dd className="mt-1 text-3xl font-extrabold text-ink">
                     <CountUp value={stats.directorates} />
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Spaces</dt>
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Modules</dt>
                   <dd className="mt-1 text-3xl font-extrabold text-ink">
                     <CountUp value={stats.spaces} />
                   </dd>
@@ -216,8 +238,8 @@ export default async function LandingPage() {
                   <div className="flex items-center gap-3">
                     <CertificateSeal className="h-11 w-11 shrink-0" />
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">CPD record</p>
-                      <p className="text-sm font-bold text-ink">Points verified on completion</p>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Version history</p>
+                      <p className="text-sm font-bold text-ink">Every revision kept</p>
                     </div>
                   </div>
                 </div>
@@ -227,14 +249,14 @@ export default async function LandingPage() {
                       <BadgeCheck className="h-5 w-5" />
                     </span>
                     <div>
-                      <p className="text-sm font-bold text-ink">Protocol acknowledged</p>
-                      <p className="text-xs leading-relaxed text-ink-muted">Version-controlled SOP. Your acknowledgement is on record.</p>
+                      <p className="text-sm font-bold text-ink">Reviewed before publishing</p>
+                      <p className="text-xs leading-relaxed text-ink-muted">A second person approves it. Their name is on the record.</p>
                     </div>
                   </div>
                 </div>
                 <div aria-hidden className="glass absolute -top-5 right-6 hidden items-center gap-2 rounded-[var(--radius-pill)] border border-hairline px-3.5 py-2 shadow-panel sm:flex">
                   <span className="h-2 w-2 rounded-full bg-warn" />
-                  <span className="text-xs font-semibold text-ink">Mandatory protocol due</span>
+                  <span className="text-xs font-semibold text-ink">New version published</span>
                 </div>
               </div>
             </Reveal>
@@ -262,9 +284,9 @@ export default async function LandingPage() {
       <section aria-labelledby="features-title" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 lg:px-10 lg:py-32">
         <Reveal>
           <SectionHeading
-            eyebrow="Why GHS-ELN"
-            title={<span id="features-title">Everything a clinical team needs to stay current, in one place.</span> as unknown as string}
-            description="We built it around the work: the protocol you need before a shift, the proof you need at appraisal, and the conversation you need with a facilitator."
+            eyebrow={`Why ${SITE.code}`}
+            title={<span id="features-title">Built to keep training material findable, not to lose it gracefully.</span> as unknown as string}
+            description="A catalogue with a memory: what was uploaded, for which programme, by whom, and which version was in force on the day you needed it."
           />
         </Reveal>
         <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -289,7 +311,7 @@ export default async function LandingPage() {
       <section aria-labelledby="how-title" className="bg-surface/60 py-24 lg:py-32">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <Reveal>
-            <SectionHeading eyebrow="How it works" title={<span id="how-title">From sign-in to a verified record in four steps.</span> as unknown as string} />
+            <SectionHeading eyebrow="How it works" title={<span id="how-title">From sign-in to the right version, in four steps.</span> as unknown as string} />
           </Reveal>
           <ol className="relative mt-16 grid gap-10 md:grid-cols-4 md:gap-6">
             <div aria-hidden className="absolute left-7 top-7 hidden h-px w-[calc(100%-3.5rem)] bg-gradient-to-r from-primary via-primary/40 to-accent md:block" />
@@ -329,7 +351,7 @@ export default async function LandingPage() {
             <SectionHeading
               eyebrow="Across Ghana"
               title={<span id="regions-title">Present in all {SITE.regionCount} regions.</span> as unknown as string}
-              description="The same protocols and the same CPD standard reach a district hospital in the north and a teaching hospital in Accra. Nobody learns from an older version because of where they serve."
+              description="A district hospital in the north opens the same document, at the same version, as a teaching hospital in Accra. Nobody works from a stale copy because of where they serve."
             />
             <ul className="flex flex-wrap gap-2">
               {GHS_REGIONS.map((region) => (
@@ -347,7 +369,7 @@ export default async function LandingPage() {
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <Reveal>
-              <SectionHeading eyebrow="Programmes" title={<span id="programmes-title">Built by the directorates that own the standards.</span> as unknown as string} />
+              <SectionHeading eyebrow="Programmes" title={<span id="programmes-title">Filed by the directorates that run the training.</span> as unknown as string} />
             </Reveal>
             <Reveal delay={0.1}>
               <Link href="/programmes" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline underline-offset-4">
@@ -390,7 +412,7 @@ export default async function LandingPage() {
       {/* ── Cadres ───────────────────────────────────────────────────────── */}
       <section aria-labelledby="cadres-title" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 lg:px-10 lg:py-32">
         <Reveal>
-          <SectionHeading eyebrow="For every role" title={<span id="cadres-title">Learning that fits the work you actually do.</span> as unknown as string} />
+          <SectionHeading eyebrow="For every cadre" title={<span id="cadres-title">Who the material is for.</span> as unknown as string} />
         </Reveal>
         <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {CADRES.map((cadre, index) => {
@@ -424,13 +446,14 @@ export default async function LandingPage() {
             <div className="absolute inset-0 flex items-center p-8 sm:p-14">
               <div className="max-w-lg space-y-5">
                 <h2 id="band-title" className="text-3xl font-extrabold leading-tight text-ink sm:text-4xl">
-                  Every shift starts with the right protocol. Make sure yours is current.
+                  The slides from your last training should still be findable.
                 </h2>
                 <p className="text-base leading-relaxed text-ink-muted">
-                  Mandatory protocols are flagged the moment they are published. Acknowledge them once, and the record is kept.
+                  Every session&apos;s material is filed under its programme, with the version and the date it changed. Ask for
+                  the current copy and you get the current copy.
                 </p>
                 <Link href="/login" className={buttonClass({ className: "h-12 rounded-[var(--radius-pill)] px-6" })}>
-                  Review your mandatory protocols
+                  Open your programmes
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               </div>
@@ -464,7 +487,7 @@ export default async function LandingPage() {
             <div className="relative grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:items-center">
               <div className="space-y-4">
                 <h2 id="cta-title" className="text-3xl font-extrabold leading-tight sm:text-4xl">
-                  Start with the protocol you need this week.
+                  Find the material for your programme.
                 </h2>
                 <p className="max-w-xl text-base leading-relaxed text-primary-ink/85">
                   Sign in with your GHS staff account. If you do not have one yet, your facility administrator can add you in minutes.

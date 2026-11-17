@@ -5,7 +5,6 @@ import { CheckCircle2, Circle } from "lucide-react";
 import { ProgressStatusChip } from "@/components/materials/progress-status-chip";
 import { buttonClass } from "@/components/ui/button";
 import { hintClass } from "@/components/ui/input";
-import { formatCredits } from "@/lib/format";
 import { updateMaterialProgressAction, type ProgressActionState } from "@/lib/server/actions/learning";
 import type { ProgressStatus } from "@/lib/labels";
 
@@ -29,13 +28,11 @@ export function MaterialProgressPanel({
   status,
   requiresAcknowledgement,
   acknowledged,
-  cpdCreditsX10,
 }: {
   materialId: string;
   status: ProgressStatus;
   requiresAcknowledgement: boolean;
   acknowledged: boolean;
-  cpdCreditsX10: number;
 }) {
   const [state, formAction, pending] = useActionState(updateMaterialProgressAction, INITIAL);
   const needsAcknowledgement = requiresAcknowledgement && !acknowledged;
@@ -55,12 +52,12 @@ export function MaterialProgressPanel({
       <ol className="mt-4 space-y-3">
         <Step done={status !== "NOT_STARTED"}>Start the material</Step>
         {requiresAcknowledgement && <Step done={acknowledged}>Acknowledge this protocol</Step>}
-        <Step done={completed}>Complete it and earn {formatCredits(cpdCreditsX10)}</Step>
+        <Step done={completed}>Mark it finished when you are done</Step>
       </ol>
 
       {completed ? (
         <p className="mt-5 rounded-control border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
-          Completed and recorded. It is on your CPD transcript.
+          Marked as finished. The record shows when, and against which version.
         </p>
       ) : (
         <form action={formAction} className="mt-5 space-y-3">

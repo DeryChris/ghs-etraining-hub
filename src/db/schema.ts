@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+﻿import { sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -10,6 +10,8 @@ import {
   jsonb,
   index,
   unique,
+  uniqueIndex,
+  date,
   pgEnum,
 } from "drizzle-orm/pg-core";
 
@@ -321,3 +323,104 @@ export const rateLimitWindows = pgTable("rate_limit_windows", {
   windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
   resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
 }, (t) => [index("rate_limit_windows_reset_idx").on(t.resetAt)]);
+
+/* ΓöÇΓöÇ Geography (reference data) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ * The Upper West Region is the pilot: personnel, trainings and facilities are
+ * named by region ΓåÆ district ΓåÆ sub-district ΓåÆ facility. Reference rows are
+ * maintained here rather than typed per session, so a district is spelled one
+ * way and the charts can group by it. GHS supplies the authoritative list;
+ * docs/decisions/0011 records what is seeded and where it came from.
+ */
+
+export const districtKindEnum = pgEnum("district_kind", ["METROPOLITAN", "MUNICIPAL", "DISTRICT"]);
+
+export const regions = pgTable("regions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: varchar("code", { length: 8 }).notNull().unique(),
+  name: text("name").notNull().unique(),
+});
+
+export const districts = pgTable("districts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  regionId: uuid("region_id").notNull().references(() => regions.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  kind: districtKindEnum("kind").notNull().default("DISTRICT"),
+  capital: text("capital"),
+}, (t) => [uniqueIndex("districts_region_name_idx").on(t.regionId, t.name)]);
+
+export const subDistricts = pgTable("sub_districts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  districtId: uuid("district_id").notNull().references(() => districts.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+}, (t) => [uniqueIndex("sub_districts_district_name_idx").on(t.districtId, t.name)]);
+
+export const facilityTypeEnum = pgEnum("facility_type", [
+  "REGIONAL_HOSPITAL",
+  "MUNICIPAL_HOSPITAL",
+  "DISTRICT_HOSPITAL",
+  "POLYCLINIC",
+  "HEALTH_CENTRE",
+  "CLINIC",
+  "DIRECTORATE",
+  "OTHER",
+]);
+export const facilityOwnershipEnum = pgEnum("facility_ownership", ["GHS", "CHAG", "PRIVATE", "OTHER"]);
+
+export const facilities = pgTable("facilities", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  districtId: uuid("district_id").notNull().references(() => districts.id, { onDelete: "cascade" }),
+  subDistrictId: uuid("sub_district_id").references(() => subDistricts.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  type: facilityTypeEnum("type").notNull().default("HEALTH_CENTRE"),
+  ownership: facilityOwnershipEnum("ownership").notNull().default("GHS"),
+  isActive: boolean("is_active").notNull().default(true),
+}, (t) => [uniqueIndex("facilities_district_name_idx").on(t.districtId, t.name)]);
+
+/* ΓöÇΓöÇ Training sessions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ * A session is a training that actually happened: a programme (category) and
+ * area (space) delivered on a date, at a place. It is the unit the insights
+ * charts count, and the thing uploaded material belongs to in practice.
+ */
+
+export const trainingSessions = pgTable("training_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  categoryId: uuid("category_id").notNull().references(() => categories.id),
+  spaceId: uuid("space_id").references(() => spaces.id, { onDelete: "set null" }),
+  organisedOn: date("organised_on").notNull(),
+  regionId: uuid("region_id").references(() => regions.id, { onDelete: "set null" }),
+  districtId: uuid("district_id").references(() => districts.id, { onDelete: "set null" }),
+  subDistrictId: uuid("sub_district_id").references(() => subDistricts.id, { onDelete: "set null" }),
+  facilityId: uuid("facility_id").references(() => facilities.id, { onDelete: "set null" }),
+  facilitatorName: text("facilitator_name"),
+  facilitatorId: uuid("facilitator_id").references(() => users.id, { onDelete: "set null" }),
+  attendeeCount: integer("attendee_count"),
+  notes: text("notes"),
+  isArchived: boolean("is_archived").notNull().default(false),
+  createdById: uuid("created_by_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index("training_sessions_organised_idx").on(t.organisedOn),
+  index("training_sessions_category_idx").on(t.categoryId, t.organisedOn),
+]);
+
+/* ΓöÇΓöÇ Views ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ * Traffic, counted honestly: one row per person, material and day, so a refresh
+ * loop cannot inflate a number and a repeat visit is a visit. Downloads are
+ * already in the audit trail; together they answer "is this programme being
+ * used?", which is the question the insights page exists to answer.
+ */
+
+export const materialViews = pgTable("material_views", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  materialId: uuid("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  viewedOn: date("viewed_on").notNull(),
+  viewCount: integer("view_count").notNull().default(1),
+  firstViewedAt: timestamp("first_viewed_at", { withTimezone: true }).notNull().defaultNow(),
+  lastViewedAt: timestamp("last_viewed_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("material_views_unique_idx").on(t.materialId, t.userId, t.viewedOn),
+  index("material_views_day_idx").on(t.viewedOn),
+]);

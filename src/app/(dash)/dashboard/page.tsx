@@ -1,18 +1,19 @@
-import Link from "next/link";
-import { ArrowRight, BadgeCheck, BookOpen, Bell, ShieldAlert, Target } from "lucide-react";
-import { CpdRing } from "@/components/analytics/cpd-ring";
+﻿import Link from "next/link";
+import { ArrowRight, BadgeCheck, BookOpen, Bell, ClipboardCheck, Download, Eye, ShieldAlert } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { PriorityChip } from "@/components/ui/priority-chip";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { CPD_CYCLE_TARGET_POINTS, pointsFromCreditsX10 } from "@/lib/cpd";
 import { formatDate, formatDateTime, formatMinutes } from "@/lib/format";
 import { safeAppLink } from "@/lib/links";
 import { MATERIAL_TYPE_LABELS, ROLE_LABELS, notificationTypeLabel } from "@/lib/labels";
 import { firstNameOf } from "@/lib/names";
+import { getInsights, getTrafficSeries } from "@/lib/server/insights-queries";
+import { getSessionSummary } from "@/lib/server/session-queries";
 import { getLearnerDashboard } from "@/lib/server/learning-queries";
 import { listNotifications } from "@/lib/server/notification-queries";
 import { requireSession } from "@/lib/server/rbac";
+import { isStaffRole } from "@/lib/viewer";
 
 const NOTICES: Record<string, string> = {
   forbidden: "That page is not available for your role.",
@@ -33,7 +34,7 @@ function StatTile({
   hint,
   tone = "default",
 }: {
-  icon: typeof Target;
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   label: string;
   value: string;
   hint: string;
@@ -60,9 +61,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { notice } = await searchParams;
   const now = new Date();
 
-  const [dashboard, announcements] = await Promise.all([getLearnerDashboard(session), listNotifications(session, 4)]);
+  const staff = isStaffRole(session.role);
+  const [dashboard, announcements, insights, traffic, sessionRecord] = await Promise.all([
+    getLearnerDashboard(session),
+    listNotifications(session, 4),
+    staff ? getInsights(session) : Promise.resolve(null),
+    staff ? getTrafficSeries(session, 4) : Promise.resolve(null),
+    staff ? getSessionSummary(session) : Promise.resolve(null),
+  ]);
 
-  const points = pointsFromCreditsX10(dashboard.creditsX10);
+
   const outstanding = dashboard.mandatoryOutstanding;
   const noticeText = notice ? NOTICES[notice] : undefined;
   const nextUp = dashboard.continueLearning[0] ?? outstanding[0] ?? null;
@@ -80,7 +88,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div className="grid items-center gap-10 lg:grid-cols-[1fr_auto]">
           <div className="space-y-6">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-              {ROLE_LABELS[session.role]} · {formatDate(now)}
+              {ROLE_LABELS[session.role]} ┬╖ {formatDate(now)}
             </p>
             <h1 id="dash-title" className="text-balance text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">
               {greetingFor(now)}, {firstNameOf(session.name)}.
@@ -88,7 +96,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
               {outstanding.length > 0
                 ? `${outstanding.length} mandatory ${outstanding.length === 1 ? "protocol needs" : "protocols need"} your attention. Start with the first one.`
-                : "Nothing mandatory is waiting for you. Keep your CPD moving with the next material."}
+                : "Nothing mandatory is waiting for you. The material from your last training is in the library."}
             </p>
             <div className="flex flex-wrap items-center gap-3">
               {nextUp ? (
@@ -103,19 +111,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-4 rounded-hero border border-hairline bg-canvas/60 p-6 backdrop-blur">
-            <CpdRing value={points} max={CPD_CYCLE_TARGET_POINTS} />
-            <p className="text-center text-sm text-ink-muted">
-              {points >= CPD_CYCLE_TARGET_POINTS
-                ? "Your CPD target for this cycle is met."
-                : `${(CPD_CYCLE_TARGET_POINTS - points).toFixed(1)} points to your cycle target.`}
-            </p>
-          </div>
         </div>
       </section>
 
       {/* Stats */}
-      <section aria-label="Summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatTile
           icon={ShieldAlert}
           label="Mandatory to do"
@@ -123,10 +123,57 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           hint={dashboard.mandatoryTotal === 0 ? "None assigned" : `of ${dashboard.mandatoryTotal} mandatory protocols`}
           tone={outstanding.length > 0 ? "warn" : "success"}
         />
-        <StatTile icon={Target} label="CPD points" value={points.toFixed(1)} hint={`of ${CPD_CYCLE_TARGET_POINTS} this cycle`} tone="success" />
         <StatTile icon={BookOpen} label="In progress" value={String(dashboard.inProgressCount)} hint="Materials you have started" />
         <StatTile icon={BadgeCheck} label="Completed" value={String(dashboard.completedCount)} hint="Recorded on your transcript" />
       </section>
+
+      {insights && traffic && sessionRecord && (
+        <section aria-labelledby="insights-heading" className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 id="insights-heading" className="text-lg font-bold text-ink">
+                Library at a glance
+              </h2>
+              <p className="text-sm text-ink-muted">
+                {insights.scope === "all"
+                  ? "Traffic and output across every programme. The detail is on Insights."
+                  : "Traffic and output in the programmes you run. The detail is on Insights."}
+              </p>
+            </div>
+            <Link href="/insights" className={buttonClass({ variant: "ghost", size: "sm" })}>
+              All insights
+              <ArrowRight className="ml-1 h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatTile
+              icon={Eye}
+              label="Opens ┬╖ 4 weeks"
+              value={String(traffic.totals.views)}
+              hint={`${insights.catalogue.published} materials published`}
+            />
+            <StatTile
+              icon={Download}
+              label="Downloads ┬╖ 4 weeks"
+              value={String(traffic.totals.downloads)}
+              hint="From the audit trail"
+            />
+            <StatTile
+              icon={ClipboardCheck}
+              label="Trainings ┬╖ 90 days"
+              value={String(sessionRecord.last90Days)}
+              hint={`${sessionRecord.total} on record`}
+            />
+            <StatTile
+              icon={BookOpen}
+              label="Awaiting review"
+              value={String(insights.catalogue.inReview)}
+              hint={insights.catalogue.inReview > 0 ? "Waiting for a decision" : "The queue is clear"}
+              tone={insights.catalogue.inReview > 0 ? "warn" : "success"}
+            />
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="space-y-10 lg:col-span-2">
@@ -141,7 +188,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
             {outstanding.length === 0 ? (
               <ListEmptyState
-                art="certificate"
+                art="folder"
                 title="You are up to date"
                 description="No mandatory protocols are waiting for you. New ones appear here as soon as they are published."
               />
@@ -161,7 +208,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                         <p className="font-semibold text-ink group-hover:text-primary">{item.title}</p>
                         <p className="text-xs text-ink-muted">
                           {item.spaceTitle}
-                          {item.estimatedMinutes !== null ? ` · ${formatMinutes(item.estimatedMinutes)}` : ""}
+                          {item.estimatedMinutes !== null ? ` ┬╖ ${formatMinutes(item.estimatedMinutes)}` : ""}
                         </p>
                       </div>
                       <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
@@ -193,7 +240,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   <li key={item.id}>
                     <Link href={`/materials/${item.id}`} className="block p-5 transition-colors duration-fast hover:bg-surface-2">
                       <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                        {MATERIAL_TYPE_LABELS[item.type]} · {item.spaceTitle}
+                        {MATERIAL_TYPE_LABELS[item.type]} ┬╖ {item.spaceTitle}
                       </p>
                       <p className="mt-1 font-semibold text-ink">{item.title}</p>
                       <div className="mt-3">

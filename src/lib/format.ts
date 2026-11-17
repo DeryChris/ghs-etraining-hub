@@ -1,5 +1,5 @@
 /**
- * Display formatting for GHS-ELN. Everything is shown in Africa/Accra time, 24-hour
+ * Display formatting for the training library. Everything is shown in Africa/Accra time, 24-hour
  * clock, with the en-GB conventions the UI copy uses (docs/ui-ux.md §5).
  */
 const ACCRA_TZ = "Africa/Accra";

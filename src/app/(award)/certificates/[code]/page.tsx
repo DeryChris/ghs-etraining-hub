@@ -13,7 +13,8 @@ import { displayOrigin } from "@/lib/app-url";
 export const dynamic = "force-dynamic";
 
 /**
- * The printable award. A certificate is proof of CPD, so the holder must be able
+ * The printable award. Certificates are no longer issued (ADR-0011), but every
+ * certificate already in someone's hands stays printable by the people entitled
  * to produce it — the public `/verify` page only ever shows a masked name, which
  * is not enough to print. Holder and staff only.
  */
@@ -33,7 +34,7 @@ export default async function CertificateAwardPage({ params }: { params: Promise
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Link href="/analytics" className={buttonClass({ variant: "ghost" })}>
-          Back to my CPD
+          Back to my activity
         </Link>
         <div className="flex flex-wrap gap-2">
           <Link href={`/verify?code=${serial}`} className={buttonClass({ variant: "secondary" })}>
@@ -76,7 +77,7 @@ export default async function CertificateAwardPage({ params }: { params: Promise
 
         <dl className="grid gap-4 border-t border-hairline pt-6 text-sm sm:grid-cols-3">
           <div className="text-center sm:text-left">
-            <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">CPD points</dt>
+            <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Points recorded at issue</dt>
             <dd className="mt-1 font-semibold text-ink">{formatCredits(award.creditsX10)}</dd>
           </div>
           <div className="text-center sm:text-left">
