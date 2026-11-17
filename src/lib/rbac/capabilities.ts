@@ -35,6 +35,7 @@ export type Action =
   | "message.read_any_thread"
   | "notification.broadcast"
   | "notification.view"
+  | "training.create"
   | "analytics.view_personal"
   | "analytics.view_cohort"
   | "analytics.export"
@@ -78,6 +79,7 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.read_draft": true,
     "material.read_published": true,
     "material.download": true,
+    "training.create": true,
     "assessment.configure": true,
     "assessment.take": true,
     "assessment.override_score": true,
@@ -121,6 +123,7 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.read_draft": true,
     "material.read_published": true,
     "material.download": true,
+    "training.create": false,
     "assessment.configure": true,
     "assessment.take": true,
     "assessment.override_score": false,
@@ -164,6 +167,7 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.read_draft": false,
     "material.read_published": true,
     "material.download": true,
+    "training.create": false,
     "assessment.configure": false,
     "assessment.take": true,
     "assessment.override_score": false,

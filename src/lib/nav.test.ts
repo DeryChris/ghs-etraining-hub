@@ -19,7 +19,7 @@ describe("navFor", () => {
   it("gives a facilitator authoring, review and notices but no administration", () => {
     const facilitator = hrefs("FACILITATOR");
     expect(facilitator).toEqual(
-      expect.arrayContaining(["/authoring", "/review", "/notices"]),
+      expect.arrayContaining(["/authoring", "/review", "/notices", "/sessions"]),
     );
     expect(facilitator).not.toContain("/users");
     expect(facilitator).not.toContain("/settings");
@@ -43,7 +43,7 @@ describe("navFor", () => {
     expect(admin.map((section) => section.id)).toEqual(["learn", "community", "record", "author", "administration"]);
     for (const section of admin) expect(section.items.length).toBeGreaterThan(0);
     // Order within a section follows the declaration, not the role filter.
-    expect(admin[3]?.items.map((item) => item.href)).toEqual(["/review"]);
+    expect(admin[3]?.items.map((item) => item.href)).toEqual(["/sessions", "/review"]);
   });
 
   it("gives every role notifications, including facilitators", () => {

@@ -26,6 +26,7 @@ export type NavIcon =
   | "cpd"
   | "insights"
   | "materials"
+  | "sessions"
   | "review"
   | "notice"
   | "users"
@@ -111,6 +112,13 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: "Author",
     items: [
       { href: "/authoring", label: "My materials", icon: "materials", roles: FACILITATOR_ONLY },
+      {
+        href: "/sessions",
+        label: "Sessions",
+        icon: "sessions",
+        roles: STAFF,
+        hint: "Record the trainings that ran, and where",
+      },
       { href: "/review", label: "Review queue", icon: "review", roles: STAFF, count: "reviews" },
       { href: "/notices", label: "Send notice", icon: "notice", roles: FACILITATOR_ONLY },
     ],
