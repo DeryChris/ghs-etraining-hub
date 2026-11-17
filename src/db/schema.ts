@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -45,6 +46,7 @@ export const users = pgTable("users", {
   index("users_region_role_idx").on(t.region, t.role),
   index("users_directorate_idx").on(t.directorate),
   index("users_facility_idx").on(t.facility),
+  index("users_email_lower_idx").on(sql`lower(${t.email})`),
 ]);
 
 export const sessions = pgTable("sessions", {
@@ -109,7 +111,11 @@ export const materials = pgTable("materials", {
   isPublished: boolean("is_published").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("materials_space_id_idx").on(t.spaceId)]);
+}, (t) => [
+  index("materials_space_id_idx").on(t.spaceId),
+  index("materials_visibility_idx").on(t.state, t.isPublished, t.spaceId),
+  unique("materials_space_title_key").on(t.spaceId, t.title),
+]);
 
 export const materialVersions = pgTable("material_versions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -127,7 +133,10 @@ export const materialVersions = pgTable("material_versions", {
   publishedAt: timestamp("published_at", { withTimezone: true }),
   supersededByVersionId: uuid("superseded_by_version_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("material_versions_material_id_idx").on(t.materialId)]);
+}, (t) => [
+  index("material_versions_material_id_idx").on(t.materialId),
+  unique("material_versions_material_version_key").on(t.materialId, t.version),
+]);
 
 export const enrollments = pgTable("enrollments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -138,7 +147,7 @@ export const enrollments = pgTable("enrollments", {
   dueAt: timestamp("due_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   lastRemindedAt: timestamp("last_reminded_at", { withTimezone: true }),
-}, (t) => [unique().on(t.userId, t.spaceId)]);
+}, (t) => [unique().on(t.userId, t.spaceId), index("enrollments_space_idx").on(t.spaceId)]);
 
 export const materialProgress = pgTable("material_progress", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -150,7 +159,10 @@ export const materialProgress = pgTable("material_progress", {
   acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [unique().on(t.userId, t.materialId)]);
+}, (t) => [
+  unique().on(t.userId, t.materialId),
+  index("material_progress_user_status_idx").on(t.userId, t.status, t.updatedAt),
+]);
 
 export const assessments = pgTable("assessments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -198,7 +210,13 @@ export const certificates = pgTable("certificates", {
   expiresAt: timestamp("expires_at", { withTimezone: true }),
   verificationCount: integer("verification_count").notNull().default(0),
   lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
-});
+}, (t) => [
+  index("certificates_user_idx").on(t.userId),
+  index("certificates_material_idx").on(t.materialId),
+  // One certificate per learner, material and published version: re-completing a
+  // superseded version must not mint a second serial.
+  unique("certificates_user_material_version_key").on(t.userId, t.materialId, t.materialVersionId),
+]);
 
 export const comments = pgTable("comments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -211,7 +229,7 @@ export const comments = pgTable("comments", {
   removedById: uuid("removed_by_id").references(() => users.id),
   editedAt: timestamp("edited_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [index("comments_material_created_idx").on(t.materialId, t.createdAt)]);
 
 export const directMessages = pgTable("direct_messages", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -223,7 +241,10 @@ export const directMessages = pgTable("direct_messages", {
   isReported: boolean("is_reported").notNull().default(false),
   reportReason: text("report_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [
+  index("direct_messages_sender_idx").on(t.senderId, t.createdAt),
+  index("direct_messages_recipient_idx").on(t.recipientId, t.isRead, t.createdAt),
+]);
 
 export const notifications = pgTable("notifications", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -236,7 +257,7 @@ export const notifications = pgTable("notifications", {
   audienceFilter: jsonb("audience_filter"),
   publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
-});
+}, (t) => [index("notifications_published_at_idx").on(t.publishedAt), index("notifications_expires_at_idx").on(t.expiresAt)]);
 
 export const notificationRecipients = pgTable("notification_recipients", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -244,7 +265,10 @@ export const notificationRecipients = pgTable("notification_recipients", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   isRead: boolean("is_read").notNull().default(false),
   readAt: timestamp("read_at", { withTimezone: true }),
-}, (t) => [unique().on(t.notificationId, t.userId)]);
+}, (t) => [
+  unique().on(t.notificationId, t.userId),
+  index("notification_recipients_user_unread_idx").on(t.userId, t.isRead),
+]);
 
 export const notificationReadCursors = pgTable("notification_read_cursors", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -255,7 +279,10 @@ export const notificationReadCursors = pgTable("notification_read_cursors", {
 
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  // RESTRICT, never SET NULL: the chain hash covers actorId, so nulling it after
+  // a deletion would make verifyAuditChain() report false tampering. Staff are
+  // deactivated (is_active = false), never deleted.
+  userId: uuid("user_id").references(() => users.id, { onDelete: "restrict" }),
   action: text("action").notNull(),
   entity: text("entity").notNull(),
   entityId: text("entity_id").notNull(),
@@ -265,7 +292,10 @@ export const auditLogs = pgTable("audit_logs", {
   prevHash: text("prev_hash"),
   hash: text("hash"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("audit_logs_created_at_idx").on(t.createdAt)]);
+}, (t) => [
+  index("audit_logs_created_at_idx").on(t.createdAt),
+  index("audit_logs_user_created_idx").on(t.userId, t.createdAt),
+]);
 
 export const messageReports = pgTable("message_reports", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -290,4 +320,4 @@ export const rateLimitWindows = pgTable("rate_limit_windows", {
   count: integer("count").notNull().default(0),
   windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
   resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
-});
+}, (t) => [index("rate_limit_windows_reset_idx").on(t.resetAt)]);

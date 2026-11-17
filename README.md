@@ -1,231 +1,189 @@
 # GHS-ELN — Ghana Health Service eLearning Network
 
-Production-grade continuous professional development (CPD) and clinical learning portal for the Ghana Health Service, built on **Next.js 16**, **React 19**, **Tailwind CSS v4**, **Drizzle ORM**, **Supabase** (PostgreSQL + Auth + Storage), and **Vercel**.
+Continuous professional development (CPD) and clinical learning portal for the Ghana Health
+Service, built on **Next.js 16**, **React 19**, **Tailwind CSS v4**, **Drizzle ORM**, **Supabase**
+(PostgreSQL + Auth + Storage) and **Vercel**.
 
 ---
 
-## Architecture Summary
+## Architecture summary
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Next.js 16 App Router, React 19 |
-| Styling | Tailwind CSS v4 (`@import "tailwindcss"`, `@theme` tokens) |
-| ORM | Drizzle ORM (`drizzle-orm` + `pg`, no Prisma) |
-| Database | PostgreSQL (Supabase, transaction pooler port 6543) |
-| Auth | Supabase Auth (`@supabase/ssr`) + session cookie layer |
-| Storage | Supabase Storage (private buckets, signed URLs) |
-| Hosting | Vercel (serverless + edge) |
-| Testing | Vitest (unit), Playwright (E2E at 390/768/1440px) |
-| Lint | ESLint (Next.js + strict TS rules) |
+| Framework | Next.js 16 App Router, React 19 (Turbopack) |
+| Styling | Tailwind CSS v4 (`@import "tailwindcss"`, `@theme` tokens, no config file) |
+| ORM | Drizzle ORM + `postgres` driver (no Prisma) |
+| Database | PostgreSQL (Supabase; transaction pooler on 6543 at runtime) |
+| Auth | Supabase Auth via `@supabase/ssr`; role and scope come from `public.users` |
+| Storage | Supabase Storage, private bucket, 15-minute signed URLs |
+| Edge gate | `src/proxy.ts` (Next 16's successor to `middleware.ts`) |
+| Migrations | Drizzle SQL in `drizzle/` + raw SQL in `supabase/migrations/` (see `docs/migrations.md`) |
+| Testing | Vitest (unit), Playwright (public + optional credentialled smoke) |
+| CI | `.github/workflows/ci.yml` (typecheck, lint, unit tests, build, production audit) |
 
 ---
 
-## Project Structure
+## What is implemented today
+
+**Shipped:** staff sign-in / password reset; dashboard with mandatory protocols; directorates →
+spaces → material viewer; library search with server-side pagination; progress
+(start · acknowledge · complete) with per-version re-acknowledgement; **CPD certificate issuance
+with random serials** and a public verification page; personal analytics/transcript; staff
+messaging (paginated threads); notifications; marketing site.
+
+**Enforced, not just documented:** capability matrix (role × action × scope), facilitator scope
+resolved from `category_facilitators`, cohort visibility (`spaces.audience_*`,
+`categories.is_restricted`), hash-chained audit log written in the same transaction as each
+mutation, rate limits on progress/messages/certificate lookups, RLS lock-down of the public API.
+
+**Not built yet:** facilitator/admin surfaces (authoring, upload, submit-for-review, publish,
+broadcast, audit-log viewer), comments/discussion, assessments, message reporting, MFA
+enforcement and lockout. The tables exist; the flows do not. See `REPO_ANALYSIS.md` for the
+prioritised gap list.
+
+---
+
+## Project structure
 
 ```
-ghs-etraining-hub/
-├── docs/                          # Product specs (PRD, architecture, data model, RBAC, UI/UX, conventions, QA)
-├── drizzle.config.ts              # Drizzle kit configuration
-├── middleware.ts                  # Edge middleware (session tripwire, RBAC route guard)
-├── next.config.ts                 # Next.js config (security headers, image allowlist)
-├── vercel.json                    # Vercel build/deploy settings
-├── supabase/config.toml           # Supabase local development config
-├── package.json
-├── tsconfig.json
-├── eslint.config.mjs
-├── vitest.config.ts
-├── playwright.config.ts           # E2E at 390px, 768px, 1440px
-├── .env.example                   # Environment variable template
-├── .gitignore
-├── README.md
-├── src/
-│   ├── app/                       # Next.js App Router
-│   │   ├── (auth)/                # Public: login, forgot-password
-│   │   ├── (dash)/                # Protected shell: dashboard, directorates, etc.
-│   │   │   ├── layout.tsx         # Shell with header + sidebar
-│   │   │   └── dashboard/page.tsx # Learner dashboard
-│   │   ├── api/health/route.ts    # Health endpoint
-│   │   ├── layout.tsx             # Root layout
-│   │   ├── page.tsx               # Redirect to /dashboard
-│   │   ├── loading.tsx            # Global loading skeleton
-│   │   ├── error.tsx              # Error boundary
-│   │   ├── not-found.tsx          # 404 page
-│   │   └── global-error.tsx       # Global error boundary
-│   ├── components/
-│   │   ├── layout/                # Header, Sidebar
-│   │   └── ui/                    # Card, Badge, Stat, EmptyState, utils
-│   ├── db/
-│   │   ├── index.ts               # Drizzle singleton (server-only)
-│   │   ├── schema.ts              # All tables (snake_case, camelCase TS)
-│   │   └── seed.ts                # Idempotent seeder
-│   └── lib/
-│       ├── client/supabase-browser.ts   # Browser Supabase client
-│       ├── format.ts                  # Intl date/bytes/credits formatting (Africa/Accra)
-│       ├── ghs-constants.ts           # Domain truth: regions, directorates, MIME, CPD credits
-│       ├── rbac/capabilities.ts       # Capability matrix (role × action → allow/deny)
-│       ├── server/
-│       │   ├── auth-adapter.ts        # Supabase Auth wrapper
-│       │   ├── audit.ts               # Hash-chained immutable audit log
-│       │   ├── rbac.ts                # requireSession, requireCapability
-│       │   ├── session.ts             # Signed session cookie (SHA-256)
-│       │   ├── storage.ts             # Supabase Storage adapter
-│       │   └── queries.ts             # Typed DTO queries (no db in components)
-│       └── utils.ts                   # cn() helper
+docs/                          # PRD, architecture, data model, RBAC, UI/UX, conventions, QA, migrations
+docs/decisions/**              # architecture decision records
+drizzle/**                     # generated + reviewed SQL migrations (versioned)
+supabase/migrations/**         # raw SQL: RLS lock-down, grants
+scripts/                       # ops scripts (auth provisioning, audit-chain verification)
+tests/e2e/**                   # Playwright specs
+.github/workflows/ci.yml       # CI gates
+next.config.ts                 # security headers (CSP, COOP/CORP, Permissions-Policy), image allowlist
+vercel.json                    # build/deploy settings and environment mapping
+drizzle.config.ts              # drizzle-kit (uses DIRECT_URL)
+src/
+  app/
+    (marketing)/               # public: home, programmes, about, verify, legal, contact
+    (auth)/                    # login, forgot-password, reset-password
+    (dash)/                    # protected shell: dashboard, directorates, spaces, library,
+                               # materials, messages, notifications, analytics
+    api/health/                # liveness/readiness probe
+    api/materials/[id]/file/   # audit-logged signed-URL redirect for controlled documents
+    auth/callback/             # PKCE code exchange for reset links
+  assets/fonts/                # self-hosted Plus Jakarta Sans (SIL OFL 1.1)
+  components/{ui,layout,materials,messages,analytics,marketing,auth,brand,theme}/
+  db/
+    client.ts                  # pooled Drizzle singleton (server-only)
+    schema.ts                  # all tables (snake_case columns, camelCase fields)
+    seed.ts                    # idempotent seeder
+  lib/
+    rbac/capabilities.ts       # capability matrix + scope rules (isomorphic, unit-tested)
+    viewer.ts                  # Viewer shape, isStaffRole()
+    certificate-code.ts        # random serial generation/validation
+    file-name.ts               # MIME-correct download names
+    format.ts / cpd.ts / ghs-constants.ts / labels.ts / links.ts / names.ts
+    server/
+      session.ts               # Supabase identity + public.users authority
+      rbac.ts                  # requireSession, checkCapability (DB-verified scope)
+      audit.ts                 # hash-chained append + chain verifier
+      certificates.ts          # certificate issuance (inside the caller's transaction)
+      rate-limit.ts            # fixed-window limiter over rate_limit_windows
+      learning-queries.ts      # catalogue, materials, dashboard, transcript + cohort filters
+      messaging-queries.ts     # conversations, paginated threads
+      notification-queries.ts  # notices + unread counts
+      public-queries.ts        # public stats + certificate verification
+      file-storage.ts          # signed URLs for the private bucket
+      logger.ts                # one-line JSON events with PII redaction
+      request-context.ts       # client IP / user agent
+      supabase-server.ts       # cookie-bound Supabase client
+      actions/                 # Server Actions: learning, messages, notifications, auth
 ```
 
 ---
 
-## Getting Started
+## Getting started
 
-### 1. Install dependencies
-
-```powershell
-cd C:\Users\amkch\Documents\Projects\ghs-etraining-hub
-npm install
-```
-
-### 2. Configure environment
-
-Copy `.env.example` to `.env.local` and fill in your Supabase values:
-
-```powershell
-Copy-Item .env.example .env.local
-```
-
-Edit `.env.local`:
-
-| Variable | Source in Supabase Dashboard |
-|----------|------------------------------|
-| `DATABASE_URL` | Settings → Database → Connection string → Pooler (port 6543) + `?pgbouncer=true` |
-| `DIRECT_URL` | Settings → Database → Connection string → Session/Direct (port 5432) + `?sslmode=require` |
-| `SESSION_SECRET` | Any 32+ character random string |
-| `SUPABASE_URL` | Settings → API → Project URL |
-| `SUPABASE_ANON_KEY` | Settings → API → Publishable key (`sb_publishable_...`) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Settings → API → Secret key (`sb_secret_...`) |
-| `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` |
-
-### 3. Set up the database
-
-```powershell
-# Generate Drizzle client
-npx drizzle-kit generate
-
-# Push schema to Supabase (sandbox/dev only)
-npx drizzle-kit push
-
-# Seed with GHS data
+```bash
+npm ci
+cp .env.example .env.local     # then fill in the Supabase values
+npm run db:migrate             # drizzle/0000…, 0001…, 0002…
+psql "$DIRECT_URL" -f supabase/migrations/20260113000000_lock_public_api.sql
 npm run db:seed
+npm run dev                    # http://localhost:3000
 ```
 
-> **Note:** `drizzle-kit push` requires a direct connection. If port 5432 is blocked by Supabase, temporarily point both `DATABASE_URL` and `DIRECT_URL` to the pooled connection (port 6543) to run the push, then restore `DATABASE_URL` to the pooled URL for runtime.
+| Variable | Source |
+|---|---|
+| `DATABASE_URL` | Supabase → Database → Pooler (port 6543) + `?pgbouncer=true` — runtime only |
+| `DIRECT_URL` | Database → Session/direct connection (5432, `sslmode=require`) — drizzle-kit only |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | API settings (anon key is public-safe) |
+| `SUPABASE_SERVICE_ROLE_KEY` | API settings — **server only**, used to sign storage URLs |
+| `NEXT_PUBLIC_APP_URL` | The public origin (`http://localhost:3000` locally) |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` / `_PHONE` | Optional; the site says how to reach ICT when unset |
+| `SEED_ADMIN_EMAIL`, `ALLOW_PROD_SEED` | Seeder only; refuses production by default |
 
-### 4. Run the dev server
+Existing databases that were created with `drizzle-kit push` need the one-time baseline
+procedure in `docs/migrations.md` before `db:migrate` will work.
 
-```powershell
-npm run dev
-```
+### Health check
 
-Open **http://localhost:3000**.
-
-### 5. Health check
-
-```powershell
+```bash
 curl -s http://localhost:3000/api/health
-# Expected: {"ok":true,"checks":{"db":"up"},...}
+# {"ok":true,"version":"2.0.0","uptime":…,"checks":{"db":"up"},"latencyMs":…}
 ```
 
 ---
 
-## Default Seed Account
+## Staff logins
 
-| Email | Role | Staff PIN |
-|-------|------|-----------|
-| `admin@ghs.gov.gh` (or `SEED_ADMIN_EMAIL`) | SYSTEM_ADMIN | GHS-000001 |
+1. Insert the directory row (the source of truth for identity and role):
 
-Seeder reads `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` and refuses to run in production unless `ALLOW_PROD_SEED=true`.
+   ```sql
+   insert into users (ghs_staff_id, email, full_name, role, region, facility)
+   values ('GHS-000123', 'ama.mensah@ghs.gov.gh', 'Ama Serwaa Mensah', 'LEARNER', 'Ashanti', 'Komfo Anokye');
+   ```
 
----
+2. Provision the Auth login (prints a temporary password once; nothing is stored):
 
-## Vercel Deployment
+   ```bash
+   npm run user:provision -- ama.mensah@ghs.gov.gh
+   npm run user:provision -- ama.mensah@ghs.gov.gh --reset   # re-issue
+   ```
 
-1. Push the repository to GitHub.
-2. In Vercel, **Add New Project** → import the GitHub repo.
-3. **Build and Output Settings:**
-   - Build Command: `npm run build`
-   - Output Directory: `.next`
-   - Root Directory: `ghs-etraining-hub` (or `.` if the repo root is the project)
-4. **Environment Variables:** Add all variables from `.env.local` (except `NEXT_PUBLIC_` ones are fine in both).
-5. Deploy.
+3. The staff member signs in and changes the password. Role always comes from the database, never
+   from Auth metadata.
 
-### Supabase Connection via Vercel
-
-When connecting Supabase in Vercel:
-- **Working directory / relative path to `supabase/` folder:** `.` (or leave blank if at repo root)
-- The `supabase/config.toml` is for local development; production uses your hosted Supabase project.
-
----
-
-## Key Conventions (from AGENTS.md)
-
-- **Drizzle is the ORM** — no Prisma. Schema lives in `src/db/schema.ts` (TypeScript).
-- **No Supabase SDKs in components** — wrap behind `src/lib/server/*` adapters.
-- **No `db` in components** — all data access through `src/lib/server/queries.ts` or Server Actions.
-- **Server-only modules** start with `import "server-only";`.
-- **Auth-deny by default** — every mutation begins with `requireCapability(...)` from `src/lib/server/rbac.ts`.
-- **Every mutation writes an audit row** via `logAudit()` in the same transaction.
-- **TypeScript strict** — no `any`, no non-null `!` on unverified data.
-- **WCAG 2.2 AA** — visible focus rings, ≥44px hit areas, semantic landmarks.
-- **Bandwidth-first** — server-rendered HTML, paginated lists, lazy-loaded viewers, signed URLs for media.
-
----
-
-## Authentication & Pilot Access
-
-Sign-in is **Supabase Auth** (email + password) via the browser client; the edge gate
-(`src/proxy.ts`) verifies the session cookie and server components enrich the role from the
-`public.users` directory through `src/lib/server/session.ts`. Never trust `user_metadata.role`
-for authorization — server capabilities (`src/lib/server/rbac.ts`) are the enforcement point.
-
-A pilot `SYSTEM_ADMIN` account exists for smoke-testing (credentials were issued out-of-band;
-rotate after first sign-in):
-
-- Email: `admin@ghs.gov.gh` → matches `public.users.ghs_staff_id = GHS-000001`
-
-To add more staff: create the Supabase Auth user (Dashboard → Authentication → Add User, or the
-Admin API), then insert the matching row in `public.users` (same email). Roles must exist in
-both places; the DB role wins.
-
-Common pitfall (resolved): the app previously shipped a custom `ghs_session` cookie that no
-login flow ever set — every protected page threw `UNAUTHENTICATED`. `session.ts` is now
-Supabase-unified and returns `null` instead of throwing; callers `redirect("/login")`.
+Allow `<origin>/auth/callback` in Supabase → Authentication → URL configuration so reset links
+work. Create a **private** storage bucket named `ghs-materials` for controlled documents.
 
 ---
 
 ## Operations
 
-- **Security migration:** `supabase/migrations/20260113000000_lock_public_api.sql` locks the public
-  API (RLS on, anon/authenticated revoked). Apply it to every environment. See ADR-0002.
-- **Staff logins:** create the directory row in `public.users` first, then run
-  `npx tsx scripts/provision-auth-user.ts <email>` (add `--reset` to issue a new temporary password).
-- **Storage:** create a private bucket named `ghs-materials`. Controlled files are served only through
-  15-minute signed URLs.
-- **Auth redirects:** allow `<origin>/auth/callback` in Supabase → Authentication → URL configuration.
-- **Smoke tests:** `E2E_LEARNER_EMAIL=… E2E_LEARNER_PASSWORD=… npx playwright test`.
+* **Migrations:** `docs/migrations.md`. Schema changes are generated, reviewed and committed;
+  `drizzle-kit push` is sandbox-only.
+* **Audit integrity:** `npm run db:verify-chain` recomputes the hash chain (exit 1 on tamper).
+  Run it after every restore and on a schedule. Staff are deactivated, never deleted — the chain
+  covers the actor id.
+* **Rate limits:** fixed windows in `rate_limit_windows`, keyed by a SHA-256 of the identifier
+  (progress 60/5 min, messages 30/5 min, certificate verification 20/5 min per connection).
+  `purgeExpiredRateLimits()` is safe to call from a cron.
+* **Security headers:** CSP, COOP/CORP and Permissions-Policy are set in `next.config.ts`; the
+  nonce migration is tracked in `docs/decisions/0007-csp-and-headers.md`.
+* **Seeding:** `npm run db:seed` upserts (the seed is idempotent); it refuses production unless
+  `ALLOW_PROD_SEED=true`.
 
 ---
 
-## Verification Gates (before claiming done)
+## Verification gates
 
-```powershell
-npx next typegen
+```bash
 npm exec tsc -- --noEmit
 npm run lint
+npm test
+npm run db:check
 npm run build
-curl -s localhost:3000/api/health
+npm run test:e2e:public
+npm run db:verify-chain
 ```
 
 ---
 
 ## License
 
-Internal GHS use.
+Internal GHS use. Fonts: Plus Jakarta Sans, SIL Open Font License 1.1 (`src/assets/fonts/OFL.txt`).

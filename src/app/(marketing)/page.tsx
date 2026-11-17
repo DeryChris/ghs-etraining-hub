@@ -25,8 +25,8 @@ import { SectionHeading } from "@/components/marketing/section-heading";
 import { buttonClass } from "@/components/ui/button";
 import { GHS_REGIONS } from "@/lib/ghs-constants";
 import { SITE } from "@/lib/site";
-import { listCategories } from "@/lib/server/learning-queries";
-import { getPublicStats } from "@/lib/server/public-queries";
+import { listPublicCategories } from "@/lib/server/learning-queries";
+import { getPublicStatsCached } from "@/lib/server/public-queries";
 
 export const metadata: Metadata = {
   title: "Clinical learning for every health worker",
@@ -121,7 +121,7 @@ const FAQ = [
 ];
 
 export default async function LandingPage() {
-  const [stats, directorates] = await Promise.all([getPublicStats(), listCategories()]);
+  const [stats, directorates] = await Promise.all([getPublicStatsCached(), listPublicCategories()]);
   const previewDirectorates = directorates.slice(0, 6);
 
   return (
@@ -169,6 +169,7 @@ export default async function LandingPage() {
               </div>
             </Reveal>
 
+            {stats && (
             <Reveal delay={0.24}>
               <dl className="grid max-w-md grid-cols-3 gap-6 border-t border-hairline pt-7">
                 <div>
@@ -191,6 +192,7 @@ export default async function LandingPage() {
                 </div>
               </dl>
             </Reveal>
+            )}
           </div>
 
           <div className="relative lg:col-span-6">

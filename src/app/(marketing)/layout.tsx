@@ -3,7 +3,15 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { resolveAccount } from "@/lib/server/session";
 
-/** Public pages. The header adapts its call to action for signed-in staff. */
+/**
+ * Public pages. The header adapts its call to action for signed-in staff, which
+ * means every render reads the session cookie and the live taxonomy — so the
+ * group is explicitly dynamic. Public statistics are cached separately (see
+ * getPublicStatsCached) so a marketing page view costs one cheap cached query
+ * rather than three aggregates.
+ */
+export const dynamic = "force-dynamic";
+
 export default async function MarketingLayout({ children }: { children: ReactNode }) {
   const account = await resolveAccount();
   const signedIn = account.state === "active";

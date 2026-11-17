@@ -12,10 +12,10 @@ export default async function DirectorateDetailPage({ params }: { params: Promis
   const { categoryId } = await params;
   if (!isUuid(categoryId)) notFound();
 
-  const category = await getCategory(categoryId);
+  const category = await getCategory(categoryId, session);
   if (!category) notFound();
 
-  const spaces = await listSpacesInCategory(category.id, session.sub);
+  const spaces = await listSpacesInCategory(category.id, session);
 
   return (
     <div className="space-y-8">

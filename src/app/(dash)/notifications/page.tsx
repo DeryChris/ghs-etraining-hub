@@ -13,7 +13,7 @@ import Link from "next/link";
 
 export default async function NotificationsPage() {
   const session = await requireSession();
-  const items = await listNotifications(session.sub, 100);
+  const items = await listNotifications(session, 100);
   const unread = items.filter((item) => !item.isRead).length;
 
   return (
