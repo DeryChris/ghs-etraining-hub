@@ -111,7 +111,7 @@ src/
 ```bash
 npm ci
 cp .env.example .env.local     # then fill in the Supabase values
-npm run db:migrate             # drizzle/0000…, 0001…, 0002…
+npm run db:migrate             # drizzle/0000…0003
 psql "$DIRECT_URL" -f supabase/migrations/20260113000000_lock_public_api.sql
 npm run db:seed
 npm run dev                    # http://localhost:3000
@@ -129,6 +129,21 @@ npm run dev                    # http://localhost:3000
 
 Existing databases that were created with `drizzle-kit push` need the one-time baseline
 procedure in `docs/migrations.md` before `db:migrate` will work.
+
+### Updating an existing database
+
+A database created before the sessions and traffic release is missing migration `0003`. The
+symptom is a page failing with `relation "material_views" does not exist` (or
+`training_sessions`, `districts`). Fix it, then reload:
+
+```bash
+npm run db:migrate   # applies drizzle/0003; needs DIRECT_URL
+npm run db:seed      # idempotent; loads the Upper West geography used by the sessions form
+```
+
+`GET /api/health` now reports schema drift directly: `{"ok":false,"checks":{"db":"up","schema":"outdated"},
+"missingTables":["material_views"],"error":{"code":"SCHEMA_OUTDATED",…}}`. It answers `503` until the
+migration is applied, so a deploy that skips the step is caught by the probe rather than by a user.
 
 ### Health check
 

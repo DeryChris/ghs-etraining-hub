@@ -64,6 +64,15 @@ export default async function SessionsPage() {
           actionText="See programmes"
           actionHref="/directorates"
         />
+      ) : geography.length === 0 ? (
+        <div className="rounded-card border border-warn/40 bg-warn/8 p-5">
+          <p className="font-semibold text-ink">The geography has not been loaded</p>
+          <p className="mt-1 text-sm leading-relaxed text-ink-muted">
+            The region → facility picker is empty because no districts have been seeded into this database. Run{" "}
+            <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-xs">npm run db:seed</code> against the same
+            database the app uses, then reload. The seed is idempotent, so it is safe to run again later.
+          </p>
+        </div>
       ) : (
         <SessionForm programmes={programmes} geography={geography} />
       )}
