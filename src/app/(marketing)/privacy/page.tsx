@@ -49,7 +49,7 @@ export default function PrivacyPage() {
         {
           heading: "Who can see it",
           paragraphs: [
-            "You can see your own records. Facilitators see learning progress within their directorate. System administrators see directory records and the audit trail.",
+            "You can see your own records. Facilitators see learning progress within their directorate. System administrators see directory records, and every administrative action is written to the tamper-evident audit trail.",
             "Certificate verification shows only the holder's first name and last initial, the award, and the dates.",
           ],
         },

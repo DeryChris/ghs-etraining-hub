@@ -39,7 +39,7 @@ export default function TermsPage() {
         {
           heading: "Messages and discussion",
           paragraphs: [
-            "Keep messages professional and about work. Do not include patient information. Facilitators may moderate discussion, and administrators may review messages reported as inappropriate.",
+            "Keep messages professional and about work. Do not include patient information. Messages can be reviewed when a complaint about conduct is raised.",
           ],
         },
         {

@@ -107,7 +107,7 @@ const CADRES: { icon: LucideIcon; title: string; body: string }[] = [
 const FAQ = [
   {
     question: `What is the ${SITE.name}?`,
-    answer: `It is the ${SITE.fullName} — the single place where the material from GHS training programmes is stored, versioned and kept open to staff. ${SITE.purpose}`,
+    answer: `It is the ${SITE.fullName} — ${SITE.purpose} Material from a session is filed under the programme that ran it, with the date and the version, so a facilitator's slides are still findable a year later.`,
   },
   {
     question: "Who can use it?",

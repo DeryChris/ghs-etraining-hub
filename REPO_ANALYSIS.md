@@ -1,6 +1,6 @@
 # GHS-ELN — Repository Analysis
 
-> **Renamed 17 November 2026.** The product is now the **Ghana Health Service Training Library
+> **Renamed 16 November 2026.** The product is now the **Ghana Health Service Training Library
 > (GHS-TL)**. Everything below was written when it was called GHS-ELN and is kept verbatim as the
 > dated assessment; read "GHS-ELN" as GHS-TL.
 >
