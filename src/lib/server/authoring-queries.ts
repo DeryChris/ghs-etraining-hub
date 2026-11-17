@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, exists, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, exists, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { categories, categoryFacilitators, materialVersions, materials, reviewAssignments, spaces, users } from "@/db/schema";
 import type { MaterialState, ReviewDecision } from "@/lib/material-workflow";
@@ -259,6 +259,21 @@ export interface ReviewQueueRow {
  * assigned to. Versions they uploaded are included but flagged by the UI —
  * the two-person rule is enforced again when they press a button.
  */
+/**
+ * How many versions are waiting for a decision — the sidebar badge. It uses the
+ * same predicate as the queue itself, so the number always matches the page.
+ */
+export async function countReviewQueue(viewer: Viewer): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(materialVersions)
+    .innerJoin(materials, eq(materials.id, materialVersions.materialId))
+    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
+    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .where(and(eq(materialVersions.state, "IN_REVIEW"), scopeFor(viewer)));
+  return row?.n ?? 0;
+}
+
 export async function listReviewQueue(viewer: Viewer): Promise<ReviewQueueRow[]> {
   const approvalTotals = db
     .select({

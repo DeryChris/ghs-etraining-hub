@@ -1,43 +1,12 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { and, asc, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { categories, certificates, materialProgress, materialVersions, materials, spaces, users } from "@/db/schema";
 import { PRIORITY_RANK, type MaterialType, type PriorityLevel, type ProgressStatus } from "@/lib/labels";
 import { log } from "@/lib/server/logger";
-import { isStaffRole, type Viewer } from "@/lib/viewer";
-
-/*
- * Learners only ever see published, live content that is meant for them.
- * Every condition is built with eq()/and() so columns are table-qualified. Raw column
- * references inside sql`` can render unqualified, which breaks correlated subqueries.
- */
-const publishedMaterial = and(eq(materials.isPublished, true), eq(materials.state, "PUBLISHED"));
-const liveSpace = eq(spaces.isArchived, false);
-const liveCategory = eq(categories.isArchived, false);
-
-/**
- * Audience targeting: a space with no audience is for everyone; a space that names
- * a region, directorate or cadre is for that cohort only.
- *
- * Staff are exempt (they review content outside their own cohort). A viewer without
- * a given attribute is compared against "" so it matches untargeted content only —
- * an anonymous marketing visitor therefore never sees targeted material.
- */
-function audienceFor(viewer: Viewer | null) {
-  if (viewer && isStaffRole(viewer.role)) return undefined;
-  return and(
-    or(isNull(spaces.audienceRegion), eq(spaces.audienceRegion, viewer?.region ?? "")),
-    or(isNull(spaces.audienceDirectorate), eq(spaces.audienceDirectorate, viewer?.directorate ?? "")),
-    or(isNull(spaces.audienceCadre), eq(spaces.audienceCadre, viewer?.cadre ?? "")),
-  );
-}
-
-/** Restricted directorates (e.g. sensitive clinical programmes) are staff-only. */
-function categoryFor(viewer: Viewer | null) {
-  if (viewer && isStaffRole(viewer.role)) return undefined;
-  return eq(categories.isRestricted, false);
-}
+import { audienceFor, categoryFor, liveCategory, liveSpace, publishedMaterial } from "@/lib/server/visibility";
+import type { Viewer } from "@/lib/viewer";
 
 function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`);

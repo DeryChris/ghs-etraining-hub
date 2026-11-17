@@ -1,0 +1,156 @@
+/**
+ * The signed-in navigation, in one place.
+ *
+ * Pure data: no React, no database, no server-only imports, so the menu can be
+ * unit-tested and rendered identically in the sidebar and anywhere else that
+ * needs to know what a role may reach. Whether a role *may* use a destination is
+ * still decided on the server (`requireRole` / `checkCapability`); this module
+ * only decides what is worth showing, so a learner never sees a door they cannot
+ * open.
+ *
+ * Sections are the headings in the sidebar. An item whose roles exclude the
+ * viewer disappears, and a section that loses all of its items disappears with
+ * it — which is why the administrator sees "Author" holding only the review
+ * queue, while a facilitator sees their materials and notices there too.
+ */
+import type { Role } from "@/lib/rbac/capabilities";
+
+/** Icon names are resolved to components by the sidebar, keeping this module pure. */
+export type NavIcon =
+  | "dashboard"
+  | "programmes"
+  | "library"
+  | "assessment"
+  | "messages"
+  | "notifications"
+  | "cpd"
+  | "insights"
+  | "materials"
+  | "review"
+  | "notice"
+  | "users"
+  | "settings";
+
+/** Unread/outstanding counts the shell already knows how to fetch. */
+export type NavCount = "messages" | "notifications" | "reviews";
+
+export interface NavItem {
+  href: string;
+  label: string;
+  icon: NavIcon;
+  roles: readonly Role[];
+  count?: NavCount;
+  /** One line used as the link's title attribute where the label is terse. */
+  hint?: string;
+}
+
+export interface NavSection {
+  id: string;
+  label: string;
+  items: readonly NavItem[];
+}
+
+export interface NavGroup {
+  id: string;
+  label: string;
+  items: NavItem[];
+}
+
+const EVERYONE: readonly Role[] = ["SYSTEM_ADMIN", "FACILITATOR", "LEARNER"];
+const STAFF: readonly Role[] = ["SYSTEM_ADMIN", "FACILITATOR"];
+const FACILITATOR_ONLY: readonly Role[] = ["FACILITATOR"];
+const ADMIN_ONLY: readonly Role[] = ["SYSTEM_ADMIN"];
+
+export const NAV_SECTIONS: readonly NavSection[] = [
+  {
+    id: "learn",
+    label: "Learn",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: "dashboard", roles: EVERYONE },
+      { href: "/directorates", label: "Programmes", icon: "programmes", roles: EVERYONE },
+      { href: "/library", label: "Library", icon: "library", roles: EVERYONE },
+      {
+        href: "/assessments",
+        label: "Pre/Post Test",
+        icon: "assessment",
+        roles: EVERYONE,
+        hint: "Pre-tests, post-tests and the practical labs attached to them",
+      },
+    ],
+  },
+  {
+    id: "community",
+    label: "Community",
+    items: [
+      { href: "/messages", label: "Messages", icon: "messages", roles: EVERYONE, count: "messages" },
+      {
+        href: "/notifications",
+        label: "Notifications",
+        icon: "notifications",
+        roles: EVERYONE,
+        count: "notifications",
+      },
+    ],
+  },
+  {
+    id: "record",
+    label: "My record",
+    items: [
+      { href: "/analytics", label: "My CPD", icon: "cpd", roles: EVERYONE },
+      {
+        href: "/insights",
+        label: "Insights",
+        icon: "insights",
+        roles: STAFF,
+        hint: "Coverage, review backlog and completion across the programmes you run",
+      },
+    ],
+  },
+  {
+    id: "author",
+    label: "Author",
+    items: [
+      { href: "/authoring", label: "My materials", icon: "materials", roles: FACILITATOR_ONLY },
+      { href: "/review", label: "Review queue", icon: "review", roles: STAFF, count: "reviews" },
+      { href: "/notices", label: "Send notice", icon: "notice", roles: FACILITATOR_ONLY },
+    ],
+  },
+  {
+    id: "administration",
+    label: "Administration",
+    items: [
+      { href: "/users", label: "Users", icon: "users", roles: ADMIN_ONLY },
+      { href: "/settings", label: "Settings", icon: "settings", roles: ADMIN_ONLY },
+    ],
+  },
+];
+
+/**
+ * The sections a role should see, in order, with empty ones removed. The order
+ * of `NAV_SECTIONS` is the order on screen, so a role's menu is never reordered
+ * between pages.
+ */
+export function navFor(role: Role): NavGroup[] {
+  return NAV_SECTIONS.map((section) => ({
+    id: section.id,
+    label: section.label,
+    items: section.items.filter((item) => item.roles.includes(role)),
+  })).filter((section) => section.items.length > 0);
+}
+
+/**
+ * Which item is "here". `/dashboard` matches exactly — it is the root of the
+ * shell, so every other path would otherwise light it up. Everything else matches
+ * itself and its sub-paths (`/authoring/abc` keeps "My materials" selected).
+ */
+export function isActiveHref(pathname: string, href: string): boolean {
+  if (href === "/dashboard") return pathname === "/dashboard";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** The active href for a pathname, if any — useful for breadcrumbs and tests. */
+export function activeHref(pathname: string, role: Role): string | undefined {
+  const items = navFor(role).flatMap((section) => section.items);
+  const match = items.filter((item) => isActiveHref(pathname, item.href)).sort((a, b) => b.href.length - a.href.length)[0];
+  return match?.href;
+}
