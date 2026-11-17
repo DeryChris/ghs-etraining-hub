@@ -14,7 +14,7 @@ schema, never a production step.
 ## Fresh environment
 
 ```bash
-export DIRECT_URL="postgresql://…:5432/postgres?sslmode=require"   # session connection
+export DIRECT_URL="postgresql://postgres.<ref>:…@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require"
 npm run db:migrate                       # drizzle/0000_baseline.sql, 0001_…, 0002_…, 0003_…
 psql "$DIRECT_URL" -f supabase/migrations/20260113000000_lock_public_api.sql
 npm run db:seed

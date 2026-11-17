@@ -120,7 +120,7 @@ npm run dev                    # http://localhost:3000
 | Variable | Source |
 |---|---|
 | `DATABASE_URL` | Supabase → Database → Pooler (port 6543) + `?pgbouncer=true` — runtime only |
-| `DIRECT_URL` | Database → Session/direct connection (5432, `sslmode=require`) — drizzle-kit only |
+| `DIRECT_URL` | Database → **Session pooler** (5432, `sslmode=require`) — drizzle-kit only. `db.<ref>.supabase.co` is IPv6-only now and fails on IPv4 with `ENOTFOUND` |
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | API settings (anon key is public-safe) |
 | `SUPABASE_SERVICE_ROLE_KEY` | API settings — **server only**, used to sign storage URLs |
 | `NEXT_PUBLIC_APP_URL` | The public origin (`http://localhost:3000` locally) |
@@ -139,6 +139,13 @@ symptom is a page failing with `relation "material_views" does not exist` (or
 ```bash
 npm run db:migrate   # applies drizzle/0003; needs DIRECT_URL
 npm run db:seed      # idempotent; loads the Upper West geography used by the sessions form
+```
+
+If the connection itself fails — `getaddrinfo ENOTFOUND`, `ECONNREFUSED`, or `read ECONNRESET` — run the
+doctor first. It checks both URLs, resolves the hosts, connects, and names the fix without changing anything:
+
+```bash
+npm run db:doctor
 ```
 
 `GET /api/health` now reports schema drift directly: `{"ok":false,"checks":{"db":"up","schema":"outdated"},
