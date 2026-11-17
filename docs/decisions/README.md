@@ -135,3 +135,26 @@ actor id.
 upload slots (body limits make proxying impossible), and publishing a version requires a colleague
 who did not upload it to approve it first, with an audited `SYSTEM_ADMIN` override as the only escape
 hatch.
+
+---
+
+## ADR‑0009 — Rename to GHS Training Library, official emblem, one name source
+
+**Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0009-training-library-rename.md`](./0009-training-library-rename.md)
+
+**Decision.** The name has three forms — `GHS-TL`, `GHS Training Library`, `Ghana Health Service Training
+Library` — declared once in `src/lib/site.ts` and read by every page, metadata block, seeder and script. The
+official GHS emblem replaces the invented mark, in both supplied tone variants, with the theme switch done
+in CSS. `vercel.json` stops referencing `@secret` values so a fresh project can build; variables live in the
+project settings.
+
+---
+
+## ADR‑0010 — Role‑aware navigation, and the administration surfaces behind it
+
+**Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0010-role-aware-navigation-and-administration.md`](./0010-role-aware-navigation-and-administration.md)
+
+**Decision.** The signed-in menu becomes pure, unit‑tested data (`src/lib/nav.ts`) with a role on every item,
+so the menu and `requireRole` cannot disagree. It is backed by four new surfaces — `/assessments`,
+`/insights`, `/users` (directory CRUD) and `/settings` — each stating what it does not do yet, with the
+directory invariants (no self‑demotion, last administrator protected) enforced on the server and audited.

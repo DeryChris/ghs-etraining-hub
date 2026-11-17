@@ -33,6 +33,12 @@ and use the utility it generates.
 * Shell: fixed 264 px sidebar (collapsible to 72 px icons, persisted in a cookie, `<main>` shifts
   with a CSS grid template so there is no layout thrash), sticky 60 px header with global search,
   notification bell and avatar menu.
+* Navigation is **role‑aware and sectioned**, and its source is `src/lib/nav.ts` (ADR‑0010): *Learn*
+  (Dashboard · Programmes · Library · Pre/Post Test), *Community* (Messages · Notifications), *My record*
+  (My CPD · Insights), *Author* (My materials · Review queue · Send notice — assembled per role) and
+  *Administration* (Users · Settings, administrators only). A section with nothing in it for a role does
+  not render, and an item's badge (unread messages, unread notifications, versions awaiting review) shows
+  only when it is above zero.
 * Mobile: sidebar becomes a focus‑trapped drawer, priority nav visible in the header; tables
   collapse to stacked definition lists at `< 720 px` (never horizontal scroll for clinical data).
 * Content column max width 1200 px; long‑form reading width 72 ch.
@@ -67,7 +73,13 @@ Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard opera
   assessment CTAs. No unrelated sidebars.
 * **Data tables (admin)** — server‑side pagination with a page‑size selector (25/50/100), saved
   filters in the URL (shareable, back‑button safe), row actions in a kebab menu, count in the
-  caption ("Showing 1–25 of 4,182 GHS staff").
+  caption ("Showing 1–25 of 4,182 GHS staff"). `/users` is the reference implementation: 25 per page,
+  filters in the URL, row actions inline (role select, deactivate/reactivate, reset link) with the
+  result of each action announced next to the row it changed.
+* **Insights** — headline numbers first (`/insights`), then coverage by programme with the backlog
+  beside it, then the coverage gaps. The dashboard shows four of those numbers and a link; nothing on
+  the dashboard is a chart. Numbers are always labelled with the window they cover ("Completions · last
+  30 days"), because an unlabelled total is a claim nobody can check.
 
 ## 5. Copy style
 

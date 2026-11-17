@@ -215,6 +215,11 @@ export function isGlobalForFacilitators(action: Action): boolean {
   return FACILITATOR_GLOBAL_ACTIONS.includes(action);
 }
 
+/** Narrows an untrusted string (a search param, a form field) to a Role. */
+export function isRole(value: string | null | undefined): value is Role {
+  return value === "SYSTEM_ADMIN" || value === "FACILITATOR" || value === "LEARNER";
+}
+
 export function can(role: Role | null | undefined, action: Action): boolean {
   if (PUBLIC_ACTIONS.has(action)) return true;
   if (!role) return false;
