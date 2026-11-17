@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { categories, certificates, materialProgress, materials, spaces, users } from "@/db/schema";
+import { auditLogs, categories, certificates, materialProgress, materialVersions, materialViews, materials, spaces, trainingSessions, users } from "@/db/schema";
 import { scopeFor } from "@/lib/server/scope";
 import { isStaffRole, type Viewer } from "@/lib/viewer";
 
@@ -140,5 +140,238 @@ export async function getInsights(viewer: Viewer): Promise<Insights> {
     programmes,
     gaps: programmeRows.filter((row) => row.published === 0).map(({ id, name }) => ({ id, name })),
     windowDays: WINDOW_DAYS,
+  };
+}
+
+/* ── Chart series ───────────────────────────────────────────────────────────
+ * The numbers the insights page draws. Each series comes from one aggregate
+ * query; bucketing happens in SQL (`date_trunc`) so the browser receives a few
+ * hundred numbers rather than a row per event.
+ */
+
+export interface Bucket {
+  /** Sort key, e.g. 2026-11 or 2026-W46. */
+  key: string;
+  /** Axis label, e.g. "Nov" or "12 Oct". */
+  label: string;
+}
+
+const MONTH_LABEL = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "Africa/Accra" });
+const DAY_LABEL = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Africa/Accra" });
+
+function monthBuckets(count: number): Bucket[] {
+  const now = new Date();
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (count - 1 - index), 1));
+    return { key: `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`, label: MONTH_LABEL.format(date) };
+  });
+}
+
+function weekBuckets(count: number): Bucket[] {
+  const now = new Date();
+  // Monday of the current week, then back `count - 1` weeks.
+  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = (monday.getUTCDay() + 6) % 7;
+  monday.setUTCDate(monday.getUTCDate() - day);
+
+  return Array.from({ length: count }, (_, index) => {
+    const start = new Date(monday);
+    start.setUTCDate(monday.getUTCDate() - (count - 1 - index) * 7);
+    const iso = start.toISOString().slice(0, 10);
+    return { key: iso, label: DAY_LABEL.format(start) };
+  });
+}
+
+export interface TrafficSeries {
+  buckets: Bucket[];
+  views: number[];
+  downloads: number[];
+  totals: { views: number; downloads: number };
+}
+
+/** Views (from material_views) and downloads (from the audit trail), weekly. */
+export async function getTrafficSeries(viewer: Viewer, weeks = 12): Promise<TrafficSeries> {
+  const buckets = weekBuckets(weeks);
+  const since = buckets[0]?.key ?? new Date().toISOString().slice(0, 10);
+
+  const viewRows = await db
+    .select({
+      week: sql<string>`to_char(date_trunc('week', ${materialViews.viewedOn}), 'YYYY-MM-DD')`,
+      n: sql<number>`coalesce(sum(${materialViews.viewCount}), 0)::int`,
+    })
+    .from(materialViews)
+    .innerJoin(materials, eq(materials.id, materialViews.materialId))
+    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
+    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .where(and(scopeFor(viewer), gte(materialViews.viewedOn, since)))
+    .groupBy(sql`date_trunc('week', ${materialViews.viewedOn})`);
+
+  const downloadRows = await db
+    .select({
+      week: sql<string>`to_char(date_trunc('week', ${auditLogs.createdAt}), 'YYYY-MM-DD')`,
+      n: sql<number>`count(*)::int`,
+    })
+    .from(auditLogs)
+    .innerJoin(materials, eq(materials.id, sql`${auditLogs.entityId}::uuid`))
+    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
+    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .where(and(eq(auditLogs.action, "MATERIAL_FILE_ISSUED"), scopeFor(viewer), gte(auditLogs.createdAt, new Date(`${since}T00:00:00Z`))))
+    .groupBy(sql`date_trunc('week', ${auditLogs.createdAt})`);
+
+  const viewsByWeek = new Map(viewRows.map((row) => [row.week, row.n]));
+  const downloadsByWeek = new Map(downloadRows.map((row) => [row.week, row.n]));
+
+  const views = buckets.map((bucket) => viewsByWeek.get(bucket.key) ?? 0);
+  const downloads = buckets.map((bucket) => downloadsByWeek.get(bucket.key) ?? 0);
+
+  return {
+    buckets,
+    views,
+    downloads,
+    totals: {
+      views: views.reduce((sum, n) => sum + n, 0),
+      downloads: downloads.reduce((sum, n) => sum + n, 0),
+    },
+  };
+}
+
+export interface UploadSeries {
+  buckets: Bucket[];
+  series: { label: string; values: number[] }[];
+  total: number;
+}
+
+/** New versions uploaded per month, split by the busiest programmes. */
+export async function getUploadSeries(viewer: Viewer, months = 12, topProgrammes = 4): Promise<UploadSeries> {
+  const buckets = monthBuckets(months);
+  const since = new Date();
+  since.setUTCDate(1);
+  since.setUTCMonth(since.getUTCMonth() - (months - 1));
+
+  const rows = await db
+    .select({
+      month: sql<string>`to_char(date_trunc('month', ${materialVersions.createdAt}), 'YYYY-MM')`,
+      categoryId: categories.id,
+      categoryName: categories.name,
+      n: sql<number>`count(*)::int`,
+    })
+    .from(materialVersions)
+    .innerJoin(materials, eq(materials.id, materialVersions.materialId))
+    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
+    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .where(and(scopeFor(viewer), gte(materialVersions.createdAt, since)))
+    .groupBy(sql`date_trunc('month', ${materialVersions.createdAt})`, categories.id, categories.name);
+
+  const totals = new Map<string, { name: string; n: number }>();
+  for (const row of rows) {
+    const current = totals.get(row.categoryId) ?? { name: row.categoryName, n: 0 };
+    current.n += row.n;
+    totals.set(row.categoryId, current);
+  }
+  const leaders = [...totals.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, topProgrammes);
+  const leaderIds = new Set(leaders.map(([id]) => id));
+
+  const series = [
+    ...leaders.map(([id, value]) => ({
+      label: value.name,
+      values: buckets.map((bucket) => rows.find((row) => row.month === bucket.key && row.categoryId === id)?.n ?? 0),
+    })),
+    ...(totals.size > leaders.length
+      ? [
+          {
+            label: "Other programmes",
+            values: buckets.map((bucket) =>
+              rows.filter((row) => row.month === bucket.key && !leaderIds.has(row.categoryId)).reduce((sum, row) => sum + row.n, 0),
+            ),
+          },
+        ]
+      : []),
+  ];
+
+  return { buckets, series: series.length ? series : [{ label: "Uploads", values: buckets.map(() => 0) }], total: [...totals.values()].reduce((sum, value) => sum + value.n, 0) };
+}
+
+export interface SessionSeries {
+  buckets: Bucket[];
+  counts: number[];
+  byProgramme: { label: string; value: number }[];
+  total: number;
+}
+
+/** Trainings that actually ran, per month and per programme. */
+export async function getSessionSeries(viewer: Viewer, months = 12): Promise<SessionSeries> {
+  const buckets = monthBuckets(months);
+  const since = new Date();
+  since.setUTCDate(1);
+  since.setUTCMonth(since.getUTCMonth() - (months - 1));
+  const sinceDate = since.toISOString().slice(0, 10);
+
+  const rows = await db
+    .select({
+      month: sql<string>`to_char(date_trunc('month', ${trainingSessions.organisedOn}), 'YYYY-MM')`,
+      categoryName: categories.name,
+      n: sql<number>`count(*)::int`,
+    })
+    .from(trainingSessions)
+    .innerJoin(categories, eq(categories.id, trainingSessions.categoryId))
+    .where(and(scopeFor(viewer), eq(trainingSessions.isArchived, false), gte(trainingSessions.organisedOn, sinceDate)))
+    .groupBy(sql`date_trunc('month', ${trainingSessions.organisedOn})`, categories.name);
+
+  const byProgramme = new Map<string, number>();
+  for (const row of rows) byProgramme.set(row.categoryName, (byProgramme.get(row.categoryName) ?? 0) + row.n);
+
+  return {
+    buckets,
+    counts: buckets.map((bucket) => rows.filter((row) => row.month === bucket.key).reduce((sum, row) => sum + row.n, 0)),
+    byProgramme: [...byProgramme.entries()]
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value),
+    total: rows.reduce((sum, row) => sum + row.n, 0),
+  };
+}
+
+/** Views of published material in the last 30 days, per programme. */
+export async function getProgrammeTraffic(viewer: Viewer, days = 30): Promise<{ label: string; value: number }[]> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const rows = await db
+    .select({ label: categories.name, n: sql<number>`coalesce(sum(${materialViews.viewCount}), 0)::int` })
+    .from(materialViews)
+    .innerJoin(materials, eq(materials.id, materialViews.materialId))
+    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
+    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .where(and(scopeFor(viewer), gte(materialViews.viewedOn, since)))
+    .groupBy(categories.name)
+    .orderBy(desc(sql`coalesce(sum(${materialViews.viewCount}), 0)`));
+  return rows.map((row) => ({ label: row.label, value: row.n }));
+}
+
+/** A person's own traffic, for "My activity". Never another person's. */
+export async function getMyTraffic(userId: string, days = 30): Promise<{ opens: number; materials: number; downloads: number; days: number }> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const [viewRow] = await db
+    .select({
+      opens: sql<number>`coalesce(sum(${materialViews.viewCount}), 0)::int`,
+      materials: sql<number>`count(distinct ${materialViews.materialId})::int`,
+    })
+    .from(materialViews)
+    .where(and(eq(materialViews.userId, userId), gte(materialViews.viewedOn, since)));
+
+  const [downloadRow] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(auditLogs)
+    .where(
+      and(
+        eq(auditLogs.action, "MATERIAL_FILE_ISSUED"),
+        eq(auditLogs.userId, userId),
+        gte(auditLogs.createdAt, new Date(`${since}T00:00:00Z`)),
+      ),
+    );
+
+  return {
+    opens: viewRow?.opens ?? 0,
+    materials: viewRow?.materials ?? 0,
+    downloads: downloadRow?.n ?? 0,
+    days,
   };
 }
