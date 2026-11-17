@@ -141,12 +141,23 @@ npm run db:migrate   # applies drizzle/0003; needs DIRECT_URL
 npm run db:seed      # idempotent; loads the Upper West geography used by the sessions form
 ```
 
-If the connection itself fails ΓÇö `getaddrinfo ENOTFOUND`, `ECONNREFUSED`, or `read ECONNRESET` ΓÇö run the
-doctor first. It checks both URLs, resolves the hosts, connects, and names the fix without changing anything:
+If the connection itself fails — `getaddrinfo ENOTFOUND`, `ECONNREFUSED`, or `read ECONNRESET` — run the
+doctor first. It checks both URLs, resolves the hosts, connects twice (with `pg`, the driver
+drizzle-kit uses, and with postgres.js, the driver the app uses), and names the fix without changing
+anything:
 
 ```bash
 npm run db:doctor
 ```
+
+`Error: self-signed certificate in certificate chain` (`SELF_SIGNED_CERT_IN_CHAIN`) is not a wrong
+password or a wrong host: the URL is fine, the machine's trust store is not. Antivirus HTTPS
+scanning, a corporate proxy (Zscaler, Netskope) and similar products re-sign TLS with a root Node
+does not know, so node-postgres — which since v8.11 treats `sslmode=require` as `verify-full` —
+rejects the chain. `drizzle.config.ts` therefore applies `sslmode=require` with libpq semantics
+(encrypted, chain not verified), which is exactly the trust level the app's runtime driver already
+uses, so `db:migrate`, `db:push` and `db:studio` connect wherever the app connects. To verify
+instead, say so: `sslmode=verify-full&sslrootcert=<path-to-inspecting-ca>.pem`.
 
 `GET /api/health` now reports schema drift directly: `{"ok":false,"checks":{"db":"up","schema":"outdated"},
 "missingTables":["material_views"],"error":{"code":"SCHEMA_OUTDATED",ΓÇª}}`. It answers `503` until the
