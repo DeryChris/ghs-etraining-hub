@@ -1,5 +1,8 @@
 import "server-only";
-import { and, count, eq } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
+import { and, count, eq, sql } from "drizzle-orm";
+import { isCertificateCode } from "@/lib/certificate-code";
+import { log } from "@/lib/server/logger";
 import { db } from "@/db/index";
 import { categories, certificates, materials, spaces, users } from "@/db/schema";
 
@@ -19,6 +22,31 @@ export async function getPublicStats(): Promise<{ directorates: number; spaces: 
     materials: materialRows[0]?.n ?? 0,
   };
 }
+
+/**
+ * Public counters, cached for five minutes. The marketing site is the only
+ * caller, and a stale-by-minutes count is preferable to three aggregates on
+ * every visit from a metered mobile connection.
+ */
+export type PublicStats = { directorates: number; spaces: number; materials: number };
+
+/**
+ * Cached public counters, with a deliberate soft failure: if the database is
+ * unreachable the marketing page renders without numbers instead of an error
+ * page. The status is still visible to operators via /api/health and the log.
+ */
+export const getPublicStatsCached = unstable_cache(
+  async (): Promise<PublicStats | null> => {
+    try {
+      return await getPublicStats();
+    } catch (error) {
+      log.error({ event: "public_stats.unavailable", error });
+      return null;
+    }
+  },
+  ["public-stats"],
+  { revalidate: 300, tags: ["taxonomy"] },
+);
 
 /** "Ama Serwaa Mensah" → "Ama M." Public verification shows the minimum needed to confirm identity. */
 function maskHolderName(fullName: string): string {
@@ -40,9 +68,13 @@ export interface CertificateCheck {
 }
 
 /** Looks up a certificate by its public serial. Returns null for unknown codes. */
-export async function verifyCertificate(code: string): Promise<CertificateCheck | null> {
+export async function verifyCertificate(input: string): Promise<CertificateCheck | null> {
+  const code = input.trim().toUpperCase();
+  if (!isCertificateCode(code)) return null;
+
   const [row] = await db
     .select({
+      id: certificates.id,
       code: certificates.code,
       issuedAt: certificates.issuedAt,
       expiresAt: certificates.expiresAt,
@@ -58,6 +90,21 @@ export async function verifyCertificate(code: string): Promise<CertificateCheck 
     .limit(1);
 
   if (!row) return null;
+
+  // Verification is an auditable event in itself: record that someone checked.
+  // A failure here must never hide a valid certificate, so it is best-effort.
+  try {
+    await db
+      .update(certificates)
+      .set({
+        verificationCount: sql`${certificates.verificationCount} + 1`,
+        lastVerifiedAt: new Date(),
+      })
+      .where(eq(certificates.id, row.id));
+  } catch {
+    // Counters are telemetry; the verification result stands either way.
+  }
+
   const expired = row.expiresAt !== null && row.expiresAt.getTime() < Date.now();
   return {
     valid: !expired && row.isActive,

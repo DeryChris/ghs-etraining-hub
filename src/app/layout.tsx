@@ -1,14 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { MotionProvider } from "@/components/motion-provider";
 import { themeBootScript } from "@/lib/theme";
 
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
+/*
+ * The typeface is vendored under src/assets/fonts (SIL OFL 1.1, see OFL.txt).
+ * next/font/google downloads at build time, which fails in offline or
+ * egress-restricted CI — a self-hosted variable font makes the build hermetic
+ * and removes a third-party request from the critical path for learners on
+ * metered mobile data.
+ */
+const jakarta = localFont({
+  src: "../assets/fonts/plus-jakarta-sans-latin-wght-normal.woff2",
   variable: "--font-jakarta",
   display: "swap",
+  weight: "200 800",
+  fallback: ["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
 });
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";

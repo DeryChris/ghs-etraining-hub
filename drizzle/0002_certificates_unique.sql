@@ -1,0 +1,1 @@
+ALTER TABLE "certificates" ADD CONSTRAINT "certificates_user_material_version_key" UNIQUE("user_id","material_id","material_version_id");

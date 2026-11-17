@@ -126,26 +126,24 @@ Northern, Oti, Savannah, Upper East, Upper West, Volta, Western, Western North),
 
 ### 4.0 What exists today vs. what you will build
 
-This repository currently ships the **GHS‑ELN Build Console** — the documentation set you are
-reading, plus a live PostgreSQL board (`/build`), decision log (`/decisions`), note queue
-(`/notes`) and gate‑run log. The console is also the reference implementation of the conventions in
-this file: it uses the same tokens, the same component layering, the same zod‑at‑the‑boundary
-discipline and the same "no ORM in client code" rule. **Copy its patterns.**
+The learner-facing platform is live: sign-in (Supabase Auth), dashboard, directorates →
+spaces → material viewer, library search with pagination, progress (start / acknowledge /
+complete) with certificate issuance, personal CPD analytics, staff messaging, notifications,
+public certificate verification, the marketing site, and the material authoring pipeline
+(draft → signed upload → review → publish → supersede → archive, ADR‑0008). Schema, RLS
+migration, CI and Drizzle migrations are versioned in this repository.
 
-| Present today | To be created by you (same tree) |
+| Present and working | Not built yet (next milestones) |
 | --- | --- |
-| `AGENTS.md`, `docs/**` | `src/app/(auth)/**` — login, forgot password |
-| `.claude/skills/**`, `.claude/commands/**`, `.claude/plugin/**` | `src/app/(dash)/**` — dashboard, directorates, spaces, material viewer |
-| `src/db/schema.ts` (console tables) | GHS‑ELN domain tables per `docs/data-model.md` |
-| `src/db/seed-data.ts`, `src/lib/server/queries.ts` | `src/lib/server/session.ts`, `rbac.ts`, `audit.ts`, `storage.ts`, `src/lib/rbac/capabilities.ts` |
-| `src/components/{ui,shell,console,markdown}.tsx` | `src/components/{layout,materials,analytics}/**` |
-| `middleware`-free auth | `middleware.ts` (edge tripwire) once sessions exist |
-| `/api/health`, `/api/progress`, `/api/tasks`, `/api/decisions`, `/api/notes`, `/api/gate` | webhooks, private file streaming, certificate verification |
+| `src/app/(auth)/**`, `(dash)/**`, `(marketing)/**` | Remaining admin surfaces: create category/space, broadcast notices, read the audit log |
+| `(dash)/authoring/**`, `(dash)/review/**`, `(dash)/notices/**`, `(award)/certificates/**` — draft, upload, review, publish, archive, targeted notices, printable award | Comments/discussion threads; assessments and grading; message reporting |
+| `src/db/schema.ts` + `drizzle/**` migrations | Virus-scanning worker (versions sit at `scanStatus = PENDING`) |
+| `src/lib/server/{session,rbac,audit,file-storage,authoring-queries,*-queries,rate-limit,certificates}.ts`, `src/lib/material-workflow.ts` | Category/space CRUD actions |
+| Capability matrix, hash-chained audit, cohort visibility, CPD certificates | Cohort notices (`notifications.audience_filter`), MFA enforcement, lockout |
+| `tests/e2e/**` (public + optional credentialled smoke), CI workflow | Per-request CSP nonce (see docs/decisions/0003) |
 
-When you add the platform's own tables to `src/db/schema.ts`, **keep the console tables** — the
-board, ADRs and notes are how work is tracked across sessions. The console's routes are not part of
-the shipped GHS‑ELN product surface; guard them behind an internal capability or move them behind
-`/internal` when the product goes live.
+Do not re-implement what is here: extend it. When you add a mutation, follow the shape in §6
+and add its capability to the matrix with a test vector.
 
 ```
 AGENTS.md                  # you are here — the operating contract
@@ -156,9 +154,12 @@ docs/rbac.md               # the machine-readable capability matrix + test vecto
 docs/ui-ux.md              # design tokens, components, copy tone, a11y
 docs/conventions.md        # naming, commit, PR, error-handling conventions
 docs/qa.md                 # verification gates and manual QA scripts
-.claude/skills/*/SKILL.md  # loadable skills (see §12)
-.claude/commands/*.md      # slash commands for recurring jobs
-.claude/plugin/*.json      # plugin manifest wiring skills + hooks together
+docs/migrations.md         # how schema changes ship (Drizzle + Supabase streams)
+docs/decisions/**          # ADRs (identity/RLS/audit chain, CSP)
+drizzle/**                 # generated, reviewed SQL migrations (versioned)
+supabase/migrations/**     # raw SQL: RLS lock-down, grants
+scripts/**                 # ops scripts (auth provisioning, audit-chain verification)
+tests/e2e/**               # Playwright specs (public + credentialled smoke)
 src/
   app/
     (auth)/                # /login, /forgot-password — no shell, no session required
@@ -174,9 +175,10 @@ src/
     schema.ts              # ALL tables (snake_case names, camelCase TS fields)
     seed.ts                # idempotent seeder, run via `npm run db:seed`
   lib/
-    server/                # server-only: session, rbac, audit, storage, queries
+    server/                # server-only: session, rbac, audit, storage, queries, rate limits
     client/                # browser-only helpers (fetchers, optimistic stores)
     rbac/capabilities.ts   # shared (isomorphic) matrix — safe to import from tests
+    viewer.ts              # Viewer shape + isStaffRole(), used to scope content
     ghs-constants.ts       # domain truth
     format.ts              # dates (Intl, Africa/Accra), bytes, staff PIN masking
     utils.ts               # cn() and nothing else
@@ -186,7 +188,7 @@ src/
 
 * Does it render JSX? → `src/components/**`.
 * Does it touch `db`? → `src/lib/server/**`, and the filename must describe the capability
-  (`material-queries.ts`, not `helpers.ts`).
+  (`learning-queries.ts`, not `helpers.ts`).
 * Is it used by both server and client? → `src/lib/**` root, and it must not import `server-only`.
 * Is it a constant a clinician would recognise? → `src/lib/ghs-constants.ts`.
 * Is it a one-off script? → `scripts/` + an `npm run` alias, never `src/`.
@@ -214,8 +216,9 @@ export const users = pgTable("users", {
   timestamps are always `withTimezone: true`.
 * Soft‑delete only where audit retention requires it (`isArchived`, `deactivatedAt`). Never
   `DELETE` a row that has audit or completion history — deactivate instead.
-* Schema changes: edit `src/db/schema.ts`, then `npx drizzle-kit push` (sandbox) **and** generate
-  SQL for review (`npx drizzle-kit generate`). Never edit a pushed migration by hand; add a new one.
+* Schema changes: edit `src/db/schema.ts`, run `npm run db:generate`, review the SQL in
+  `drizzle/`, commit it, apply with `npm run db:migrate`. `drizzle-kit push` is a sandbox-only
+  shortcut. Never edit an applied migration; add a new one. See docs/migrations.md.
 * Queries: select explicit columns (no `select *` on wide tables), paginate with `limit/offset`
   plus a stable `orderBy`, batch with `inArray` instead of N+1, wrap multi‑write flows in
   `db.transaction(...)`. Return **typed DTOs** from `src/lib/server/*-queries.ts` — components
@@ -226,10 +229,16 @@ export const users = pgTable("users", {
 
 ## 6. Auth & RBAC implementation contract
 
-**Session** (`src/lib/server/session.ts`): an `httpOnly`, `sameSite=lax`, `secure` (prod) cookie
-holding a signed payload `{ sub, role, name, staffId, exp }`. Read it with `getSession()` (throws
-`UnauthenticatedError`), never trust `user_metadata` from the client. Middleware performs a cheap
-signature/redirect check only (it runs on the edge — no DB, no Prisma, no Node APIs).
+**Session** (`src/lib/server/session.ts`): identity comes from **Supabase Auth** cookies
+(`@supabase/ssr`), authority from `public.users`. `resolveAccount()` returns a discriminated
+state (`anonymous | unprovisioned | inactive | active`) and `getSession()` returns `Session | null`
+— it never throws, so callers `redirect("/login")`. The session carries `region`, `directorate`
+and `cadre` because content visibility depends on them. Never trust `user_metadata`: it is
+user-writable, so role and scope are read from the database.
+
+**The edge file is `src/proxy.ts`** (Next 16 renamed `middleware.ts` to `proxy.ts`). It refreshes
+the session cookie and redirects anonymous visitors on protected paths — a convenience layer.
+It runs on the edge: no DB, no Node APIs.
 
 **Middleware is a tripwire, not the gate.** Real authorisation happens in the Server Action /
 Route Handler via `src/lib/server/rbac.ts`:
@@ -257,14 +266,19 @@ export async function createSpace(input: unknown) {
   this directorate"). Never leak the existence of admin surfaces in a 404 message body.
 * The capability matrix lives in `src/lib/rbac/capabilities.ts` as data, and `docs/rbac.md`
   documents it. Every change to the matrix requires a matching test vector in
-  `src/lib/rbac/__tests__/capabilities.test.ts` (table‑driven: role × action × scope → allow/deny).
+  `src/lib/rbac/capabilities.test.ts`, which sweeps every action × role so a new capability
+  cannot ship unverified. Category-scoped facilitator actions are checked against
+  `category_facilitators` inside `checkCapability()`, never trusted from the payload.
 
 ---
 
 ## 7. Audit trail contract
 
-* API: `logAudit(tx, { actor, action, entity, entityId, metadata, ip, userAgent })` — inside the
-  same transaction as the mutation.
+* API: `logAudit({ actor, action, entity, entityId, metadata }, tx)` — pass the caller's
+  transaction so the row commits or rolls back with the mutation. `ip`/`userAgent` are captured
+  from headers inside the helper; do not pass or log them yourself.
+* The actor's id is part of the hash, so `audit_logs.user_id` is `ON DELETE RESTRICT`: staff are
+  deactivated, never deleted. Verify the chain with `npm run db:verify-chain` after a restore.
 * Action taxonomy: `"<VERB>_<ENTITY>"` in `SCREAMING_SNAKE`, verbs limited to
   `CREATE | UPDATE | DELETE | ARCHIVE | RESTORE | PUBLISH | ASSIGN | UNASSIGN | LOGIN | LOGOUT |
   EXPORT | ROLE_CHANGE | APPROVE | REJECT`. Entities are PascalCase singular (`Material`, `User`).
@@ -321,12 +335,17 @@ values into components; use the token utilities (`bg-surface`, `text-ink-muted`,
 ## 10. Verification gates (must pass before you say "done")
 
 ```bash
-npx next typegen                       # route types
 npm exec tsc -- --noEmit               # zero errors
 npm run lint                           # zero errors, zero warnings
-npm run build                          # must be clean
-curl -s localhost:3000/api/health      # {"ok":true,...}
+npm test                               # unit tests (vitest)
+npm run db:check                       # drizzle migration/snapshot consistency
+npm run build                          # must be clean (hermetic: no font/CDN fetch)
+npm run test:e2e:public                # Playwright, public surface
+curl -s localhost:3000/api/health      # {"ok":true,"checks":{"db":"up"}}
+npm run db:verify-chain                # audit hash chain intact (after restores)
 ```
+
+CI runs the first five on every push (`.github/workflows/ci.yml`).
 
 Additionally:
 

@@ -1,0 +1,89 @@
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { buttonClass } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ListEmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { NewDraftForm } from "@/components/authoring/new-draft-form";
+import { materialStateBadge } from "@/components/authoring/state-badge";
+import { formatDate } from "@/lib/format";
+import { MATERIAL_TYPE_LABELS, PRIORITY_LABELS } from "@/lib/labels";
+import { MATERIAL_STATE_LABELS } from "@/lib/material-workflow";
+import { listAuthoringMaterials, listAuthoringSpaces } from "@/lib/server/authoring-queries";
+import { requireRole } from "@/lib/server/rbac";
+
+export const dynamic = "force-dynamic";
+
+export default async function AuthoringPage() {
+  const session = await requireRole(["SYSTEM_ADMIN", "FACILITATOR"]);
+  const [materials, spaces] = await Promise.all([listAuthoringMaterials(session), listAuthoringSpaces(session)]);
+
+  return (
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Authoring"
+        title="My materials"
+        description="Draft, upload and track every version you are responsible for. A second person reviews each version before learners see it."
+      />
+
+      <div className="flex flex-wrap gap-3">
+        <Link href="/review" className={buttonClass({ variant: "secondary" })}>
+          Review queue
+        </Link>
+        <Link href="/library" className={buttonClass({ variant: "ghost" })}>
+          Browse published library
+        </Link>
+      </div>
+
+      <section aria-labelledby="new-draft-heading" className="rounded-card border border-hairline bg-surface p-5 shadow-panel">
+        <h2 id="new-draft-heading" className="text-base font-bold text-ink">
+          New material
+        </h2>
+        <p className="mt-1 mb-4 text-sm text-ink-muted">
+          Start with the details. You can upload the file on the next screen, then send it for review.
+        </p>
+        <NewDraftForm spaces={spaces} />
+      </section>
+
+      <section aria-labelledby="materials-heading" className="space-y-4">
+        <h2 id="materials-heading" className="text-base font-bold text-ink">
+          Materials you can edit
+        </h2>
+
+        {materials.length === 0 ? (
+          <ListEmptyState
+            title="Nothing here yet"
+            description="Create a draft above. Materials appear here once you are assigned to a directorate."
+          />
+        ) : (
+          <ul className="space-y-3">
+            {materials.map((material) => (
+              <li key={material.id}>
+                <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={materialStateBadge(material.state)}>{MATERIAL_STATE_LABELS[material.state]}</Badge>
+                      <span className="text-xs text-ink-muted">
+                        {MATERIAL_TYPE_LABELS[material.type]} · {PRIORITY_LABELS[material.priority]}
+                      </span>
+                    </div>
+                    <p className="mt-2 truncate text-sm font-semibold text-ink">{material.title}</p>
+                    <p className="mt-1 text-xs text-ink-muted">
+                      {material.categoryName} · {material.spaceTitle} · {material.versionCount} version
+                      {material.versionCount === 1 ? "" : "s"}
+                      {material.currentVersionNumber ? ` · published v${material.currentVersionNumber}` : ""} · updated{" "}
+                      {formatDate(material.updatedAt)}
+                    </p>
+                  </div>
+                  <Link href={`/authoring/${material.id}`} className={buttonClass({ variant: "secondary", size: "sm" })}>
+                    Open
+                  </Link>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}
