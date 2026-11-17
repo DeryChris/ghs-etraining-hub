@@ -2,7 +2,9 @@
   "name": "ghs-tl",
   "version": "2.0.0",
   "private": true,
-  "engines": { "node": "22.x" },
+  "engines": {
+    "node": "22.x"
+  },
   "description": "Ghana Health Service Training Library (GHS-TL) - catalogue of training programme material, versioned and audited",
   "scripts": {
     "dev": "next dev",
@@ -22,7 +24,9 @@
     "db:check": "drizzle-kit check",
     "test:e2e:public": "playwright test tests/e2e/public.spec.ts",
     "user:provision": "tsx scripts/provision-auth-user.ts",
-    "db:verify-chain": "tsx scripts/verify-audit-chain.ts"
+    "db:verify-chain": "tsx scripts/verify-audit-chain.ts",
+    "user:create-auth": "tsx scripts/create-admin-auth.ts",
+    "user:reset-password": "tsx scripts/reset-admin-password.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

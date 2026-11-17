@@ -134,6 +134,48 @@ curl -s http://localhost:3000/api/health
 
 ---
 
+## Deploying to Vercel
+
+The repository is deploy-ready: `vercel.json` declares the framework, `npm ci`, `.next` and
+nothing else. **Environment variables are set in the Vercel project, never in `vercel.json`** — a
+`@secret` reference that is missing from the project fails the build outright, which is what broke
+the first attempt.
+
+1. **Import the repository** (Vercel → Add New → Project → this repo). Framework preset is detected
+   as Next.js; leave the build and install commands alone.
+2. **Add the variables** under Project → Settings → Environment Variables, for Production *and*
+   Preview. Only these six are required to build and boot:
+
+   | Name | Notes |
+   | --- | --- |
+   | `NEXT_PUBLIC_SUPABASE_URL` | inlined at build time — set before the first deploy |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | inlined at build time |
+   | `NEXT_PUBLIC_APP_URL` | the production origin, e.g. `https://tl.ghs.gov.gh` (no trailing slash) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | server only; used to sign storage URLs |
+   | `DATABASE_URL` | Supabase pooler connection string, `?pgbouncer=true` |
+   | `DIRECT_URL` | direct connection; needed by `drizzle-kit`, harmless at runtime |
+
+   `NEXT_PUBLIC_SUPPORT_EMAIL` / `NEXT_PUBLIC_SUPPORT_PHONE` are optional. `SEED_ADMIN_EMAIL` and
+   `ALLOW_PROD_SEED` belong to local seeding only — do not set them in Vercel.
+3. **Deploy**, then smoke-test the deployment:
+
+   ```bash
+   curl -s https://<your-domain>/api/health      # {"ok":true,...,"checks":{"db":"up"}}
+   ```
+
+   A 503 with `checks.db = "down"` means `DATABASE_URL` is wrong (or the pooler host is not
+   reachable from Vercel). The site still renders; only data-backed queries fail.
+4. **Point Supabase at the deployment**: Authentication → URL configuration → Site URL and
+   `https://<your-domain>/auth/callback` in the redirect allow-list, or password-reset links break.
+5. **Create the private storage bucket** `ghs-materials` (Storage → New bucket, public off).
+6. **First administrator**: `npm run db:seed` against the production database with
+   `ALLOW_PROD_SEED=true` (seed is idempotent), or insert the directory row by hand and run
+   `npm run user:create-auth you@ghs.gov.gh`.
+
+Anything `NEXT_PUBLIC_*` changed later needs a redeploy, because it is compiled into the bundle.
+
+---
+
 ## Staff logins
 
 1. Insert the directory row (the source of truth for identity and role):
@@ -149,6 +191,10 @@ curl -s http://localhost:3000/api/health
    npm run user:provision -- ama.mensah@ghs.gov.gh
    npm run user:provision -- ama.mensah@ghs.gov.gh --reset   # re-issue
    ```
+
+   If Auth has no user at all, `npm run user:create-auth -- ama.mensah@ghs.gov.gh` creates it; if
+   someone is locked out before mail delivery works, `npm run user:reset-password -- <email>` sets
+   a new password (both read the password from the environment, never from the repository).
 
 3. The staff member signs in and changes the password. Role always comes from the database, never
    from Auth metadata.
