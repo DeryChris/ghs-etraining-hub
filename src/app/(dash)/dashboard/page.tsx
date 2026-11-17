@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, BookOpen, Bell, ShieldAlert, Target } from "lucide-react";
+import { ArrowRight, BadgeCheck, BookOpen, Bell, ClipboardCheck, ShieldAlert, Target, Users } from "lucide-react";
 import { CpdRing } from "@/components/analytics/cpd-ring";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
@@ -10,9 +10,11 @@ import { formatDate, formatDateTime, formatMinutes } from "@/lib/format";
 import { safeAppLink } from "@/lib/links";
 import { MATERIAL_TYPE_LABELS, ROLE_LABELS, notificationTypeLabel } from "@/lib/labels";
 import { firstNameOf } from "@/lib/names";
+import { getInsights } from "@/lib/server/insights-queries";
 import { getLearnerDashboard } from "@/lib/server/learning-queries";
 import { listNotifications } from "@/lib/server/notification-queries";
 import { requireSession } from "@/lib/server/rbac";
+import { isStaffRole } from "@/lib/viewer";
 
 const NOTICES: Record<string, string> = {
   forbidden: "That page is not available for your role.",
@@ -60,7 +62,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const { notice } = await searchParams;
   const now = new Date();
 
-  const [dashboard, announcements] = await Promise.all([getLearnerDashboard(session), listNotifications(session, 4)]);
+  const staff = isStaffRole(session.role);
+  const [dashboard, announcements, insights] = await Promise.all([
+    getLearnerDashboard(session),
+    listNotifications(session, 4),
+    staff ? getInsights(session) : Promise.resolve(null),
+  ]);
 
   const points = pointsFromCreditsX10(dashboard.creditsX10);
   const outstanding = dashboard.mandatoryOutstanding;
@@ -127,6 +134,64 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <StatTile icon={BookOpen} label="In progress" value={String(dashboard.inProgressCount)} hint="Materials you have started" />
         <StatTile icon={BadgeCheck} label="Completed" value={String(dashboard.completedCount)} hint="Recorded on your transcript" />
       </section>
+
+      {insights && (
+        <section aria-labelledby="insights-heading" className="space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 id="insights-heading" className="text-lg font-bold text-ink">
+                Library at a glance
+              </h2>
+              <p className="text-sm text-ink-muted">
+                {insights.scope === "all"
+                  ? "Across every programme in the service. The detail is on Insights."
+                  : "Across the programmes you are assigned to. The detail is on Insights."}
+              </p>
+            </div>
+            <Link href="/insights" className={buttonClass({ variant: "ghost", size: "sm" })}>
+              All insights
+              <ArrowRight className="ml-1 h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatTile
+              icon={BookOpen}
+              label="Published"
+              value={String(insights.catalogue.published)}
+              hint={`${insights.catalogue.programmes} programmes · ${insights.catalogue.spaces} spaces`}
+            />
+            <StatTile
+              icon={ClipboardCheck}
+              label="Awaiting review"
+              value={String(insights.catalogue.inReview)}
+              hint={insights.catalogue.inReview > 0 ? "Waiting for a decision" : "The queue is clear"}
+              tone={insights.catalogue.inReview > 0 ? "warn" : "success"}
+            />
+            <StatTile
+              icon={Target}
+              label={`Completions · ${insights.windowDays}d`}
+              value={String(insights.learning.completionsInWindow)}
+              hint={`${insights.learning.certificatesInWindow} certificates issued`}
+            />
+            {insights.people ? (
+              <StatTile
+                icon={Users}
+                label="Active staff"
+                value={String(insights.people.total)}
+                hint={`${insights.people.facilitators} facilitators · ${insights.people.admins} admins`}
+              />
+            ) : (
+              <StatTile
+                icon={BookOpen}
+                label="Nothing published"
+                value={String(insights.gaps.length)}
+                hint={insights.gaps.length > 0 ? "Programmes with no material" : "Every programme is covered"}
+                tone={insights.gaps.length > 0 ? "warn" : "success"}
+              />
+            )}
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="space-y-10 lg:col-span-2">

@@ -1,27 +1,11 @@
 import "server-only";
-import { and, asc, count, eq, exists, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { categories, categoryFacilitators, materialVersions, materials, reviewAssignments, spaces, users } from "@/db/schema";
+import { categories, materialVersions, materials, reviewAssignments, spaces, users } from "@/db/schema";
 import type { MaterialState, ReviewDecision } from "@/lib/material-workflow";
 import type { MaterialType, PriorityLevel } from "@/lib/labels";
-import { isStaffRole, type Viewer } from "@/lib/viewer";
-
-/*
- * Authoring surfaces show drafts, so unlike the learner queries these must not
- * filter on state — but they must be scoped. SYSTEM_ADMIN sees every category;
- * a facilitator sees only the categories they are assigned to in
- * category_facilitators (docs/rbac.md §2).
- */
-function scopeFor(viewer: Viewer) {
-  if (!isStaffRole(viewer.role)) return sql`false`;
-  if (viewer.role === "SYSTEM_ADMIN") return undefined;
-  return exists(
-    db
-      .select({ one: sql`1` })
-      .from(categoryFacilitators)
-      .where(and(eq(categoryFacilitators.categoryId, categories.id), eq(categoryFacilitators.userId, viewer.id))),
-  );
-}
+import { scopeFor } from "@/lib/server/scope";
+import type { Viewer } from "@/lib/viewer";
 
 export interface AuthoringMaterialRow {
   id: string;
