@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   GHS-ELN design system · "Clinical Ledger" v3
+   GHS-TL design system · "Clinical Ledger" v3
    Brand: GHS flag palette (red #CF2027 · gold #FCD116 · green #006B3F) plus the
    Ghana star. Every colour is a CSS variable so light and dark themes share one
    set of utilities. Components never hard-code colours.
@@ -109,6 +109,35 @@
     --glow-b: rgb(252 209 22 / 0.09);
     --grid-line: rgb(154 181 165 / 0.06);
   }
+}
+
+/* The GHS emblem has a light-surface and a dark-surface artwork: the lettering in
+   the crest and the motto swap between black and white. The theme is chosen by
+   `data-theme` when the visitor picks one, otherwise by the system preference. */
+.brand-emblem-dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand-emblem-light {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .brand-emblem-dark {
+    display: block;
+  }
+}
+
+[data-theme="dark"] .brand-emblem-light {
+  display: none;
+}
+
+[data-theme="dark"] .brand-emblem-dark {
+  display: block;
+}
+
+[data-theme="light"] .brand-emblem-dark {
+  display: none;
 }
 
 @layer base {

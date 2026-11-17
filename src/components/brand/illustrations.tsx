@@ -1,5 +1,5 @@
 /**
- * Original vector illustrations for GHS-ELN. Colour comes from currentColor and the
+ * Original vector illustrations for the training library. Colour comes from currentColor and the
  * brand variables, so they work in both themes. None of them carry information that
  * is not also in text.
  */
@@ -54,7 +54,7 @@ export function RegionMap({ className }: { className?: string }) {
   }).join(" ") + " Z";
 
   return (
-    <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className={className} role="img" aria-label="Map of Ghana showing the 16 regions served by GHS-ELN">
+    <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className={className} role="img" aria-label="Map of Ghana showing the 16 regions served by the Ghana Health Service Training Library">
       <path d={outline} fill="var(--primary)" fillOpacity="0.1" stroke="var(--primary)" strokeOpacity="0.55" strokeWidth="1.5" strokeLinejoin="round" />
       {REGIONS.map((region, index) => {
         const [x, y] = project(region.lon, region.lat);
