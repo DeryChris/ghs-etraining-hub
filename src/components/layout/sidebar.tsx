@@ -9,6 +9,7 @@ import { BrandMark, Wordmark } from "@/components/brand/brand-mark";
 import type { ShellUser } from "@/components/layout/types";
 import { ROLE_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { SITE } from "@/lib/site";
 
 type CountKey = "messages" | "notifications";
 
@@ -71,7 +72,7 @@ export function Sidebar({ user, unreadMessages, unreadNotifications, onNavigate,
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center justify-between px-5">
-        <Link href="/dashboard" onClick={onNavigate} className="rounded-control focus-visible:outline-2 focus-visible:outline-primary" aria-label="GHS-ELN dashboard">
+        <Link href="/dashboard" onClick={onNavigate} className="rounded-control focus-visible:outline-2 focus-visible:outline-primary" aria-label={`${SITE.name} dashboard`}>
           <Wordmark size={32} />
         </Link>
         {onClose && (

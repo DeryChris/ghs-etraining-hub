@@ -6,10 +6,11 @@ import { Reveal } from "@/components/marketing/reveal";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { buttonClass } from "@/components/ui/button";
 import { listPublicCategories } from "@/lib/server/learning-queries";
+import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Programmes",
-  description: "The directorates and programmes behind GHS-ELN learning.",
+  description: `The directorates and training programmes whose material is catalogued in the ${SITE.name}.`,
 };
 
 export default async function ProgrammesPage() {

@@ -8,30 +8,30 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       eyebrow="Privacy notice"
-      title="How GHS-ELN handles your personal data"
+      title={`How the ${SITE.name} handles your personal data`}
       intro="This notice explains what the platform records about you, why, who can see it, and how you can ask questions or make a request."
       updated={SITE.policyUpdated}
       sections={[
         {
           heading: "Who we are",
           paragraphs: [
-            "GHS-ELN is the Ghana Health Service eLearning Network. It is an internal platform for GHS staff to learn, acknowledge protocols and record continuing professional development.",
+            `The ${SITE.fullName} is an internal service for GHS staff. It stores the material from training programmes, records what each person opened, acknowledged or completed, and keeps the audit history that makes those records trustworthy.`,
           ],
         },
         {
           heading: "What we collect",
           paragraphs: [
             "Directory details: your staff ID, name, work email, role, directorate, region and facility.",
-            "Learning records: materials you open, acknowledgements, completions, CPD points and certificates.",
+            "Training records: material you open or download, acknowledgements, completions, CPD points and certificates. Downloads are recorded because controlled material leaves the platform this way.",
             "Communication: messages you send and notices addressed to you.",
             "Security records: sign-in and sign-out events, the network address and browser used, and audit entries for privileged actions.",
-            "GHS-ELN does not hold patient information. Do not send it through messages or support requests.",
+            `The ${SITE.name} does not hold patient information. Do not send it through messages or support requests.`,
           ],
         },
         {
           heading: "Why we use it",
           paragraphs: [
-            "To deliver mandatory protocols and training, record CPD, let facilitators support learners, keep controlled documents current, and keep the platform secure and accountable.",
+            "To catalogue each training programme's material, keep superseded versions available, let staff find the version that applies to them, record CPD where a programme carries it, and keep the platform secure and accountable for what was uploaded, changed or withdrawn.",
           ],
         },
         {

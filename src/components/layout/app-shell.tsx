@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
 import type { ShellUser } from "@/components/layout/types";
+import { SITE } from "@/lib/site";
 
 export function AppShell({
   user,
@@ -77,7 +78,7 @@ export function AppShell({
           {children}
         </main>
         <footer className="mx-auto max-w-[1200px] px-4 pb-10 text-xs text-ink-muted md:px-8">
-          GHS-ELN · Internal platform. Access is monitored and recorded.
+          {SITE.name} · Internal platform. Access is monitored and recorded.
         </footer>
       </div>
     </div>

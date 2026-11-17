@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { Wordmark } from "@/components/brand/brand-mark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PRIMARY_NAV } from "@/lib/site";
+import { SITE } from "@/lib/site";
 
 export function SiteHeader({ signedIn }: { signedIn: boolean }) {
   const pathname = usePathname();
@@ -31,7 +32,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
       }`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-5 sm:px-8 lg:h-18 lg:px-10">
-        <Link href="/" className="rounded-control focus-visible:outline-2 focus-visible:outline-primary" aria-label="GHS-ELN home">
+        <Link href="/" className="rounded-control focus-visible:outline-2 focus-visible:outline-primary" aria-label={`${SITE.name} home`}>
           <Wordmark size={34} />
         </Link>
 

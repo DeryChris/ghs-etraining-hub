@@ -11,7 +11,7 @@ async function main() {
     throw new Error("Seeder refused to run in production. Set ALLOW_PROD_SEED=true to override.");
   }
 
-  console.log("🌱 Seeding GHS-ELN database...");
+  console.log("🌱 Seeding the training library database...");
 
   // Upsert admin user
   const [admin] = await db.insert(users).values({

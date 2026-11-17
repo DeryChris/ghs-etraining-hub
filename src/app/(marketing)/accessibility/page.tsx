@@ -9,7 +9,7 @@ export default function AccessibilityPage() {
     <LegalPage
       eyebrow="Accessibility"
       title="Designed to work for everyone"
-      intro="GHS-ELN is for staff who work long shifts, on different devices, with different needs. This page states what we aim for and what is still missing."
+      intro={`The ${SITE.name} is for staff who work long shifts, on different devices, with different needs. This page states what we aim for and what is still missing.`}
       updated={SITE.policyUpdated}
       sections={[
         {

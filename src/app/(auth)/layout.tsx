@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { SITE } from "@/lib/site";
 import { BrandMark, Wordmark } from "@/components/brand/brand-mark";
 
 /** Split screen: a brand panel with the flag stripe on desktop, the form beside it. */
@@ -22,15 +23,18 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <Link href="/" className="inline-flex items-center gap-3 rounded-control focus-visible:outline-2 focus-visible:outline-accent">
             <BrandMark size={44} />
             <span className="flex flex-col leading-none">
-              <span className="text-lg font-extrabold tracking-tight"></span>
-              <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70">eLearning Network</span>
+              <span className="text-lg font-extrabold tracking-tight">{SITE.code}</span>
+              <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70">{SITE.tagline}</span>
             </span>
           </Link>
           <div className="max-w-md space-y-5">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">Ghana Health Service</p>
-            <p className="text-3xl font-extrabold leading-tight xl:text-4xl">Clinical knowledge, current and verifiable, in one place.</p>
+            <p className="text-3xl font-extrabold leading-tight xl:text-4xl">
+              Every training programme&apos;s material, in one place.
+            </p>
             <p className="text-sm leading-relaxed text-white/75">
-              Protocols, practical training and CPD for every GHS facility, from the teaching hospital to the health centre.
+              The slides, protocols and videos from GHS training sessions — catalogued by programme, versioned, and never
+              lost in a chat group.
             </p>
           </div>
           <p className="text-xs text-white/60">Internal platform. Access is monitored and recorded.</p>
@@ -40,14 +44,14 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-col justify-center bg-canvas px-6 py-12 sm:px-12 lg:px-16">
         <div className="mx-auto w-full max-w-md space-y-8">
           <div className="flex items-center justify-between lg:hidden">
-            <Link href="/" className="rounded-control focus-visible:outline-2 focus-visible:outline-primary" aria-label="GHS-ELN home">
+            <Link href="/" className="rounded-control focus-visible:outline-2 focus-visible:outline-primary" aria-label={`${SITE.name} home`}>
               <Wordmark size={36} />
             </Link>
           </div>
           {children}
           <p className="text-center text-xs text-ink-muted">
             <Link href="/" className="font-semibold text-ink-muted underline-offset-4 hover:text-ink hover:underline">
-              Back to the GHS-ELN home page
+              Back to the {SITE.name} home page
             </Link>
           </p>
         </div>
