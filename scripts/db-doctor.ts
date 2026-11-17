@@ -1,16 +1,24 @@
 import "dotenv/config";
 import { lookup } from "node:dns/promises";
+import { Pool } from "pg";
 import postgres from "postgres";
+import { planMigrationConnection } from "../src/db/connection-url";
 
 /*
  * `npm run db:doctor` — one command that says why the database tools cannot
  * reach the database, and what to change.
  *
- * It exists because the two failures that cost the most time are invisible in
- * the raw errors: a Supabase hostname that no longer resolves on IPv4 (the
- * direct `db.<ref>.supabase.co` host is IPv6-only now) and a transaction
- * pooler URL handed to drizzle-kit, which cannot run DDL. Both look like
- * "connection failed" until you read the docs.
+ * It exists because the failures that cost the most time are invisible in the
+ * raw errors: a Supabase hostname that no longer resolves on IPv4 (the direct
+ * `db.<ref>.supabase.co` host is IPv6-only now), a transaction pooler URL
+ * handed to drizzle-kit, which cannot run DDL, and a certificate chain that
+ * Node refuses (`SELF_SIGNED_CERT_IN_CHAIN`) on a machine whose TLS is
+ * intercepted. All three look like "connection failed" until you read the docs.
+ *
+ * It connects twice on purpose: with `pg` (exactly what drizzle-kit uses, so a
+ * migration that would fail is caught here) and with postgres.js (exactly what
+ * the app uses at runtime). A doctor that only tested the app's driver reported
+ * "Connected" while `npm run db:migrate` died on TLS.
  *
  * Read-only: it connects, counts, and disconnects. It never migrates or writes.
  */
@@ -89,7 +97,13 @@ function checkUrlShape(name: string, raw: string | undefined, role: "runtime" | 
   }
 
   if (!hasSsl && !/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(host)) {
-    record("warn", `${name} has no sslmode`, "Supabase requires TLS. Add ?sslmode=require (or &sslmode=require).");
+    record(
+      "warn",
+      `${name} has no sslmode`,
+      role === "migrations"
+        ? "Supabase requires TLS. Add ?sslmode=require: migrations then run with libpq semantics (encrypted, chain not verified), so a TLS-inspecting antivirus or proxy cannot break them."
+        : "Supabase requires TLS. Add ?sslmode=require (or &sslmode=require).",
+    );
   }
 
   const user = decodeURIComponent(url.username);
@@ -128,13 +142,79 @@ async function checkDns(name: string, raw: string | undefined) {
   }
 }
 
+/* Certificate failures that mean "something on this machine re-signs TLS", not
+ * "the database is unreachable". Node's own error codes for that class. */
+const TLS_TRUST_ERRORS = new Set([
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+  "CERT_HAS_EXPIRED",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+]);
+
+/*
+ * The migration path, exercised with the driver drizzle-kit actually uses.
+ * postgres.js (below) encrypts without verifying the chain; node-postgres does
+ * not. Testing only the app driver is how "✓ Connected" sat next to
+ * "Error: self-signed certificate in certificate chain" from db:migrate.
+ */
+async function checkMigrationDriver(raw: string | undefined) {
+  if (!raw) return;
+  const plan = planMigrationConnection(raw);
+
+  if (plan.changed) {
+    record(
+      "ok",
+      "Migrations use libpq TLS semantics",
+      "Deliberate: sslmode=require encrypts without verifying the chain — the same trust level the app's\n" +
+        "runtime driver uses, and what keeps TLS inspection from breaking db:migrate.\n" +
+        "Use sslmode=verify-full (plus sslrootcert=<ca>.pem) to require verification.",
+    );
+  }
+
+  const pool = new Pool({ connectionString: plan.url, max: 1, connectionTimeoutMillis: 10_000 });
+  try {
+    await pool.query("select 1");
+    record("ok", "drizzle-kit can connect", `pg driver; ${plan.summary}`);
+  } catch (error) {
+    const code = (error as { code?: string }).code ?? "";
+    const message = error instanceof Error ? error.message : String(error);
+    if (TLS_TRUST_ERRORS.has(code)) {
+      // Two different stories, and mixing them up sends people the wrong way:
+      // with verification on, the fix is to trust the interceptor or stop asking;
+      // with verification already off, something else is terminating TLS.
+      const advice =
+        plan.tls.kind === "verify-full"
+          ? "DIRECT_URL asks for full chain verification and Node does not trust the chain it was given.\n" +
+            "Something on this machine re-signs TLS: an antivirus HTTPS scanner or a corporate proxy\n" +
+            "(Zscaler, Netskope).\n" +
+            "  Fix A — stop asking for verification: change sslmode to require (drizzle.config.ts then\n" +
+            "          encrypts without checking the chain, exactly as the app's driver does).\n" +
+            "  Fix B — keep verification and trust the interceptor:\n" +
+            "          sslmode=verify-full&sslrootcert=C:\\path\\to\\inspecting-ca.pem\n" +
+            `  Fix C — exempt ${hostOf(raw)?.hostname ?? "this host"} from HTTPS scanning in the security product.`
+          : "The connection is already configured not to verify the chain, so TLS is being rejected\n" +
+            "before that happens. Look for a proxy that terminates connections (HTTPS_PROXY,\n" +
+            "NODE_EXTRA_CA_CERTS) or a firewall between here and the database.";
+      record("fail", "Migrations fail on TLS: certificate not trusted", `${message} (${code})\n${advice}`);
+    } else {
+      record("fail", "drizzle-kit cannot connect", message.split("\n")[0] ?? message);
+    }
+  } finally {
+    await pool.end().catch(() => undefined);
+  }
+}
+
 async function checkDatabase(raw: string | undefined) {
   const url = hostOf(raw);
   if (!url) return;
   const sql = postgres(url.toString(), { max: 1, prepare: false, connect_timeout: 10 });
+  let connected = false;
   try {
     const [{ version }] = await sql<{ version: string }[]>`select version()`;
     record("ok", "Connected", version.split(",")[0] ?? version);
+    connected = true;
 
     const missing = await sql<{ name: string }[]>`
       select t.name
@@ -142,15 +222,17 @@ async function checkDatabase(raw: string | undefined) {
       where to_regclass('public.' || t.name) is null
       order by t.name
     `;
-    if (missing.length === 0) {
-      record("ok", "Schema", "every table this build expects exists");
-    } else {
+    if (missing.length > 0) {
+      // Stop here: the count queries below read those very tables and would
+      // otherwise surface as a bogus "Could not connect" next to this failure.
       record(
         "fail",
         "Schema is behind",
         `missing: ${missing.map((row) => row.name).join(", ")} — run npm run db:migrate`,
       );
+      return;
     }
+    record("ok", "Schema", "every table this build expects exists");
 
     const [geography] = await sql<{ regions: number; districts: number; facilities: number }[]>`
       select
@@ -172,7 +254,7 @@ async function checkDatabase(raw: string | undefined) {
     record("ok", "Accounts", `${users?.n ?? 0} directory row(s)`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    record("fail", "Could not connect", message.split("\n")[0] ?? message);
+    record("fail", connected ? "Database query failed" : "Could not connect", message.split("\n")[0] ?? message);
   } finally {
     await sql.end({ timeout: 5 }).catch(() => undefined);
   }
@@ -188,6 +270,7 @@ async function main() {
   await checkDns("DATABASE_URL", runtime);
   await checkDns("DIRECT_URL", direct);
 
+  await checkMigrationDriver(direct);
   await checkDatabase(direct);
 
   const icon: Record<Level, string> = { ok: "✓", warn: "!", fail: "✗" };

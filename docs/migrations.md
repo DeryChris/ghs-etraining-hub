@@ -36,6 +36,38 @@ Such a database has the tables but no `drizzle.__drizzle_migrations` history. Do
 From that point on, every schema change is: edit `src/db/schema.ts` → `npm run db:generate` →
 review the SQL → `npm run db:migrate` in each environment.
 
+## When TLS is the failure
+
+```
+Error: self-signed certificate in certificate chain
+  code: 'SELF_SIGNED_CERT_IN_CHAIN'
+```
+
+`db:doctor` prints `✓ Connected` in the same session, because the two tools do not agree on what
+`sslmode=require` means:
+
+| Tool | Driver | `sslmode=require` |
+| --- | --- | --- |
+| `db:doctor`, the app, `db:seed` | postgres.js | encrypt, do not verify the chain |
+| `db:migrate`, `db:push`, `db:studio` | node-postgres via drizzle-kit | since pg-connection-string 2.7: an alias for `verify-full` |
+
+On a machine whose TLS is intercepted — antivirus HTTPS scanning, a corporate proxy — verify-full
+sees the interceptor's self-signed root and refuses, while the app quietly keeps working. That
+divergence, not the URL, is the bug, so `drizzle.config.ts` passes
+`?sslmode=require&uselibpqcompat=true` (the libpq semantics pg's own warning points at) via
+`src/db/connection-url.ts`. Migrations now hold the same trust level as the runtime.
+
+`sslmode=verify-full`, and any URL carrying `sslrootcert`, are passed through untouched: a deliberate
+choice is never downgraded. To verify against an inspecting CA:
+
+```bash
+export DIRECT_URL="postgresql://postgres.<ref>:…@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=verify-full&sslrootcert=/etc/ssl/certs/corp-root.pem"
+```
+
+Windows, exporting the interceptor's root from `certmgr.msc` → Trusted Root Certification
+Authorities, then pointing `sslrootcert` at the `.cer` file, is the equivalent. `npm run db:doctor`
+names this case explicitly instead of reporting a generic connection failure.
+
 ## Rules
 
 * One migration per logical change, with a descriptive `--name`.
