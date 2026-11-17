@@ -116,7 +116,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Promi
                     <dd className="mt-1 font-semibold text-ink">{result.holderName}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">CPD awarded</dt>
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Points recorded at issue</dt>
                     <dd className="mt-1 font-semibold text-ink">{formatCredits(result.cpdCreditsX10)}</dd>
                   </div>
                   <div className="sm:col-span-2">

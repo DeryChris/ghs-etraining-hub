@@ -25,7 +25,7 @@ const ROLES = [
     icon: Users,
     name: "Learners",
     who: "Ghana Health Service staff",
-    body: "Find the material for every programme attended, read or download it, acknowledge mandatory protocols and earn CPD where it applies.",
+    body: "Find the material for every programme attended, read or download it, and acknowledge the protocols that require it.",
   },
   {
     icon: BookOpenCheck,
@@ -45,7 +45,7 @@ const ROADMAP = [
   {
     phase: "Live now",
     status: "done" as const,
-    items: ["Programme catalogue with versioned material", "Reviewed uploads and two-person publishing", "CPD transcript and printable, verifiable certificates", "Search, library and cohort-targeted notices", "Every administrative action audited"],
+    items: ["Programme catalogue with versioned material", "Reviewed uploads and two-person publishing", "A record of what you opened, downloaded and finished", "Search, library and cohort-targeted notices", "Every administrative action audited"],
   },
   {
     phase: "Next",

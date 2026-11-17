@@ -31,9 +31,9 @@ export default function TermsPage() {
           ],
         },
         {
-          heading: "Learning records and CPD",
+          heading: "What the library records",
           paragraphs: [
-            "Points and certificates are awarded when a material is completed under the rules of the relevant directorate. A certificate can be checked on the verification page and printed by its holder. Records issued in error can be corrected by an administrator, and the correction is recorded.",
+            "The library records which material you opened, downloaded and marked as finished, against the version you saw. It does not award points, levels or certificates: it is an information service. Certificates issued before the CPD award was retired remain valid and checkable on the verification page, and they are not deleted. Records made in error can be corrected by an administrator, and the correction is recorded.",
           ],
         },
         {

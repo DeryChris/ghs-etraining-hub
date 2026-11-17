@@ -89,10 +89,13 @@ export default async function SettingsPage() {
             <Fact term="Support e-mail">{SITE.supportEmail ?? <span className="text-ink-muted">Not configured</span>}</Fact>
             <Fact term="Support phone">{SITE.supportPhone ?? <span className="text-ink-muted">Not configured</span>}</Fact>
             <Fact term="Policies last updated">{SITE.policyUpdated}</Fact>
-            <Fact term="Certificate check">
+            <Fact term="Certificate archive">
               <Link href="/verify" className="text-primary underline-offset-4 hover:underline">
                 Public verification page
               </Link>
+              <span className="ml-2 text-xs font-normal text-ink-muted">
+                read-only — certificates issued before the CPD award was retired
+              </span>
             </Fact>
             <Fact term="Health probe">
               <a href="/api/health" className="text-primary underline-offset-4 hover:underline">

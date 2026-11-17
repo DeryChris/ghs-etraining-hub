@@ -97,7 +97,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     id: "record",
     label: "My record",
     items: [
-      { href: "/analytics", label: "My CPD", icon: "cpd", roles: EVERYONE },
+      { href: "/analytics", label: "My activity", icon: "cpd", roles: EVERYONE },
       {
         href: "/insights",
         label: "Insights",

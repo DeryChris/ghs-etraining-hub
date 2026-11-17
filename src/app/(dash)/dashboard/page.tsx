@@ -1,16 +1,15 @@
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, BookOpen, Bell, ClipboardCheck, ShieldAlert, Target, Users } from "lucide-react";
-import { CpdRing } from "@/components/analytics/cpd-ring";
+import { ArrowRight, BadgeCheck, BookOpen, Bell, ClipboardCheck, Download, Eye, ShieldAlert } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { PriorityChip } from "@/components/ui/priority-chip";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { CPD_CYCLE_TARGET_POINTS, pointsFromCreditsX10 } from "@/lib/cpd";
 import { formatDate, formatDateTime, formatMinutes } from "@/lib/format";
 import { safeAppLink } from "@/lib/links";
 import { MATERIAL_TYPE_LABELS, ROLE_LABELS, notificationTypeLabel } from "@/lib/labels";
 import { firstNameOf } from "@/lib/names";
-import { getInsights } from "@/lib/server/insights-queries";
+import { getInsights, getTrafficSeries } from "@/lib/server/insights-queries";
+import { getSessionSummary } from "@/lib/server/session-queries";
 import { getLearnerDashboard } from "@/lib/server/learning-queries";
 import { listNotifications } from "@/lib/server/notification-queries";
 import { requireSession } from "@/lib/server/rbac";
@@ -35,7 +34,7 @@ function StatTile({
   hint,
   tone = "default",
 }: {
-  icon: typeof Target;
+  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   label: string;
   value: string;
   hint: string;
@@ -63,13 +62,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const now = new Date();
 
   const staff = isStaffRole(session.role);
-  const [dashboard, announcements, insights] = await Promise.all([
+  const [dashboard, announcements, insights, traffic, sessionRecord] = await Promise.all([
     getLearnerDashboard(session),
     listNotifications(session, 4),
     staff ? getInsights(session) : Promise.resolve(null),
+    staff ? getTrafficSeries(session, 4) : Promise.resolve(null),
+    staff ? getSessionSummary(session) : Promise.resolve(null),
   ]);
 
-  const points = pointsFromCreditsX10(dashboard.creditsX10);
+
   const outstanding = dashboard.mandatoryOutstanding;
   const noticeText = notice ? NOTICES[notice] : undefined;
   const nextUp = dashboard.continueLearning[0] ?? outstanding[0] ?? null;
@@ -95,7 +96,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
               {outstanding.length > 0
                 ? `${outstanding.length} mandatory ${outstanding.length === 1 ? "protocol needs" : "protocols need"} your attention. Start with the first one.`
-                : "Nothing mandatory is waiting for you. Keep your CPD moving with the next material."}
+                : "Nothing mandatory is waiting for you. The material from your last training is in the library."}
             </p>
             <div className="flex flex-wrap items-center gap-3">
               {nextUp ? (
@@ -110,19 +111,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-4 rounded-hero border border-hairline bg-canvas/60 p-6 backdrop-blur">
-            <CpdRing value={points} max={CPD_CYCLE_TARGET_POINTS} />
-            <p className="text-center text-sm text-ink-muted">
-              {points >= CPD_CYCLE_TARGET_POINTS
-                ? "Your CPD target for this cycle is met."
-                : `${(CPD_CYCLE_TARGET_POINTS - points).toFixed(1)} points to your cycle target.`}
-            </p>
-          </div>
         </div>
       </section>
 
       {/* Stats */}
-      <section aria-label="Summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatTile
           icon={ShieldAlert}
           label="Mandatory to do"
@@ -130,12 +123,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           hint={dashboard.mandatoryTotal === 0 ? "None assigned" : `of ${dashboard.mandatoryTotal} mandatory protocols`}
           tone={outstanding.length > 0 ? "warn" : "success"}
         />
-        <StatTile icon={Target} label="CPD points" value={points.toFixed(1)} hint={`of ${CPD_CYCLE_TARGET_POINTS} this cycle`} tone="success" />
         <StatTile icon={BookOpen} label="In progress" value={String(dashboard.inProgressCount)} hint="Materials you have started" />
         <StatTile icon={BadgeCheck} label="Completed" value={String(dashboard.completedCount)} hint="Recorded on your transcript" />
       </section>
 
-      {insights && (
+      {insights && traffic && sessionRecord && (
         <section aria-labelledby="insights-heading" className="space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -144,8 +136,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </h2>
               <p className="text-sm text-ink-muted">
                 {insights.scope === "all"
-                  ? "Across every programme in the service. The detail is on Insights."
-                  : "Across the programmes you are assigned to. The detail is on Insights."}
+                  ? "Traffic and output across every programme. The detail is on Insights."
+                  : "Traffic and output in the programmes you run. The detail is on Insights."}
               </p>
             </div>
             <Link href="/insights" className={buttonClass({ variant: "ghost", size: "sm" })}>
@@ -155,40 +147,30 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatTile
-              icon={BookOpen}
-              label="Published"
-              value={String(insights.catalogue.published)}
-              hint={`${insights.catalogue.programmes} programmes · ${insights.catalogue.spaces} spaces`}
+              icon={Eye}
+              label="Opens · 4 weeks"
+              value={String(traffic.totals.views)}
+              hint={`${insights.catalogue.published} materials published`}
+            />
+            <StatTile
+              icon={Download}
+              label="Downloads · 4 weeks"
+              value={String(traffic.totals.downloads)}
+              hint="From the audit trail"
             />
             <StatTile
               icon={ClipboardCheck}
+              label="Trainings · 90 days"
+              value={String(sessionRecord.last90Days)}
+              hint={`${sessionRecord.total} on record`}
+            />
+            <StatTile
+              icon={BookOpen}
               label="Awaiting review"
               value={String(insights.catalogue.inReview)}
               hint={insights.catalogue.inReview > 0 ? "Waiting for a decision" : "The queue is clear"}
               tone={insights.catalogue.inReview > 0 ? "warn" : "success"}
             />
-            <StatTile
-              icon={Target}
-              label={`Completions · ${insights.windowDays}d`}
-              value={String(insights.learning.completionsInWindow)}
-              hint={`${insights.learning.certificatesInWindow} certificates issued`}
-            />
-            {insights.people ? (
-              <StatTile
-                icon={Users}
-                label="Active staff"
-                value={String(insights.people.total)}
-                hint={`${insights.people.facilitators} facilitators · ${insights.people.admins} admins`}
-              />
-            ) : (
-              <StatTile
-                icon={BookOpen}
-                label="Nothing published"
-                value={String(insights.gaps.length)}
-                hint={insights.gaps.length > 0 ? "Programmes with no material" : "Every programme is covered"}
-                tone={insights.gaps.length > 0 ? "warn" : "success"}
-              />
-            )}
           </div>
         </section>
       )}
@@ -206,7 +188,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
             {outstanding.length === 0 ? (
               <ListEmptyState
-                art="certificate"
+                art="folder"
                 title="You are up to date"
                 description="No mandatory protocols are waiting for you. New ones appear here as soon as they are published."
               />

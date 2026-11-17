@@ -158,3 +158,26 @@ project settings.
 so the menu and `requireRole` cannot disagree. It is backed by four new surfaces — `/assessments`,
 `/insights`, `/users` (directory CRUD) and `/settings` — each stating what it does not do yet, with the
 directory invariants (no self‑demotion, last administrator protected) enforced on the server and audited.
+
+---
+
+## ADR‑0011 — The library is informational: retire CPD awards, keep issued certificates
+
+**Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0011-informational-library-retires-cpd.md`](./0011-informational-library-retires-cpd.md)
+
+**Decision.** The service is an informational library: no CPD points, no cycle target, no certificate
+awarded on completion. `My CPD` becomes `My activity` (what you opened, downloaded and finished). Every
+already‑issued certificate row, the `/verify` check, the printable award and the frozen serial format stay
+untouched — certificates in people's hands must still check out.
+
+---
+
+## ADR‑0012 — A training is a session; traffic is measured per programme
+
+**Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0012-sessions-geography-and-traffic.md`](./0012-sessions-geography-and-traffic.md)
+
+**Decision.** `training_sessions` records a dated training under a programme, at region → district →
+sub‑district → facility (Upper West seeded, CHPS excluded, programme taxonomy left to a later client
+upload). Traffic is open‑counts (`material_views`, one row per person per day, fire‑and‑forget beacon that
+honours DNT) plus downloads from the existing audit trail, drawn as server‑rendered SVG charts on `/insights`.
+

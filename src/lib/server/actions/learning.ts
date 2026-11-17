@@ -5,9 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/index";
 import { enrollments, materialProgress } from "@/db/schema";
-import { formatCredits } from "@/lib/format";
 import { logAudit } from "@/lib/server/audit";
-import { issueCertificate } from "@/lib/server/certificates";
 import { getMaterialDetail } from "@/lib/server/learning-queries";
 import { log } from "@/lib/server/logger";
 import { consumeRateLimit, rateLimitKey, retryAfterText } from "@/lib/server/rate-limit";
@@ -25,17 +23,15 @@ const progressInput = z
   })
   .strict();
 
-function successMessage(intent: "start" | "acknowledge" | "complete", creditsX10: number, code: string | null): string {
+function successMessage(intent: "start" | "acknowledge" | "complete"): string {
   if (intent === "start") return "Started. Your progress is saved.";
   if (intent === "acknowledge") return "Acknowledged. Mark the material complete when you have finished it.";
-  const base = `Completed. ${formatCredits(creditsX10)} added to your CPD transcript.`;
-  return code ? `${base} Certificate ${code} — anyone can check it on the verification page.` : base;
+  return "Recorded as complete. Your record shows when, and against which version.";
 }
 
 /**
- * One action covers the learner's journey: start → acknowledge (mandatory
- * protocols) → complete. Each step is written atomically with its audit row,
- * and completion issues the CPD certificate in the same transaction.
+ * One action covers the reader's journey: start → acknowledge (mandatory
+ * protocols) → complete. Each step is written atomically with its audit row.
  */
 export async function updateMaterialProgressAction(
   _previous: ProgressActionState,
@@ -143,38 +139,10 @@ export async function updateMaterialProgressAction(
       tx,
     );
 
-    let certificateCode: string | null = null;
-    if (intent === "complete") {
-      const certificate = await issueCertificate(tx, {
-        userId: session.sub,
-        materialId,
-        materialVersionId: versionId,
-        cpdCreditsX10: material.cpdCreditsX10,
-        recertificationMonths: material.recertificationMonths,
-      });
-      certificateCode = certificate.issued ? certificate.code : certificate.existingCode;
-      if (certificate.issued) {
-        await logAudit(
-          {
-            actor,
-            action: "CERTIFICATE_ISSUED",
-            entity: "Certificate",
-            entityId: certificate.code,
-            metadata: {
-              materialId,
-              versionId,
-              cpdCreditsX10: material.cpdCreditsX10,
-              expiresAt: material.recertificationMonths
-                ? new Date(now.getTime() + material.recertificationMonths * 30 * 24 * 60 * 60 * 1000).toISOString()
-                : null,
-            },
-          },
-          tx,
-        );
-      }
-    }
-
-    return { ok: true, message: successMessage(intent, material.cpdCreditsX10, certificateCode) };
+    // Completing a material records that it was read. It does not award points or
+    // issue a certificate: this is an information service, and ADR-0011 retires
+    // the CPD framing. Certificates already issued stay verifiable on /verify.
+    return { ok: true, message: successMessage(intent) };
   });
 
   if (result.ok) {

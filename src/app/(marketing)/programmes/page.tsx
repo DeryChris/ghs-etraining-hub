@@ -29,7 +29,7 @@ export default async function ProgrammesPage() {
               Learning owned by the directorates that set the standards.
             </h1>
             <p className="max-w-2xl text-lg leading-relaxed text-ink-muted">
-              Each directorate publishes its own protocols, spaces and assessments. Sign in to open them, record your progress and earn CPD.
+              Each directorate publishes its own protocols, spaces and assessments. Sign in to open them and record what you have read.
             </p>
           </Reveal>
         </div>

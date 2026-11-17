@@ -35,7 +35,8 @@ and use the utility it generates.
   notification bell and avatar menu.
 * Navigation is **role‑aware and sectioned**, and its source is `src/lib/nav.ts` (ADR‑0010): *Learn*
   (Dashboard · Programmes · Library · Pre/Post Test), *Community* (Messages · Notifications), *My record*
-  (My CPD · Insights), *Author* (My materials · Review queue · Send notice — assembled per role) and
+  (My activity · Insights), *Author* (Sessions · My materials · Review queue · Send notice — assembled per
+  role) and
   *Administration* (Users · Settings, administrators only). A section with nothing in it for a role does
   not render, and an item's badge (unread messages, unread notifications, versions awaiting review) shows
   only when it is above zero.
@@ -76,10 +77,17 @@ Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard opera
   caption ("Showing 1–25 of 4,182 GHS staff"). `/users` is the reference implementation: 25 per page,
   filters in the URL, row actions inline (role select, deactivate/reactivate, reset link) with the
   result of each action announced next to the row it changed.
-* **Insights** — headline numbers first (`/insights`), then coverage by programme with the backlog
-  beside it, then the coverage gaps. The dashboard shows four of those numbers and a link; nothing on
-  the dashboard is a chart. Numbers are always labelled with the window they cover ("Completions · last
-  30 days"), because an unlabelled total is a claim nobody can check.
+* **Insights** — headline numbers first (`/insights`), then charts: an area chart of opens vs
+  downloads by week, stacked bars of versions uploaded per month by programme, a monthly count of
+  sessions run, ranked bars for opens and for sessions per programme, and a donut of published material
+  by type. Charts are server-rendered SVG using the `--chart-1..8` / `--chart-grid` tokens in
+  `globals.css`; each one repeats its figures in a `<details>` table and in `<title>` tooltips. The
+  dashboard shows four headline numbers and a link, and nothing on the dashboard is a chart. Numbers are
+  always labelled with the window they cover ("Opens · 4 weeks"), because an unlabelled total is a claim
+  nobody can check.
+* **Sessions** — one training per row: title, programme (module optional), date, region → district →
+  sub-district → facility, facilitator and attendee count. Facilities exclude CHPS compounds. The
+  cascade narrows as you choose; every optional key is cross-checked against its parent on the server.
 
 ## 5. Copy style
 

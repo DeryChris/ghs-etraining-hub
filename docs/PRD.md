@@ -1,7 +1,15 @@
 # GHS-TL Product Requirements Document — v2
 
-**Status:** Approved for build · **Supersedes:** client PRD v1 (2026) · **Owner:** GHS Capacity
-Development Directorate · **Implementation contract:** [`AGENTS.md`](../AGENTS.md)
+**Status:** Approved for build, amended 2026‑11 · **Supersedes:** client PRD v1 (2026) · **Owner:** GHS
+Capacity Development Directorate · **Implementation contract:** [`AGENTS.md`](../AGENTS.md)
+
+> **Amendment (2026‑11).** The product is an **informational library**, not a CPD platform: points, cycle
+> targets and certificate awarding are retired, while every certificate already issued stays verifiable
+> ([ADR‑0011](./decisions/0011-informational-library-retires-cpd.md)). Trainings are recorded as dated
+> **sessions** scoped region → district → sub‑district → facility, starting with the Upper West Region and
+> excluding CHPS compounds; programme fields and areas arrive later as a client upload
+> ([ADR‑0012](./decisions/0012-sessions-geography-and-traffic.md)). Where this document still speaks of CPD
+> credits or awards, the ADRs govern.
 
 > v1 described *content management* well but almost nothing about *learning outcomes*, *data
 > protection*, *upload safety*, or *low‑bandwidth delivery*. v2 keeps everything that was right in

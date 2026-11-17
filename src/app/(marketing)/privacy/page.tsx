@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           heading: "What we collect",
           paragraphs: [
             "Directory details: your staff ID, name, work email, role, directorate, region and facility.",
-            "Training records: material you open or download, acknowledgements, completions, CPD points and certificates. Downloads are recorded because controlled material leaves the platform this way.",
+            "Training records: material you open or download, acknowledgements and completions, against the version you saw. Views are counted once per person per day. Downloads are recorded because controlled material leaves the platform this way.",
             "Communication: messages you send and notices addressed to you.",
             "Security records: sign-in and sign-out events, the network address and browser used, and audit entries for privileged actions.",
             `The ${SITE.name} does not hold patient information. Do not send it through messages or support requests.`,
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
         {
           heading: "Why we use it",
           paragraphs: [
-            "To catalogue each training programme's material, keep superseded versions available, let staff find the version that applies to them, record CPD where a programme carries it, and keep the platform secure and accountable for what was uploaded, changed or withdrawn.",
+            "To catalogue each training programme's material, keep superseded versions available, let staff find the version that applies to them, record what staff actually consulted, and keep the platform secure and accountable for what was uploaded, changed or withdrawn.",
           ],
         },
         {
@@ -43,7 +43,7 @@ export default function PrivacyPage() {
         {
           heading: "How long we keep it",
           paragraphs: [
-            "Audit records are kept for seven years. Learning and certificate records follow the GHS records retention schedule, which is being confirmed.",
+            "Audit records are kept for seven years. Learning records, and the certificates issued before the CPD award was retired, follow the GHS records retention schedule, which is being confirmed.",
           ],
         },
         {

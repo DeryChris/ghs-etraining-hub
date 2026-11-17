@@ -30,9 +30,10 @@ reviewed, published, downloaded or withdrew it. Built on **Next.js 16**, **React
 
 **Shipped:** staff sign-in / password reset; dashboard with mandatory protocols; directorates →
 spaces → material viewer; library search with server-side pagination; progress
-(start · acknowledge · complete) with per-version re-acknowledgement; **CPD certificate issuance
-with random serials**, public verification and a printable award for the holder; personal
-analytics/transcript with certificate serials; staff messaging (paginated threads); notifications;
+(start · acknowledge · complete) with per-version re-acknowledgement; a personal record of what you
+opened, downloaded and finished; **training sessions** recorded under a programme at region →
+district → sub-district → facility; **traffic insights** (opens, downloads, upload rate, trainings
+per programme) drawn as server-rendered SVG charts; staff messaging (paginated threads); notifications;
 **authoring pipeline** (draft → signed upload → review → publish → supersede → archive) with the
 two-person publish rule; **cohort-targeted notices**; marketing site and the GHS emblem brand set.
 
@@ -43,8 +44,12 @@ mutation, rate limits on progress/messages/certificate lookups, RLS lock-down of
 
 **Not built yet:** category/space administration and the audit-log viewer, comments/discussion,
 assessments and grading, message reporting, MFA enforcement and account lockout, server-rendered
-certificate PDFs. The tables exist; the flows do not. See `REPO_ANALYSIS.md` for the prioritised
-gap list.
+certificate PDFs, and time-to-publish. The tables exist; the flows do not. See `REPO_ANALYSIS.md`
+for the prioritised gap list.
+
+**Retired, deliberately:** CPD points, cycle targets and certificate awarding (ADR-0011). The
+`certificates` table, `GHS-CPD-…` serials, `/verify` and the printable award remain, so certificates
+already issued still check out; nothing new is issued.
 
 ---
 
@@ -86,7 +91,7 @@ src/
       session.ts               # Supabase identity + public.users authority
       rbac.ts                  # requireSession, checkCapability (DB-verified scope)
       audit.ts                 # hash-chained append + chain verifier
-      certificates.ts          # certificate issuance (inside the caller's transaction)
+      certificates.ts          # frozen certificate serials (ADR-0011: no new issuance)
       rate-limit.ts            # fixed-window limiter over rate_limit_windows
       learning-queries.ts      # catalogue, materials, dashboard, transcript + cohort filters
       messaging-queries.ts     # conversations, paginated threads

@@ -92,7 +92,7 @@ const STEPS = [
   {
     icon: BadgeCheck,
     title: "Record what you completed",
-    body: "Where a programme carries CPD, points post to your transcript with a certificate anybody can verify.",
+    body: "The library keeps what you opened, downloaded and marked as finished, so you can find your way back to it.",
   },
 ];
 
@@ -132,7 +132,7 @@ const FAQ = [
   {
     question: "Is my learning record official?",
     answer:
-      "Completions, CPD points and certificates are recorded against your staff record. Each certificate carries a serial code that the verification page can check.",
+      "The library records which material you opened, downloaded and marked as finished, always against the version you saw. Certificates issued before the CPD award was retired remain checkable on the verification page."
   },
   {
     question: "I forgot my password. What now?",
