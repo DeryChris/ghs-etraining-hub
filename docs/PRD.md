@@ -1,4 +1,4 @@
-# GHS‑ELN Product Requirements Document — v2
+# GHS-TL Product Requirements Document — v2
 
 **Status:** Approved for build · **Supersedes:** client PRD v1 (2026) · **Owner:** GHS Capacity
 Development Directorate · **Implementation contract:** [`AGENTS.md`](../AGENTS.md)
@@ -11,7 +11,7 @@ Development Directorate · **Implementation contract:** [`AGENTS.md`](../AGENTS.
 
 ## 1. Product summary
 
-GHS‑ELN is the Ghana Health Service's national platform for continuous professional development
+GHS-TL is the Ghana Health Service's national platform for continuous professional development
 (CPD), clinical SOP dissemination and public‑health emergency training. It serves professional
 staff in all 16 regions, on hospital networks and on personal mobile data, and it must produce
 **evidence**: who was trained, on which protocol version, when, with what assessment score, and

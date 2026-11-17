@@ -1,4 +1,4 @@
-# UI/UX — GHS‑ELN
+# UI/UX — GHS-TL
 
 Dark‑first, clinical, calm. The platform is read under fluorescent ward lighting and on a phone at
 night; the palette must never shout, and data density must never overwhelm a small screen.

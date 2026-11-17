@@ -11,9 +11,9 @@ Build this as production software, not a prototype.
 9. Review the final diff using a separate reviewer agent.
 10. Do not claim completion while tests, console errors or security findings remain.
 
-# AGENTS.md — Ghana Health Service eLearning Network (GHS‑ELN)
+# AGENTS.md — Ghana Health Service Training Library (GHS-TL)
 
-> **You are an autonomous engineering agent working on GHS‑ELN.**
+> **You are an autonomous engineering agent working on GHS-TL.**
 > This file is your contract. It is *not* generic advice — every rule below is scoped to this
 > repository, this stack, this domain (Ghana Health Service continuous professional development)
 > and this database. Read it fully before writing a single line of code. If a rule here conflicts
@@ -23,13 +23,16 @@ Build this as production software, not a prototype.
 
 ## 0. Mission in one paragraph
 
-GHS‑ELN trains Ghana Health Service staff (medical officers, nurses, midwives, pharmacists,
-laboratory technologists, records officers, administrators) across **all 16 administrative
-regions** on clinical SOPs, public‑health protocols and emergency response. Content is organised
-as **Category (directorate / national programme) → Space (specialised unit / module) → Material
-(document, video, interactive lab)**, moderated by facilitators, audited end‑to‑end, and delivered
-over **unreliable, metered mobile data**. Every design decision must survive three constraints:
-clinical correctness, low bandwidth, and auditability.
+GHS-TL (Ghana Health Service Training Library) is the **catalogue of record for GHS training
+programmes**. Every directorate, programme and unit that runs training — for medical officers,
+nurses, midwives, pharmacists, laboratory technologists, records officers and administrators across
+**all 16 administrative regions** — files that training's material here instead of leaving it in a
+WhatsApp group. Content is organised as **Category (directorate / national programme) → Space
+(specialised unit / module) → Material (document, video, interactive lab)** and every upload is a
+numbered version that is reviewed by a second person before it reaches staff. Nothing is deleted:
+material is archived, and the hash‑chained audit trail records who uploaded, reviewed, published,
+downloaded or withdrew it. Every design decision must survive three constraints: **findable
+material, low bandwidth, and auditability**.
 
 ---
 
@@ -135,12 +138,12 @@ migration, CI and Drizzle migrations are versioned in this repository.
 
 | Present and working | Not built yet (next milestones) |
 | --- | --- |
-| `src/app/(auth)/**`, `(dash)/**`, `(marketing)/**` | Remaining admin surfaces: create category/space, broadcast notices, read the audit log |
+| `src/app/(auth)/**`, `(dash)/**`, `(marketing)/**` | Remaining admin surfaces: create category/space, read the audit log |
 | `(dash)/authoring/**`, `(dash)/review/**`, `(dash)/notices/**`, `(award)/certificates/**` — draft, upload, review, publish, archive, targeted notices, printable award | Comments/discussion threads; assessments and grading; message reporting |
 | `src/db/schema.ts` + `drizzle/**` migrations | Virus-scanning worker (versions sit at `scanStatus = PENDING`) |
 | `src/lib/server/{session,rbac,audit,file-storage,authoring-queries,*-queries,rate-limit,certificates}.ts`, `src/lib/material-workflow.ts` | Category/space CRUD actions |
-| Capability matrix, hash-chained audit, cohort visibility, CPD certificates | Cohort notices (`notifications.audience_filter`), MFA enforcement, lockout |
-| `tests/e2e/**` (public + optional credentialled smoke), CI workflow | Per-request CSP nonce (see docs/decisions/0003) |
+| Capability matrix, hash-chained audit, cohort visibility, CPD certificates, cohort-targeted notices | MFA enforcement, account lockout (needs an ICT policy decision) |
+| `tests/e2e/**` (public + optional credentialled smoke), CI workflow | Per-request CSP nonce (see docs/decisions/0007) |
 
 Do not re-implement what is here: extend it. When you add a mutation, follow the shape in §6
 and add its capability to the matrix with a test vector.
@@ -407,8 +410,8 @@ Slash commands (`.claude/commands/`):
 * `/ghs-audit <area>` — security/RBAC/audit sweep; produces a findings report with severities.
 * `/ghs-review` — self code review against §2, §6, §8 and §10.
 
-Plugin manifest: `.claude/plugin/ghs-eln/plugin.json` wires the skills, commands and hooks above
-into a single named plugin (`ghs-eln`) so a fresh agent session gets the whole toolchain at once.
+Plugin manifest: `.claude/plugin/ghs-tl/plugin.json` wires the skills, commands and hooks above
+into a single named plugin (`ghs-tl`) so a fresh agent session gets the whole toolchain at once.
 
 Hooks defined in `.claude/settings.json` (all non‑blocking, `|| true` so they can never brick a
 session): remind on session start, run typecheck + lint on stop, and block commits containing
@@ -487,7 +490,7 @@ curl -s localhost:3000/api/progress    # board, blockers and last gate run
 
 Seeding rule for this repository: the console seeds itself on first data access
 (`ensureSeeded()` in `src/lib/server/queries.ts`), keyed on natural codes so it is
-idempotent. When the GHS‑ELN application itself lands, replace that with a proper
+idempotent. When the GHS-TL application itself lands, replace that with a proper
 `npm run db:seed` script that reads `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` and
 refuses to run when `NODE_ENV=production` unless `ALLOW_PROD_SEED=true`.
 

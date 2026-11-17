@@ -1,5 +1,9 @@
 # GHS-ELN — Repository Analysis
 
+> **Renamed 17 November 2026.** The product is now the **Ghana Health Service Training Library
+> (GHS-TL)**. Everything below was written when it was called GHS-ELN and is kept verbatim as the
+> dated assessment; read "GHS-ELN" as GHS-TL.
+>
 > **Remediation status — 16 November 2026.** The findings below have been worked in priority
 > order across eight commits; this document is kept as the original assessment so the reasoning is
 > auditable. Status per item is recorded in §12.

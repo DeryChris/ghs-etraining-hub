@@ -1,4 +1,4 @@
-# Architecture — GHS‑ELN
+# Architecture — GHS-TL
 
 Companion to `AGENTS.md` (contract) and `docs/PRD.md` (requirements). This file explains *how the
 request lifecycle works* so an agent never has to guess where code belongs.

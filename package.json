@@ -1,8 +1,9 @@
 {
-  "name": "ghs-eln",
+  "name": "ghs-tl",
   "version": "2.0.0",
   "private": true,
-  "description": "Ghana Health Service eLearning Network (GHS-ELN) - Continuous Professional Development & Clinical Learning Portal",
+  "engines": { "node": "22.x" },
+  "description": "Ghana Health Service Training Library (GHS-TL) - catalogue of training programme material, versioned and audited",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -14,6 +14,6 @@ They live here, outside `docs/`, so a reader does not mistake them for documenta
 build. If a future design needs them, copy the relevant ideas into `docs/ui-ux.md` rather than
 linking the HTML.
 
-**Provenance.** Created for this project during the GHS-ELN discovery phase; no third-party
+**Provenance.** Created for this project during the GHS-TL discovery phase; no third-party
 templates or fonts are embedded (system font stack only). The GHS wordmark and flag colours are
 public-service identity marks and should be reproduced per Ghana Health Service brand guidance.

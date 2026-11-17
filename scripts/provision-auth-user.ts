@@ -98,7 +98,7 @@ async function main(): Promise<void> {
   console.log(`  Role (from the directory, not Auth metadata): ${directoryRow.role}`);
   console.log(`  Temporary password: ${password}`);
   console.log("  Share it out-of-band and ask the staff member to change it at first sign-in.");
-  console.log("  This value is not stored anywhere by GHS-ELN.");
+  console.log("  This value is not stored anywhere by the training library.");
 }
 
 main()

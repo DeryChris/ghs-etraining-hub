@@ -1,8 +1,11 @@
-# GHS-ELN — Ghana Health Service eLearning Network
+# GHS-TL — Ghana Health Service Training Library
 
-Continuous professional development (CPD) and clinical learning portal for the Ghana Health
-Service, built on **Next.js 16**, **React 19**, **Tailwind CSS v4**, **Drizzle ORM**, **Supabase**
-(PostgreSQL + Auth + Storage) and **Vercel**.
+The catalogue of record for Ghana Health Service training programmes. Material from a training
+session — slides, protocols, videos, references — is filed under the directorate and module that ran
+it, as a numbered version that a second reviewer has to approve before staff see it. Nothing is
+deleted silently: material is archived, and a hash-chained audit trail records who uploaded,
+reviewed, published, downloaded or withdrew it. Built on **Next.js 16**, **React 19**,
+**Tailwind CSS v4**, **Drizzle ORM**, **Supabase** (PostgreSQL + Auth + Storage) and **Vercel**.
 
 ---
 
@@ -28,18 +31,20 @@ Service, built on **Next.js 16**, **React 19**, **Tailwind CSS v4**, **Drizzle O
 **Shipped:** staff sign-in / password reset; dashboard with mandatory protocols; directorates →
 spaces → material viewer; library search with server-side pagination; progress
 (start · acknowledge · complete) with per-version re-acknowledgement; **CPD certificate issuance
-with random serials** and a public verification page; personal analytics/transcript; staff
-messaging (paginated threads); notifications; marketing site.
+with random serials**, public verification and a printable award for the holder; personal
+analytics/transcript with certificate serials; staff messaging (paginated threads); notifications;
+**authoring pipeline** (draft → signed upload → review → publish → supersede → archive) with the
+two-person publish rule; **cohort-targeted notices**; marketing site and the GHS emblem brand set.
 
 **Enforced, not just documented:** capability matrix (role × action × scope), facilitator scope
 resolved from `category_facilitators`, cohort visibility (`spaces.audience_*`,
 `categories.is_restricted`), hash-chained audit log written in the same transaction as each
 mutation, rate limits on progress/messages/certificate lookups, RLS lock-down of the public API.
 
-**Not built yet:** facilitator/admin surfaces (authoring, upload, submit-for-review, publish,
-broadcast, audit-log viewer), comments/discussion, assessments, message reporting, MFA
-enforcement and lockout. The tables exist; the flows do not. See `REPO_ANALYSIS.md` for the
-prioritised gap list.
+**Not built yet:** category/space administration and the audit-log viewer, comments/discussion,
+assessments and grading, message reporting, MFA enforcement and account lockout, server-rendered
+certificate PDFs. The tables exist; the flows do not. See `REPO_ANALYSIS.md` for the prioritised
+gap list.
 
 ---
 
@@ -54,7 +59,7 @@ scripts/                       # ops scripts (auth provisioning, audit-chain ver
 tests/e2e/**                   # Playwright specs
 .github/workflows/ci.yml       # CI gates
 next.config.ts                 # security headers (CSP, COOP/CORP, Permissions-Policy), image allowlist
-vercel.json                    # build/deploy settings and environment mapping
+vercel.json                    # build/deploy settings (env vars live in the Vercel project)
 drizzle.config.ts              # drizzle-kit (uses DIRECT_URL)
 src/
   app/

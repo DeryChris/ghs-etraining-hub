@@ -1,4 +1,4 @@
-# Data model — GHS‑ELN
+# Data model — GHS-TL
 
 Authoritative schema lives in `src/db/schema.ts`. This document explains intent, invariants and
 indexes so an agent does not have to reverse‑engineer them. Naming/style rules are in
