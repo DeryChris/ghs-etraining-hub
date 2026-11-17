@@ -13,7 +13,10 @@ test.skip(!email || !password, "Set E2E_LEARNER_EMAIL and E2E_LEARNER_PASSWORD t
 test("anonymous visitors are sent to sign-in", async ({ page }) => {
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login\?next=%2Fdashboard/);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("GHS-ELN");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Welcome back");
+  // The brand lives in the document title, which is where the name is rendered on
+  // the sign-in screen (the wordmark itself is an image plus SITE.code).
+  await expect(page).toHaveTitle(/GHS-TL/);
 });
 
 test("learner can sign in and reach every primary page", async ({ page }) => {
