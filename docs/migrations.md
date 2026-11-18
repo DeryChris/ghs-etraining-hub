@@ -44,3 +44,19 @@ review the SQL → `npm run db:migrate` in each environment.
   back-fill in the same migration and are called out in the PR description.
 * `supabase/migrations/` runs last, so a new table needs its RLS lock-down statement added
   there in the same change.
+
+## Applied migrations carry a hash
+
+`drizzle.__drizzle_migrations` stores a SHA-256 of each migration file. If a file is edited
+after it has been applied anywhere — including a fix applied during rollout — that hash no
+longer matches and `drizzle-kit migrate` will try to run the file again.
+
+`0005_programme_areas_replace_spaces.sql` is in exactly that state. Its first version expanded
+`category_facilitators` with a straight `SELECT`, which collided on `area_facilitators_unique_idx`
+wherever two directorate grants mapped into the same area (live data did; the PGlite fixture did
+not). The fix — `SELECT DISTINCT a.id, cf.user_id` — went in and the migration was applied as
+`programme_areas_replace_spaces_v2`, so the live hash is the pre-fix one.
+
+Until the database is recreated from scratch, treat `0005` as already applied: never re-run it,
+and if a future environment is built by `drizzle-kit migrate` from zero, that run is the one that
+produces a matching hash. Do not "fix" the recorded hash by hand.

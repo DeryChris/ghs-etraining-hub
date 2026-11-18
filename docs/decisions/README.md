@@ -161,6 +161,18 @@ directory invariants (no self‑demotion, last administrator protected) enforced
 
 ---
 
+## ADR‑0014 — One taxonomy: programme fields and areas replace directorates and spaces
+
+**Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0014-programme-areas-replace-directorates.md`](./0014-programme-areas-replace-directorates.md)
+
+**Decision.** `categories`, `spaces` and `category_facilitators` are dropped; programme fields and
+their areas are the only taxonomy. Materials, enrolments and facilitator assignments move to the
+area (`materials.programme_area_id`, `area_facilitators`), cohort targeting moves to
+`programme_areas.audience_*`, the browse surface becomes `/catalogue`, and the Sessions tab is
+retired because a session is a training. Migration `0005` maps every existing space to the area that
+teaches the same subject, keeps a JSON snapshot in `legacy_taxonomy_backup`, and refuses to run if
+anything would be left unfiled.
+
 ## ADR‑0013 — The Trainings register, and two surfaces for reference data
 
 **Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0013-trainings-register-and-reference-data.md`](./0013-trainings-register-and-reference-data.md)

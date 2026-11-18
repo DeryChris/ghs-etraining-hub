@@ -16,38 +16,37 @@ row.** Any change here is a `ROLE_CHANGE` audit event and requires an ADR.
 | `user.assign_role` | ✅ | ❌ | ❌ |
 | `user.reset_password` | ✅ (any) | ✅ (own assigned learners, temporary only) | ❌ (self reset via email only) |
 | `user.read_pii` | ✅ (audited) | ✅ (assigned roster only) | ❌ (self only) |
-| `category.create` / `category.update` / `category.archive` | ✅ | ❌ | ❌ |
-| `category.assign_facilitator` | ✅ | ❌ | ❌ |
-| `space.create` | ✅ (any category) | ✅ (assigned category) | ❌ |
-| `space.update` | ✅ | ✅ (assigned category) | ❌ |
-| `material.create` | ✅ | ✅ (assigned category) | ❌ |
-| `material.upload_version` | ✅ | ✅ (assigned category) | ❌ |
+| `area.update` | ✅ | ❌ | ❌ |
+| `area.assign_facilitator` | ✅ | ❌ | ❌ |
+| `material.create` | ✅ | ✅ (assigned area) | ❌ |
+| `material.upload_version` | ✅ | ✅ (assigned area) | ❌ |
 | `material.submit_review` | ✅ | ✅ (authored draft) | ❌ |
-| `material.review` | ✅ | ✅ (assigned category, **reviewer ≠ uploader**, ADR‑0008) | ❌ |
-| `material.publish` | ✅ | ✅ (assigned category, **reviewer ≠ author**) | ❌ |
-| `material.archive` | ✅ | ✅ (assigned category) | ❌ |
-| `material.read_draft` | ✅ | ✅ (assigned category) | ❌ |
+| `material.review` | ✅ | ✅ (assigned area, **reviewer ≠ uploader**, ADR‑0008) | ❌ |
+| `material.publish` | ✅ | ✅ (assigned area, **reviewer ≠ author**) | ❌ |
+| `material.archive` | ✅ | ✅ (assigned area) | ❌ |
+| `material.read_draft` | ✅ | ✅ (assigned area) | ❌ |
 | `material.read_published` | ✅ | ✅ | ✅ (audience match) |
 | `material.download` | ✅ | ✅ | ✅ (audience match) |
-| `assessment.configure` | ✅ | ✅ (assigned category) | ❌ |
+| `assessment.configure` | ✅ | ✅ (assigned area) | ❌ |
 | `assessment.take` | ✅ (audited, no answer-key access) | ✅ | ✅ (enrolled + attempts left) |
 | `assessment.override_score` | ✅ (reason + audit) | ❌ | ❌ |
-| `enrollment.self` | ✅ | ✅ | ✅ (open spaces) |
-| `enrollment.assign` | ✅ | ✅ (assigned category) | ❌ |
+| `enrollment.self` | ✅ | ✅ | ✅ (open areas) |
+| `enrollment.assign` | ✅ | ✅ (assigned area) | ❌ |
 | `comment.create` / `comment.edit_own` | ✅ | ✅ | ✅ |
-| `comment.moderate` | ✅ (any) | ✅ (assigned spaces) | ❌ |
-| `message.send` | ✅ | ✅ (assigned learners, admins, peers in category) | ✅ (peers, facilitators, admins) |
+| `comment.moderate` | ✅ (any) | ✅ (assigned areas) | ❌ |
+| `message.send` | ✅ | ✅ (assigned learners, admins, peers in area) | ✅ (peers, facilitators, admins) |
 | `message.read_any_thread` | ✅ (only with DPO‑approved investigation, audited) | ❌ | ❌ |
-| `session.create` | ✅ | ✅ (assigned category) | ❌ |
 | `training.manage` | ✅ | ✅ (any training — field work, not catalogue governance) | ❌ |
+| `area.update` | ✅ | ❌ | ❌ |
+| `area.assign_facilitator` | ✅ | ❌ | ❌ |
 | `taxonomy.manage` | ✅ | ❌ | ❌ |
 | `geography.manage` | ✅ | ❌ | ❌ |
-| `notification.broadcast` | ✅ | ✅ (space announcement, assigned space) | ❌ |
+| `notification.broadcast` | ✅ | ✅ (area announcement, assigned area) | ❌ |
 | `notification.view` | ✅ | ✅ | ✅ (own) |
 | `analytics.view_personal` | ✅ | ✅ | ✅ (own) |
-| `analytics.view_cohort` | ✅ (national) | ✅ (assigned categories/regions) | ❌ |
+| `analytics.view_cohort` | ✅ (national) | ✅ (assigned areas/regions) | ❌ |
 | `analytics.export` | ✅ (audited) | ✅ (assigned scope, audited) | ❌ |
-| `audit_log.read` | ✅ (all, reading is audited) | ✅ (own space events only) | ❌ |
+| `audit_log.read` | ✅ (all, reading is audited) | ✅ (own area events only) | ❌ |
 | `maintenance_banner.manage` | ✅ | ❌ | view only |
 | `certificate.verify` | public (no session, rate-limited per connection) | public | public |
 | `certificate.revoke` | ✅ (audited) | ❌ | ❌ |
@@ -55,22 +54,22 @@ row.** Any change here is a `ROLE_CHANGE` audit event and requires an ADR.
 ## 2. Scope resolution
 
 `scopeFor(action, target)` must be resolved **from the database**, never from the request payload.
-`checkCapability(action, scope)` → `src/lib/server/rbac.ts` enforces the category-scoped half of
-this rule for facilitators by querying `category_facilitators`; the caller's `scope.categoryId` is
+`checkCapability(action, scope)` → `src/lib/server/rbac.ts` enforces the area-scoped half of
+this rule for facilitators by querying `area_facilitators`; the caller's `scope.areaId` is
 only a hint, never proof of assignment.
 
-* Facilitator scope = `categoryIds` from `category_facilitators` (+ `region` if regional).
-* `training.manage` is global for staff: the Trainings register is the GHS training calendar, not a
-  directorate's filing cabinet, so a facilitator may plan a training without being assigned to the
-  category that would have been recorded on a session. Recording a *session* stays category‑scoped
-  (`session.create`), which is what ADR‑0012 intended and what the matrix now says.
+* Facilitator scope = `areaIds` from `area_facilitators` (+ `region` if regional).
+* `training.manage` is global for staff: the Trainings register is the GHS training calendar, not an
+  area's filing cabinet, so a facilitator may plan a training without being assigned to the area it
+  is filed under. Reading and authoring material in an area stays area‑scoped, through
+  `area_facilitators` (ADR‑0014).
 * `taxonomy.manage` and `geography.manage` are administrator‑only: they change the words and places
   every other form offers.
-* Space scope inherits its category; material inherits its space.
+* Material scope is its programme area; a facilitator may only act on an area they are assigned to.
 * Audience match for learners = `audienceRegion IS NULL OR audienceRegion = user.region` (and the
   same for directorate/cadre). This is enforced in SQL by `audienceFor()` in
   `src/lib/server/learning-queries.ts`, not in the UI: staff are exempt, a viewer with no cohort
-  attribute matches untargeted content only, and `categories.isRestricted` hides the directorate
+  attribute matches untargeted content only, and `programme_fields.isRestricted` hides the programme
   from learners entirely.
 * A facilitator who is also the author of a version **cannot** approve/publish that version alone —
   the reviewer must differ from the author (clinical two‑person rule).

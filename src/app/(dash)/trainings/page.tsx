@@ -133,7 +133,7 @@ export default async function TrainingsPage({
               New training
             </Link>
           ) : (
-            <Link href="/directorates" className={buttonClass({ variant: "secondary" })}>
+            <Link href="/catalogue" className={buttonClass({ variant: "secondary" })}>
               Browse the catalogue
             </Link>
           )

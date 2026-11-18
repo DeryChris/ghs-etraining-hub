@@ -4,11 +4,11 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { materialVersions, materials, reviewAssignments, spaces } from "@/db/schema";
+import { materialVersions, materials, reviewAssignments, programmeAreas } from "@/db/schema";
 import { checkUpload, canTransition, materialStorageKey, nextVersionNumber, publishBlockers } from "@/lib/material-workflow";
 import type { MaterialState, ReviewDecision } from "@/lib/material-workflow";
 import type { Action, Role, Scope } from "@/lib/rbac/capabilities";
-import { categoryIdForMaterial, categoryIdForSpace } from "@/lib/server/authoring-queries";
+import { areaIdForMaterial } from "@/lib/server/authoring-queries";
 import { logAudit } from "@/lib/server/audit";
 import { createMaterialUploadTarget, inspectMaterialObject, removeMaterialObject } from "@/lib/server/file-storage";
 import { log } from "@/lib/server/logger";
@@ -51,11 +51,11 @@ type Guarded =
   | { ok: false; message: string }
   | { ok: true; session: NonNullable<Awaited<ReturnType<typeof getSession>>> };
 
-/** Session + category scope for a material, before the material row is trusted. */
+/** Session + area scope for a material, before the material row is trusted. */
 async function guardForMaterial(action: Action, materialId: string): Promise<Guarded> {
-  const categoryId = await categoryIdForMaterial(materialId);
-  if (!categoryId) return { ok: false, message: "That material no longer exists." };
-  const scope: Scope = { categoryId };
+  const areaId = await areaIdForMaterial(materialId);
+  if (!areaId) return { ok: false, message: "That material no longer exists." };
+  const scope: Scope = { areaId };
   return checkCapability(action, scope);
 }
 
@@ -65,15 +65,15 @@ type LoadedVersion =
       ok: true;
       material: typeof materials.$inferSelect;
       version: typeof materialVersions.$inferSelect;
-      spaceSlug: string;
+      areaCode: string;
     };
 
 async function loadVersion(materialId: string, versionId: string): Promise<LoadedVersion> {
   const [row] = await db
-    .select({ material: materials, version: materialVersions, spaceSlug: spaces.slug })
+    .select({ material: materials, version: materialVersions, areaCode: programmeAreas.code })
     .from(materialVersions)
     .innerJoin(materials, eq(materials.id, materialVersions.materialId))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
     .where(and(eq(materialVersions.id, versionId), eq(materialVersions.materialId, materialId)))
     .limit(1);
   if (!row) return { ok: false, message: "That version no longer exists." };
@@ -89,7 +89,7 @@ export async function createDraftAction(
   formData: FormData,
 ): Promise<AuthoringActionState> {
   const parsed = draftInput.safeParse({
-    spaceId: field(formData, "spaceId"),
+    programmeAreaId: field(formData, "programmeAreaId"),
     title: field(formData, "title"),
     summary: field(formData, "summary"),
     type: field(formData, "type"),
@@ -99,10 +99,7 @@ export async function createDraftAction(
     return { ok: false, message: parsed.error.issues[0]?.message ?? GENERIC_FAILURE };
   }
 
-  const categoryId = await categoryIdForSpace(parsed.data.spaceId);
-  if (!categoryId) return { ok: false, message: "That space no longer exists." };
-
-  const guard = await checkCapability("material.create", { categoryId });
+  const guard = await checkCapability("material.create", { areaId: parsed.data.programmeAreaId });
   if (!guard.ok) return { ok: false, message: guard.message };
   const { session } = guard;
 
@@ -111,7 +108,7 @@ export async function createDraftAction(
       const [row] = await tx
         .insert(materials)
         .values({
-          spaceId: parsed.data.spaceId,
+          programmeAreaId: parsed.data.programmeAreaId,
           title: parsed.data.title,
           summary: parsed.data.summary ?? null,
           type: parsed.data.type,
@@ -128,7 +125,7 @@ export async function createDraftAction(
           action: "MATERIAL_DRAFT_CREATED",
           entity: "material",
           entityId: row.id,
-          metadata: { title: parsed.data.title, spaceId: parsed.data.spaceId },
+          metadata: { title: parsed.data.title, programmeAreaId: parsed.data.programmeAreaId },
         },
         tx,
       );
@@ -495,7 +492,7 @@ export async function publishVersionAction(
   });
 
   revalidateAuthoring(parsed.data.materialId);
-  revalidatePath(`/spaces/${loaded.spaceSlug}`);
+  revalidatePath(`/programmeAreas/${loaded.areaCode}`);
   return { ok: true, message: "Published. Learners in the audience can see it now." };
 }
 

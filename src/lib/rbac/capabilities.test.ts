@@ -18,7 +18,7 @@ describe("capability matrix", () => {
   it("keeps administrative actions to SYSTEM_ADMIN", () => {
     expect(can("SYSTEM_ADMIN", "user.create")).toBe(true);
     expect(can("FACILITATOR", "user.create")).toBe(false);
-    expect(can("LEARNER", "category.create")).toBe(false);
+    expect(can("LEARNER", "area.update")).toBe(false);
     expect(can("LEARNER", "audit_log.read")).toBe(false);
   });
 
@@ -26,7 +26,7 @@ describe("capability matrix", () => {
     expect(can("FACILITATOR", "material.create")).toBe(true);
     expect(can("FACILITATOR", "material.review")).toBe(true);
     expect(can("LEARNER", "material.review")).toBe(false);
-    expect(can("FACILITATOR", "category.assign_facilitator")).toBe(false);
+    expect(can("FACILITATOR", "area.assign_facilitator")).toBe(false);
   });
 
   it("reserves reading other people's threads for SYSTEM_ADMIN", () => {
@@ -68,13 +68,13 @@ describe("capability matrix", () => {
 
 describe("scope resolution", () => {
   it("blocks a facilitator from publishing their own version", () => {
-    expect(scopeAllows("FACILITATOR", "material.publish", { categoryId: "c1", reviewerIsAuthor: true })).toBe(false);
-    expect(scopeAllows("FACILITATOR", "material.review", { categoryId: "c1", reviewerIsAuthor: true })).toBe(false);
+    expect(scopeAllows("FACILITATOR", "material.publish", { areaId: "a1", reviewerIsAuthor: true })).toBe(false);
+    expect(scopeAllows("FACILITATOR", "material.review", { areaId: "a1", reviewerIsAuthor: true })).toBe(false);
   });
 
   it("requires a category for facilitator governance actions", () => {
-    expect(scopeAllows("FACILITATOR", "space.create", {})).toBe(false);
-    expect(scopeAllows("FACILITATOR", "space.create", { categoryId: "c1" })).toBe(true);
+    expect(scopeAllows("FACILITATOR", "material.create", {})).toBe(false);
+    expect(scopeAllows("FACILITATOR", "material.create", { areaId: "a1" })).toBe(true);
   });
 
   it("allows facilitators global self-service actions without a category", () => {

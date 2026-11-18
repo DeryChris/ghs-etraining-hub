@@ -2,94 +2,104 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { categories, certificates, materialProgress, materialVersions, materials, spaces, users } from "@/db/schema";
+import { programmeFields, certificates, materialProgress, materialVersions, materials, programmeAreas, users } from "@/db/schema";
 import { PRIORITY_RANK, type MaterialType, type PriorityLevel, type ProgressStatus } from "@/lib/labels";
 import { log } from "@/lib/server/logger";
-import { audienceFor, categoryFor, liveCategory, liveSpace, publishedMaterial } from "@/lib/server/visibility";
+import { audienceFor, fieldFor, liveField, liveArea, publishedMaterial } from "@/lib/server/visibility";
 import type { Viewer } from "@/lib/viewer";
 
 function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`);
 }
 
-/* ── Directorates & spaces ─────────────────────────────────────────────── */
+/* ── Fields & areas ────────────────────────────────────────────────────── */
 
-export interface CategoryCard {
+export interface FieldCard {
   id: string;
   code: string;
   name: string;
   description: string | null;
-  spaceCount: number;
+  areaCount: number;
   materialCount: number;
 }
 
-export async function listCategories(viewer: Viewer | null): Promise<CategoryCard[]> {
-  const spaceTotal = db
+export async function listFields(viewer: Viewer | null): Promise<FieldCard[]> {
+  const areaTotal = db
     .select({ n: count() })
-    .from(spaces)
-    .where(and(eq(spaces.categoryId, categories.id), liveSpace, audienceFor(viewer)));
+    .from(programmeAreas)
+    .where(and(eq(programmeAreas.fieldId, programmeFields.id), liveArea, audienceFor(viewer)));
 
   const materialTotal = db
     .select({ n: count() })
     .from(materials)
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .where(and(eq(spaces.categoryId, categories.id), liveSpace, publishedMaterial, audienceFor(viewer)));
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .where(and(eq(programmeAreas.fieldId, programmeFields.id), liveArea, publishedMaterial, audienceFor(viewer)));
 
   return db
     .select({
-      id: categories.id,
-      code: categories.code,
-      name: categories.name,
-      description: categories.description,
-      spaceCount: sql<number>`coalesce((${spaceTotal}), 0)::int`,
+      id: programmeFields.id,
+      code: programmeFields.code,
+      name: programmeFields.name,
+      description: programmeFields.description,
+      areaCount: sql<number>`coalesce((${areaTotal}), 0)::int`,
       materialCount: sql<number>`coalesce((${materialTotal}), 0)::int`,
     })
-    .from(categories)
-    .where(and(liveCategory, categoryFor(viewer)))
-    .orderBy(asc(categories.name));
+    .from(programmeFields)
+    .where(and(liveField, fieldFor(viewer)))
+    .orderBy(asc(programmeFields.name));
 }
 
 /**
- * The public directorate list, cached for five minutes. Signed-in pages use the
- * uncached listCategories() so a facilitator's publish is visible immediately.
+ * The public field list, cached for five minutes. Signed-in pages use the
+ * uncached listFields() so a facilitator's publish is visible immediately.
  */
-export const listPublicCategories = unstable_cache(
-  async (): Promise<CategoryCard[]> => {
+export const listPublicFields = unstable_cache(
+  async (): Promise<FieldCard[]> => {
     try {
-      return await listCategories(null);
+      return await listFields(null);
     } catch (error) {
       // The public programme list must not take the whole marketing page down.
-      log.error({ event: "public_categories.unavailable", error });
+      log.error({ event: "public_fields.unavailable", error });
       return [];
     }
   },
-  ["public-categories"],
+  ["public-fields"],
   { revalidate: 300, tags: ["taxonomy"] },
 );
 
-export async function getCategory(id: string, viewer: Viewer | null) {
+export async function getField(id: string, viewer: Viewer | null) {
   const [row] = await db
     .select()
-    .from(categories)
-    .where(and(eq(categories.id, id), liveCategory, categoryFor(viewer)))
+    .from(programmeFields)
+    .where(and(eq(programmeFields.id, id), liveField, fieldFor(viewer)))
     .limit(1);
   return row ?? null;
 }
 
-export interface SpaceCard {
+/** A field by its stable code (`PF-PH`), which is what the catalogue URLs use. */
+export async function getFieldByCode(code: string, viewer: Viewer | null) {
+  const [row] = await db
+    .select()
+    .from(programmeFields)
+    .where(and(eq(programmeFields.code, code.toUpperCase()), liveField, fieldFor(viewer)))
+    .limit(1);
+  return row ?? null;
+}
+
+export interface AreaCard {
   id: string;
-  slug: string;
-  title: string;
+  code: string;
+  name: string;
   description: string | null;
   materialCount: number;
   completedCount: number;
 }
 
-export async function listSpacesInCategory(categoryId: string, viewer: Viewer): Promise<SpaceCard[]> {
+export async function listAreasInField(fieldId: string, viewer: Viewer): Promise<AreaCard[]> {
   const materialTotal = db
     .select({ n: count() })
     .from(materials)
-    .where(and(eq(materials.spaceId, spaces.id), publishedMaterial));
+    .where(and(eq(materials.programmeAreaId, programmeAreas.id), publishedMaterial));
 
   const completedTotal = db
     .select({ n: count() })
@@ -97,7 +107,7 @@ export async function listSpacesInCategory(categoryId: string, viewer: Viewer): 
     .innerJoin(materials, eq(materials.id, materialProgress.materialId))
     .where(
       and(
-        eq(materials.spaceId, spaces.id),
+        eq(materials.programmeAreaId, programmeAreas.id),
         eq(materialProgress.userId, viewer.id),
         eq(materialProgress.status, "COMPLETED"),
         publishedMaterial,
@@ -106,38 +116,38 @@ export async function listSpacesInCategory(categoryId: string, viewer: Viewer): 
 
   return db
     .select({
-      id: spaces.id,
-      slug: spaces.slug,
-      title: spaces.title,
-      description: spaces.description,
+      id: programmeAreas.id,
+      code: programmeAreas.code,
+      name: programmeAreas.name,
+      description: programmeAreas.description,
       materialCount: sql<number>`coalesce((${materialTotal}), 0)::int`,
       completedCount: sql<number>`coalesce((${completedTotal}), 0)::int`,
     })
-    .from(spaces)
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .from(programmeAreas)
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(
       and(
-        eq(spaces.categoryId, categoryId),
-        liveSpace,
-        liveCategory,
-        categoryFor(viewer),
+        eq(programmeAreas.fieldId, fieldId),
+        liveArea,
+        liveField,
+        fieldFor(viewer),
         audienceFor(viewer),
       ),
     )
-    .orderBy(asc(spaces.title));
+    .orderBy(asc(programmeAreas.name));
 }
 
-export async function getSpaceBySlug(slug: string, viewer: Viewer | null) {
+export async function getAreaByCode(code: string, viewer: Viewer | null) {
   const [row] = await db
-    .select({ space: spaces, category: categories })
-    .from(spaces)
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .select({ area: programmeAreas, field: programmeFields })
+    .from(programmeAreas)
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(
       and(
-        eq(spaces.slug, slug),
-        liveSpace,
-        liveCategory,
-        categoryFor(viewer),
+        eq(programmeAreas.code, code.toUpperCase()),
+        liveArea,
+        liveField,
+        fieldFor(viewer),
         audienceFor(viewer),
       ),
     )
@@ -162,7 +172,7 @@ export interface MaterialListItem {
   acknowledgedAt: Date | null;
 }
 
-export async function listMaterialsInSpace(spaceId: string, viewer: Viewer): Promise<MaterialListItem[]> {
+export async function listMaterialsInArea(programmeAreaId: string, viewer: Viewer): Promise<MaterialListItem[]> {
   return db
     .select({
       id: materials.id,
@@ -180,16 +190,16 @@ export async function listMaterialsInSpace(spaceId: string, viewer: Viewer): Pro
     })
     .from(materials)
     .innerJoin(users, eq(users.id, materials.authorId))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, viewer.id)))
     .where(
       and(
-        eq(materials.spaceId, spaceId),
+        eq(materials.programmeAreaId, programmeAreaId),
         publishedMaterial,
-        liveSpace,
-        liveCategory,
-        categoryFor(viewer),
+        liveArea,
+        liveField,
+        fieldFor(viewer),
         audienceFor(viewer),
       ),
     )
@@ -197,9 +207,9 @@ export async function listMaterialsInSpace(spaceId: string, viewer: Viewer): Pro
 }
 
 export interface LibraryItem extends MaterialListItem {
-  spaceSlug: string;
-  spaceTitle: string;
-  categoryName: string;
+  areaCode: string;
+  areaName: string;
+  fieldName: string;
 }
 
 export const LIBRARY_PAGE_SIZE = 24;
@@ -217,9 +227,9 @@ function libraryFilters(input: { query: string; type: MaterialType | null; viewe
   const pattern = `%${escapeLike(term)}%`;
   return and(
     publishedMaterial,
-    liveSpace,
-    liveCategory,
-    categoryFor(input.viewer),
+    liveArea,
+    liveField,
+    fieldFor(input.viewer),
     audienceFor(input.viewer),
     input.type ? eq(materials.type, input.type) : undefined,
     term ? or(ilike(materials.title, pattern), ilike(materials.summary, pattern)) : undefined,
@@ -242,8 +252,8 @@ export async function searchLibrary(input: {
   const [countRow] = await db
     .select({ n: count() })
     .from(materials)
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(where);
 
   const total = countRow?.n ?? 0;
@@ -264,14 +274,14 @@ export async function searchLibrary(input: {
       status: sql<ProgressStatus>`coalesce(${materialProgress.status}, 'NOT_STARTED')`,
       watchedPercent: sql<number>`coalesce(${materialProgress.watchedPercent}, 0)`,
       acknowledgedAt: materialProgress.acknowledgedAt,
-      spaceSlug: spaces.slug,
-      spaceTitle: spaces.title,
-      categoryName: categories.name,
+      areaCode: programmeAreas.code,
+      areaName: programmeAreas.name,
+      fieldName: programmeFields.name,
     })
     .from(materials)
     .innerJoin(users, eq(users.id, materials.authorId))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, input.viewer.id)))
     .where(where)
     .orderBy(asc(materials.title))
@@ -285,15 +295,15 @@ export async function getMaterialDetail(materialId: string, viewer: Viewer) {
   const [row] = await db
     .select({
       material: materials,
-      space: spaces,
-      category: categories,
+      area: programmeAreas,
+      field: programmeFields,
       authorName: users.fullName,
       version: materialVersions,
       progress: materialProgress,
     })
     .from(materials)
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .innerJoin(users, eq(users.id, materials.authorId))
     .leftJoin(materialVersions, eq(materialVersions.id, materials.currentVersionId))
     .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, viewer.id)))
@@ -301,9 +311,9 @@ export async function getMaterialDetail(materialId: string, viewer: Viewer) {
       and(
         eq(materials.id, materialId),
         publishedMaterial,
-        liveSpace,
-        liveCategory,
-        categoryFor(viewer),
+        liveArea,
+        liveField,
+        fieldFor(viewer),
         audienceFor(viewer),
       ),
     )
@@ -318,8 +328,8 @@ export interface MandatoryItem {
   title: string;
   priority: PriorityLevel;
   estimatedMinutes: number | null;
-  spaceTitle: string;
-  spaceSlug: string;
+  areaName: string;
+  areaCode: string;
   /** Acknowledged earlier, but a newer version was published since. */
   reacknowledgementRequired: boolean;
 }
@@ -329,8 +339,8 @@ export interface ContinueItem {
   title: string;
   type: MaterialType;
   watchedPercent: number;
-  spaceTitle: string;
-  spaceSlug: string;
+  areaName: string;
+  areaCode: string;
 }
 
 export interface LearnerDashboard {
@@ -360,21 +370,21 @@ export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashbo
         priority: materials.priority,
         estimatedMinutes: materials.estimatedMinutes,
         currentVersionId: materials.currentVersionId,
-        spaceTitle: spaces.title,
-        spaceSlug: spaces.slug,
+        areaName: programmeAreas.name,
+        areaCode: programmeAreas.code,
         acknowledgedAt: materialProgress.acknowledgedAt,
         acknowledgedVersionId: materialProgress.materialVersionId,
       })
       .from(materials)
-      .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-      .innerJoin(categories, eq(categories.id, spaces.categoryId))
+      .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+      .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
       .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, viewer.id)))
       .where(
         and(
           publishedMaterial,
-          liveSpace,
-          liveCategory,
-          categoryFor(viewer),
+          liveArea,
+          liveField,
+          fieldFor(viewer),
           audienceFor(viewer),
           eq(materials.requiresAcknowledgement, true),
         ),
@@ -385,21 +395,21 @@ export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashbo
         title: materials.title,
         type: materials.type,
         watchedPercent: materialProgress.watchedPercent,
-        spaceTitle: spaces.title,
-        spaceSlug: spaces.slug,
+        areaName: programmeAreas.name,
+        areaCode: programmeAreas.code,
       })
       .from(materialProgress)
       .innerJoin(materials, eq(materials.id, materialProgress.materialId))
-      .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-      .innerJoin(categories, eq(categories.id, spaces.categoryId))
+      .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+      .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
       .where(
         and(
           eq(materialProgress.userId, viewer.id),
           eq(materialProgress.status, "IN_PROGRESS"),
           publishedMaterial,
-          liveSpace,
-          liveCategory,
-          categoryFor(viewer),
+          liveArea,
+          liveField,
+          fieldFor(viewer),
           audienceFor(viewer),
         ),
       )
@@ -415,8 +425,8 @@ export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashbo
       title: row.title,
       priority: row.priority,
       estimatedMinutes: row.estimatedMinutes,
-      spaceTitle: row.spaceTitle,
-      spaceSlug: row.spaceSlug,
+      areaName: row.areaName,
+      areaCode: row.areaCode,
       reacknowledgementRequired: row.acknowledgedAt !== null,
     }))
     .sort((a, b) => PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority] || a.title.localeCompare(b.title));
@@ -439,7 +449,7 @@ export interface CompletionRecord {
   type: MaterialType;
   creditsX10: number;
   completedAt: Date | null;
-  spaceTitle: string;
+  areaName: string;
   /** Null when the material earned no CPD points, so nothing was issued. */
   certificateCode: string | null;
 }
@@ -456,13 +466,13 @@ export async function listCompletions(userId: string, limit = 500): Promise<Comp
       type: materials.type,
       creditsX10: materials.cpdCreditsX10,
       completedAt: materialProgress.completedAt,
-      spaceTitle: spaces.title,
+      areaName: programmeAreas.name,
       // The certificate for the version that was actually completed, if one was issued.
       certificateCode: certificates.code,
     })
     .from(materialProgress)
     .innerJoin(materials, eq(materials.id, materialProgress.materialId))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
     .leftJoin(
       certificates,
       and(
@@ -484,8 +494,8 @@ export interface CertificateAward {
   holderName: string;
   staffId: string;
   title: string;
-  spaceTitle: string;
-  categoryName: string;
+  areaName: string;
+  fieldName: string;
   creditsX10: number;
   issuedAt: Date;
   expiresAt: Date | null;
@@ -507,8 +517,8 @@ export async function getCertificateAward(code: string): Promise<CertificateAwar
       holderName: users.fullName,
       staffId: users.ghsStaffId,
       title: materials.title,
-      spaceTitle: spaces.title,
-      categoryName: categories.name,
+      areaName: programmeAreas.name,
+      fieldName: programmeFields.name,
       creditsX10: certificates.cpdCreditsX10,
       issuedAt: certificates.issuedAt,
       expiresAt: certificates.expiresAt,
@@ -516,8 +526,8 @@ export async function getCertificateAward(code: string): Promise<CertificateAwar
     .from(certificates)
     .innerJoin(users, eq(users.id, certificates.userId))
     .innerJoin(materials, eq(materials.id, certificates.materialId))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(eq(certificates.code, code))
     .limit(1);
 

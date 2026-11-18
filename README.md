@@ -28,13 +28,13 @@ reviewed, published, downloaded or withdrew it. Built on **Next.js 16**, **React
 
 ## What is implemented today
 
-**Shipped:** staff sign-in / password reset; dashboard with mandatory protocols; directorates →
-spaces → material viewer; library search with server-side pagination; progress
+**Shipped:** staff sign-in / password reset; dashboard with mandatory protocols; a **catalogue** of
+programme fields → areas → material viewer; library search with server-side pagination; progress
 (start · acknowledge · complete) with per-version re-acknowledgement; a personal record of what you
 opened, downloaded and finished; a **Trainings register** (the Learn section's "Trainings" tab) with a
 filter bar, plan form — title, year, programme field and area, target group, region → district →
 sub-district → facility, start/end dates, duration, venue — and an audited archive; **training
-sessions** recorded under a programme at region → district → sub-district → facility; **traffic insights** (opens, downloads, upload rate, trainings
+**trainings** recorded at region → district → sub-district → facility; **traffic insights** (opens, downloads, upload rate, trainings
 per programme) drawn as server-rendered SVG charts; staff messaging (paginated threads); notifications;
 **authoring pipeline** (draft → signed upload → review → publish → supersede → archive) with the
 two-person publish rule; **cohort-targeted notices**; marketing site and the GHS emblem brand set.
@@ -77,8 +77,8 @@ src/
   app/
     (marketing)/               # public: home, programmes, about, verify, legal, contact
     (auth)/                    # login, forgot-password, reset-password
-    (dash)/                    # protected shell: dashboard, trainings, directorates, library,
-                               # geography, programme-fields, sessions, messages, analytics
+    (dash)/                    # protected shell: dashboard, trainings, catalogue, library,
+                               # catalogue, geography, programme-fields, messages, analytics
     api/health/                # liveness/readiness probe
     api/materials/[id]/file/   # audit-logged signed-URL redirect for controlled documents
     auth/callback/             # PKCE code exchange for reset links
@@ -139,13 +139,13 @@ procedure in `docs/migrations.md` before `db:migrate` will work.
 
 ### Updating an existing database
 
-A database created before the sessions and traffic release is missing migration `0003`. The
+A database created before the registrations and traffic release is missing migration `0003`. The
 symptom is a page failing with `relation "material_views" does not exist` (or
 `training_sessions`, `districts`). Fix it, then reload:
 
 ```bash
 npm run db:migrate   # applies drizzle/0003; needs DIRECT_URL
-npm run db:seed      # idempotent; loads the Upper West geography used by the sessions form
+npm run db:seed      # idempotent; loads the taxonomy, regions and Upper West geography the training form uses
 ```
 
 If the connection itself fails — `getaddrinfo ENOTFOUND`, `ECONNREFUSED`, or `read ECONNRESET` — run the

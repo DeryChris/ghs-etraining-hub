@@ -13,7 +13,7 @@ export const storageKeyPattern = /^materials\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.[a-z
 
 export const draftInput = z
   .object({
-    spaceId: uuid,
+    programmeAreaId: uuid,
     title: z.string().trim().min(3, "Give the material a title of at least 3 characters.").max(160),
     summary: z.string().trim().max(600).optional(),
     type: z.enum(MATERIAL_TYPES),

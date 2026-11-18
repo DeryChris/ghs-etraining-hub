@@ -7,7 +7,7 @@
  *
  * Why a script and not a UI: onboarding is an ICT operation, not something a
  * facilitator should be able to do from the app. Authority (role, category
- * assignment) lives in public.users and category_facilitators — never in Auth
+ * assignment) lives in public.users and area_facilitators — never in Auth
  * user metadata, which the account holder can edit themselves.
  *
  * Requires NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and DATABASE_URL.

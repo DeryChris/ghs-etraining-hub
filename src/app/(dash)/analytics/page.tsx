@@ -89,7 +89,7 @@ export default async function ActivityPage() {
                       </Link>
                       <p className="mt-0.5 text-xs text-ink-muted">{MATERIAL_TYPE_LABELS[completion.type]}</p>
                     </td>
-                    <td className="px-4 py-3 text-ink-muted">{completion.spaceTitle}</td>
+                    <td className="px-4 py-3 text-ink-muted">{completion.areaName}</td>
                     <td className="px-4 py-3 text-ink-muted">{formatDate(completion.completedAt)}</td>
                   </tr>
                 ))}

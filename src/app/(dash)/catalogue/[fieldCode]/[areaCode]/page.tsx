@@ -5,19 +5,21 @@ import { ListEmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { MATERIAL_TYPES, MATERIAL_TYPE_LABELS } from "@/lib/labels";
-import { getSpaceBySlug, listMaterialsInSpace } from "@/lib/server/learning-queries";
+import { fieldHref } from "@/lib/links";
+import { getAreaByCode, listMaterialsInArea } from "@/lib/server/learning-queries";
 import { requireSession } from "@/lib/server/rbac";
 
-export default async function SpacePage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function AreaPage({ params }: { params: Promise<{ fieldCode: string; areaCode: string }> }) {
   const session = await requireSession();
-  const { slug } = await params;
-  if (!/^[a-z0-9-]{1,100}$/.test(slug)) notFound();
+  const { areaCode } = await params;
+  const code = decodeURIComponent(areaCode);
+  if (!/^[A-Za-z0-9-]{1,24}$/.test(code)) notFound();
 
-  const found = await getSpaceBySlug(slug, session);
+  const found = await getAreaByCode(code, session);
   if (!found) notFound();
-  const { space, category } = found;
+  const { area, field } = found;
 
-  const materials = await listMaterialsInSpace(space.id, session);
+  const materials = await listMaterialsInArea(area.id, session);
   const completed = materials.filter((m) => m.status === "COMPLETED").length;
   const percent = materials.length > 0 ? (completed / materials.length) * 100 : 0;
   const groups = MATERIAL_TYPES.map((type) => ({ type, items: materials.filter((m) => m.type === type) })).filter(
@@ -29,35 +31,35 @@ export default async function SpacePage({ params }: { params: Promise<{ slug: st
       <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
-            <Link href="/directorates" className="hover:text-ink">
-              Directorates
+            <Link href="/catalogue" className="hover:text-ink">
+              Catalogue
             </Link>
           </li>
           <li aria-hidden>/</li>
           <li>
-            <Link href={`/directorates/${category.id}`} className="hover:text-ink">
-              {category.name}
+            <Link href={fieldHref(field.code)} className="hover:text-ink">
+              {field.name}
             </Link>
           </li>
           <li aria-hidden>/</li>
           <li aria-current="page" className="text-ink">
-            {space.title}
+            {area.name}
           </li>
         </ol>
       </nav>
 
-      <PageHeader eyebrow={category.code} title={space.title} description={space.description ?? undefined} />
+      <PageHeader eyebrow={`${field.name} · ${area.code}`} title={area.name} description={area.description ?? undefined} />
 
-      <section aria-label="Space progress" className="rounded-card border border-hairline bg-surface p-5 shadow-panel">
+      <section aria-label="Area progress" className="rounded-card border border-hairline bg-surface p-5 shadow-panel">
         <p className="mb-3 text-sm font-semibold text-ink">
           {completed} of {materials.length} {materials.length === 1 ? "material" : "materials"} completed
         </p>
-        <ProgressBar value={percent} label={`Completion in ${space.title}`} />
+        <ProgressBar value={percent} label={`Completion in ${area.name}`} />
       </section>
 
       {materials.length === 0 ? (
         <ListEmptyState
-          title="No published materials in this space yet"
+          title="No published materials in this area yet"
           description="Facilitators publish SOPs, videos and labs here once they have been reviewed."
         />
       ) : (

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { broadcastNoticeAction, type NoticeActionState } from "@/lib/server/actions/notices";
-import type { AuthoringSpace } from "@/lib/server/authoring-queries";
+import type { AuthoringArea } from "@/lib/server/authoring-queries";
 
 const INITIAL: NoticeActionState = { ok: false, message: null };
 
@@ -22,9 +22,9 @@ const PRIORITIES = [
   { value: "CRITICAL", label: "Critical" },
 ];
 
-export function BroadcastForm({ spaces, canAddressEveryone }: { spaces: AuthoringSpace[]; canAddressEveryone: boolean }) {
+export function BroadcastForm({ areas, canAddressEveryone }: { areas: AuthoringArea[]; canAddressEveryone: boolean }) {
   const [state, formAction] = useActionState(broadcastNoticeAction, INITIAL);
-  const [scope, setScope] = useState<"SPACE" | "ALL">(spaces.length ? "SPACE" : "ALL");
+  const [scope, setScope] = useState<"AREA" | "ALL">(areas.length ? "AREA" : "ALL");
 
   return (
     <form action={formAction} className="space-y-4">
@@ -35,12 +35,12 @@ export function BroadcastForm({ spaces, canAddressEveryone }: { spaces: Authorin
             <input
               type="radio"
               name="scope"
-              value="SPACE"
-              checked={scope === "SPACE"}
-              onChange={() => setScope("SPACE")}
-              disabled={spaces.length === 0}
+              value="AREA"
+              checked={scope === "AREA"}
+              onChange={() => setScope("AREA")}
+              disabled={areas.length === 0}
             />
-            One space&apos;s cohort
+            One programme area&apos;s cohort
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -57,22 +57,22 @@ export function BroadcastForm({ spaces, canAddressEveryone }: { spaces: Authorin
         {!canAddressEveryone && <p className={hintClass}>Only a system administrator can address everyone.</p>}
       </fieldset>
 
-      {scope === "SPACE" && (
+      {scope === "AREA" && (
         <div>
-          <label htmlFor="notice-space" className={labelClass}>
-            Space
+          <label htmlFor="notice-area" className={labelClass}>
+            Programme area
           </label>
-          <select id="notice-space" name="spaceId" required className={inputClass} defaultValue="">
+          <select id="notice-area" name="areaId" required className={inputClass} defaultValue="">
             <option value="" disabled>
-              Choose a space
+              Choose a programme area
             </option>
-            {spaces.map((space) => (
-              <option key={space.id} value={space.id}>
-                {space.categoryName} · {space.title}
+            {areas.map((area) => (
+              <option key={area.id} value={area.id}>
+                {area.fieldName} · {area.name}
               </option>
             ))}
           </select>
-          <p className={hintClass}>The notice inherits that space&apos;s region, directorate and cadre audience.</p>
+          <p className={hintClass}>The notice inherits that area&apos;s region, directorate and cadre audience.</p>
         </div>
       )}
 

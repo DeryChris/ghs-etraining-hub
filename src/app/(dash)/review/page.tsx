@@ -19,7 +19,7 @@ export default async function ReviewQueuePage() {
       <PageHeader
         eyebrow="Quality assurance"
         title="Review queue"
-        description="Versions waiting for a colleague's decision, limited to the directorates you are assigned to. You cannot decide on a version you uploaded."
+        description="Versions waiting for a colleague's decision, limited to the programme areas you are assigned to. You cannot decide on a version you uploaded."
       />
 
       <div className="flex flex-wrap gap-3">
@@ -45,7 +45,7 @@ export default async function ReviewQueuePage() {
                     {item.materialTitle} <span className="font-normal text-ink-muted">v{item.version}</span>
                   </h2>
                   <span className="text-xs text-ink-muted">
-                    {item.categoryName} · uploaded by {item.uploadedByName} on {formatDateTime(item.uploadedAt)}
+                    {item.fieldName} · uploaded by {item.uploadedByName} on {formatDateTime(item.uploadedAt)}
                   </span>
                 </div>
 

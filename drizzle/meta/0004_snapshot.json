@@ -409,162 +409,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.categories": {
-      "name": "categories",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "code": {
-          "name": "code",
-          "type": "varchar(20)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_restricted": {
-          "name": "is_restricted",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_archived": {
-          "name": "is_archived",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "categories_code_unique": {
-          "name": "categories_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.category_facilitators": {
-      "name": "category_facilitators",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "category_id": {
-          "name": "category_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope": {
-          "name": "scope",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'ALL_SPACES'"
-        },
-        "assigned_at": {
-          "name": "assigned_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "category_facilitators_category_id_categories_id_fk": {
-          "name": "category_facilitators_category_id_categories_id_fk",
-          "tableFrom": "category_facilitators",
-          "tableTo": "categories",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "category_facilitators_user_id_users_id_fk": {
-          "name": "category_facilitators_user_id_users_id_fk",
-          "tableFrom": "category_facilitators",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "category_facilitators_category_id_user_id_unique": {
-          "name": "category_facilitators_category_id_user_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "category_id",
-            "user_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.certificates": {
       "name": "certificates",
       "schema": "",
@@ -1113,12 +957,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "space_id": {
-          "name": "space_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
         "source": {
           "name": "source",
           "type": "enrollment_source",
@@ -1183,19 +1021,6 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "enrollments_space_id_spaces_id_fk": {
-          "name": "enrollments_space_id_spaces_id_fk",
-          "tableFrom": "enrollments",
-          "tableTo": "spaces",
-          "columnsFrom": [
-            "space_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
         "enrollments_assigned_by_id_users_id_fk": {
           "name": "enrollments_assigned_by_id_users_id_fk",
           "tableFrom": "enrollments",
@@ -1211,16 +1036,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "enrollments_user_id_space_id_unique": {
-          "name": "enrollments_user_id_space_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "space_id"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1852,12 +1668,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "space_id": {
-          "name": "space_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
         "author_id": {
           "name": "author_id",
           "type": "uuid",
@@ -1945,19 +1755,6 @@
         }
       },
       "foreignKeys": {
-        "materials_space_id_spaces_id_fk": {
-          "name": "materials_space_id_spaces_id_fk",
-          "tableFrom": "materials",
-          "tableTo": "spaces",
-          "columnsFrom": [
-            "space_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
         "materials_author_id_users_id_fk": {
           "name": "materials_author_id_users_id_fk",
           "tableFrom": "materials",
@@ -1973,16 +1770,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "materials_space_title_key": {
-          "name": "materials_space_title_key",
-          "nullsNotDistinct": false,
-          "columns": [
-            "space_id",
-            "title"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -2847,146 +2635,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.spaces": {
-      "name": "spaces",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "slug": {
-          "name": "slug",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "category_id": {
-          "name": "category_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_by_id": {
-          "name": "created_by_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "audience_region": {
-          "name": "audience_region",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "audience_directorate": {
-          "name": "audience_directorate",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "audience_cadre": {
-          "name": "audience_cadre",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_archived": {
-          "name": "is_archived",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "spaces_category_id_idx": {
-          "name": "spaces_category_id_idx",
-          "columns": [
-            {
-              "expression": "category_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "spaces_category_id_categories_id_fk": {
-          "name": "spaces_category_id_categories_id_fk",
-          "tableFrom": "spaces",
-          "tableTo": "categories",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "spaces_created_by_id_users_id_fk": {
-          "name": "spaces_created_by_id_users_id_fk",
-          "tableFrom": "spaces",
-          "tableTo": "users",
-          "columnsFrom": [
-            "created_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "spaces_slug_unique": {
-          "name": "spaces_slug_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.sub_districts": {
       "name": "sub_districts",
       "schema": "",
@@ -3087,18 +2735,6 @@
         },
         "programme_area_id": {
           "name": "programme_area_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "category_id": {
-          "name": "category_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "space_id": {
-          "name": "space_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -3311,32 +2947,6 @@
           "tableTo": "programme_areas",
           "columnsFrom": [
             "programme_area_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "training_sessions_category_id_categories_id_fk": {
-          "name": "training_sessions_category_id_categories_id_fk",
-          "tableFrom": "training_sessions",
-          "tableTo": "categories",
-          "columnsFrom": [
-            "category_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "training_sessions_space_id_spaces_id_fk": {
-          "name": "training_sessions_space_id_spaces_id_fk",
-          "tableFrom": "training_sessions",
-          "tableTo": "spaces",
-          "columnsFrom": [
-            "space_id"
           ],
           "columnsTo": [
             "id"

@@ -26,7 +26,7 @@ import { SectionHeading } from "@/components/marketing/section-heading";
 import { buttonClass } from "@/components/ui/button";
 import { GHS_REGIONS } from "@/lib/ghs-constants";
 import { SITE } from "@/lib/site";
-import { listPublicCategories } from "@/lib/server/learning-queries";
+import { listPublicFields } from "@/lib/server/learning-queries";
 import { getPublicStatsCached } from "@/lib/server/public-queries";
 
 export const metadata: Metadata = {
@@ -142,8 +142,8 @@ const FAQ = [
 ];
 
 export default async function LandingPage() {
-  const [stats, directorates] = await Promise.all([getPublicStatsCached(), listPublicCategories()]);
-  const previewDirectorates = directorates.slice(0, 6);
+  const [stats, fields] = await Promise.all([getPublicStatsCached(), listPublicFields()]);
+  const previewFields = fields.slice(0, 6);
 
   return (
     <>
@@ -197,13 +197,13 @@ export default async function LandingPage() {
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Programmes</dt>
                   <dd className="mt-1 text-3xl font-extrabold text-ink">
-                    <CountUp value={stats.directorates} />
+                    <CountUp value={stats.fields} />
                   </dd>
                 </div>
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Modules</dt>
                   <dd className="mt-1 text-3xl font-extrabold text-ink">
-                    <CountUp value={stats.spaces} />
+                    <CountUp value={stats.areas} />
                   </dd>
                 </div>
                 <div>
@@ -264,13 +264,13 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Directorate strip (live taxonomy) ────────────────────────────── */}
-      {previewDirectorates.length > 0 && (
-        <section aria-label="Directorates on the platform" className="border-y border-hairline bg-surface/60">
+      {/* ── Programme field strip (live taxonomy) ────────────────────────── */}
+      {previewFields.length > 0 && (
+        <section aria-label="Programme fields on the platform" className="border-y border-hairline bg-surface/60">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-3 px-5 py-6 sm:px-8 lg:px-10">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">Programmes include</p>
             <ul className="flex flex-wrap gap-2">
-              {previewDirectorates.map((item) => (
+              {previewFields.map((item) => (
                 <li key={item.id} className="rounded-[var(--radius-pill)] border border-hairline bg-canvas px-3 py-1 text-xs font-semibold text-ink">
                   {item.name}
                 </li>
@@ -364,12 +364,12 @@ export default async function LandingPage() {
         </Reveal>
       </section>
 
-      {/* ── Directorates ─────────────────────────────────────────────────── */}
+      {/* ── Programme fields ─────────────────────────────────────────────── */}
       <section aria-labelledby="programmes-title" className="bg-surface/60 py-24 lg:py-32">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <Reveal>
-              <SectionHeading eyebrow="Programmes" title={<span id="programmes-title">Filed by the directorates that run the training.</span> as unknown as string} />
+              <SectionHeading eyebrow="Programmes" title={<span id="programmes-title">Filed by the programme fields that run the training.</span> as unknown as string} />
             </Reveal>
             <Reveal delay={0.1}>
               <Link href="/programmes" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline underline-offset-4">
@@ -379,14 +379,14 @@ export default async function LandingPage() {
             </Reveal>
           </div>
 
-          {previewDirectorates.length === 0 ? (
+          {previewFields.length === 0 ? (
             <div className="mt-14 flex flex-col items-center gap-4 rounded-card border border-dashed border-hairline bg-canvas p-12 text-center">
               <EmptyArt variant="folder" className="h-28 w-auto text-ink-muted" />
-              <p className="text-sm text-ink-muted">Programmes will appear here as directorates publish them.</p>
+              <p className="text-sm text-ink-muted">Programmes will appear here as the programme taxonomy is published.</p>
             </div>
           ) : (
             <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {previewDirectorates.map((item, index) => (
+              {previewFields.map((item, index) => (
                 <Reveal key={item.id} delay={(index % 3) * 0.06}>
                   <li className="list-none">
                     <Link
@@ -397,7 +397,7 @@ export default async function LandingPage() {
                       <h3 className="text-lg font-bold leading-snug text-ink">{item.name}</h3>
                       {item.description && <p className="line-clamp-2 text-sm leading-relaxed text-ink-muted">{item.description}</p>}
                       <span className="mt-auto inline-flex items-center gap-1.5 pt-2 text-sm font-semibold text-primary">
-                        {item.spaceCount} {item.spaceCount === 1 ? "space" : "spaces"}
+                        {item.areaCount} {item.areaCount === 1 ? "space" : "programmeAreas"}
                         <ArrowRight className="h-4 w-4 transition-transform duration-base group-hover:translate-x-1" aria-hidden />
                       </span>
                     </Link>

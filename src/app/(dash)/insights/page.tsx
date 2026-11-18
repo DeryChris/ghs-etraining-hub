@@ -13,14 +13,15 @@ import { MATERIAL_TYPE_LABELS, type MaterialType } from "@/lib/labels";
 import {
   getInsights,
   getProgrammeTraffic,
-  getSessionSeries,
+  getTrainingCounts,
+  getTrainingSeries,
   getTrafficSeries,
   getUploadSeries,
 } from "@/lib/server/insights-queries";
-import { getSessionSummary } from "@/lib/server/session-queries";
+
 import { requireRole } from "@/lib/server/rbac";
 import { db } from "@/db/index";
-import { categories, materials, spaces } from "@/db/schema";
+import { programmeFields, materials, programmeAreas } from "@/db/schema";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { scopeFor } from "@/lib/server/scope";
 
@@ -34,8 +35,8 @@ async function publishedByType(viewer: { id: string; role: "SYSTEM_ADMIN" | "FAC
   const rows = await db
     .select({ type: materials.type, n: sql<number>`count(*)::int` })
     .from(materials)
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(and(scopeFor(viewer), eq(materials.isPublished, true), eq(materials.state, "PUBLISHED"), isNotNull(materials.currentVersionId)))
     .groupBy(materials.type);
   const byType = new Map(rows.map((row) => [row.type, row.n]));
@@ -46,13 +47,13 @@ export default async function InsightsPage() {
   const session = await requireRole(["SYSTEM_ADMIN", "FACILITATOR"]);
   const admin = session.role === "SYSTEM_ADMIN";
 
-  const [insights, traffic, uploads, sessions, programmeTraffic, sessionSummary, typeMix] = await Promise.all([
+  const [insights, traffic, uploads, sessions, programmeTraffic, trainingCounts, typeMix] = await Promise.all([
     getInsights(session),
     getTrafficSeries(session, 12),
     getUploadSeries(session, 12),
-    getSessionSeries(session, 12),
+    getTrainingSeries(session, 12),
     getProgrammeTraffic(session, 30),
-    getSessionSummary(session),
+    getTrainingCounts(session),
     publishedByType(session),
   ]);
 
@@ -73,8 +74,8 @@ export default async function InsightsPage() {
         }
         actions={
           <>
-            <Link href="/sessions" className={buttonClass({ variant: "secondary" })}>
-              Record a session
+            <Link href="/trainings" className={buttonClass({ variant: "secondary" })}>
+              Open the register
             </Link>
             <Link href="/review" className={buttonClass({ variant: "ghost" })}>
               Review queue {insights.catalogue.inReview > 0 ? `(${insights.catalogue.inReview})` : ""}
@@ -89,7 +90,7 @@ export default async function InsightsPage() {
       >
         <Stat value={traffic.totals.views} label="Material opens · last 12 weeks" />
         <Stat value={traffic.totals.downloads} label="Downloads · last 12 weeks" />
-        <Stat value={sessionSummary.last90Days} label="Trainings run · last 90 days" />
+        <Stat value={trainingCounts.last90Days} label="Trainings run · last 90 days" />
         <Stat value={insights.catalogue.published} label="Published materials" />
       </section>
 
@@ -143,20 +144,20 @@ export default async function InsightsPage() {
 
         <ChartCard
           title="Trainings organised"
-          description="Sessions recorded per month. This is the count of trainings that actually ran, not material that exists."
+          description="Trainings recorded per month. This is the count of trainings that actually ran, not material that exists."
           table={{
-            head: ["Month", "Sessions"],
+            head: ["Month", "Trainings"],
             rows: sessions.buckets.map((bucket, index) => [bucket.label, sessions.counts[index] ?? 0]),
           }}
         >
           {hasSessions ? (
             <BarChart
               labels={sessions.buckets.map((bucket) => bucket.label)}
-              series={[{ label: "Sessions", color: "var(--chart-2)", values: sessions.counts }]}
+              series={[{ label: "Trainings", color: "var(--chart-2)", values: sessions.counts }]}
               height={230}
             />
           ) : (
-            <EmptyChart message="No sessions recorded yet. Staff can add them from Sessions, one per training that ran." />
+            <EmptyChart message="No trainings recorded yet. Staff add them from Trainings, one per training that ran." />
           )}
         </ChartCard>
       </div>
@@ -210,17 +211,17 @@ export default async function InsightsPage() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <ChartCard
-          title="Sessions by programme"
+          title="Trainings by programme field"
           description="Which programmes are actually running trainings in the last 12 months."
           table={{
-            head: ["Programme", "Sessions"],
+            head: ["Programme field", "Trainings"],
             rows: sessions.byProgramme.map((row) => [row.label, row.value]),
           }}
         >
           {sessions.byProgramme.length > 0 ? (
-            <RankBars items={sessions.byProgramme.map((row, index) => ({ label: row.label, value: row.value, color: chartColor(index + 2) }))} unit="sessions" />
+            <RankBars items={sessions.byProgramme.map((row, index) => ({ label: row.label, value: row.value, color: chartColor(index + 2) }))} unit="trainings" />
           ) : (
-            <EmptyChart message="No sessions recorded in the last 12 months." />
+            <EmptyChart message="No trainings recorded in the last 12 months." />
           )}
         </ChartCard>
 
@@ -239,7 +240,7 @@ export default async function InsightsPage() {
             </div>
             <div className="flex items-center justify-between gap-3">
               <dt className="text-ink-muted">Spaces / modules</dt>
-              <dd className="tabular-nums font-semibold text-ink">{insights.catalogue.spaces}</dd>
+              <dd className="tabular-nums font-semibold text-ink">{insights.catalogue.programmeAreas}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
               <dt className="text-ink-muted">Awaiting review</dt>
@@ -250,12 +251,12 @@ export default async function InsightsPage() {
               <dd className="tabular-nums font-semibold text-ink">{insights.catalogue.draft}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Sessions on record</dt>
-              <dd className="tabular-nums font-semibold text-ink">{sessionSummary.total}</dd>
+              <dt className="text-ink-muted">Trainings on record</dt>
+              <dd className="tabular-nums font-semibold text-ink">{trainingCounts.total}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">People reached in sessions</dt>
-              <dd className="tabular-nums font-semibold text-ink">{sessionSummary.attendees}</dd>
+              <dt className="text-ink-muted">People reached in trainings</dt>
+              <dd className="tabular-nums font-semibold text-ink">{trainingCounts.attendees}</dd>
             </div>
             {insights.people && (
               <div className="flex items-center justify-between gap-3">

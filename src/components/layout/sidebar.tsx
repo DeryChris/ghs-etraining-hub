@@ -5,7 +5,7 @@ import {
   BarChart3,
   Bell,
   BookOpen,
-  CalendarDays,
+  FolderTree,
   ClipboardCheck,
   ClipboardList,
   GraduationCap,
@@ -42,12 +42,12 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   cpd: BarChart3,
   insights: TrendingUp,
   materials: PenLine,
-  sessions: CalendarDays,
+  catalogue: Layers,
   review: ClipboardCheck,
   notice: Megaphone,
   users: Users,
   geography: MapPinned,
-  taxonomy: Layers,
+  taxonomy: FolderTree,
   settings: Settings,
 };
 

@@ -9,7 +9,7 @@ import { safeAppLink } from "@/lib/links";
 import { MATERIAL_TYPE_LABELS, ROLE_LABELS, notificationTypeLabel } from "@/lib/labels";
 import { firstNameOf } from "@/lib/names";
 import { getInsights, getTrafficSeries } from "@/lib/server/insights-queries";
-import { getSessionSummary } from "@/lib/server/session-queries";
+import { getTrainingCounts } from "@/lib/server/insights-queries";
 import { getLearnerDashboard } from "@/lib/server/learning-queries";
 import { listNotifications } from "@/lib/server/notification-queries";
 import { requireSession } from "@/lib/server/rbac";
@@ -67,7 +67,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     listNotifications(session, 4),
     staff ? getInsights(session) : Promise.resolve(null),
     staff ? getTrafficSeries(session, 4) : Promise.resolve(null),
-    staff ? getSessionSummary(session) : Promise.resolve(null),
+    staff ? getTrainingCounts(session) : Promise.resolve(null),
   ]);
 
 
@@ -207,7 +207,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                         </div>
                         <p className="font-semibold text-ink group-hover:text-primary">{item.title}</p>
                         <p className="text-xs text-ink-muted">
-                          {item.spaceTitle}
+                          {item.areaName}
                           {item.estimatedMinutes !== null ? ` · ${formatMinutes(item.estimatedMinutes)}` : ""}
                         </p>
                       </div>
@@ -240,7 +240,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   <li key={item.id}>
                     <Link href={`/materials/${item.id}`} className="block p-5 transition-colors duration-fast hover:bg-surface-2">
                       <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                        {MATERIAL_TYPE_LABELS[item.type]} · {item.spaceTitle}
+                        {MATERIAL_TYPE_LABELS[item.type]} · {item.areaName}
                       </p>
                       <p className="mt-1 font-semibold text-ink">{item.title}</p>
                       <div className="mt-3">

@@ -23,7 +23,7 @@ describe("navFor", () => {
   it("gives a facilitator authoring, review and notices but no administration", () => {
     const facilitator = hrefs("FACILITATOR");
     expect(facilitator).toEqual(
-      expect.arrayContaining(["/authoring", "/review", "/notices", "/sessions"]),
+      expect.arrayContaining(["/authoring", "/review", "/notices"]),
     );
     expect(facilitator).not.toContain("/users");
     expect(facilitator).not.toContain("/settings");
@@ -35,6 +35,7 @@ describe("navFor", () => {
     expect(hrefs("LEARNER")).toEqual([
       "/dashboard",
       "/trainings",
+      "/catalogue",
       "/library",
       "/assessments",
       "/messages",
@@ -49,13 +50,16 @@ describe("navFor", () => {
     expect(admin.map((section) => section.id)).toEqual(["learn", "community", "record", "author", "administration"]);
     for (const section of admin) expect(section.items.length).toBeGreaterThan(0);
     // Order within a section follows the declaration, not the role filter.
-    expect(admin[3]?.items.map((item) => item.href)).toEqual(["/sessions", "/review"]);
+    expect(admin[3]?.items.map((item) => item.href)).toEqual(["/review"]);
   });
 
-  it("renamed Programmes to Trainings for every role, and kept the catalogue out of the menu", () => {
+  it("renamed Programmes to Trainings for every role, with the catalogue beside it", () => {
     for (const role of ROLES) {
       expect(hrefs(role)).toContain("/trainings");
+      expect(hrefs(role)).toContain("/catalogue");
+      // Directorates and spaces are gone: there is one taxonomy (ADR-0014).
       expect(hrefs(role)).not.toContain("/directorates");
+      expect(hrefs(role)).not.toContain("/sessions");
     }
     const trainings = navFor("FACILITATOR")
       .flatMap((section) => section.items)

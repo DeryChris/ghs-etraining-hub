@@ -8,12 +8,8 @@ export type Action =
   | "user.assign_role"
   | "user.reset_password"
   | "user.read_pii"
-  | "category.create"
-  | "category.update"
-  | "category.archive"
-  | "category.assign_facilitator"
-  | "space.create"
-  | "space.update"
+  | "area.update"
+  | "area.assign_facilitator"
   | "material.create"
   | "material.upload_version"
   | "material.submit_review"
@@ -35,7 +31,6 @@ export type Action =
   | "message.read_any_thread"
   | "notification.broadcast"
   | "notification.view"
-  | "session.create"
   | "training.manage"
   | "taxonomy.manage"
   | "geography.manage"
@@ -48,7 +43,7 @@ export type Action =
   | "certificate.revoke";
 
 export type Scope = {
-  categoryId?: string;
+  areaId?: string;
   region?: string;
   directorate?: string;
   cadre?: string;
@@ -67,12 +62,8 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "user.assign_role": true,
     "user.reset_password": true,
     "user.read_pii": true,
-    "category.create": true,
-    "category.update": true,
-    "category.archive": true,
-    "category.assign_facilitator": true,
-    "space.create": true,
-    "space.update": true,
+    "area.update": true,
+    "area.assign_facilitator": true,
     "material.create": true,
     "material.upload_version": true,
     "material.submit_review": true,
@@ -82,7 +73,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.read_draft": true,
     "material.read_published": true,
     "material.download": true,
-    "session.create": true,
     "training.manage": true,
     "taxonomy.manage": true,
     "geography.manage": true,
@@ -114,12 +104,8 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "user.assign_role": false,
     "user.reset_password": false,
     "user.read_pii": false,
-    "category.create": false,
-    "category.update": false,
-    "category.archive": false,
-    "category.assign_facilitator": false,
-    "space.create": true,
-    "space.update": true,
+    "area.update": false,
+    "area.assign_facilitator": false,
     "material.create": true,
     "material.upload_version": true,
     "material.submit_review": true,
@@ -129,7 +115,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.read_draft": true,
     "material.read_published": true,
     "material.download": true,
-    "session.create": true,
     "training.manage": true,
     "taxonomy.manage": false,
     "geography.manage": false,
@@ -161,12 +146,8 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "user.assign_role": false,
     "user.reset_password": false,
     "user.read_pii": false,
-    "category.create": false,
-    "category.update": false,
-    "category.archive": false,
-    "category.assign_facilitator": false,
-    "space.create": false,
-    "space.update": false,
+    "area.update": false,
+    "area.assign_facilitator": false,
     "material.create": false,
     "material.upload_version": false,
     "material.submit_review": false,
@@ -176,7 +157,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.read_draft": false,
     "material.read_published": true,
     "material.download": true,
-    "session.create": false,
     "training.manage": false,
     "taxonomy.manage": false,
     "geography.manage": false,
@@ -211,8 +191,8 @@ export const PUBLIC_ACTIONS: ReadonlySet<Action> = new Set<Action>(["certificate
 
 /**
  * Self-service and messaging actions a facilitator may perform outside their
- * assigned categories. Everything else they do is category-scoped, and
- * src/lib/server/rbac.ts verifies the assignment against category_facilitators.
+ * assigned programme areas. Everything else they do is area-scoped, and
+ * src/lib/server/rbac.ts verifies the assignment against area_facilitators.
  */
 export const FACILITATOR_GLOBAL_ACTIONS: readonly Action[] = [
   "training.manage",
@@ -266,9 +246,9 @@ export function scopeAllows(
     if ((action === "material.publish" || action === "material.review") && scope.reviewerIsAuthor === true) {
       return false;
     }
-    // Self-service and messaging actions are global; everything else is category-bound.
+    // Self-service and messaging actions are global; everything else is area-bound.
     if (isGlobalForFacilitators(action)) return true;
-    if (!scope.categoryId) return false;
+    if (!scope.areaId) return false;
     return true;
   }
 

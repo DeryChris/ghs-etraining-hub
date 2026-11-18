@@ -20,6 +20,7 @@ import { currentRequestId } from "@/lib/server/request-context";
 const REQUIRED_TABLES = [
   "programme_fields",
   "programme_areas",
+  "area_facilitators",
   "regions",
   "districts",
   "sub_districts",

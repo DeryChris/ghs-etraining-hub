@@ -8,11 +8,11 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { MATERIAL_TYPE_LABELS, MATERIAL_TYPES } from "@/lib/labels";
 import { MATERIAL_STATES } from "@/lib/material-workflow";
 import { createDraftAction, type AuthoringActionState } from "@/lib/server/actions/authoring";
-import type { AuthoringSpace } from "@/lib/server/authoring-queries";
+import type { AuthoringArea } from "@/lib/server/authoring-queries";
 
 const INITIAL: AuthoringActionState = { ok: false, message: null };
 
-export function NewDraftForm({ spaces }: { spaces: AuthoringSpace[] }) {
+export function NewDraftForm({ programmeAreas }: { programmeAreas: AuthoringArea[] }) {
   const [state, formAction] = useActionState(createDraftAction, INITIAL);
   const router = useRouter();
 
@@ -20,7 +20,7 @@ export function NewDraftForm({ spaces }: { spaces: AuthoringSpace[] }) {
     if (state.ok && state.materialId) router.push(`/authoring/${state.materialId}`);
   }, [state, router]);
 
-  if (spaces.length === 0) {
+  if (programmeAreas.length === 0) {
     return (
       <p className="rounded-control border border-hairline bg-surface-2 px-4 py-3 text-sm text-ink-muted">
         You are not assigned to a directorate yet, so you cannot author material. Ask an administrator to assign you to
@@ -36,13 +36,13 @@ export function NewDraftForm({ spaces }: { spaces: AuthoringSpace[] }) {
           <label htmlFor="draft-space" className={labelClass}>
             Space
           </label>
-          <select id="draft-space" name="spaceId" required className={inputClass} defaultValue="">
+          <select id="draft-space" name="programmeAreaId" required className={inputClass} defaultValue="">
             <option value="" disabled>
-              Choose a space
+              Choose a programme area
             </option>
-            {spaces.map((space) => (
+            {programmeAreas.map((space) => (
               <option key={space.id} value={space.id}>
-                {space.categoryName} · {space.title}
+                {space.fieldName} · {space.name}
               </option>
             ))}
           </select>

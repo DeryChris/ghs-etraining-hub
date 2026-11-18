@@ -47,7 +47,7 @@ export default async function AuthoringMaterialPage({ params }: { params: Promis
       </nav>
 
       <PageHeader
-        eyebrow={`${material.categoryName} · ${material.spaceTitle}`}
+        eyebrow={`${material.fieldName} · ${material.areaName}`}
         title={material.title}
         description={material.summary ?? undefined}
       />
@@ -58,7 +58,7 @@ export default async function AuthoringMaterialPage({ params }: { params: Promis
         <Badge variant="outline">{PRIORITY_LABELS[material.priority]} priority</Badge>
         <span className="text-xs text-ink-muted">Author: {material.authorName}</span>
         {material.state === "PUBLISHED" && (
-          <Link href={`/spaces/${material.spaceSlug}`} className="text-xs font-semibold text-primary hover:underline">
+          <Link href={`/programmeAreas/${material.areaCode}`} className="text-xs font-semibold text-primary hover:underline">
             View in learner library
           </Link>
         )}

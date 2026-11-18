@@ -3,9 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { count, eq } from "drizzle-orm";
 import { db } from "@/db/index";
-import { programmeAreas, programmeFields, trainingSessions } from "@/db/schema";
+import {
+  areaFacilitators,
+  programmeAreas,
+  programmeFields,
+  trainingSessions,
+  users,
+} from "@/db/schema";
 import { field } from "@/lib/schemas/authoring";
-import { codeFrom, programmeAreaInput, programmeFieldInput } from "@/lib/schemas/reference";
+import {
+  codeFrom,
+  programmeAreaInput,
+  programmeFieldInput,
+} from "@/lib/schemas/reference";
 import { logAudit } from "@/lib/server/audit";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
@@ -37,7 +47,9 @@ interface Actor {
   staffId: string;
 }
 
-async function adminGuard(): Promise<{ ok: true; actor: Actor } | { ok: false; message: string }> {
+async function adminGuard(): Promise<
+  { ok: true; actor: Actor } | { ok: false; message: string }
+> {
   const check = await checkCapability("taxonomy.manage");
   return check.ok
     ? {
@@ -52,7 +64,10 @@ async function adminGuard(): Promise<{ ok: true; actor: Actor } | { ok: false; m
     : { ok: false, message: check.message };
 }
 
-async function availableFieldCode(name: string, supplied: string | undefined): Promise<string> {
+async function availableFieldCode(
+  name: string,
+  supplied: string | undefined,
+): Promise<string> {
   const base = supplied ?? `PF-${codeFrom(name)}`;
   for (let attempt = 0; attempt < 25; attempt += 1) {
     const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`;
@@ -66,7 +81,11 @@ async function availableFieldCode(name: string, supplied: string | undefined): P
   return `${base}-${Date.now().toString(36).toUpperCase().slice(-4)}`;
 }
 
-async function availableAreaCode(fieldId: string, name: string, supplied: string | undefined): Promise<string> {
+async function availableAreaCode(
+  fieldId: string,
+  name: string,
+  supplied: string | undefined,
+): Promise<string> {
   const [parent] = await db
     .select({ code: programmeFields.code })
     .from(programmeFields)
@@ -89,7 +108,9 @@ async function availableAreaCode(fieldId: string, name: string, supplied: string
 
 /* ── Fields ─────────────────────────────────────────────────────────────── */
 
-export async function createProgrammeFieldAction(formData: FormData): Promise<void> {
+export async function createProgrammeFieldAction(
+  formData: FormData,
+): Promise<void> {
   const auth = await adminGuard();
   if (!auth.ok) return backTo(PATH, { error: auth.message });
 
@@ -98,7 +119,10 @@ export async function createProgrammeFieldAction(formData: FormData): Promise<vo
     code: field(formData, "code"),
     description: field(formData, "description"),
   });
-  if (!parsed.success) return backTo(PATH, { error: parsed.error.issues[0]?.message ?? "Check the details." });
+  if (!parsed.success)
+    return backTo(PATH, {
+      error: parsed.error.issues[0]?.message ?? "Check the details.",
+    });
 
   const input = parsed.data;
   let failure: string | null = null;
@@ -128,7 +152,10 @@ export async function createProgrammeFieldAction(formData: FormData): Promise<vo
     });
   } catch (error) {
     log.error({ event: "programme_field.create_failed", err: String(error) });
-    failure = failureMessage(error, "The programme field was not created. Try again.");
+    failure = failureMessage(
+      error,
+      "The programme field was not created. Try again.",
+    );
   }
 
   if (failure) return backTo(PATH, { error: failure });
@@ -137,7 +164,9 @@ export async function createProgrammeFieldAction(formData: FormData): Promise<vo
   return backTo(PATH, { notice: `Added “${input.name}”.` });
 }
 
-export async function updateProgrammeFieldAction(formData: FormData): Promise<void> {
+export async function updateProgrammeFieldAction(
+  formData: FormData,
+): Promise<void> {
   const auth = await adminGuard();
   if (!auth.ok) return backTo(PATH, { error: auth.message });
 
@@ -147,15 +176,23 @@ export async function updateProgrammeFieldAction(formData: FormData): Promise<vo
     code: "",
     description: field(formData, "description"),
   });
-  if (!id) return backTo(PATH, { error: "That programme field could not be found." });
-  if (!parsed.success) return backTo(PATH, { error: parsed.error.issues[0]?.message ?? "Check the details." });
+  if (!id)
+    return backTo(PATH, { error: "That programme field could not be found." });
+  if (!parsed.success)
+    return backTo(PATH, {
+      error: parsed.error.issues[0]?.message ?? "Check the details.",
+    });
 
   let failure: string | null = null;
   try {
     await db.transaction(async (tx) => {
       await tx
         .update(programmeFields)
-        .set({ name: parsed.data.name, description: parsed.data.description ?? null, updatedAt: new Date() })
+        .set({
+          name: parsed.data.name,
+          description: parsed.data.description ?? null,
+          updatedAt: new Date(),
+        })
         .where(eq(programmeFields.id, id));
       await logAudit(
         {
@@ -170,7 +207,10 @@ export async function updateProgrammeFieldAction(formData: FormData): Promise<vo
     });
   } catch (error) {
     log.error({ event: "programme_field.update_failed", err: String(error) });
-    failure = failureMessage(error, "The programme field was not saved. Try again.");
+    failure = failureMessage(
+      error,
+      "The programme field was not saved. Try again.",
+    );
   }
 
   if (failure) return backTo(PATH, { error: failure });
@@ -179,13 +219,16 @@ export async function updateProgrammeFieldAction(formData: FormData): Promise<vo
   return backTo(PATH, { notice: `Saved “${parsed.data.name}”.` });
 }
 
-export async function setProgrammeFieldArchivedAction(formData: FormData): Promise<void> {
+export async function setProgrammeFieldArchivedAction(
+  formData: FormData,
+): Promise<void> {
   const auth = await adminGuard();
   if (!auth.ok) return backTo(PATH, { error: auth.message });
 
   const id = field(formData, "id");
   const archived = field(formData, "archived") === "true";
-  if (!id) return backTo(PATH, { error: "That programme field could not be found." });
+  if (!id)
+    return backTo(PATH, { error: "That programme field could not be found." });
 
   let failure: string | null = null;
   try {
@@ -197,7 +240,9 @@ export async function setProgrammeFieldArchivedAction(formData: FormData): Promi
       await logAudit(
         {
           actor: auth.actor,
-          action: archived ? "PROGRAMME_FIELD_ARCHIVED" : "PROGRAMME_FIELD_RESTORED",
+          action: archived
+            ? "PROGRAMME_FIELD_ARCHIVED"
+            : "PROGRAMME_FIELD_RESTORED",
           entity: "programme_field",
           entityId: id,
         },
@@ -206,7 +251,10 @@ export async function setProgrammeFieldArchivedAction(formData: FormData): Promi
     });
   } catch (error) {
     log.error({ event: "programme_field.archive_failed", err: String(error) });
-    failure = failureMessage(error, "The programme field was not changed. Try again.");
+    failure = failureMessage(
+      error,
+      "The programme field was not changed. Try again.",
+    );
   }
 
   if (failure) return backTo(PATH, { error: failure });
@@ -219,12 +267,15 @@ export async function setProgrammeFieldArchivedAction(formData: FormData): Promi
   });
 }
 
-export async function deleteProgrammeFieldAction(formData: FormData): Promise<void> {
+export async function deleteProgrammeFieldAction(
+  formData: FormData,
+): Promise<void> {
   const auth = await adminGuard();
   if (!auth.ok) return backTo(PATH, { error: auth.message });
 
   const id = field(formData, "id");
-  if (!id) return backTo(PATH, { error: "That programme field could not be found." });
+  if (!id)
+    return backTo(PATH, { error: "That programme field could not be found." });
 
   let failure: string | null = null;
   try {
@@ -239,14 +290,22 @@ export async function deleteProgrammeFieldAction(formData: FormData): Promise<vo
       await db.transaction(async (tx) => {
         await tx.delete(programmeFields).where(eq(programmeFields.id, id));
         await logAudit(
-          { actor: auth.actor, action: "PROGRAMME_FIELD_DELETED", entity: "programme_field", entityId: id },
+          {
+            actor: auth.actor,
+            action: "PROGRAMME_FIELD_DELETED",
+            entity: "programme_field",
+            entityId: id,
+          },
           tx,
         );
       });
     }
   } catch (error) {
     log.error({ event: "programme_field.delete_failed", err: String(error) });
-    failure = failureMessage(error, "The programme field was not deleted. Try again.");
+    failure = failureMessage(
+      error,
+      "The programme field was not deleted. Try again.",
+    );
   }
 
   if (failure) return backTo(PATH, { error: failure });
@@ -257,7 +316,9 @@ export async function deleteProgrammeFieldAction(formData: FormData): Promise<vo
 
 /* ── Areas ──────────────────────────────────────────────────────────────── */
 
-export async function createProgrammeAreaAction(formData: FormData): Promise<void> {
+export async function createProgrammeAreaAction(
+  formData: FormData,
+): Promise<void> {
   const auth = await adminGuard();
   if (!auth.ok) return backTo(PATH, { error: auth.message });
 
@@ -267,7 +328,10 @@ export async function createProgrammeAreaAction(formData: FormData): Promise<voi
     code: field(formData, "code"),
     description: field(formData, "description"),
   });
-  if (!parsed.success) return backTo(PATH, { error: parsed.error.issues[0]?.message ?? "Check the details." });
+  if (!parsed.success)
+    return backTo(PATH, {
+      error: parsed.error.issues[0]?.message ?? "Check the details.",
+    });
 
   const input = parsed.data;
   const anchor = `?field=${input.fieldId}`;
@@ -302,7 +366,10 @@ export async function createProgrammeAreaAction(formData: FormData): Promise<voi
     });
   } catch (error) {
     log.error({ event: "programme_area.create_failed", err: String(error) });
-    failure = failureMessage(error, "The programme area was not created. Try again.");
+    failure = failureMessage(
+      error,
+      "The programme area was not created. Try again.",
+    );
   }
 
   if (failure) return backTo(PATH + anchor, { error: failure });
@@ -311,7 +378,9 @@ export async function createProgrammeAreaAction(formData: FormData): Promise<voi
   return backTo(PATH + anchor, { notice: `Added “${input.name}”.` });
 }
 
-export async function updateProgrammeAreaAction(formData: FormData): Promise<void> {
+export async function updateProgrammeAreaAction(
+  formData: FormData,
+): Promise<void> {
   const auth = await adminGuard();
   if (!auth.ok) return backTo(PATH, { error: auth.message });
 
@@ -323,8 +392,12 @@ export async function updateProgrammeAreaAction(formData: FormData): Promise<voi
     code: "",
     description: field(formData, "description"),
   });
-  if (!id) return backTo(PATH, { error: "That programme area could not be found." });
-  if (!parsed.success) return backTo(PATH, { error: parsed.error.issues[0]?.message ?? "Check the details." });
+  if (!id)
+    return backTo(PATH, { error: "That programme area could not be found." });
+  if (!parsed.success)
+    return backTo(PATH, {
+      error: parsed.error.issues[0]?.message ?? "Check the details.",
+    });
 
   const anchor = fieldId ? `?field=${fieldId}` : "";
   let failure: string | null = null;
@@ -332,7 +405,11 @@ export async function updateProgrammeAreaAction(formData: FormData): Promise<voi
     await db.transaction(async (tx) => {
       await tx
         .update(programmeAreas)
-        .set({ name: parsed.data.name, description: parsed.data.description ?? null, updatedAt: new Date() })
+        .set({
+          name: parsed.data.name,
+          description: parsed.data.description ?? null,
+          updatedAt: new Date(),
+        })
         .where(eq(programmeAreas.id, id));
       await logAudit(
         {
@@ -347,7 +424,10 @@ export async function updateProgrammeAreaAction(formData: FormData): Promise<voi
     });
   } catch (error) {
     log.error({ event: "programme_area.update_failed", err: String(error) });
-    failure = failureMessage(error, "The programme area was not saved. Try again.");
+    failure = failureMessage(
+      error,
+      "The programme area was not saved. Try again.",
+    );
   }
 
   if (failure) return backTo(PATH + anchor, { error: failure });
@@ -356,14 +436,17 @@ export async function updateProgrammeAreaAction(formData: FormData): Promise<voi
   return backTo(PATH + anchor, { notice: `Saved “${parsed.data.name}”.` });
 }
 
-export async function setProgrammeAreaArchivedAction(formData: FormData): Promise<void> {
+export async function setProgrammeAreaArchivedAction(
+  formData: FormData,
+): Promise<void> {
   const auth = await adminGuard();
   if (!auth.ok) return backTo(PATH, { error: auth.message });
 
   const id = field(formData, "id");
   const fieldId = field(formData, "fieldId");
   const archived = field(formData, "archived") === "true";
-  if (!id) return backTo(PATH, { error: "That programme area could not be found." });
+  if (!id)
+    return backTo(PATH, { error: "That programme area could not be found." });
 
   const anchor = fieldId ? `?field=${fieldId}` : "";
   let failure: string | null = null;
@@ -376,7 +459,9 @@ export async function setProgrammeAreaArchivedAction(formData: FormData): Promis
       await logAudit(
         {
           actor: auth.actor,
-          action: archived ? "PROGRAMME_AREA_ARCHIVED" : "PROGRAMME_AREA_RESTORED",
+          action: archived
+            ? "PROGRAMME_AREA_ARCHIVED"
+            : "PROGRAMME_AREA_RESTORED",
           entity: "programme_area",
           entityId: id,
         },
@@ -385,24 +470,32 @@ export async function setProgrammeAreaArchivedAction(formData: FormData): Promis
     });
   } catch (error) {
     log.error({ event: "programme_area.archive_failed", err: String(error) });
-    failure = failureMessage(error, "The programme area was not changed. Try again.");
+    failure = failureMessage(
+      error,
+      "The programme area was not changed. Try again.",
+    );
   }
 
   if (failure) return backTo(PATH + anchor, { error: failure });
   revalidatePath(PATH);
   revalidatePath("/trainings");
   return backTo(PATH + anchor, {
-    notice: archived ? "Archived. Existing trainings keep it; new plans no longer offer it." : "Restored.",
+    notice: archived
+      ? "Archived. Existing trainings keep it; new plans no longer offer it."
+      : "Restored.",
   });
 }
 
-export async function deleteProgrammeAreaAction(formData: FormData): Promise<void> {
+export async function deleteProgrammeAreaAction(
+  formData: FormData,
+): Promise<void> {
   const auth = await adminGuard();
   if (!auth.ok) return backTo(PATH, { error: auth.message });
 
   const id = field(formData, "id");
   const fieldId = field(formData, "fieldId");
-  if (!id) return backTo(PATH, { error: "That programme area could not be found." });
+  if (!id)
+    return backTo(PATH, { error: "That programme area could not be found." });
 
   const anchor = fieldId ? `?field=${fieldId}` : "";
   let failure: string | null = null;
@@ -418,18 +511,143 @@ export async function deleteProgrammeAreaAction(formData: FormData): Promise<voi
       await db.transaction(async (tx) => {
         await tx.delete(programmeAreas).where(eq(programmeAreas.id, id));
         await logAudit(
-          { actor: auth.actor, action: "PROGRAMME_AREA_DELETED", entity: "programme_area", entityId: id },
+          {
+            actor: auth.actor,
+            action: "PROGRAMME_AREA_DELETED",
+            entity: "programme_area",
+            entityId: id,
+          },
           tx,
         );
       });
     }
   } catch (error) {
     log.error({ event: "programme_area.delete_failed", err: String(error) });
-    failure = failureMessage(error, "The programme area was not deleted. Try again.");
+    failure = failureMessage(
+      error,
+      "The programme area was not deleted. Try again.",
+    );
   }
 
   if (failure) return backTo(PATH + anchor, { error: failure });
   revalidatePath(PATH);
   revalidatePath("/trainings");
   return backTo(PATH + anchor, { notice: "Programme area deleted." });
+}
+
+/* ── Who may author in an area ──────────────────────────────────────────── */
+
+/**
+ * Assigns a staff member to a programme area. Content authority is per area
+ * (ADR-0014), so this replaces the old per-directorate grant: the facilitator
+ * can then author, review and publish in that area and nowhere else.
+ */
+export async function assignAreaFacilitatorAction(
+  formData: FormData,
+): Promise<void> {
+  const auth = await adminGuard();
+  if (!auth.ok) return backTo(PATH, { error: auth.message });
+
+  const areaId = field(formData, "areaId");
+  const userId = field(formData, "userId");
+  const fieldId = field(formData, "fieldId");
+  if (!areaId || !userId)
+    return backTo(PATH, { error: "Choose a person and a programme area." });
+  const anchor = fieldId ? `?field=${fieldId}` : "";
+
+  let failure: string | null = null;
+  try {
+    const [person] = await db
+      .select({
+        id: users.id,
+        fullName: users.fullName,
+        role: users.role,
+        isActive: users.isActive,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!person) {
+      failure = "That account no longer exists.";
+    } else if (!person.isActive) {
+      failure = `${person.fullName}'s account is inactive. Reactivate it before assigning work.`;
+    } else if (person.role === "LEARNER") {
+      failure =
+        "Learners cannot author material. Change their role to facilitator first.";
+    } else {
+      await db.transaction(async (tx) => {
+        await tx
+          .insert(areaFacilitators)
+          .values({ areaId, userId })
+          .onConflictDoNothing({
+            target: [areaFacilitators.areaId, areaFacilitators.userId],
+          });
+        await logAudit(
+          {
+            actor: auth.actor,
+            action: "AREA_FACILITATOR_ASSIGNED",
+            entity: "programme_area",
+            entityId: areaId,
+            metadata: { userId, fullName: person.fullName },
+          },
+          tx,
+        );
+      });
+    }
+  } catch (error) {
+    log.error({ event: "area.assign_facilitator_failed", err: String(error) });
+    failure = failureMessage(error, "The assignment was not saved. Try again.");
+  }
+
+  if (failure) return backTo(PATH + anchor, { error: failure });
+  revalidatePath(PATH);
+  revalidatePath("/authoring");
+  return backTo(PATH + anchor, {
+    notice: "Assigned. They can author in that area now.",
+  });
+}
+
+export async function unassignAreaFacilitatorAction(
+  formData: FormData,
+): Promise<void> {
+  const auth = await adminGuard();
+  if (!auth.ok) return backTo(PATH, { error: auth.message });
+
+  const id = field(formData, "id");
+  const fieldId = field(formData, "fieldId");
+  if (!id)
+    return backTo(PATH, { error: "That assignment could not be found." });
+  const anchor = fieldId ? `?field=${fieldId}` : "";
+
+  let failure: string | null = null;
+  try {
+    await db.transaction(async (tx) => {
+      await tx.delete(areaFacilitators).where(eq(areaFacilitators.id, id));
+      await logAudit(
+        {
+          actor: auth.actor,
+          action: "AREA_FACILITATOR_REMOVED",
+          entity: "programme_area",
+          entityId: id,
+        },
+        tx,
+      );
+    });
+  } catch (error) {
+    log.error({
+      event: "area.unassign_facilitator_failed",
+      err: String(error),
+    });
+    failure = failureMessage(
+      error,
+      "The assignment was not removed. Try again.",
+    );
+  }
+
+  if (failure) return backTo(PATH + anchor, { error: failure });
+  revalidatePath(PATH);
+  revalidatePath("/authoring");
+  return backTo(PATH + anchor, {
+    notice: "Assignment removed. Their existing material stays published.",
+  });
 }

@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/index";
-import { notifications, spaces } from "@/db/schema";
+import { notifications, programmeAreas, programmeFields } from "@/db/schema";
 import { notificationTypeLabel } from "@/lib/labels";
+import { areaHref } from "@/lib/links";
 import { compactAudience } from "@/lib/notification-audience";
 import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
@@ -26,8 +27,8 @@ export interface NoticeActionState {
 
 const noticeInput = z
   .object({
-    scope: z.enum(["SPACE", "ALL"]),
-    spaceId: z.string().uuid().optional(),
+    scope: z.enum(["AREA", "ALL"]),
+    areaId: z.string().uuid().optional(),
     title: z.string().trim().min(5, "Give the notice a title of at least 5 characters.").max(160),
     body: z.string().trim().min(10, "Write at least a sentence so people know what to do.").max(2000),
     type: z.enum(NOTICE_TYPES),
@@ -37,8 +38,8 @@ const noticeInput = z
   .strict();
 
 /**
- * Publishes an official notice. A space announcement reaches the cohort that can
- * see that space (its `audience_*` columns become the notice's
+ * Publishes an official notice. An area announcement reaches the cohort that can
+ * see that programme area (its `audience_*` columns become the notice's
  * `audience_filter`); only a SYSTEM_ADMIN may address everyone. Both paths are
  * capability-checked and audited — a notice is an instruction to staff, so the
  * record of who sent it matters.
@@ -49,8 +50,8 @@ export async function broadcastNoticeAction(
 ): Promise<NoticeActionState> {
   const expiresRaw = field(formData, "expiresInDays");
   const parsed = noticeInput.safeParse({
-    scope: field(formData, "scope") ?? "SPACE",
-    spaceId: field(formData, "spaceId") || undefined,
+    scope: field(formData, "scope") ?? "AREA",
+    areaId: field(formData, "areaId") || undefined,
     title: field(formData, "title"),
     body: field(formData, "body"),
     type: field(formData, "type") ?? "SPACE_ANNOUNCEMENT",
@@ -59,40 +60,42 @@ export async function broadcastNoticeAction(
   });
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Check the notice and try again." };
 
-  const { scope, spaceId, title, body, type, priority, expiresInDays } = parsed.data;
+  const { scope, areaId, title, body, type, priority, expiresInDays } = parsed.data;
 
-  let categoryId: string | undefined;
+  let areaIdForScope: string | undefined;
   let audienceFilter: ReturnType<typeof compactAudience> = null;
   let linkUrl: string | null = null;
 
-  if (scope === "SPACE") {
-    if (!spaceId) return { ok: false, message: "Choose the space the notice belongs to." };
+  if (scope === "AREA") {
+    if (!areaId) return { ok: false, message: "Choose the programme area the notice belongs to." };
 
-    const [space] = await db
+    const [area] = await db
       .select({
-        id: spaces.id,
-        slug: spaces.slug,
-        title: spaces.title,
-        categoryId: spaces.categoryId,
-        audienceRegion: spaces.audienceRegion,
-        audienceDirectorate: spaces.audienceDirectorate,
-        audienceCadre: spaces.audienceCadre,
+        id: programmeAreas.id,
+        code: programmeAreas.code,
+        name: programmeAreas.name,
+        fieldId: programmeAreas.fieldId,
+        audienceRegion: programmeAreas.audienceRegion,
+        audienceDirectorate: programmeAreas.audienceDirectorate,
+        audienceCadre: programmeAreas.audienceCadre,
+        fieldCode: programmeFields.code,
       })
-      .from(spaces)
-      .where(eq(spaces.id, spaceId))
+      .from(programmeAreas)
+      .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
+      .where(eq(programmeAreas.id, areaId))
       .limit(1);
-    if (!space) return { ok: false, message: "That space no longer exists." };
+    if (!area) return { ok: false, message: "That programme area no longer exists." };
 
-    categoryId = space.categoryId;
+    areaIdForScope = area.id;
     audienceFilter = compactAudience({
-      region: space.audienceRegion,
-      directorate: space.audienceDirectorate,
-      cadre: space.audienceCadre,
+      region: area.audienceRegion,
+      directorate: area.audienceDirectorate,
+      cadre: area.audienceCadre,
     });
-    linkUrl = `/spaces/${space.slug}`;
+    linkUrl = areaHref(area.fieldCode, area.code);
   }
 
-  const guard = await checkCapability("notification.broadcast", { categoryId });
+  const guard = await checkCapability("notification.broadcast", { areaId: areaIdForScope });
   if (!guard.ok) return { ok: false, message: guard.message };
   const { session } = guard;
 
@@ -124,7 +127,7 @@ export async function broadcastNoticeAction(
           action: "NOTIFICATION_BROADCAST",
           entity: "notification",
           entityId: row.id,
-          metadata: { scope, spaceId: spaceId ?? null, audienceFilter, type },
+          metadata: { scope, areaId: areaIdForScope ?? null, audienceFilter, type },
         },
         tx,
       );

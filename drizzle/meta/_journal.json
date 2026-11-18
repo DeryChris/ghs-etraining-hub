@@ -36,6 +36,13 @@
       "when": 1794996145596,
       "tag": "0004_programme_taxonomy_and_trainings",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794998436637,
+      "tag": "0005_programme_areas_replace_spaces",
+      "breakpoints": true
     }
   ]
 }

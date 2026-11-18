@@ -43,9 +43,9 @@ export default async function LibraryPage({
       <PageHeader
         eyebrow="Published materials"
         title="Library"
-        description="Every published SOP, video, lab and assessment you can access, across all directorates."
+        description="Every published SOP, video, lab and assessment you can access, filed under its programme field and area."
         actions={
-          <Link href="/directorates" className={buttonClass({ variant: "ghost" })}>
+          <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
             Browse by programme
           </Link>
         }
@@ -87,14 +87,14 @@ export default async function LibraryPage({
       {items.length === 0 ? (
         <ListEmptyState
           title={filtered ? "No materials match those filters" : "The library is empty for now"}
-          description={filtered ? "Try a shorter search, or choose All types." : "Published materials will appear here as directorates release them."}
+          description={filtered ? "Try a shorter search, or choose All types." : "Published materials appear here as soon as a programme area releases them."}
         />
       ) : (
         <>
           <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {items.map((item) => (
               <li key={item.id}>
-                <MaterialCard material={item} context={`${item.categoryName} · ${item.spaceTitle}`} />
+                <MaterialCard material={item} context={`${item.fieldName} · ${item.areaName}`} />
               </li>
             ))}
           </ul>

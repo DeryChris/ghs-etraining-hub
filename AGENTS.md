@@ -27,8 +27,8 @@ GHS-TL (Ghana Health Service Training Library) is the **catalogue of record for 
 programmes**. Every directorate, programme and unit that runs training — for medical officers,
 nurses, midwives, pharmacists, laboratory technologists, records officers and administrators across
 **all 16 administrative regions** — files that training's material here instead of leaving it in a
-WhatsApp group. Content is organised as **Category (directorate / national programme) → Space
-(specialised unit / module) → Material (document, video, interactive lab)** and every upload is a
+WhatsApp group. Content is organised as **Programme field → Programme area →
+Material (document, video, interactive lab)**, and trainings are filed against the same area and every upload is a
 numbered version that is reviewed by a second person before it reaches staff. Nothing is deleted:
 material is archived, and the hash‑chained audit trail records who uploaded, reviewed, published,
 downloaded or withdrew it. Every design decision must survive three constraints: **findable
@@ -75,7 +75,7 @@ Breaking any of these is a build failure, even if `npm run build` passes.
    is rejected.
 2. **Role ≠ permission.** Never check `user.role === "FACILITATOR"` inline. Use the capability
    matrix in `src/lib/rbac/capabilities.ts` (`can(user, "material.create", ctx)`). Object‑level
-   scope (a facilitator may only touch *their assigned categories*) is part of the check, not an
+   scope (a facilitator may only touch *their assigned programme areas*) is part of the check, not an
    afterthought.
 3. **Every mutation writes an audit row.** Use `logAudit()` from `src/lib/server/audit.ts` — same
    transaction as the mutation, not a fire‑and‑forget. Event names follow §7.
@@ -108,15 +108,15 @@ Breaking any of these is a build failure, even if `npm run build` passes.
 | --- | --- | --- |
 | Directorate | GHS division that owns training content (e.g. Public Health Directorate) | `Category` |
 | National programme | Vertical programme (EPI/malaria/NTP) that also owns content | `Category` |
-| Space | A specialised clinical unit / module inside a category | `Space` |
+| Programme area | A specialised subject inside a programme field (replaced Space, ADR-0014) | `Area` |
 | Material | One versioned learning artefact (PDF, MP4, lab, quiz) | `Material` + `MaterialVersion` |
 | Lab | Interactive browser exercise attached to a material | `LabEnvironment` |
 | GHS Staff PIN | HR identifier, format `GHS-\d{6}` | `User.ghsStaffId` (unique, validated) |
 | Region | One of Ghana's 16 administrative regions | `GHS_REGIONS` constant |
 | Facility | Place of posting (e.g. Ridge Regional Hospital) | `User.facility` |
 | CPD credit | Continuing professional development unit issued on completion | `Certificate.cpdCredits` |
-| IPC | Infection Prevention & Control | sample category |
-| Cold chain | Vaccine refrigeration logistics | sample space |
+| PF-CLIN-03 | Quality Assurance | sample programme area |
+| PF-PH-01 | EPI (cold chain, immunisation) | sample programme area |
 
 `src/lib/ghs-constants.ts` is the single source of truth and exports:
 `GHS_REGIONS` (Ahafo, Ashanti, Bono, Bono East, Central, Eastern, Greater Accra, North East,
@@ -129,8 +129,8 @@ Northern, Oti, Savannah, Upper East, Upper West, Volta, Western, Western North),
 
 ### 4.0 What exists today vs. what you will build
 
-The learner-facing platform is live: sign-in (Supabase Auth), dashboard, directorates →
-spaces → material viewer, library search with pagination, progress (start / acknowledge /
+The learner-facing platform is live: sign-in (Supabase Auth), dashboard, catalogue →
+areas → material viewer, library search with pagination, progress (start / acknowledge /
 complete) with certificate issuance, personal CPD analytics, staff messaging, notifications,
 public certificate verification, the marketing site, and the material authoring pipeline
 (draft → signed upload → review → publish → supersede → archive, ADR‑0008). Schema, RLS
@@ -138,7 +138,7 @@ migration, CI and Drizzle migrations are versioned in this repository.
 
 | Present and working | Not built yet (next milestones) |
 | --- | --- |
-| `src/app/(auth)/**`, `(dash)/**`, `(marketing)/**` | Remaining admin surfaces: create category/space, read the audit log |
+| `src/app/(auth)/**`, `(dash)/**`, `(marketing)/**` | Remaining admin surfaces: the audit-log viewer |
 | `(dash)/authoring/**`, `(dash)/review/**`, `(dash)/notices/**`, `(award)/certificates/**` — draft, upload, review, publish, archive, targeted notices, printable award | Comments/discussion threads; assessments and grading; message reporting |
 | `src/db/schema.ts` + `drizzle/**` migrations | Virus-scanning worker (versions sit at `scanStatus = PENDING`) |
 | `src/lib/server/{session,rbac,audit,file-storage,authoring-queries,*-queries,rate-limit,certificates}.ts`, `src/lib/material-workflow.ts` | Category/space CRUD actions |

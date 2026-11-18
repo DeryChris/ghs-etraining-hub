@@ -1,16 +1,23 @@
 import "server-only";
-import { asc, count, eq, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import {
+  areaFacilitators,
   districts,
   facilities,
+  materials,
   programmeAreas,
   programmeFields,
   regions,
   subDistricts,
   trainingSessions,
+  users,
 } from "@/db/schema";
-import type { DistrictKind, FacilityOwnership, FacilityType } from "@/lib/labels";
+import type {
+  DistrictKind,
+  FacilityOwnership,
+  FacilityType,
+} from "@/lib/labels";
 
 /*
  * Reference data for the two administration surfaces and for every picker that
@@ -24,14 +31,27 @@ import type { DistrictKind, FacilityOwnership, FacilityType } from "@/lib/labels
 
 /* ── Programme taxonomy ─────────────────────────────────────────────────── */
 
+export interface AreaFacilitator {
+  id: string;
+  fullName: string;
+  staffId: string;
+}
+
 export interface ProgrammeAreaRow {
   id: string;
   code: string;
   name: string;
   description: string | null;
+  audience: {
+    region: string | null;
+    directorate: string | null;
+    cadre: string | null;
+  };
   sortOrder: number;
   isArchived: boolean;
   trainingCount: number;
+  materialCount: number;
+  facilitators: AreaFacilitator[];
 }
 
 export interface ProgrammeFieldRow {
@@ -47,23 +67,58 @@ export interface ProgrammeFieldRow {
 }
 
 export async function listProgrammeTaxonomy(): Promise<ProgrammeFieldRow[]> {
-  const [fields, areas, usage] = await Promise.all([
-    db
-      .select()
-      .from(programmeFields)
-      .orderBy(asc(programmeFields.sortOrder), asc(programmeFields.name)),
-    db
-      .select()
-      .from(programmeAreas)
-      .orderBy(asc(programmeAreas.sortOrder), asc(programmeAreas.name)),
-    db
-      .select({ areaId: trainingSessions.programmeAreaId, n: sql<number>`count(*)::int` })
-      .from(trainingSessions)
-      .where(sql`${trainingSessions.programmeAreaId} is not null`)
-      .groupBy(trainingSessions.programmeAreaId),
-  ]);
+  const [fields, areas, usage, assignments, materialCounts] = await Promise.all(
+    [
+      db
+        .select()
+        .from(programmeFields)
+        .orderBy(asc(programmeFields.sortOrder), asc(programmeFields.name)),
+      db
+        .select()
+        .from(programmeAreas)
+        .orderBy(asc(programmeAreas.sortOrder), asc(programmeAreas.name)),
+      db
+        .select({
+          areaId: trainingSessions.programmeAreaId,
+          n: sql<number>`count(*)::int`,
+        })
+        .from(trainingSessions)
+        .where(sql`${trainingSessions.programmeAreaId} is not null`)
+        .groupBy(trainingSessions.programmeAreaId),
+      db
+        .select({
+          id: areaFacilitators.id,
+          areaId: areaFacilitators.areaId,
+          fullName: users.fullName,
+          staffId: users.ghsStaffId,
+        })
+        .from(areaFacilitators)
+        .innerJoin(users, eq(users.id, areaFacilitators.userId))
+        .orderBy(asc(users.fullName)),
+      db
+        .select({
+          areaId: materials.programmeAreaId,
+          n: sql<number>`count(*)::int`,
+        })
+        .from(materials)
+        .groupBy(materials.programmeAreaId),
+    ],
+  );
 
   const perArea = new Map(usage.map((row) => [row.areaId, row.n]));
+  const perAreaMaterials = new Map(
+    materialCounts.map((row) => [row.areaId, row.n]),
+  );
+  const facilitatorsByArea = new Map<string, AreaFacilitator[]>();
+  for (const assignment of assignments) {
+    const list = facilitatorsByArea.get(assignment.areaId) ?? [];
+    list.push({
+      id: assignment.id,
+      fullName: assignment.fullName,
+      staffId: assignment.staffId,
+    });
+    facilitatorsByArea.set(assignment.areaId, list);
+  }
 
   return fields.map((field) => {
     const fieldAreas = areas
@@ -73,9 +128,16 @@ export async function listProgrammeTaxonomy(): Promise<ProgrammeFieldRow[]> {
         code: area.code,
         name: area.name,
         description: area.description,
+        audience: {
+          region: area.audienceRegion,
+          directorate: area.audienceDirectorate,
+          cadre: area.audienceCadre,
+        },
         sortOrder: area.sortOrder,
         isArchived: area.isArchived,
         trainingCount: perArea.get(area.id) ?? 0,
+        materialCount: perAreaMaterials.get(area.id) ?? 0,
+        facilitators: facilitatorsByArea.get(area.id) ?? [],
       }));
     return {
       id: field.id,
@@ -86,9 +148,32 @@ export async function listProgrammeTaxonomy(): Promise<ProgrammeFieldRow[]> {
       isArchived: field.isArchived,
       areas: fieldAreas,
       areaCount: fieldAreas.length,
-      trainingCount: fieldAreas.reduce((total, area) => total + area.trainingCount, 0),
+      trainingCount: fieldAreas.reduce(
+        (total, area) => total + area.trainingCount,
+        0,
+      ),
     };
   });
+}
+
+/** The people a programme area can be assigned to: active facilitators and admins. */
+export async function listAssignableFacilitators(): Promise<
+  { id: string; fullName: string; staffId: string }[]
+> {
+  return db
+    .select({
+      id: users.id,
+      fullName: users.fullName,
+      staffId: users.ghsStaffId,
+    })
+    .from(users)
+    .where(
+      and(
+        eq(users.isActive, true),
+        inArray(users.role, ["FACILITATOR", "SYSTEM_ADMIN"]),
+      ),
+    )
+    .orderBy(asc(users.fullName));
 }
 
 export interface ProgrammeAreaOption {
@@ -105,10 +190,16 @@ export interface ProgrammeFieldOption {
 }
 
 /** Non-archived fields with their non-archived areas, for the training form. */
-export async function listProgrammeFieldOptions(): Promise<ProgrammeFieldOption[]> {
+export async function listProgrammeFieldOptions(): Promise<
+  ProgrammeFieldOption[]
+> {
   const [fields, areas] = await Promise.all([
     db
-      .select({ id: programmeFields.id, code: programmeFields.code, name: programmeFields.name })
+      .select({
+        id: programmeFields.id,
+        code: programmeFields.code,
+        name: programmeFields.name,
+      })
       .from(programmeFields)
       .where(eq(programmeFields.isArchived, false))
       .orderBy(asc(programmeFields.sortOrder), asc(programmeFields.name)),
@@ -170,12 +261,13 @@ export interface GeographyRegion {
  * never sees this tree.
  */
 export async function listGeography(): Promise<GeographyRegion[]> {
-  const [regionRows, districtRows, subDistrictRows, facilityRows] = await Promise.all([
-    db.select().from(regions).orderBy(asc(regions.name)),
-    db.select().from(districts).orderBy(asc(districts.name)),
-    db.select().from(subDistricts).orderBy(asc(subDistricts.name)),
-    db.select().from(facilities).orderBy(asc(facilities.name)),
-  ]);
+  const [regionRows, districtRows, subDistrictRows, facilityRows] =
+    await Promise.all([
+      db.select().from(regions).orderBy(asc(regions.name)),
+      db.select().from(districts).orderBy(asc(districts.name)),
+      db.select().from(subDistricts).orderBy(asc(subDistricts.name)),
+      db.select().from(facilities).orderBy(asc(facilities.name)),
+    ]);
 
   return regionRows.map((region) => ({
     id: region.id,
@@ -190,7 +282,10 @@ export async function listGeography(): Promise<GeographyRegion[]> {
         capital: district.capital,
         subDistricts: subDistrictRows
           .filter((subDistrict) => subDistrict.districtId === district.id)
-          .map((subDistrict) => ({ id: subDistrict.id, name: subDistrict.name })),
+          .map((subDistrict) => ({
+            id: subDistrict.id,
+            name: subDistrict.name,
+          })),
         facilities: facilityRows
           .filter((facility) => facility.districtId === district.id)
           .map((facility) => ({
@@ -216,7 +311,14 @@ export interface TaxonomyTotals {
 
 /** One row of counters for the two administration pages. */
 export async function getReferenceTotals(): Promise<TaxonomyTotals> {
-  const [fields, areas, regionCount, districtCount, subDistrictCount, facilityCount] = await Promise.all([
+  const [
+    fields,
+    areas,
+    regionCount,
+    districtCount,
+    subDistrictCount,
+    facilityCount,
+  ] = await Promise.all([
     db.select({ n: count() }).from(programmeFields),
     db.select({ n: count() }).from(programmeAreas),
     db.select({ n: count() }).from(regions),

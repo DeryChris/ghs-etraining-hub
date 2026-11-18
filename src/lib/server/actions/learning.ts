@@ -64,13 +64,13 @@ export async function updateMaterialProgressAction(
 
   const material = detail.material;
   const versionId = detail.material.currentVersionId;
-  const spaceId = material.spaceId;
-  const spaceSlug = detail.space.slug;
+  const programmeAreaId = material.programmeAreaId;
+  const areaCode = detail.area.code;
   const actor = { sub: session.sub, role: session.role, name: session.name, staffId: session.staffId };
 
   const result: ProgressActionState = await db.transaction(async (tx) => {
     // Recording progress enrols the learner in the space (idempotent).
-    await tx.insert(enrollments).values({ userId: session.sub, spaceId, source: "SELF" }).onConflictDoNothing();
+    await tx.insert(enrollments).values({ userId: session.sub, programmeAreaId, source: "SELF" }).onConflictDoNothing();
 
     const [row] = await tx
       .select()
@@ -151,7 +151,7 @@ export async function updateMaterialProgressAction(
     revalidatePath("/library");
     revalidatePath("/analytics");
     revalidatePath(`/materials/${materialId}`);
-    revalidatePath(`/spaces/${spaceSlug}`);
+    revalidatePath(`/programmeAreas/${areaCode}`);
   }
   return result;
 }

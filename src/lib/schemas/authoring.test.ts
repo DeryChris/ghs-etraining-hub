@@ -7,7 +7,7 @@ const VERSION_ID = "1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d";
 describe("authoring schemas", () => {
   it("accepts a minimal draft", () => {
     const parsed = draftInput.safeParse({
-      spaceId: MATERIAL_ID,
+      programmeAreaId: MATERIAL_ID,
       title: "Malaria case management refresher",
       type: "DOCUMENT",
       priority: "HIGH",
@@ -16,13 +16,13 @@ describe("authoring schemas", () => {
   });
 
   it("refuses a draft title that is too short", () => {
-    const parsed = draftInput.safeParse({ spaceId: MATERIAL_ID, title: "ab", type: "DOCUMENT", priority: "LOW" });
+    const parsed = draftInput.safeParse({ programmeAreaId: MATERIAL_ID, title: "ab", type: "DOCUMENT", priority: "LOW" });
     expect(parsed.success).toBe(false);
   });
 
   it("refuses unknown fields so payloads cannot smuggle state", () => {
     const parsed = draftInput.safeParse({
-      spaceId: MATERIAL_ID,
+      programmeAreaId: MATERIAL_ID,
       title: "Valid title",
       type: "DOCUMENT",
       priority: "LOW",

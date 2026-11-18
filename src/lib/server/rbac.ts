@@ -2,7 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/index";
-import { categoryFacilitators } from "@/db/schema";
+import { areaFacilitators } from "@/db/schema";
 import {
   can,
   isGlobalForFacilitators,
@@ -31,15 +31,15 @@ export async function requireRole(roles: Role[]): Promise<Session> {
 }
 
 /**
- * A facilitator's authority is the set of categories they are assigned to in
- * category_facilitators — read from the database, never from the request payload
+ * A facilitator's authority is the set of programme areas they are assigned to
+ * in area_facilitators — read from the database, never from the request payload
  * (docs/rbac.md §2).
  */
-async function facilitatorAssignedTo(userId: string, categoryId: string): Promise<boolean> {
+async function facilitatorAssignedTo(userId: string, areaId: string): Promise<boolean> {
   const [row] = await db
-    .select({ id: categoryFacilitators.id })
-    .from(categoryFacilitators)
-    .where(and(eq(categoryFacilitators.userId, userId), eq(categoryFacilitators.categoryId, categoryId)))
+    .select({ id: areaFacilitators.id })
+    .from(areaFacilitators)
+    .where(and(eq(areaFacilitators.userId, userId), eq(areaFacilitators.areaId, areaId)))
     .limit(1);
   return Boolean(row);
 }
@@ -50,7 +50,7 @@ export type CapabilityCheck = { ok: true; session: Session } | { ok: false; mess
  * Actions: returns a plain-English refusal instead of throwing, so forms can
  * show it inline. Decisions use the role from the database, never the client.
  *
- * When a category-scoped action is attempted by a facilitator, the assignment is
+ * When an area-scoped action is attempted by a facilitator, the assignment is
  * verified here rather than trusted from the caller's scope object.
  */
 export async function checkCapability(action: Action, scope: Scope = {}): Promise<CapabilityCheck> {
@@ -60,9 +60,9 @@ export async function checkCapability(action: Action, scope: Scope = {}): Promis
     return { ok: false, message: "Your role does not allow this action." };
   }
 
-  if (session.role === "FACILITATOR" && !isGlobalForFacilitators(action) && scope.categoryId) {
-    if (!(await facilitatorAssignedTo(session.sub, scope.categoryId))) {
-      return { ok: false, message: "That directorate is not assigned to you." };
+  if (session.role === "FACILITATOR" && !isGlobalForFacilitators(action) && scope.areaId) {
+    if (!(await facilitatorAssignedTo(session.sub, scope.areaId))) {
+      return { ok: false, message: "That programme area is not assigned to you." };
     }
   }
 

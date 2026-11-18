@@ -27,6 +27,7 @@ const TABLES = [
   "users",
   "programme_fields",
   "programme_areas",
+  "area_facilitators",
   "materials",
   "material_views",
   "training_sessions",
