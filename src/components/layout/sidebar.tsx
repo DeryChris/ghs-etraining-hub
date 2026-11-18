@@ -114,7 +114,7 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
         <SidebarFlagLine />
       </div>
 
-      <nav aria-label="Primary" className="relative z-10 flex-1 space-y-6 overflow-y-auto px-3 py-6">
+      <nav aria-label="Primary" className="nav-scroll relative z-10 flex-1 space-y-6 overflow-y-auto px-3 py-6">
         {groups.map((group) => (
           <div key={group.id} className="space-y-1">
             <p
