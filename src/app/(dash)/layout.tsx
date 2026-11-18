@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
 import { AccountBlocked } from "@/components/layout/account-blocked";
+import { DatabaseUnavailable } from "@/components/layout/database-unavailable";
 import { AppShell } from "@/components/layout/app-shell";
 import { countReviewQueue } from "@/lib/server/authoring-queries";
 import { countUnreadMessages } from "@/lib/server/messaging-queries";
 import { countUnreadNotifications } from "@/lib/server/notification-queries";
-import { withinOr } from "@/lib/server/deadline";
-import { resolveAccount } from "@/lib/server/session";
+import { connectionErrorCode, databaseTarget } from "@/lib/db-target";
+import { within, withinOr } from "@/lib/server/deadline";
+import { log } from "@/lib/server/logger";
+import { resolveAccount, type AccountState } from "@/lib/server/session";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +22,29 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const account = await resolveAccount();
+  /*
+   * The shell cannot draw until it knows who is asking, so this one query is on
+   * the critical path of every signed-in route. When the database is unreachable
+   * it used to sit here indefinitely — the visitor saw the loading skeleton and
+   * nothing else. A deadline turns that into an explanation.
+   */
+  let account: AccountState;
+  try {
+    account = await within("shell.session", resolveAccount(), 8_000);
+  } catch (error) {
+    log.error({
+      event: "shell.session_unavailable",
+      error,
+      code: connectionErrorCode(error),
+    });
+    return (
+      <DatabaseUnavailable
+        target={databaseTarget(process.env.DATABASE_URL)}
+        code={connectionErrorCode(error)}
+      />
+    );
+  }
+
   if (account.state === "anonymous") redirect("/login");
   if (account.state !== "active")
     return <AccountBlocked state={account.state} />;

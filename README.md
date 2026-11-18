@@ -148,11 +148,31 @@ npm run db:migrate   # applies drizzle/0003; needs DIRECT_URL
 npm run db:seed      # idempotent; loads the taxonomy, regions and Upper West geography the training form uses
 ```
 
-If the connection itself fails — `getaddrinfo ENOTFOUND`, `ECONNREFUSED`, or `read ECONNRESET` — run the
-doctor first. It checks both URLs, resolves the hosts, connects, and names the fix without changing anything:
+If the connection itself fails — `getaddrinfo ENOTFOUND`, `ECONNREFUSED`, `CONNECT_TIMEOUT`, or
+`read ECONNRESET` — run the doctor first. It checks both URLs, resolves the hosts, connects, and names the fix
+without changing anything:
 
 ```bash
 npm run db:doctor
+```
+
+`write CONNECT_TIMEOUT` deserves its own note, because the cause is almost always the host and not the password.
+Supabase's direct host, `db.<project-ref>.supabase.co`, resolves **only to IPv6**. On a network without IPv6
+(most office Wi-Fi, some ISPs) the TCP handshake never completes, and every query waits out `connect_timeout`.
+Use the pooler instead — Supabase → **Connect** → *Session pooler* — which resolves to IPv4:
+
+```dotenv
+# wrong on an IPv4-only network: IPv6-only host, connect times out
+DATABASE_URL=postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres
+
+# right: Supavisor pooler, IPv4, session mode on 5432 (6543 for transaction mode)
+DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-1-<region>.pooler.supabase.com:5432/postgres?sslmode=require&uselibpqcompat=true
+```
+
+Check the DNS answer before guessing which of the two is wrong:
+
+```bash
+node -e "require('dns').lookup('db.<ref>.supabase.co',{all:true},console.log)"   # [{family:6,…}] explains it
 ```
 
 `GET /api/health` now reports schema drift directly: `{"ok":false,"checks":{"db":"up","schema":"outdated"},

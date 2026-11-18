@@ -28,7 +28,7 @@ function createClient(url: string) {
     max: 5,
     idle_timeout: 20,
     max_lifetime: 60 * 30,
-    connect_timeout: 10,
+    connect_timeout: 5,
     // A query that reaches Postgres and never returns is cut off here, so a
     // stalled statement surfaces as an error the page can show rather than an
     // endless spinner. Page-level deadlines live in `lib/server/deadline.ts`.
