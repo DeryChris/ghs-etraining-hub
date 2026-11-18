@@ -3,6 +3,7 @@ import { CalendarDays, MapPin, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
+import { Notice } from "@/components/ui/notice";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Stat } from "@/components/ui/stat";
@@ -117,6 +118,8 @@ export default async function TrainingsPage({
   const firstOnPage = list.total === 0 ? 0 : (list.page - 1) * TRAININGS_PAGE_SIZE + 1;
   const lastOnPage = (list.page - 1) * TRAININGS_PAGE_SIZE + list.items.length;
   const mayManage = can(session.role, "training.manage");
+  const notice = single("notice");
+  const error = single("error");
 
   return (
     <div className="space-y-8">
@@ -136,6 +139,8 @@ export default async function TrainingsPage({
           )
         }
       />
+
+      <Notice notice={notice} error={error} />
 
       <section
         aria-label="Register totals"
