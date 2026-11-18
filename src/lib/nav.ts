@@ -12,13 +12,19 @@
  * viewer disappears, and a section that loses all of its items disappears with
  * it — which is why the administrator sees "Author" holding only the review
  * queue, while a facilitator sees their materials and notices there too.
+ *
+ * "Trainings" replaced "Programmes" in the Learn section (ADR-0013): the tab is
+ * the training register, and the directorate catalogue it used to open is still
+ * at /directorates, reachable from the Library and from the register header.
  */
 import type { Role } from "@/lib/rbac/capabilities";
 
 /** Icon names are resolved to components by the sidebar, keeping this module pure. */
 export type NavIcon =
   | "dashboard"
-  | "programmes"
+  | "training"
+  | "geography"
+  | "taxonomy"
   | "library"
   | "assessment"
   | "messages"
@@ -68,7 +74,13 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: "Learn",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: "dashboard", roles: EVERYONE },
-      { href: "/directorates", label: "Programmes", icon: "programmes", roles: EVERYONE },
+      {
+        href: "/trainings",
+        label: "Trainings",
+        icon: "training",
+        roles: EVERYONE,
+        hint: "Every training GHS has planned or run, by programme field and area",
+      },
       { href: "/library", label: "Library", icon: "library", roles: EVERYONE },
       {
         href: "/assessments",
@@ -128,6 +140,20 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: "Administration",
     items: [
       { href: "/users", label: "Users", icon: "users", roles: ADMIN_ONLY },
+      {
+        href: "/geography",
+        label: "Geography & facilities",
+        icon: "geography",
+        roles: ADMIN_ONLY,
+        hint: "Regions, districts, sub-districts and the facilities a training is held at",
+      },
+      {
+        href: "/programme-fields",
+        label: "Programme fields",
+        icon: "taxonomy",
+        roles: ADMIN_ONLY,
+        hint: "The programme fields and areas a training plan is filed under",
+      },
       { href: "/settings", label: "Settings", icon: "settings", roles: ADMIN_ONLY },
     ],
   },

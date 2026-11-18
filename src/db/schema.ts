@@ -376,18 +376,72 @@ export const facilities = pgTable("facilities", {
   isActive: boolean("is_active").notNull().default(true),
 }, (t) => [uniqueIndex("facilities_district_name_idx").on(t.districtId, t.name)]);
 
-/* ── Training sessions ──────────────────────────────────────────────────────
- * A session is a training that actually happened: a programme (category) and
- * area (space) delivered on a date, at a place. It is the unit the insights
- * charts count, and the thing uploaded material belongs to in practice.
+/* ── Programme taxonomy (fields → areas) ────────────────────────────────────
+ * The vocabulary a training plan is written in: "Administration and Support
+ * Services" is a field, "Biomedical Equipment" an area inside it. GHS supplied
+ * the list (src/db/data/programme-taxonomy.ts) and administrators maintain it
+ * at /programme-fields.
+ *
+ * It is deliberately NOT `categories`. A category is a directorate that governs
+ * library content and facilitator assignments; a programme area classifies a
+ * training that ran or will run. Merging them would re-file every existing
+ * space and material under names GHS has not confirmed the mapping for, so the
+ * two stay separate until it does (ADR-0013).
  */
+
+export const programmeFields = pgTable("programme_fields", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: varchar("code", { length: 24 }).notNull().unique(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isArchived: boolean("is_archived").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const programmeAreas = pgTable("programme_areas", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fieldId: uuid("field_id").notNull().references(() => programmeFields.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 24 }).notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isArchived: boolean("is_archived").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("programme_areas_field_name_idx").on(t.fieldId, t.name),
+  index("programme_areas_field_idx").on(t.fieldId),
+]);
+
+/* ── Trainings (physical table: training_sessions) ───────────────────────────
+ * The registry behind the Trainings tab. A row is either a training that ran
+ * (status COMPLETED, attendance and notes filled in) or one that is planned
+ * (PLANNED), which is what makes the same table serve both the calendar and
+ * the record.
+ *
+ * `categoryId` is nullable now: a training is classified by programme field and
+ * area, and only the older rows — recorded against the library taxonomy — carry
+ * a category. `organisedOn` is the start date; `endsOn` the last day.
+ */
+
+export const trainingStatusEnum = pgEnum("training_status", ["PLANNED", "COMPLETED", "CANCELLED"]);
 
 export const trainingSessions = pgTable("training_sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
-  categoryId: uuid("category_id").notNull().references(() => categories.id),
+  year: integer("year").notNull().default(sql`extract(year from current_date)::int`),
+  programmeFieldId: uuid("programme_field_id").references(() => programmeFields.id, { onDelete: "set null" }),
+  programmeAreaId: uuid("programme_area_id").references(() => programmeAreas.id, { onDelete: "set null" }),
+  categoryId: uuid("category_id").references(() => categories.id),
   spaceId: uuid("space_id").references(() => spaces.id, { onDelete: "set null" }),
+  targetGroup: text("target_group"),
   organisedOn: date("organised_on").notNull(),
+  endsOn: date("ends_on"),
+  durationText: text("duration_text"),
+  status: trainingStatusEnum("status").notNull().default("COMPLETED"),
+  venue: text("venue"),
   regionId: uuid("region_id").references(() => regions.id, { onDelete: "set null" }),
   districtId: uuid("district_id").references(() => districts.id, { onDelete: "set null" }),
   subDistrictId: uuid("sub_district_id").references(() => subDistricts.id, { onDelete: "set null" }),
@@ -403,6 +457,8 @@ export const trainingSessions = pgTable("training_sessions", {
 }, (t) => [
   index("training_sessions_organised_idx").on(t.organisedOn),
   index("training_sessions_category_idx").on(t.categoryId, t.organisedOn),
+  index("training_sessions_year_idx").on(t.year, t.organisedOn),
+  index("training_sessions_area_idx").on(t.programmeAreaId),
 ]);
 
 /* ── Views ──────────────────────────────────────────────────────────────────

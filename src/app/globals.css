@@ -111,6 +111,37 @@
   }
 }
 
+/* ── Signed-in navigation ─────────────────────────────────────────────────────
+   The sidebar is GHS green in both themes. It is the one surface that does not
+   follow the theme: the crest it carries only reads correctly on the brand
+   green, and a menu that turns near-black at night next to a white page is the
+   one place the design system would look accidental. The tones below are fixed
+   brand values, not theme tokens; white on #006B3F is 7:1, muted #CFE3D8 is
+   5.6:1, and gold #FCD116 with #211A00 ink is 12:1. */
+:root {
+  --nav-from: #006b3f;
+  --nav-to: #003d24;
+  --nav-ink: #ffffff;
+  --nav-muted: #cfe3d8;
+  --nav-active: #fcd116;
+  --nav-active-ink: #211a00;
+  --nav-hairline: rgb(255 255 255 / 0.18);
+  --nav-wash: rgb(255 255 255 / 0.08);
+}
+
+.nav-surface {
+  background-image: linear-gradient(168deg, var(--nav-from) 0%, var(--nav-to) 100%);
+  color: var(--nav-ink);
+}
+
+.nav-wash {
+  background-color: var(--nav-wash);
+}
+
+.nav-divider {
+  border-color: var(--nav-hairline);
+}
+
 /* The GHS emblem has a light-surface and a dark-surface artwork: the lettering in
    the crest and the motto swap between black and white. The theme is chosen by
    `data-theme` when the visitor picks one, otherwise by the system preference. */

@@ -38,6 +38,10 @@ row.** Any change here is a `ROLE_CHANGE` audit event and requires an ADR.
 | `comment.moderate` | ✅ (any) | ✅ (assigned spaces) | ❌ |
 | `message.send` | ✅ | ✅ (assigned learners, admins, peers in category) | ✅ (peers, facilitators, admins) |
 | `message.read_any_thread` | ✅ (only with DPO‑approved investigation, audited) | ❌ | ❌ |
+| `session.create` | ✅ | ✅ (assigned category) | ❌ |
+| `training.manage` | ✅ | ✅ (any training — field work, not catalogue governance) | ❌ |
+| `taxonomy.manage` | ✅ | ❌ | ❌ |
+| `geography.manage` | ✅ | ❌ | ❌ |
 | `notification.broadcast` | ✅ | ✅ (space announcement, assigned space) | ❌ |
 | `notification.view` | ✅ | ✅ | ✅ (own) |
 | `analytics.view_personal` | ✅ | ✅ | ✅ (own) |
@@ -56,6 +60,12 @@ this rule for facilitators by querying `category_facilitators`; the caller's `sc
 only a hint, never proof of assignment.
 
 * Facilitator scope = `categoryIds` from `category_facilitators` (+ `region` if regional).
+* `training.manage` is global for staff: the Trainings register is the GHS training calendar, not a
+  directorate's filing cabinet, so a facilitator may plan a training without being assigned to the
+  category that would have been recorded on a session. Recording a *session* stays category‑scoped
+  (`session.create`), which is what ADR‑0012 intended and what the matrix now says.
+* `taxonomy.manage` and `geography.manage` are administrator‑only: they change the words and places
+  every other form offers.
 * Space scope inherits its category; material inherits its space.
 * Audience match for learners = `audienceRegion IS NULL OR audienceRegion = user.region` (and the
   same for directorate/cadre). This is enforced in SQL by `audienceFor()` in

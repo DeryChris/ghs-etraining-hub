@@ -35,7 +35,10 @@ export type Action =
   | "message.read_any_thread"
   | "notification.broadcast"
   | "notification.view"
-  | "training.create"
+  | "session.create"
+  | "training.manage"
+  | "taxonomy.manage"
+  | "geography.manage"
   | "analytics.view_personal"
   | "analytics.view_cohort"
   | "analytics.export"
@@ -79,7 +82,10 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.read_draft": true,
     "material.read_published": true,
     "material.download": true,
-    "training.create": true,
+    "session.create": true,
+    "training.manage": true,
+    "taxonomy.manage": true,
+    "geography.manage": true,
     "assessment.configure": true,
     "assessment.take": true,
     "assessment.override_score": true,
@@ -123,7 +129,10 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.read_draft": true,
     "material.read_published": true,
     "material.download": true,
-    "training.create": false,
+    "session.create": true,
+    "training.manage": true,
+    "taxonomy.manage": false,
+    "geography.manage": false,
     "assessment.configure": true,
     "assessment.take": true,
     "assessment.override_score": false,
@@ -167,7 +176,10 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "material.read_draft": false,
     "material.read_published": true,
     "material.download": true,
-    "training.create": false,
+    "session.create": false,
+    "training.manage": false,
+    "taxonomy.manage": false,
+    "geography.manage": false,
     "assessment.configure": false,
     "assessment.take": true,
     "assessment.override_score": false,
@@ -203,6 +215,7 @@ export const PUBLIC_ACTIONS: ReadonlySet<Action> = new Set<Action>(["certificate
  * src/lib/server/rbac.ts verifies the assignment against category_facilitators.
  */
 export const FACILITATOR_GLOBAL_ACTIONS: readonly Action[] = [
+  "training.manage",
   "material.read_published",
   "material.download",
   "assessment.take",

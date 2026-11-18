@@ -161,6 +161,19 @@ directory invariants (no self‑demotion, last administrator protected) enforced
 
 ---
 
+## ADR‑0013 — The Trainings register, and two surfaces for reference data
+
+**Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0013-trainings-register-and-reference-data.md`](./0013-trainings-register-and-reference-data.md)
+
+**Decision.** "Programmes" in the Learn section becomes **Trainings** (`/trainings`) for every role: the
+register of trainings planned and run, with an enriched filter bar, counters and a "New training"
+form (title, year, programme field, programme area, target group, region → district → sub‑district →
+facility, start/end date, duration, venue). Programme fields and their areas become new reference
+tables seeded from the GHS document, administered at `/programme-fields`; the region → facility tree
+gets `/geography`. `training_sessions` becomes the register (nullable `categoryId`, new plan
+columns), capabilities split into `session.create`, `training.manage`, `taxonomy.manage` and
+`geography.manage`, and the sidebar is GHS green in both themes.
+
 ## ADR‑0011 — The library is informational: retire CPD awards, keep issued certificates
 
 **Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0011-informational-library-retires-cpd.md`](./0011-informational-library-retires-cpd.md)

@@ -95,6 +95,25 @@ Recipients rows are created **only** for `USER_IDS` audiences; everything else i
 time against `notification_read_cursors (userId, notificationId, readAt)` — the broadcast‑fan‑out
 rule from PRD §5.7.
 
+### programme_fields, programme_areas
+The vocabulary a training plan is written in: `programme_fields` (`code` unique, `name` unique,
+`description`, `sortOrder`, `isArchived`) and `programme_areas` (`fieldId` → programme_fields,
+`code` unique, `name`, `description`, `sortOrder`, `isArchived`; unique on (`fieldId`, `name`)).
+Seeded from the GHS list in `src/db/data/programme-taxonomy.ts` (10 fields, 41 areas) and maintained
+at `/programme-fields`. Deliberately **not** `categories`: a category is a directorate that governs
+library content and facilitator scope, a programme area classifies a training. ADR‑0013 records why
+they are not merged.
+
+### training_sessions (the Trainings register)
+`title`, `year` (defaults to the current year, corrected to the start date's year on backfill),
+`programmeFieldId`, `programmeAreaId`, `targetGroup`, `organisedOn` (start date), `endsOn`,
+`durationText`, `status` (`PLANNED | COMPLETED | CANCELLED`), `venue`, `regionId`, `districtId`,
+`subDistrictId`, `facilityId`, `attendeeCount`, `notes`, `isArchived`, `createdById`, timestamps.
+`categoryId`/`spaceId` remain for sessions recorded against the library taxonomy and are nullable —
+a training filed through the register carries no category, which is why the Sessions page joins them
+with `LEFT JOIN`. Indexes on (`year`, `organisedOn`) and `programmeAreaId` back the register's
+filters. Rows are archived, never deleted.
+
 ### audit_logs
 `userId` (nullable — `SYSTEM` actor), `action`, `entity`, `entityId`, `metadata jsonb`,
 `ipAddress`, `userAgent`, `prevHash`, `hash`, `createdAt`. Append‑only; `INSERT|SELECT` grants only.
@@ -104,7 +123,8 @@ Support tables for abuse handling, the two‑person publish rule, and login/uplo
 
 ## 3. Suggested seed data (`src/db/seed.ts`)
 
-Six categories with real GHS directorate names, 12 spaces (IPC, cold chain, malaria case
+The ten programme fields and forty-one areas GHS supplied (`PROGRAMME_FIELDS`), keyed on their
+codes so a revised list updates rather than duplicates. Six categories with real GHS directorate names, 12 spaces (IPC, cold chain, malaria case
 management, integrated disease surveillance & response, maternal & newborn care, AMR stewardship,
 mental health, health records & DHIMS, emergency triage, HIV/STI, NTDs, quality of care), three
 materials per space with at least one `CRITICAL` SOP requiring acknowledgement, a demo roster of

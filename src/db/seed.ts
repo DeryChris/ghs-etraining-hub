@@ -1,8 +1,20 @@
 import "dotenv/config";
 import { db } from "./client";
-import { users, categories, spaces, materials, regions, districts, subDistricts, facilities } from "./schema";
+import {
+  users,
+  categories,
+  spaces,
+  materials,
+  regions,
+  districts,
+  subDistricts,
+  facilities,
+  programmeFields,
+  programmeAreas,
+} from "./schema";
 import { eq } from "drizzle-orm";
 import { REGIONS, UPPER_WEST_DISTRICTS, UPPER_WEST_REGION_CODE } from "./data/geography";
+import { PROGRAMME_FIELDS, flatProgrammeAreas } from "./data/programme-taxonomy";
 
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "admin@ghs.gov.gh";
 // The seeded admin has no password here. Provision its login with scripts/provision-auth-user.ts.
@@ -115,6 +127,40 @@ async function main() {
       },
     });
   }
+
+  // ── Programme taxonomy (fields → areas) ───────────────────────────────────
+  // Upserted on the code, so re-running after GHS revises the list updates the
+  // names in place instead of duplicating rows — and an area added by hand from
+  // /programme-fields is never touched. Sort order follows the source document.
+  for (const [index, field] of PROGRAMME_FIELDS.entries()) {
+    const [row] = await db
+      .insert(programmeFields)
+      .values({ code: field.code, name: field.name, sortOrder: index * 10 })
+      .onConflictDoUpdate({
+        target: programmeFields.code,
+        set: { name: field.name, sortOrder: index * 10, updatedAt: new Date() },
+      })
+      .returning({ id: programmeFields.id });
+
+    for (const [areaIndex, area] of field.areas.entries()) {
+      await db
+        .insert(programmeAreas)
+        .values({
+          fieldId: row.id,
+          code: area.code,
+          name: area.name,
+          sortOrder: areaIndex * 10,
+        })
+        .onConflictDoUpdate({
+          target: programmeAreas.code,
+          set: { fieldId: row.id, name: area.name, sortOrder: areaIndex * 10, updatedAt: new Date() },
+        });
+    }
+  }
+
+  console.log(
+    `   Programme taxonomy: ${PROGRAMME_FIELDS.length} fields, ${flatProgrammeAreas().length} areas`,
+  );
 
   // ── Reference geography ───────────────────────────────────────────────────
   // Upserted on the natural key, so re-running after GHS supplies a fuller

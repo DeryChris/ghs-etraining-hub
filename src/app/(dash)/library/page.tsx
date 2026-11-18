@@ -44,6 +44,11 @@ export default async function LibraryPage({
         eyebrow="Published materials"
         title="Library"
         description="Every published SOP, video, lab and assessment you can access, across all directorates."
+        actions={
+          <Link href="/directorates" className={buttonClass({ variant: "ghost" })}>
+            Browse by programme
+          </Link>
+        }
       />
 
       <form action="/library" method="get" role="search" className="grid gap-3 rounded-card border border-hairline bg-surface p-4 md:grid-cols-[1fr_220px_auto] md:items-end">

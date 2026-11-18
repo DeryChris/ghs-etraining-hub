@@ -17,8 +17,8 @@ export interface SessionRow {
   id: string;
   title: string;
   organisedOn: string;
-  categoryId: string;
-  categoryName: string;
+  categoryId: string | null;
+  categoryName: string | null;
   spaceTitle: string | null;
   regionName: string | null;
   districtName: string | null;
@@ -50,7 +50,9 @@ export async function listSessions(viewer: Viewer, limit = 40): Promise<SessionR
       createdByName: creator.fullName,
     })
     .from(trainingSessions)
-    .innerJoin(categories, eq(categories.id, trainingSessions.categoryId))
+    // LEFT: a training filed through the register (field → area) has no category,
+    // and it still belongs in the record of what ran.
+    .leftJoin(categories, eq(categories.id, trainingSessions.categoryId))
     .leftJoin(spaces, eq(spaces.id, trainingSessions.spaceId))
     .leftJoin(regions, eq(regions.id, trainingSessions.regionId))
     .leftJoin(districts, eq(districts.id, trainingSessions.districtId))
@@ -80,7 +82,7 @@ export async function getSessionSummary(viewer: Viewer): Promise<SessionSummary>
       programmes: sql<number>`count(distinct ${trainingSessions.categoryId})::int`,
     })
     .from(trainingSessions)
-    .innerJoin(categories, eq(categories.id, trainingSessions.categoryId))
+    .leftJoin(categories, eq(categories.id, trainingSessions.categoryId))
     .where(and(scopeFor(viewer), eq(trainingSessions.isArchived, false)));
   return row ?? { total: 0, last90Days: 0, attendees: 0, programmes: 0 };
 }

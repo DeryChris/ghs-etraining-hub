@@ -81,3 +81,49 @@ export function notificationTypeLabel(type: string): string {
 export function isMaterialType(value: string | null | undefined): value is MaterialType {
   return (MATERIAL_TYPES as readonly string[]).includes(value ?? "");
 }
+
+/* ── Trainings and the reference geography ───────────────────────────────────
+ * The Trainings tab and the two administration surfaces read these. Kept here
+ * so a status or a district kind is spelled the same way in a list, a filter
+ * and an export.
+ */
+
+export const TRAINING_STATUSES = ["PLANNED", "COMPLETED", "CANCELLED"] as const;
+export type TrainingStatus = (typeof TRAINING_STATUSES)[number];
+
+export const TRAINING_STATUS_LABELS: Record<TrainingStatus, string> = {
+  PLANNED: "Planned",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};
+
+export function isTrainingStatus(value: string | null | undefined): value is TrainingStatus {
+  return value === "PLANNED" || value === "COMPLETED" || value === "CANCELLED";
+}
+
+export const DISTRICT_KINDS = ["METROPOLITAN", "MUNICIPAL", "DISTRICT"] as const;
+export type DistrictKind = (typeof DISTRICT_KINDS)[number];
+
+export const DISTRICT_KIND_LABELS: Record<DistrictKind, string> = {
+  METROPOLITAN: "Metropolitan",
+  MUNICIPAL: "Municipal",
+  DISTRICT: "District",
+};
+
+export function isDistrictKind(value: string | null | undefined): value is DistrictKind {
+  return value === "METROPOLITAN" || value === "MUNICIPAL" || value === "DISTRICT";
+}
+
+export const FACILITY_OWNERSHIPS = ["GHS", "CHAG", "PRIVATE", "OTHER"] as const;
+export type FacilityOwnership = (typeof FACILITY_OWNERSHIPS)[number];
+
+export const FACILITY_OWNERSHIP_LABELS: Record<FacilityOwnership, string> = {
+  GHS: "GHS",
+  CHAG: "CHAG",
+  PRIVATE: "Private",
+  OTHER: "Other",
+};
+
+export function isFacilityOwnership(value: string | null | undefined): value is FacilityOwnership {
+  return value === "GHS" || value === "CHAG" || value === "PRIVATE" || value === "OTHER";
+}

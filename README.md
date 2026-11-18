@@ -31,8 +31,10 @@ reviewed, published, downloaded or withdrew it. Built on **Next.js 16**, **React
 **Shipped:** staff sign-in / password reset; dashboard with mandatory protocols; directorates →
 spaces → material viewer; library search with server-side pagination; progress
 (start · acknowledge · complete) with per-version re-acknowledgement; a personal record of what you
-opened, downloaded and finished; **training sessions** recorded under a programme at region →
-district → sub-district → facility; **traffic insights** (opens, downloads, upload rate, trainings
+opened, downloaded and finished; a **Trainings register** (the Learn section's "Trainings" tab) with a
+filter bar, plan form — title, year, programme field and area, target group, region → district →
+sub-district → facility, start/end dates, duration, venue — and an audited archive; **training
+sessions** recorded under a programme at region → district → sub-district → facility; **traffic insights** (opens, downloads, upload rate, trainings
 per programme) drawn as server-rendered SVG charts; staff messaging (paginated threads); notifications;
 **authoring pipeline** (draft → signed upload → review → publish → supersede → archive) with the
 two-person publish rule; **cohort-targeted notices**; marketing site and the GHS emblem brand set.
@@ -41,6 +43,11 @@ two-person publish rule; **cohort-targeted notices**; marketing site and the GHS
 resolved from `category_facilitators`, cohort visibility (`spaces.audience_*`,
 `categories.is_restricted`), hash-chained audit log written in the same transaction as each
 mutation, rate limits on progress/messages/certificate lookups, RLS lock-down of the public API.
+
+**Reference data is administrable:** `/programme-fields` (ten fields, forty-one areas from the GHS
+list) and `/geography` (regions → districts → sub-districts → facilities) are full CRUD surfaces for
+administrators, with archive-instead-of-delete for anything a training already refers to. The
+signed-in sidebar is GHS green in both themes (ADR-0013).
 
 **Not built yet:** category/space administration and the audit-log viewer, comments/discussion,
 assessments and grading, message reporting, MFA enforcement and account lockout, server-rendered
@@ -70,8 +77,8 @@ src/
   app/
     (marketing)/               # public: home, programmes, about, verify, legal, contact
     (auth)/                    # login, forgot-password, reset-password
-    (dash)/                    # protected shell: dashboard, directorates, spaces, library,
-                               # materials, messages, notifications, analytics
+    (dash)/                    # protected shell: dashboard, trainings, directorates, library,
+                               # geography, programme-fields, sessions, messages, analytics
     api/health/                # liveness/readiness probe
     api/materials/[id]/file/   # audit-logged signed-URL redirect for controlled documents
     auth/callback/             # PKCE code exchange for reset links

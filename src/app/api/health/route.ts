@@ -18,6 +18,8 @@ import { currentRequestId } from "@/lib/server/request-context";
 
 /** Tables added by the newest migration first, so a stale database names itself. */
 const REQUIRED_TABLES = [
+  "programme_fields",
+  "programme_areas",
   "regions",
   "districts",
   "sub_districts",

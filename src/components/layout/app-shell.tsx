@@ -40,7 +40,7 @@ export function AppShell({
         Skip to main content
       </a>
 
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 border-r border-hairline bg-surface/70 backdrop-blur md:block">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 border-r border-ghs-green/30 shadow-panel md:block">
         <Sidebar {...sidebarProps} />
       </aside>
 
@@ -65,7 +65,7 @@ export function AppShell({
         initial={false}
         animate={{ x: navOpen ? 0 : "-100%" }}
         transition={{ type: "tween", duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-        className="surface-card fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] rounded-none border-y-0 border-l-0 shadow-lift md:hidden"
+        className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] overflow-hidden rounded-none shadow-lift md:hidden"
       >
         <Sidebar {...sidebarProps} onNavigate={closeNav} onClose={closeNav} />
       </motion.aside>

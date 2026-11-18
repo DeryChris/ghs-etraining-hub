@@ -69,7 +69,7 @@ export async function createSessionAction(_previous: SessionActionState, formDat
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Check the details and try again." };
 
   const input = parsed.data;
-  const guard = await checkCapability("training.create", { categoryId: input.categoryId });
+  const guard = await checkCapability("session.create", { categoryId: input.categoryId });
   if (!guard.ok) return { ok: false, message: guard.message };
   const { session } = guard;
 

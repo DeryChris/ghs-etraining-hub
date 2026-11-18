@@ -25,6 +25,8 @@ function record(level: Level, label: string, detail: string) {
 
 const TABLES = [
   "users",
+  "programme_fields",
+  "programme_areas",
   "materials",
   "material_views",
   "training_sessions",
