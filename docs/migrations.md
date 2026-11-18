@@ -45,6 +45,8 @@ review the SQL → `npm run db:migrate` in each environment.
 * `supabase/migrations/` runs last, so a new table needs its RLS lock-down statement added
   there in the same change.
 
+The programme-areas cutover of 17 November 2026 has its own note: [cutover-2026-11-17](cutover-2026-11-17-programme-areas.md).
+
 ## Applied migrations carry a hash
 
 `drizzle.__drizzle_migrations` stores a SHA-256 of each migration file. If a file is edited
