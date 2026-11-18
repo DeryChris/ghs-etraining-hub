@@ -145,8 +145,15 @@ symptom is a page failing with `relation "material_views" does not exist` (or
 
 ```bash
 npm run db:migrate   # applies drizzle/0003; needs DIRECT_URL
-npm run db:seed      # idempotent; loads the taxonomy, regions and Upper West geography the training form uses
+npm run db:seed            # idempotent; taxonomy + geography + starter content and accounts
+npm run db:seed:geography  # geography only — safe on a database that already has real people in it
 ```
+
+`db:seed:geography` exists because the full seeder also creates a demo administrator, a facilitator
+and three starter materials. If the app is live and only the district/facility pickers are empty
+(`db:doctor` says *"No districts or facilities"*), run the geography command instead: it upserts
+regions, the eleven Upper West districts, their sub-districts and 24 facilities, and touches
+nothing else.
 
 If the connection itself fails — `getaddrinfo ENOTFOUND`, `ECONNREFUSED`, `CONNECT_TIMEOUT`, or
 `read ECONNRESET` — run the doctor first. It checks both URLs, resolves the hosts, connects, and names the fix

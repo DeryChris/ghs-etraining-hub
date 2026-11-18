@@ -207,7 +207,14 @@ async function checkDatabase(
       record(
         "fail",
         "Geography is empty",
-        "run npm run db:seed — the sessions form has nothing to pick from otherwise",
+        "run npm run db:seed:geography — the training form has nothing to pick from otherwise",
+      );
+    } else if (geography && geography.districts === 0) {
+      record(
+        "warn",
+        "No districts or facilities",
+        "The training form stops at Region: it needs a district and a facility. " +
+          "Run npm run db:seed:geography (idempotent; no demo accounts or materials).",
       );
     } else if (geography) {
       record(

@@ -15,6 +15,7 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx src/db/seed.ts",
+    "db:seed:geography": "tsx scripts/seed-geography.ts",
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "test:watch": "vitest --watch",

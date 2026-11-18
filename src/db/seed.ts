@@ -3,42 +3,46 @@ import { db } from "./client";
 import {
   users,
   materials,
-  regions,
-  districts,
-  subDistricts,
-  facilities,
   programmeFields,
   programmeAreas,
   areaFacilitators,
 } from "./schema";
-import { eq } from "drizzle-orm";
-import { REGIONS, UPPER_WEST_DISTRICTS, UPPER_WEST_REGION_CODE } from "./data/geography";
-import { PROGRAMME_FIELDS, flatProgrammeAreas } from "./data/programme-taxonomy";
+import { seedGeography } from "./seed-geography";
+import {
+  PROGRAMME_FIELDS,
+  flatProgrammeAreas,
+} from "./data/programme-taxonomy";
 
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "admin@ghs.gov.gh";
 // The seeded admin has no password here. Provision its login with scripts/provision-auth-user.ts.
 
 async function main() {
   if (process.env.NODE_ENV === "production" && !process.env.ALLOW_PROD_SEED) {
-    throw new Error("Seeder refused to run in production. Set ALLOW_PROD_SEED=true to override.");
+    throw new Error(
+      "Seeder refused to run in production. Set ALLOW_PROD_SEED=true to override.",
+    );
   }
 
   console.log("🌱 Seeding the training library database...");
 
   // Upsert admin user
-  const [admin] = await db.insert(users).values({
-    ghsStaffId: "GHS-000001",
-    email: ADMIN_EMAIL,
-    fullName: "GHS System Administrator",
-    role: "SYSTEM_ADMIN",
-    directorate: "HR Directorate",
-    region: "Greater Accra",
-    facility: "GHS HQ, Accra",
-    isActive: true,
-  }).onConflictDoUpdate({
-    target: users.ghsStaffId,
-    set: { role: "SYSTEM_ADMIN", isActive: true, updatedAt: new Date() },
-  }).returning();
+  const [admin] = await db
+    .insert(users)
+    .values({
+      ghsStaffId: "GHS-000001",
+      email: ADMIN_EMAIL,
+      fullName: "GHS System Administrator",
+      role: "SYSTEM_ADMIN",
+      directorate: "HR Directorate",
+      region: "Greater Accra",
+      facility: "GHS HQ, Accra",
+      isActive: true,
+    })
+    .onConflictDoUpdate({
+      target: users.ghsStaffId,
+      set: { role: "SYSTEM_ADMIN", isActive: true, updatedAt: new Date() },
+    })
+    .returning();
 
   // A facilitator account, assigned to a couple of programme areas so the
   // authoring and review queues are not empty on a fresh install.
@@ -84,7 +88,12 @@ async function main() {
         })
         .onConflictDoUpdate({
           target: programmeAreas.code,
-          set: { fieldId: row.id, name: area.name, sortOrder: areaIndex * 10, updatedAt: new Date() },
+          set: {
+            fieldId: row.id,
+            name: area.name,
+            sortOrder: areaIndex * 10,
+            updatedAt: new Date(),
+          },
         });
     }
   }
@@ -97,7 +106,11 @@ async function main() {
   // Materials live under an area, never under a second taxonomy: what a learner
   // reads and what a training covered are filed in the same place (ADR-0014).
   const seededAreas = await db
-    .select({ id: programmeAreas.id, code: programmeAreas.code, name: programmeAreas.name })
+    .select({
+      id: programmeAreas.id,
+      code: programmeAreas.code,
+      name: programmeAreas.name,
+    })
     .from(programmeAreas);
   const areaByCode = new Map(seededAreas.map((area) => [area.code, area]));
 
@@ -105,7 +118,8 @@ async function main() {
     {
       areaCode: "PF-CLIN-03",
       title: "Standard Precautions: Core SOP 2026",
-      summary: "Hand hygiene, PPE sequence and sharps handling — the protocol every clinical staff member acknowledges.",
+      summary:
+        "Hand hygiene, PPE sequence and sharps handling — the protocol every clinical staff member acknowledges.",
       type: "DOCUMENT" as const,
       priority: "CRITICAL" as const,
       requiresAcknowledgement: true,
@@ -115,7 +129,8 @@ async function main() {
     {
       areaCode: "PF-PH-01",
       title: "Cold Chain and Vaccine Handling",
-      summary: "Temperature monitoring, the shake test and what to do when the fridge fails overnight.",
+      summary:
+        "Temperature monitoring, the shake test and what to do when the fridge fails overnight.",
       type: "VIDEO" as const,
       priority: "HIGH" as const,
       requiresAcknowledgement: false,
@@ -125,7 +140,8 @@ async function main() {
     {
       areaCode: "PF-PH-06",
       title: "Integrated Disease Surveillance: Weekly Reporting",
-      summary: "How to complete and submit the weekly surveillance return, with the thresholds that trigger an alert.",
+      summary:
+        "How to complete and submit the weekly surveillance return, with the thresholds that trigger an alert.",
       type: "DOCUMENT" as const,
       priority: "HIGH" as const,
       requiresAcknowledgement: true,
@@ -180,57 +196,16 @@ async function main() {
     }
   }
 
-  console.log(`   Content: ${seededMaterialCount} starter materials filed under programme areas`);
+  console.log(
+    `   Content: ${seededMaterialCount} starter materials filed under programme areas`,
+  );
 
   // ── Reference geography ───────────────────────────────────────────────────
-  // Upserted on the natural key, so re-running after GHS supplies a fuller
-  // facility list adds rows instead of duplicating them.
-  for (const region of REGIONS) {
-    await db
-      .insert(regions)
-      .values(region)
-      .onConflictDoUpdate({ target: regions.code, set: { name: region.name } });
-  }
-
-  const [upperWest] = await db.select().from(regions).where(eq(regions.code, UPPER_WEST_REGION_CODE)).limit(1);
-  if (upperWest) {
-    for (const district of UPPER_WEST_DISTRICTS) {
-      const [row] = await db
-        .insert(districts)
-        .values({ regionId: upperWest.id, name: district.name, kind: district.kind, capital: district.capital })
-        .onConflictDoUpdate({
-          target: [districts.regionId, districts.name],
-          set: { kind: district.kind, capital: district.capital },
-        })
-        .returning();
-
-      for (const name of district.subDistricts) {
-        await db
-          .insert(subDistricts)
-          .values({ districtId: row.id, name })
-          .onConflictDoUpdate({ target: [subDistricts.districtId, subDistricts.name], set: { name } });
-      }
-
-      for (const facility of district.facilities) {
-        await db
-          .insert(facilities)
-          .values({
-            districtId: row.id,
-            name: facility.name,
-            type: facility.type,
-            ownership: facility.ownership ?? "GHS",
-          })
-          .onConflictDoUpdate({
-            target: [facilities.districtId, facilities.name],
-            set: { type: facility.type, ownership: facility.ownership ?? "GHS" },
-          });
-      }
-    }
-    console.log(
-      `   Geography: ${REGIONS.length} regions, ${UPPER_WEST_DISTRICTS.length} Upper West districts, ` +
-        `${UPPER_WEST_DISTRICTS.reduce((n, d) => n + d.facilities.length, 0)} facilities`,
-    );
-  }
+  const geography = await seedGeography(db);
+  console.log(
+    `   Geography: ${geography.regions} regions, ${geography.districts} Upper West districts, ` +
+      `${geography.subDistricts} sub-districts, ${geography.facilities} facilities`,
+  );
 
   console.log("✅ Seed complete");
   console.log(`   Admin: ${ADMIN_EMAIL} (GHS-000001)`);
