@@ -46,7 +46,11 @@ function hostOf(raw: string | undefined): URL | null {
   }
 }
 
-function checkUrlShape(name: string, raw: string | undefined, role: "runtime" | "migrations") {
+function checkUrlShape(
+  name: string,
+  raw: string | undefined,
+  role: "runtime" | "migrations",
+) {
   if (!raw) {
     record(
       "fail",
@@ -60,7 +64,11 @@ function checkUrlShape(name: string, raw: string | undefined, role: "runtime" | 
 
   const url = hostOf(raw);
   if (!url) {
-    record("fail", `${name} is not a valid URL`, "It should start with postgresql://");
+    record(
+      "fail",
+      `${name} is not a valid URL`,
+      "It should start with postgresql://",
+    );
     return;
   }
 
@@ -92,7 +100,11 @@ function checkUrlShape(name: string, raw: string | undefined, role: "runtime" | 
   }
 
   if (!hasSsl && !/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(host)) {
-    record("warn", `${name} has no sslmode`, "Supabase requires TLS. Add ?sslmode=require (or &sslmode=require).");
+    record(
+      "warn",
+      `${name} has no sslmode`,
+      "Supabase requires TLS. Add ?sslmode=require (or &sslmode=require).",
+    );
   }
 
   const user = decodeURIComponent(url.username);
@@ -110,8 +122,16 @@ async function checkDns(name: string, raw: string | undefined) {
   if (!url) return;
   try {
     const addresses = await lookup(url.hostname, { all: true });
-    const families = [...new Set(addresses.map((address) => (address.family === 6 ? "IPv6" : "IPv4")))];
-    record("ok", `${name} resolves`, `${addresses.length} address(es): ${families.join(" + ")}`);
+    const families = [
+      ...new Set(
+        addresses.map((address) => (address.family === 6 ? "IPv6" : "IPv4")),
+      ),
+    ];
+    record(
+      "ok",
+      `${name} resolves`,
+      `${addresses.length} address(es): ${families.join(" + ")}`,
+    );
     if (families.length === 1 && families[0] === "IPv6") {
       record(
         "warn",
@@ -131,13 +151,33 @@ async function checkDns(name: string, raw: string | undefined) {
   }
 }
 
-async function checkDatabase(raw: string | undefined) {
+/**
+ * Both URLs are actually dialled, not just inspected.
+ *
+ * This used to connect with `DIRECT_URL` alone, which made a green doctor mean
+ * "migrations can reach the database" — not "the app can". A `.env` whose
+ * `DATABASE_URL` still pointed at the IPv6-only direct host passed every check
+ * and then failed on every page with `write CONNECT_TIMEOUT undefined:undefined`.
+ * `deep` is only true for the runtime URL, so the schema and geography counts
+ * are not printed twice.
+ */
+async function checkDatabase(
+  label: string,
+  raw: string | undefined,
+  deep: boolean,
+) {
   const url = hostOf(raw);
   if (!url) return;
-  const sql = postgres(url.toString(), { max: 1, prepare: false, connect_timeout: 10 });
+  const sql = postgres(url.toString(), {
+    max: 1,
+    prepare: false,
+    connect_timeout: 10,
+  });
   try {
     const [{ version }] = await sql<{ version: string }[]>`select version()`;
-    record("ok", "Connected", version.split(",")[0] ?? version);
+    record("ok", `${label} connects`, version.split(",")[0] ?? version);
+
+    if (!deep) return;
 
     const missing = await sql<{ name: string }[]>`
       select t.name
@@ -155,14 +195,20 @@ async function checkDatabase(raw: string | undefined) {
       );
     }
 
-    const [geography] = await sql<{ regions: number; districts: number; facilities: number }[]>`
+    const [geography] = await sql<
+      { regions: number; districts: number; facilities: number }[]
+    >`
       select
         (select count(*) from regions)::int as regions,
         (select count(*) from districts)::int as districts,
         (select count(*) from facilities)::int as facilities
     `;
     if (geography && geography.regions === 0) {
-      record("fail", "Geography is empty", "run npm run db:seed — the sessions form has nothing to pick from otherwise");
+      record(
+        "fail",
+        "Geography is empty",
+        "run npm run db:seed — the sessions form has nothing to pick from otherwise",
+      );
     } else if (geography) {
       record(
         "ok",
@@ -171,11 +217,22 @@ async function checkDatabase(raw: string | undefined) {
       );
     }
 
-    const [users] = await sql<{ n: number }[]>`select count(*)::int as n from users`;
+    const [users] = await sql<
+      { n: number }[]
+    >`select count(*)::int as n from users`;
     record("ok", "Accounts", `${users?.n ?? 0} directory row(s)`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    record("fail", "Could not connect", message.split("\n")[0] ?? message);
+    const code = (error as NodeJS.ErrnoException).code;
+    record(
+      "fail",
+      `${label} cannot connect`,
+      `${message.split("\n")[0] ?? message}` +
+        (code === "CONNECT_TIMEOUT"
+          ? "\nThis is the URL the application uses on every page. Copy the host, port and username from " +
+            "Supabase → Connect → Session pooler, and keep DIRECT_URL on the same host."
+          : ""),
+    );
   } finally {
     await sql.end({ timeout: 5 }).catch(() => undefined);
   }
@@ -191,7 +248,9 @@ async function main() {
   await checkDns("DATABASE_URL", runtime);
   await checkDns("DIRECT_URL", direct);
 
-  await checkDatabase(direct);
+  // The app first, then migrations: if only one of them works, that is the story.
+  await checkDatabase("DATABASE_URL", runtime, true);
+  if (direct !== runtime) await checkDatabase("DIRECT_URL", direct, false);
 
   const icon: Record<Level, string> = { ok: "✓", warn: "!", fail: "✗" };
   console.log("\nGHS-TL database doctor\n");

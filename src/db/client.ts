@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { databaseTarget } from "@/lib/db-target";
 import * as schema from "./schema";
 
 const connectionString = process.env.DATABASE_URL;
@@ -38,6 +39,19 @@ function createClient(url: string) {
     },
     onnotice: () => {},
   });
+}
+
+/**
+ * One line at startup naming the host the server will use. It costs nothing and
+ * it settles the question "which connection string is the app actually on?"
+ * without ever printing the password — the first thing to check when the
+ * terminal says CONNECT_TIMEOUT but the connection string looks right.
+ */
+if (!globalForDb.__ghsPg) {
+  const target = databaseTarget(connectionString);
+  console.log(
+    `[ghs-tl] database → ${target ? `${target.host}:${target.port}` : "DATABASE_URL could not be parsed"}`,
+  );
 }
 
 export const client = globalForDb.__ghsPg ?? createClient(connectionString);
