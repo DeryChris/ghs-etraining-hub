@@ -66,8 +66,8 @@ async function probe(label: string, work: () => Promise<unknown>): Promise<{ lab
   }
 }
 
-async function deepProbes() {
-  return Promise.all([
+async function deepProbes(mode: "parallel" | "serial" = "parallel") {
+  const probes = [
     probe("session (users)", () => db.select({ id: users.id }).from(users).limit(1)),
     probe("regions", () => db.select({ id: regions.id }).from(regions).limit(50)),
     probe("geography (districts)", () => db.select({ id: districts.id }).from(districts).limit(100)),
@@ -75,12 +75,22 @@ async function deepProbes() {
     probe("trainings", () => db.select({ id: trainingSessions.id }).from(trainingSessions).limit(50)),
     probe("materials", () => db.select({ id: materials.id }).from(materials).limit(50)),
     probe("complaints", () => db.select({ id: complaints.id }).from(complaints).limit(10)),
-  ]);
+  ];
+  // Serial mode is the control: same queries, one at a time. If parallel times
+  // out and serial is fast, the connection pool is the bottleneck, not the SQL.
+  if (mode === "serial") {
+    const results: Awaited<ReturnType<typeof probe>>[] = [];
+    for (const run of probes) results.push(await run);
+    return results;
+  }
+  return Promise.all(probes);
 }
 
 export async function GET(request: Request) {
   const start = Date.now();
-  const deep = new URL(request.url).searchParams.get("deep") === "1";
+  const deepParam = new URL(request.url).searchParams.get("deep");
+  const deep = deepParam !== null;
+  const deepMode = deepParam === "serial" ? "serial" : "parallel";
   const requestId = await currentRequestId();
   let dbStatus: "up" | "down" = "down";
   let schemaStatus: "current" | "outdated" | "unknown" = "unknown";
@@ -126,7 +136,7 @@ export async function GET(request: Request) {
             }
           : null;
       })(),
-      ...(deep ? { probes: await deepProbes() } : {}),
+      ...(deep ? { probes: await deepProbes(deepMode), probeMode: deepMode } : {}),
       ...(missing.length > 0 ? { missingTables: missing } : {}),
       latencyMs: Date.now() - start,
       requestId,
