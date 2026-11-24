@@ -27,7 +27,7 @@ const globalForDb = globalThis as unknown as {
  * instance, and several instances fan out quickly, so production sets this
  * lower than a long-lived server would.
  */
-const poolMax = Number.parseInt(process.env.DB_POOL_MAX ?? "", 10) || 5;
+const poolMax = Number.parseInt(process.env.DB_POOL_MAX ?? "", 10) || 10;
 
 function createClient(url: string) {
   return postgres(url, {
@@ -36,12 +36,17 @@ function createClient(url: string) {
     max: poolMax,
     idle_timeout: 20,
     max_lifetime: 60 * 30,
-    connect_timeout: 5,
-    // A query that reaches Postgres and never returns is cut off here, so a
-    // stalled statement surfaces as an error the page can show rather than an
-    // endless spinner. Page-level deadlines live in `lib/server/deadline.ts`.
+    // A cold Vercel function in Washington opening a TLS connection to Paris can
+    // take longer than five seconds; at five it gave up and retried, which reads
+    // from the browser as a tab that never finishes loading.
+    connect_timeout: 15,
+    // A statement that reaches Postgres and never returns is cut off here, so a
+    // stalled query surfaces as an error the page can show rather than an endless
+    // spinner. Page-level deadlines live in `lib/server/deadline.ts`; a queued
+    // connection fails fast rather than waiting forever.
     connection: {
       statement_timeout: 15_000,
+      idle_in_transaction_session_timeout: 10_000,
       application_name: "ghs-training-library",
     },
     onnotice: () => {},

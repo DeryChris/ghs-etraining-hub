@@ -6,6 +6,8 @@ import { ListEmptyState } from "@/components/ui/empty-state";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
+import { DataUnavailable } from "@/components/ui/data-unavailable";
+import { withDeadline } from "@/lib/server/page-data";
 import { Stat } from "@/components/ui/stat";
 import { LIVE_REGION, isLiveRegion } from "@/lib/ghs-constants";
 import {
@@ -54,7 +56,17 @@ export default async function GeographyPage({
   const regionId = first(query.region);
   const districtId = first(query.district);
 
-  const [geography, totals] = await Promise.all([listGeography(), getReferenceTotals()]);
+  const loaded = await withDeadline("geography", Promise.all([listGeography(), getReferenceTotals()]));
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="Geography did not load"
+        description="The regions, districts and facilities could not be read in time. Nothing was changed."
+        requestId={loaded.requestId}
+      />
+    );
+  }
+  const [geography, totals] = loaded.data;
 
   const region = geography.find((row) => row.id === regionId) ?? null;
   const district = region?.districts.find((row) => row.id === districtId) ?? null;

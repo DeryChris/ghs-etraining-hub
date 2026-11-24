@@ -21,6 +21,8 @@ import {
   periodDelta,
 } from "@/lib/server/insights-queries";
 
+import { DataUnavailable } from "@/components/ui/data-unavailable";
+import { withDeadline } from "@/lib/server/page-data";
 import { requireRole } from "@/lib/server/rbac";
 
 export const dynamic = "force-dynamic";
@@ -33,15 +35,28 @@ export default async function InsightsPage() {
   // The review queue is a sign-off duty: administrators and unit heads only.
   const reviewer = admin || session.unitHead === true;
 
-  const [insights, traffic, uploads, sessions, programmeTraffic, trainingCounts, typeMix] = await Promise.all([
-    getInsights(session),
-    getTrafficSeries(session, 12),
-    getUploadSeries(session, 12),
-    getTrainingSeries(session, 12),
-    getProgrammeTraffic(session, 30),
-    getTrainingCounts(session),
-    getTypeMix(session),
-  ]);
+  const loaded = await withDeadline(
+    "insights",
+    Promise.all([
+      getInsights(session),
+      getTrafficSeries(session, 12),
+      getUploadSeries(session, 12),
+      getTrainingSeries(session, 12),
+      getProgrammeTraffic(session, 30),
+      getTrainingCounts(session),
+      getTypeMix(session),
+    ]),
+  );
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="Insights did not load"
+        description="The traffic and catalogue figures could not be read in time. The numbers on this page are recomputed per request, so nothing is stale or lost."
+        requestId={loaded.requestId}
+      />
+    );
+  }
+  const [insights, traffic, uploads, sessions, programmeTraffic, trainingCounts, typeMix] = loaded.data;
 
   const hasTraffic = traffic.totals.views + traffic.totals.downloads > 0;
   const hasUploads = uploads.total > 0;

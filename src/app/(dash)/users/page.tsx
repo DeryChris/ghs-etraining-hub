@@ -4,6 +4,8 @@ import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { DataUnavailable } from "@/components/ui/data-unavailable";
+import { withDeadline } from "@/lib/server/page-data";
 import { Stat } from "@/components/ui/stat";
 import { CreateUserForm } from "@/components/users/create-user-form";
 import { UserRowActions } from "@/components/users/user-row-actions";
@@ -40,10 +42,23 @@ export default async function UsersPage({
   const status: DirectoryStatus | null = params.status === "active" || params.status === "inactive" ? params.status : null;
   const requestedPage = Number.parseInt(params.page ?? "1", 10);
 
-  const [directory, summary] = await Promise.all([
-    listDirectory({ query, role, status, page: Number.isFinite(requestedPage) ? requestedPage : 1 }),
-    getDirectorySummary(),
-  ]);
+  const loaded = await withDeadline(
+    "users",
+    Promise.all([
+      listDirectory({ query, role, status, page: Number.isFinite(requestedPage) ? requestedPage : 1 }),
+      getDirectorySummary(),
+    ]),
+  );
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="The staff directory did not load"
+        description="The directory could not be read in time. No account was changed."
+        requestId={loaded.requestId}
+      />
+    );
+  }
+  const [directory, summary] = loaded.data;
 
   const filtered = query.length > 0 || role !== null || status !== null;
   const firstOnPage = directory.total === 0 ? 0 : (directory.page - 1) * DIRECTORY_PAGE_SIZE + 1;
