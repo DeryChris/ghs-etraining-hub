@@ -173,6 +173,7 @@ export default async function UsersPage({
                         fullName={row.fullName}
                         role={row.role}
                         isActive={row.isActive}
+                        isUnitHead={row.isUnitHead}
                         isSelf={isSelf}
                       />
                     </td>

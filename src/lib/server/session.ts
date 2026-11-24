@@ -44,6 +44,7 @@ export const resolveAccount = cache(async (): Promise<AccountState> => {
       fullName: users.fullName,
       ghsStaffId: users.ghsStaffId,
       isActive: users.isActive,
+      isUnitHead: users.isUnitHead,
       region: users.region,
       directorate: users.directorate,
       cadre: users.cadre,
@@ -67,6 +68,7 @@ export const resolveAccount = cache(async (): Promise<AccountState> => {
       region: row.region,
       directorate: row.directorate,
       cadre: row.cadre,
+      unitHead: row.isUnitHead,
     },
   };
 });

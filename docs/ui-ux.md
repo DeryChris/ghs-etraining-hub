@@ -45,6 +45,23 @@ and use the utility it generates.
 * Content column max width 1200 px; long‑form reading width 72 ch.
 * Grid: 12‑column desktop, 4‑column tablet, 1‑column mobile, 24 px gutters.
 
+### Public pages: art and photography
+
+The landing page carries no background grid. A 44 px boxed grid reads as graph paper and squares
+off every section it touches, so the hero instead uses layered vector art
+(`src/components/marketing/landing-art.tsx`): woven kente bands on a gradient mask, contour rings
+drawn from the choropleth map, the black star, and a soft dot field. Colour transitions are
+gradients — never `filter: blur()` — and each layer is `aria-hidden`, `pointer-events-none`, and
+masked so it stops before the text column. `hero-glow` is a `::before` at `z-index: -1` inside an
+`isolation: isolate`, which is what keeps the wash behind the copy on the other public pages.
+
+Photography lives in `public/images/stock/` and is referenced by path, so `next/image` optimises it
+and the build stays hermetic (no remote fetch at render time). Three images: a hero team in a
+hospital corridor, two nurses reading a protocol at a desk, and a clinician portrait used by the
+sign-in and about pages. They are illustrative — swap them for GHS photography when it is cleared
+for publication; keep the descriptive `alt` text, which names the scene and never claims an
+identity.
+
 ## 3. Component inventory (`src/components/`)
 
 `ui/`: `button` (primary/secondary/ghost/destructive, 36/44 px heights, loading state that
@@ -101,6 +118,30 @@ Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard opera
 * No exclamation marks, no dark patterns, no fake urgency, no emoji in UI chrome.
 * Timezone always `Africa/Accra`, dates as `12 Feb 2026, 14:05 GMT`, durations as `1 h 20 m`,
   sizes as `8.4 MB` (via `src/lib/format.ts`).
+
+### Feedback on every action
+
+Nothing waits for the page to settle before admitting it was pressed. A menu item carries a
+spinner the moment it is clicked (`useLinkStatus` in the sidebar), a submit button swaps its label
+for the present participle ("Signing out…", "Lodging your complaint…") and disables itself, and
+every slow tab has a `loading.tsx` whose skeleton matches the layout it replaces. Sign-out is the
+loudest case: the menu button changes under the finger, because a dead-looking sign-out is the
+complaint we heard most.
+
+### Public pages: the Getting-started panel and the Complaint Hub
+
+* Sign-in uses a split card. The left, GHS-green panel answers the three questions a first-time
+  visitor has — *do I have an account, which email, who do I ask* — as a numbered four-step guide,
+  with a gold-bordered "Used an older portal before?" notice. The right column is the form, then
+  "Create an account" (gold, the accepted exception to the brand-colour rule), then a
+  "Trouble signing in?" divider and the red Complaint Hub button.
+* `/help` is the Complaint Hub: report an issue, or check a complaint by Staff ID. It is public on
+  purpose — somebody locked out of their account cannot sign in to ask for help. `/help/report`
+  and `/help/status` never require a session and never ask for a password.
+* Only the Upper West Region is presented as live. The landing page map draws all sixteen regions
+  from real 2019 boundaries (`src/lib/ghana-map.ts`), fills Upper West, and labels the rest "coming
+  soon"; the geography admin makes every other region read-only with the same wording. Nothing is
+  hidden and nothing is shown as broken.
 
 ## 6. Accessibility contract
 

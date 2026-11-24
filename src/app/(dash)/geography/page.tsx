@@ -7,6 +7,7 @@ import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { Stat } from "@/components/ui/stat";
+import { LIVE_REGION, isLiveRegion } from "@/lib/ghs-constants";
 import {
   createDistrictAction,
   createFacilityAction,
@@ -119,6 +120,23 @@ export default async function GeographyPage({
 
         <ul className="flex flex-wrap gap-2">
           {geography.map((row) => {
+            const live = isLiveRegion(row.code, row.name);
+            if (!live) {
+              return (
+                <li key={row.id}>
+                  <span
+                    title={`${row.name} Region — coming soon`}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-control border border-dashed border-hairline bg-surface-2/60 px-3 text-sm font-semibold text-ink-muted"
+                  >
+                    <MapPin className="h-3.5 w-3.5" aria-hidden />
+                    {row.name}
+                    <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-muted">
+                      Coming soon
+                    </span>
+                  </span>
+                </li>
+              );
+            }
             const active = row.id === regionId;
             return (
               <li key={row.id}>
@@ -128,7 +146,7 @@ export default async function GeographyPage({
                   className={`inline-flex min-h-11 items-center gap-2 rounded-control border px-3 text-sm font-semibold transition-colors ${
                     active
                       ? "border-primary bg-primary text-primary-ink"
-                      : "border-hairline bg-surface text-ink-muted hover:border-primary/40 hover:text-ink"
+                      : "border-primary/40 bg-surface text-ink hover:border-primary"
                   }`}
                 >
                   <MapPin className="h-3.5 w-3.5" aria-hidden />
@@ -141,9 +159,23 @@ export default async function GeographyPage({
             );
           })}
         </ul>
+        <p className="text-xs text-ink-muted">
+          The library is live in {LIVE_REGION.name} only. The other fifteen regions are seeded and
+          read-only here until they are switched on — districts and facilities for a region are added
+          when it goes live, so nothing has to be thrown away later.
+        </p>
       </section>
 
-      {!region ? (
+      {region && !isLiveRegion(region.code, region.name) ? (
+        <section className="rounded-card border border-dashed border-hairline bg-surface-2/60 p-6 text-center">
+          <h2 className="text-lg font-bold text-ink">{region.name} Region is coming soon</h2>
+          <p className="mx-auto mt-2 max-w-prose text-sm text-ink-muted">
+            {LIVE_REGION.name} is the pilot region, so its districts and facilities are the ones that can
+            be edited today. {region.name} is already seeded — choose {LIVE_REGION.name} above to work on
+            the live geography.
+          </p>
+        </section>
+      ) : !region ? (
         <ListEmptyState
           title={geography.length === 0 ? "No regions recorded" : "Choose a region"}
           description={

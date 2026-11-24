@@ -370,3 +370,65 @@ export async function sendPasswordResetAction(_previous: UserActionState, formDa
 
   return { ok: true, message: `A set-password link was sent to ${target.email}. It works once and expires.` };
 }
+
+/* ── Unit heads ─────────────────────────────────────────────────────────────── */
+
+const unitHeadInput = z.object({ userId: z.string().uuid() }).strict();
+
+/**
+ * Marks a facilitator as a unit head, or takes the duty away again.
+ *
+ * A unit head is a facilitator who signs off the material filed under their
+ * programme fields — the review queue, for the areas they are assigned to. The
+ * role itself does not change, so their area assignments and materials keep
+ * working whichever way this is set.
+ */
+export async function setUnitHeadAction(_previous: UserActionState, formData: FormData): Promise<UserActionState> {
+  const parsed = unitHeadInput.safeParse({ userId: field(formData, "userId") });
+  if (!parsed.success) return { ok: false, message: "That person could not be identified. Reload the page." };
+
+  const guard = await checkCapability("user.assign_role");
+  if (!guard.ok) return { ok: false, message: guard.message };
+  const { session } = guard;
+
+  const [target] = await db
+    .select({ id: users.id, fullName: users.fullName, role: users.role, isUnitHead: users.isUnitHead })
+    .from(users)
+    .where(eq(users.id, parsed.data.userId))
+    .limit(1);
+  if (!target) return { ok: false, message: "That person is no longer in the directory." };
+  if (target.role !== "FACILITATOR") {
+    return {
+      ok: false,
+      message: `${target.fullName} is a ${target.role.toLowerCase().replace("_", " ")}. Only a facilitator can be a unit head.`,
+    };
+  }
+
+  const next = !target.isUnitHead;
+  try {
+    await db.transaction(async (tx) => {
+      await tx.update(users).set({ isUnitHead: next, updatedAt: new Date() }).where(eq(users.id, target.id));
+      await logAudit(
+        {
+          actor: auditActor(session),
+          action: next ? "USER_UNIT_HEAD_GRANTED" : "USER_UNIT_HEAD_REMOVED",
+          entity: "user",
+          entityId: target.id,
+          metadata: { fullName: target.fullName },
+        },
+        tx,
+      );
+    });
+  } catch (error) {
+    log.error({ event: "user.unit_head_failed", err: String(error) });
+    return { ok: false, message: "That was not saved. Try again." };
+  }
+
+  revalidatePath("/users");
+  return {
+    ok: true,
+    message: next
+      ? `${target.fullName} is now a unit head: the review queue is on their dashboard.`
+      : `${target.fullName} is no longer a unit head.`,
+  };
+}

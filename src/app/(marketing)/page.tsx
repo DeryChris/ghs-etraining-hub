@@ -19,13 +19,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { CertificateSeal, EmptyArt, RegionMap } from "@/components/brand/illustrations";
+import { CtaArt, HeroArt, MapArt } from "@/components/marketing/landing-art";
 import { CountUp } from "@/components/marketing/count-up";
 import { Faq } from "@/components/marketing/faq";
 import { Reveal } from "@/components/marketing/reveal";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { buttonClass } from "@/components/ui/button";
-import { GHS_REGIONS } from "@/lib/ghs-constants";
 import { SITE } from "@/lib/site";
+import { GHS_REGIONS, LIVE_REGION } from "@/lib/ghs-constants";
 import { listPublicFields } from "@/lib/server/learning-queries";
 import { getPublicStatsCached } from "@/lib/server/public-queries";
 
@@ -148,8 +149,9 @@ export default async function LandingPage() {
   return (
     <>
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section aria-labelledby="hero-title" className="hero-glow grid-texture relative overflow-hidden">
-        <div className="mx-auto grid max-w-7xl items-center gap-16 px-5 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-12 lg:gap-10 lg:px-10 lg:pb-28 lg:pt-24">
+      <section aria-labelledby="hero-title" className="relative overflow-hidden">
+        <HeroArt />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-5 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-12 lg:gap-10 lg:px-10 lg:pb-28 lg:pt-24">
           <div className="space-y-8 lg:col-span-6">
             <Reveal>
               <p className="inline-flex items-center gap-2.5 rounded-[var(--radius-pill)] border border-hairline bg-surface/80 px-3.5 py-1.5 text-xs font-semibold text-ink-muted backdrop-blur">
@@ -220,11 +222,18 @@ export default async function LandingPage() {
           <div className="relative lg:col-span-6">
             <Reveal delay={0.1}>
               <div className="relative mx-auto max-w-[34rem]">
-                <div className="absolute -inset-6 -z-10 rounded-[3rem] bg-primary/15 blur-3xl" aria-hidden />
-                <div className="relative aspect-[4/4.4] overflow-hidden rounded-hero border border-hairline shadow-lift sm:aspect-[5/4.2]">
+                <div
+                  aria-hidden
+                  className="absolute -inset-4 -z-10 rounded-[2.5rem] opacity-70"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, color-mix(in oklab, var(--primary) 24%, transparent), transparent 52%, color-mix(in oklab, var(--accent) 20%, transparent))",
+                  }}
+                />
+                <div className="relative aspect-[4/3] overflow-hidden rounded-hero border border-hairline shadow-lift sm:aspect-[16/11]">
                   <Image
                     src="/images/stock/health-workers.jpg"
-                    alt="Health workers in scrubs standing together in a hospital corridor"
+                    alt="Four Ghanaian health workers — a nurse, a midwife, a doctor and a laboratory scientist — standing together in a hospital corridor"
                     fill
                     priority
                     sizes="(min-width: 1024px) 540px, 100vw"
@@ -342,24 +351,49 @@ export default async function LandingPage() {
       <section aria-labelledby="regions-title" className="mx-auto grid max-w-7xl items-center gap-14 px-5 py-24 sm:px-8 lg:grid-cols-2 lg:gap-20 lg:px-10 lg:py-32">
         <Reveal>
           <div className="relative overflow-hidden rounded-hero border border-hairline bg-surface p-8 shadow-panel sm:p-10">
-            <div className="grid-texture absolute inset-0 opacity-70" aria-hidden />
+            <MapArt />
             <RegionMap className="relative mx-auto h-auto w-full max-w-[21rem]" />
           </div>
         </Reveal>
         <Reveal delay={0.08}>
           <div className="space-y-6">
             <SectionHeading
-              eyebrow="Across Ghana"
-              title={<span id="regions-title">Present in all {SITE.regionCount} regions.</span> as unknown as string}
-              description="A district hospital in the north opens the same document, at the same version, as a teaching hospital in Accra. Nobody works from a stale copy because of where they serve."
+              eyebrow="Where it is live"
+              title={<span id="regions-title">Live in {LIVE_REGION.name}. {SITE.regionCount - 1} regions to follow.</span> as unknown as string}
+              description={`The library is running in the ${LIVE_REGION.name} Region, with Wa as its hub. The other fifteen regions are already on the rollout map and are next; nothing is half-live elsewhere, so what you see here is what you get.`}
             />
             <ul className="flex flex-wrap gap-2">
-              {GHS_REGIONS.map((region) => (
-                <li key={region} className="rounded-[var(--radius-pill)] border border-hairline bg-surface px-3 py-1.5 text-xs font-semibold text-ink-muted">
-                  {region}
-                </li>
-              ))}
+              {GHS_REGIONS.map((region) => {
+                const live = region === LIVE_REGION.name;
+                return (
+                  <li
+                    key={region}
+                    className={
+                      live
+                        ? "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-primary bg-primary px-3 py-1.5 text-xs font-bold text-primary-ink"
+                        : "rounded-[var(--radius-pill)] border border-dashed border-hairline px-3 py-1.5 text-xs font-semibold text-ink-muted"
+                    }
+                  >
+                    {region}
+                    {live ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary-ink/15 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide">
+                        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary-ink" />
+                        Live
+                      </span>
+                    ) : (
+                      <span className="ml-1 text-[10px] font-bold uppercase tracking-wide opacity-70">Soon</span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
+            <p className="text-xs text-ink-muted">
+              Working in a region that is not live yet?{" "}
+              <Link href="/help/report" className="font-semibold text-primary hover:underline underline-offset-4">
+                Tell us through the Complaint Hub
+              </Link>{" "}
+              and you will be told as soon as it opens.
+            </p>
           </div>
         </Reveal>
       </section>
@@ -397,7 +431,7 @@ export default async function LandingPage() {
                       <h3 className="text-lg font-bold leading-snug text-ink">{item.name}</h3>
                       {item.description && <p className="line-clamp-2 text-sm leading-relaxed text-ink-muted">{item.description}</p>}
                       <span className="mt-auto inline-flex items-center gap-1.5 pt-2 text-sm font-semibold text-primary">
-                        {item.areaCount} {item.areaCount === 1 ? "space" : "programmeAreas"}
+                        {item.areaCount} {item.areaCount === 1 ? "module" : "modules"}
                         <ArrowRight className="h-4 w-4 transition-transform duration-base group-hover:translate-x-1" aria-hidden />
                       </span>
                     </Link>
@@ -436,7 +470,7 @@ export default async function LandingPage() {
           <div className="relative mx-auto max-w-7xl overflow-hidden rounded-hero border border-hairline shadow-lift">
             <Image
               src="/images/stock/nurses-clipboard.jpg"
-              alt="Two nurses in blue scrubs reviewing a clinical document together"
+              alt="Two nurses at a district hospital desk reading a printed clinical protocol together"
               width={1200}
               height={627}
               sizes="(min-width: 1280px) 1200px, 100vw"
@@ -482,8 +516,7 @@ export default async function LandingPage() {
       <section aria-labelledby="cta-title" className="px-5 pb-24 sm:px-8 lg:px-10">
         <Reveal>
           <div className="relative mx-auto max-w-7xl overflow-hidden rounded-hero bg-primary px-8 py-14 text-primary-ink sm:px-14 sm:py-20">
-            <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent/30 blur-3xl" aria-hidden />
-            <div className="absolute -bottom-32 left-1/3 h-80 w-80 rounded-full bg-[#cf2027]/30 blur-3xl" aria-hidden />
+            <CtaArt />
             <div className="relative grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:items-center">
               <div className="space-y-4">
                 <h2 id="cta-title" className="text-3xl font-extrabold leading-tight sm:text-4xl">

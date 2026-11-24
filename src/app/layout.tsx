@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { MotionProvider } from "@/components/motion-provider";
+import { resolveAppUrl } from "@/lib/app-url";
 import { SITE } from "@/lib/site";
 import { themeBootScript } from "@/lib/theme";
 
@@ -21,10 +22,14 @@ const jakarta = localFont({
   fallback: ["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
 });
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+/*
+ * Resolved, repaired and never thrown: a typo in NEXT_PUBLIC_APP_URL used to fail
+ * the whole production build here (see src/lib/app-url.ts).
+ */
+const APP_URL = resolveAppUrl();
 
 export const metadata: Metadata = {
-  metadataBase: new URL(APP_URL),
+  metadataBase: new URL(APP_URL.url),
   title: {
     default: `${SITE.code} · ${SITE.fullName}`,
     template: `%s · ${SITE.code}`,

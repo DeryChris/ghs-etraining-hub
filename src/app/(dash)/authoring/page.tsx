@@ -16,6 +16,9 @@ export const dynamic = "force-dynamic";
 
 export default async function AuthoringPage() {
   const session = await requireRole(["SYSTEM_ADMIN", "FACILITATOR"]);
+  // Facilitators author and send for review; signing it off is an administrator or
+  // unit-head duty, so the door is not offered to people who cannot walk through it.
+  const canReview = session.role === "SYSTEM_ADMIN" || session.unitHead === true;
   const [materials, programmeAreas] = await Promise.all([listAuthoringMaterials(session), listAuthoringAreas(session)]);
 
   return (
@@ -27,9 +30,11 @@ export default async function AuthoringPage() {
       />
 
       <div className="flex flex-wrap gap-3">
-        <Link href="/review" className={buttonClass({ variant: "secondary" })}>
-          Review queue
-        </Link>
+        {canReview && (
+          <Link href="/review" className={buttonClass({ variant: "secondary" })}>
+            Review queue
+          </Link>
+        )}
         <Link href="/library" className={buttonClass({ variant: "ghost" })}>
           Browse published library
         </Link>

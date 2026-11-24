@@ -15,6 +15,8 @@ const PUBLIC_PATHS = [
   "/about",
   "/programmes",
   "/contact",
+  // The Complaint Hub must work for somebody who cannot sign in at all.
+  "/help",
   "/verify",
   "/privacy",
   "/terms",

@@ -19,6 +19,25 @@ export const GHS_REGIONS = [
 
 export type GhsRegion = (typeof GHS_REGIONS)[number];
 
+/**
+ * The pilot. The library is live in one region and the other fifteen are coming
+ * soon, so this constant — not copy scattered across pages — decides what the
+ * map highlights, which region the geography admin lets you edit, and what the
+ * marketing pages promise.
+ */
+export const LIVE_REGION = {
+  code: "UW",
+  name: "Upper West",
+  capital: "Wa",
+  /** Regions that are live today. Add a code here when a region goes live. */
+  codes: ["UW"],
+} as const;
+
+export function isLiveRegion(code: string | null | undefined, name?: string | null): boolean {
+  if (code && (LIVE_REGION.codes as readonly string[]).includes(code)) return true;
+  return name === LIVE_REGION.name;
+}
+
 export const GHS_DIRECTORATES = [
   "Public Health Directorate",
   "Institutional Care Division",

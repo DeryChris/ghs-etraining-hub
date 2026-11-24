@@ -127,3 +127,36 @@ export const FACILITY_OWNERSHIP_LABELS: Record<FacilityOwnership, string> = {
 export function isFacilityOwnership(value: string | null | undefined): value is FacilityOwnership {
   return value === "GHS" || value === "CHAG" || value === "PRIVATE" || value === "OTHER";
 }
+
+/* ── Complaints ───────────────────────────────────────────────────────────────
+ * The four things staff actually ask for, in their words rather than the
+ * database's: "Changing of personal details", "Login access". The list is
+ * closed so a complaint can be counted and routed, and every label can be read
+ * aloud on the phone.
+ */
+
+export const COMPLAINT_ISSUES = ["PERSONAL_DETAILS", "COURSE_RELATED", "LOGIN_ACCESS", "OTHERS"] as const;
+export type ComplaintIssue = (typeof COMPLAINT_ISSUES)[number];
+
+export const COMPLAINT_ISSUE_LABELS: Record<ComplaintIssue, string> = {
+  PERSONAL_DETAILS: "Changing of personal details",
+  COURSE_RELATED: "Course related",
+  LOGIN_ACCESS: "Login access",
+  OTHERS: "Others",
+};
+
+export const COMPLAINT_ISSUE_HELP: Record<ComplaintIssue, string> = {
+  PERSONAL_DETAILS: "A wrong name, staff ID, facility or posting.",
+  COURSE_RELATED: "A module that will not open, or a training you were not credited for.",
+  LOGIN_ACCESS: "Forgotten password, no account yet, or a locked account.",
+  OTHERS: "Anything that does not fit the three above.",
+};
+
+export const COMPLAINT_STATUSES = ["SUBMITTED", "IN_PROGRESS", "RESOLVED"] as const;
+export type ComplaintStatus = (typeof COMPLAINT_STATUSES)[number];
+
+export const COMPLAINT_STATUS_LABELS: Record<ComplaintStatus, string> = {
+  SUBMITTED: "Submitted",
+  IN_PROGRESS: "Being handled",
+  RESOLVED: "Resolved",
+};
