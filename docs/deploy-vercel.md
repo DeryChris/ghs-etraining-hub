@@ -49,8 +49,7 @@ size; they cost nothing to have in place now.
 | `sb_secret_…` key | same page | server-only, signs storage URLs |
 
 Merging first matters: `main` is five commits behind the programme-areas work, so deploying it
-today would ship the old taxonomy against the migrated database — the `relation "spaces" does not
-exist` errors from earlier.
+today would ship the old taxonomy against the migrated database — the `relation "spaces" does not exist` errors from earlier.
 
 ---
 
@@ -145,11 +144,11 @@ curl -s https://<your-domain>/api/health | jq
 
 Expected: `{"ok":true,"checks":{"db":"up","schema":"current"},"latencyMs":…}`.
 
-- **`checks.db = "down"`** → `DATABASE_URL` is wrong or the pooler is unreachable. The site still
-  renders; only data-backed queries fail. Compare against the URL `npm run db:doctor` proved
-  works locally — it is the same pooler host.
-- **`checks.schema = "outdated"`** → migrations are behind. They are already applied to this
-  database, so seeing this means the deployment points somewhere else.
+- `checks.db = "down"` → `DATABASE_URL` is wrong or the pooler is unreachable. The site still
+renders; only data-backed queries fail. Compare against the URL `npm run db:doctor` proved
+works locally — it is the same pooler host.
+- `checks.schema = "outdated"` → migrations are behind. They are already applied to this
+database, so seeing this means the deployment points somewhere else.
 
 Then, in a browser:
 
@@ -157,6 +156,7 @@ Then, in a browser:
 2. `/login` accepts a staff account (see step 7 if nobody can sign in).
 3. `/dashboard` shows the greeting, numbers and the staff panels.
 4. `/catalogue` lists 10 programme fields; Clinical Care → Clinical Service Development shows 1
+
    material; `/library` shows 10.
 5. `/programme-fields` shows 10 fields, 41 areas, and People counts summing to 21.
 
@@ -194,15 +194,15 @@ creates a password in the repository.
 
 ## 8. After the first deploy
 
-- **Redeploy after changing any `NEXT_PUBLIC_*` variable.** They are inlined into the bundle; editing
-  them in the dashboard does nothing until the next build.
+- **Redeploy after changing any** `NEXT_PUBLIC_`* **variable.** They are inlined into the bundle; editing
+them in the dashboard does nothing until the next build.
 - **Migrations** stay a deliberate step: `npm run db:migrate` locally against `DIRECT_URL`, then
-  redeploy. Do not run `0004`/`0005` again — they are recorded in `drizzle.__drizzle_migrations`.
+redeploy. Do not run `0004`/`0005` again — they are recorded in `drizzle.__drizzle_migrations`.
 - **Preview deployments** share the production database by default. If a reviewer should not write
-  to live data, add a second Supabase project for previews and set the variables per environment.
+to live data, add a second Supabase project for previews and set the variables per environment.
 - **Logs:** Vercel → Deployments → Functions. Every line is one JSON object with an `event` name;
-  `query.deadline_exceeded` names the section that stalled, and `shell.session_unavailable` means
-  the app could not reach Postgres at all.
+`query.deadline_exceeded` names the section that stalled, and `shell.session_unavailable` means
+the app could not reach Postgres at all.
 
 ---
 
