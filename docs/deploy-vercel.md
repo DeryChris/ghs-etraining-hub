@@ -11,6 +11,33 @@ the local network (firewall, antivirus TLS inspection, VPN) rather than the conn
 
 ---
 
+## Why the signed-in tabs feel slow, and what actually fixes it
+
+Measured against the live database, the data is not the problem: 7 sub-districts, 24 facilities,
+10 materials, 24 audit rows. A page that takes two seconds is not doing two seconds of work — it is
+waiting. In order of how much it costs:
+
+1. **Region mismatch (the big one).** Supabase is in `eu-west-3` (Paris). Vercel functions default
+   to `iad1` (Washington). Every query then pays ~90–150 ms of round trip, and a page makes several.
+   Set the project's *Function Region* to **Paris (`cdg1`)** — Project → Settings → Functions — and
+   the same page drops most of that. It is a dashboard setting, not a code change, and on the Hobby
+   plan it is the one region you are allowed to choose.
+2. **Direct port instead of the pooler.** `DATABASE_URL` must point at the **transaction pooler,
+   port 6543** (`...pooler.supabase.com:6543/postgres`), with `?pgbouncer=true&sslmode=require`.
+   Port 5432 opens a fresh Postgres connection per cold start.
+3. **Two auth round trips per navigation.** The edge proxy calls `supabase.auth.getUser()` and the
+   dashboard layout resolves the same user again. That is unavoidable without moving identity into a
+   signed cookie; it is roughly one RTT, and it disappears from perceived time once (1) is fixed.
+4. **Everything is `force-dynamic`.** The sidebar counts and page data cannot be cached across
+   requests, by design — a stale unread badge is a bug. The loading skeletons and the in-menu spinner
+   exist so that waiting is visible rather than looking like a dead tab.
+
+The indexes added in `drizzle/0007` (`materials(programme_area_id,state)`,
+`material_views(user_id,viewed_on)`) matter once the library has thousands of rows, not at today's
+size; they cost nothing to have in place now.
+
+---
+
 ## 0. Before you start
 
 | Thing | Where | Why |

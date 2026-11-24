@@ -50,6 +50,13 @@
       "when": 1795100000000,
       "tag": "0006_complaints_and_unit_head",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795200000000,
+      "tag": "0007_complaint_thread",
+      "breakpoints": true
     }
   ]
 }

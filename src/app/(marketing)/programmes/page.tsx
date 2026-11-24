@@ -61,7 +61,7 @@ export default async function ProgrammesPage() {
                     {field.description && <p className="text-sm leading-relaxed text-ink-muted">{field.description}</p>}
                     <div className="mt-auto flex items-center justify-between gap-3 border-t border-hairline pt-5">
                       <span className="text-sm font-semibold text-ink-muted">
-                        {field.areaCount} {field.areaCount === 1 ? "module" : "modules"}
+                        {field.areaCount} {field.areaCount === 1 ? "programme area" : "programme areas"}
                       </span>
                       <Link href="/login" className="inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-primary">
                         Sign in to open

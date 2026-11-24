@@ -6,7 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Stat } from "@/components/ui/stat";
-import { listComplaints, openComplaintCount } from "@/lib/server/complaint-queries";
+import { listComplaints, messagesByComplaint, openComplaintCount } from "@/lib/server/complaint-queries";
 import { requireRole } from "@/lib/server/rbac";
 
 export const metadata: Metadata = { title: "Complaints" };
@@ -23,13 +23,16 @@ export default async function ComplaintsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  await requireRole(["SYSTEM_ADMIN"]);
+  // A working desk, not an administrator-only archive: facilitators and unit
+  // heads answer what they are assigned; resetting access stays administrator-only.
+  await requireRole(["SYSTEM_ADMIN", "FACILITATOR"]);
   const params = await searchParams;
   const filter = FILTERS.some((entry) => entry.key === params.status)
     ? (params.status as "OPEN" | "RESOLVED" | "ALL")
     : "OPEN";
 
   const [rows, openCount] = await Promise.all([listComplaints(filter), openComplaintCount()]);
+  const threads = await messagesByComplaint(rows.map((row) => row.id));
 
   return (
     <div className="space-y-8">
@@ -96,6 +99,13 @@ export default async function ComplaintsPage({
                 response: row.response,
                 createdAt: row.createdAt.toISOString(),
                 resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
+                messages: (threads.get(row.id) ?? []).map((message) => ({
+                  id: message.id,
+                  authorRole: message.authorRole,
+                  authorName: message.authorName,
+                  body: message.body,
+                  createdAt: message.createdAt.toISOString(),
+                })),
               }}
             />
           ))}

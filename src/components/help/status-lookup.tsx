@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { CheckCircle2, Clock3, Loader2, MessageSquareWarning, Search } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
+import { ComplaintReplyForm } from "@/components/help/complaint-reply";
 import { COMPLAINT_ISSUE_LABELS, COMPLAINT_STATUS_LABELS, type ComplaintIssue } from "@/lib/labels";
 import { lookupComplaintsAction, type StatusLookupState } from "@/lib/server/actions/complaints";
 
@@ -102,6 +103,7 @@ export function StatusLookup() {
                   No answer yet. It is with the administrator handling access complaints.
                 </p>
               )}
+              {state.staffId && <ComplaintReplyForm staffId={state.staffId} reference={item.reference} />}
             </li>
           ))}
         </ul>

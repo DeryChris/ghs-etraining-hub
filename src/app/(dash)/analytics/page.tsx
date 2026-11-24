@@ -72,7 +72,7 @@ export default async function ActivityPage() {
                     Material
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
-                    Module
+                    Programme area
                   </th>
                   <th scope="col" className="px-4 py-3 font-semibold">
                     Finished

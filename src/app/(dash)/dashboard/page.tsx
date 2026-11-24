@@ -7,13 +7,18 @@ import {
   ClipboardCheck,
   Download,
   Eye,
-  ShieldAlert,
+  GraduationCap,
+  Layers,
 } from "lucide-react";
+import { AreaChart } from "@/components/charts/area-chart";
+import { ChartCard, EmptyChart, chartColor } from "@/components/charts/chart-card";
+import { DonutChart } from "@/components/charts/donut-chart";
+import { KpiCard, KpiGrid } from "@/components/charts/kpi-card";
+import { RankBars } from "@/components/charts/rank-bars";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
-import { PriorityChip } from "@/components/ui/priority-chip";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { formatDate, formatDateTime, formatMinutes } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { safeAppLink } from "@/lib/links";
 import {
   MATERIAL_TYPE_LABELS,
@@ -21,8 +26,15 @@ import {
   notificationTypeLabel,
 } from "@/lib/labels";
 import { firstNameOf } from "@/lib/names";
-import { getInsights, getTrafficSeries } from "@/lib/server/insights-queries";
-import { getTrainingCounts } from "@/lib/server/insights-queries";
+import {
+  getInsights,
+  getProgrammeTraffic,
+  getTrainingCounts,
+  getTrainingSeries,
+  getTrafficSeries,
+  getTypeMix,
+  periodDelta,
+} from "@/lib/server/insights-queries";
 import { DeadlineError, within, withinOr } from "@/lib/server/deadline";
 import { log } from "@/lib/server/logger";
 import { getLearnerDashboard } from "@/lib/server/learning-queries";
@@ -47,47 +59,6 @@ function greetingFor(now: Date): string {
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
   return "Good evening";
-}
-
-function StatTile({
-  icon: Icon,
-  label,
-  value,
-  hint,
-  tone = "default",
-}: {
-  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
-  label: string;
-  value: string;
-  hint: string;
-  tone?: "default" | "warn" | "success";
-}) {
-  const valueClass =
-    tone === "warn"
-      ? "text-warn"
-      : tone === "success"
-        ? "text-primary"
-        : "text-ink";
-  const iconClass =
-    tone === "warn" ? "bg-warn/12 text-warn" : "bg-primary/10 text-primary";
-  return (
-    <div className="surface-card group p-5 transition-transform duration-base ease-out-quint hover:-translate-y-0.5">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-          {label}
-        </p>
-        <span
-          className={`flex h-9 w-9 items-center justify-center rounded-control ${iconClass}`}
-        >
-          <Icon className="h-4 w-4" aria-hidden />
-        </span>
-      </div>
-      <p className={`mt-4 text-3xl font-extrabold tabular-nums ${valueClass}`}>
-        {value}
-      </p>
-      <p className="mt-1 text-xs text-ink-muted">{hint}</p>
-    </div>
-  );
 }
 
 /**
@@ -168,26 +139,20 @@ export default async function DashboardPage({
     return <DashboardRetry />;
   }
 
-  const [dashboard, announcements, insights, traffic, sessionRecord] =
+  const [dashboard, announcements, insights, traffic, sessionRecord, trainings, typeMix, programmeTraffic] =
     await Promise.all([
       essential[0],
       essential[1],
       staff ? withinOr("dashboard.insights", getInsights(session), null) : null,
-      staff
-        ? withinOr("dashboard.traffic", getTrafficSeries(session, 4), null)
-        : null,
-      staff
-        ? withinOr(
-            "dashboard.training_counts",
-            getTrainingCounts(session),
-            null,
-          )
-        : null,
+      staff ? withinOr("dashboard.traffic", getTrafficSeries(session, 12), null) : null,
+      staff ? withinOr("dashboard.training_counts", getTrainingCounts(session), null) : null,
+      staff ? withinOr("dashboard.training_series", getTrainingSeries(session, 12), null) : null,
+      staff ? withinOr("dashboard.type_mix", getTypeMix(session), []) : [],
+      staff ? withinOr("dashboard.programme_traffic", getProgrammeTraffic(session, 30), []) : [],
     ]);
 
-  const outstanding = dashboard.mandatoryOutstanding;
   const noticeText = notice ? NOTICES[notice] : undefined;
-  const nextUp = dashboard.continueLearning[0] ?? outstanding[0] ?? null;
+  const nextUp = dashboard.continueLearning[0] ?? null;
 
   return (
     <div className="space-y-10">
@@ -217,9 +182,9 @@ export default async function DashboardPage({
               {greetingFor(now)}, {firstNameOf(session.name)}.
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
-              {outstanding.length > 0
-                ? `${outstanding.length} mandatory ${outstanding.length === 1 ? "protocol needs" : "protocols need"} your attention. Start with the first one.`
-                : "Nothing mandatory is waiting for you. The material from your last training is in the library."}
+              {dashboard.inProgressCount > 0
+                ? `${dashboard.inProgressCount} ${dashboard.inProgressCount === 1 ? "material is" : "materials are"} open where you left off, and ${dashboard.completedCount} ${dashboard.completedCount === 1 ? "is" : "are"} on your record.`
+                : `${dashboard.completedCount} ${dashboard.completedCount === 1 ? "material is" : "materials are"} on your record. Open the library to start the next one.`}
             </p>
             <div className="flex flex-wrap items-center gap-3">
               {nextUp ? (
@@ -229,9 +194,7 @@ export default async function DashboardPage({
                     className: "h-12 rounded-[var(--radius-pill)] px-6",
                   })}
                 >
-                  {dashboard.continueLearning[0]
-                    ? "Continue learning"
-                    : "Open the next protocol"}
+                  Continue learning
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               ) : null}
@@ -249,154 +212,163 @@ export default async function DashboardPage({
         </div>
       </section>
 
-      {/* Stats */}
-      <section
-        aria-label="Summary"
-        className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
-      >
-        <StatTile
-          icon={ShieldAlert}
-          label="Mandatory to do"
-          value={String(outstanding.length)}
-          hint={
-            dashboard.mandatoryTotal === 0
-              ? "None assigned"
-              : `of ${dashboard.mandatoryTotal} mandatory protocols`
-          }
-          tone={outstanding.length > 0 ? "warn" : "success"}
-        />
-        <StatTile
-          icon={BookOpen}
-          label="In progress"
-          value={String(dashboard.inProgressCount)}
-          hint="Materials you have started"
-        />
-        <StatTile
-          icon={BadgeCheck}
-          label="Completed"
-          value={String(dashboard.completedCount)}
-          hint="Recorded on your transcript"
-        />
-      </section>
-
-      {insights && traffic && sessionRecord && (
-        <section aria-labelledby="insights-heading" className="space-y-4">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h2 id="insights-heading" className="text-lg font-bold text-ink">
-                Library at a glance
-              </h2>
-              <p className="text-sm text-ink-muted">
-                {insights.scope === "all"
-                  ? "Traffic and output across every programme. The detail is on Insights."
-                  : "Traffic and output in the programmes you run. The detail is on Insights."}
-              </p>
-            </div>
-            <Link
-              href="/insights"
-              className={buttonClass({ variant: "ghost", size: "sm" })}
-            >
-              All insights
-              <ArrowRight className="ml-1 h-4 w-4" aria-hidden />
-            </Link>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatTile
+      {/* Overview analytics: the numbers, then the shapes behind them. */}
+      {staff && traffic && insights && sessionRecord ? (
+        <>
+          <KpiGrid>
+            <KpiCard
               icon={Eye}
-              label="Opens · 4 weeks"
-              value={String(traffic.totals.views)}
+              label="Material opens · 12 weeks"
+              value={traffic.totals.views}
               hint={`${insights.catalogue.published} materials published`}
+              delta={periodDelta(traffic.views)}
+              spark={traffic.views}
+              color="var(--chart-4)"
             />
-            <StatTile
+            <KpiCard
               icon={Download}
-              label="Downloads · 4 weeks"
-              value={String(traffic.totals.downloads)}
-              hint="From the audit trail"
+              label="Downloads · 12 weeks"
+              value={traffic.totals.downloads}
+              hint="Counted from the audit trail"
+              delta={periodDelta(traffic.downloads)}
+              spark={traffic.downloads}
+              color="var(--chart-1)"
             />
-            <StatTile
-              icon={ClipboardCheck}
+            <KpiCard
+              icon={GraduationCap}
               label="Trainings · 90 days"
-              value={String(sessionRecord.last90Days)}
-              hint={`${sessionRecord.total} on record`}
+              value={sessionRecord.last90Days}
+              hint={`${sessionRecord.total} on the register`}
+              spark={trainings?.counts ?? []}
+              color="var(--chart-5)"
             />
-            <StatTile
-              icon={BookOpen}
+            <KpiCard
+              icon={ClipboardCheck}
               label="Awaiting review"
-              value={String(insights.catalogue.inReview)}
-              hint={
-                insights.catalogue.inReview > 0
-                  ? "Waiting for a decision"
-                  : "The queue is clear"
-              }
-              tone={insights.catalogue.inReview > 0 ? "warn" : "success"}
+              value={insights.catalogue.inReview}
+              hint={insights.catalogue.inReview > 0 ? "Waiting for a decision" : "The queue is clear"}
+              color="var(--chart-2)"
             />
+          </KpiGrid>
+
+          <ChartCard
+            title="Performance trend"
+            description="Opens of published material against file downloads, week by week, across the programmes you can see."
+            series={[
+              { label: "Opens", color: "var(--chart-4)" },
+              { label: "Downloads", color: "var(--chart-1)" },
+            ]}
+            table={{
+              head: ["Week of", "Opens", "Downloads"],
+              rows: traffic.buckets.map((bucket, index) => [
+                bucket.label,
+                traffic.views[index] ?? 0,
+                traffic.downloads[index] ?? 0,
+              ]),
+            }}
+            actions={
+              <Link href="/insights" className={buttonClass({ variant: "ghost", size: "sm" })}>
+                Detailed analytics
+                <ArrowRight className="ml-1 h-4 w-4" aria-hidden />
+              </Link>
+            }
+          >
+            {traffic.totals.views + traffic.totals.downloads > 0 ? (
+              <AreaChart
+                labels={traffic.buckets.map((bucket) => bucket.label)}
+                series={[
+                  { label: "Opens", color: "var(--chart-4)", values: traffic.views },
+                  { label: "Downloads", color: "var(--chart-1)", values: traffic.downloads },
+                ]}
+                unit="opens"
+                height={280}
+              />
+            ) : (
+              <EmptyChart message="No opens recorded yet. Traffic starts counting from the first material someone opens." />
+            )}
+          </ChartCard>
+
+          <div className="grid gap-6 xl:grid-cols-2">
+            <ChartCard
+              title="Materials by type"
+              description="What the library is made of, so a gap in video or practical content is visible rather than guessed at."
+              table={{
+                head: ["Type", "Materials"],
+                rows: typeMix.map((entry) => [MATERIAL_TYPE_LABELS[entry.type], entry.count]),
+              }}
+            >
+              {typeMix.some((entry) => entry.count > 0) ? (
+                <DonutChart
+                  centreLabel={`${typeMix.reduce((sum, entry) => sum + entry.count, 0)} published`}
+                  slices={typeMix.map((entry, index) => ({
+                    label: MATERIAL_TYPE_LABELS[entry.type],
+                    value: entry.count,
+                    color: chartColor(index),
+                  }))}
+                />
+              ) : (
+                <EmptyChart message="Nothing is published yet." />
+              )}
+            </ChartCard>
+
+            <ChartCard
+              title="Busiest programme areas"
+              description="Opens in the last 30 days, by the area the material is filed under."
+              table={{
+                head: ["Programme area", "Opens"],
+                rows: programmeTraffic.map((row) => [row.label, row.value]),
+              }}
+            >
+              {programmeTraffic.length > 0 && programmeTraffic.some((row) => row.value > 0) ? (
+                <RankBars
+                  unit="opens"
+                  items={programmeTraffic.slice(0, 6).map((row, index) => ({
+                    label: row.label,
+                    value: row.value,
+                    color: chartColor(index),
+                  }))}
+                />
+              ) : (
+                <EmptyChart message="No opens recorded in the last 30 days." />
+              )}
+            </ChartCard>
           </div>
-        </section>
+        </>
+      ) : (
+        <KpiGrid>
+          <KpiCard
+            icon={BookOpen}
+            label="In progress"
+            value={dashboard.inProgressCount}
+            hint="Materials you have started"
+            color="var(--chart-4)"
+          />
+          <KpiCard
+            icon={BadgeCheck}
+            label="Completed"
+            value={dashboard.completedCount}
+            hint="Recorded on your record"
+            color="var(--chart-1)"
+          />
+          <KpiCard
+            icon={Layers}
+            label="Open library"
+            value="Browse"
+            hint="Every published programme"
+            color="var(--chart-5)"
+          />
+          <KpiCard
+            icon={ClipboardCheck}
+            label="Pre/post tests"
+            value="Take one"
+            hint="Attached to your trainings"
+            color="var(--chart-2)"
+          />
+        </KpiGrid>
       )}
 
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="space-y-10 lg:col-span-2">
-          <section aria-labelledby="mandatory-heading" className="space-y-4">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <h2
-                  id="mandatory-heading"
-                  className="text-lg font-bold text-ink"
-                >
-                  Mandatory protocols
-                </h2>
-                <p className="text-sm text-ink-muted">
-                  Acknowledge and complete these to keep your record current.
-                </p>
-              </div>
-            </div>
-            {outstanding.length === 0 ? (
-              <ListEmptyState
-                art="folder"
-                title="You are up to date"
-                description="No mandatory protocols are waiting for you. New ones appear here as soon as they are published."
-              />
-            ) : (
-              <ul className="space-y-3">
-                {outstanding.map((item) => (
-                  <li key={item.id}>
-                    <Link
-                      href={`/materials/${item.id}`}
-                      className="group surface-card flex flex-col gap-4 p-5 transition-[transform,border-color] duration-base ease-out-quint hover:-translate-y-0.5 hover:border-primary/40 sm:flex-row sm:items-center"
-                    >
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <PriorityChip priority={item.priority} />
-                          {item.reacknowledgementRequired && (
-                            <span className="text-xs font-semibold text-warn">
-                              New version: acknowledge again
-                            </span>
-                          )}
-                        </div>
-                        <p className="font-semibold text-ink group-hover:text-primary">
-                          {item.title}
-                        </p>
-                        <p className="text-xs text-ink-muted">
-                          {item.areaName}
-                          {item.estimatedMinutes !== null
-                            ? ` · ${formatMinutes(item.estimatedMinutes)}`
-                            : ""}
-                        </p>
-                      </div>
-                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
-                        Open
-                        <ArrowRight
-                          className="h-4 w-4 transition-transform duration-base group-hover:translate-x-1"
-                          aria-hidden
-                        />
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
           <section aria-labelledby="continue-heading" className="space-y-4">
             <h2 id="continue-heading" className="text-lg font-bold text-ink">
               Continue where you left off

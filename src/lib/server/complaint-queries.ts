@@ -1,7 +1,7 @@
 import "server-only";
-import { desc, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { complaints } from "@/db/schema";
+import { complaintMessages, complaints } from "@/db/schema";
 
 /**
  * Reads for the Complaint Hub. The public read is deliberately narrow: a staff ID
@@ -89,4 +89,52 @@ export async function openComplaintCount(): Promise<number> {
     .from(complaints)
     .where(sql`${complaints.status} <> 'RESOLVED'`);
   return row?.n ?? 0;
+}
+
+/* ── The thread ─────────────────────────────────────────────────────────────── */
+
+export interface ComplaintMessage {
+  id: string;
+  complaintId: string;
+  authorRole: "STAFF" | "DESK";
+  authorName: string;
+  body: string;
+  createdAt: Date;
+}
+
+/** All messages for a set of complaints, grouped by complaint, oldest first. */
+export async function messagesByComplaint(ids: string[]): Promise<Map<string, ComplaintMessage[]>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db
+    .select({
+      id: complaintMessages.id,
+      complaintId: complaintMessages.complaintId,
+      authorRole: complaintMessages.authorRole,
+      authorName: complaintMessages.authorName,
+      body: complaintMessages.body,
+      createdAt: complaintMessages.createdAt,
+    })
+    .from(complaintMessages)
+    .where(inArray(complaintMessages.complaintId, ids))
+    .orderBy(asc(complaintMessages.createdAt));
+
+  const grouped = new Map<string, ComplaintMessage[]>();
+  for (const row of rows) {
+    const list = grouped.get(row.complaintId) ?? [];
+    list.push({ ...row, authorRole: row.authorRole === "STAFF" ? "STAFF" : "DESK" });
+    grouped.set(row.complaintId, list);
+  }
+  return grouped;
+}
+
+/** The thread a staff member sees on the public status page. */
+export async function threadForReference(reference: string, staffId: string): Promise<ComplaintMessage[]> {
+  const [row] = await db
+    .select({ id: complaints.id })
+    .from(complaints)
+    .where(and(eq(complaints.reference, reference.trim().toUpperCase()), sql`lower(${complaints.staffId}) = ${staffId.trim().toLowerCase()}`))
+    .limit(1);
+  if (!row) return [];
+  const grouped = await messagesByComplaint([row.id]);
+  return grouped.get(row.id) ?? [];
 }

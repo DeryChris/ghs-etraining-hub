@@ -25,7 +25,6 @@ export type NavIcon =
   | "training"
   | "geography"
   | "taxonomy"
-  | "catalogue"
   | "library"
   | "assessment"
   | "messages"
@@ -84,13 +83,6 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         roles: EVERYONE,
         hint: "Every training GHS has planned or run, by programme field and area",
       },
-      {
-        href: "/catalogue",
-        label: "Catalogue",
-        icon: "catalogue",
-        roles: EVERYONE,
-        hint: "Programme fields and the areas inside them, with the material filed under each",
-      },
       { href: "/library", label: "Library", icon: "library", roles: EVERYONE },
       {
         href: "/assessments",
@@ -112,19 +104,6 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         icon: "notifications",
         roles: EVERYONE,
         count: "notifications",
-      },
-    ],
-  },
-  {
-    id: "support",
-    label: "Support",
-    items: [
-      {
-        href: "/help",
-        label: "Complaint Hub",
-        icon: "complaint",
-        roles: STAFF,
-        hint: "Report a problem with your account, a course or your details",
       },
     ],
   },
@@ -182,7 +161,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         href: "/complaints",
         label: "Complaints",
         icon: "complaint",
-        roles: ADMIN_ONLY,
+        roles: STAFF,
         hint: "What staff have reported, to answer or reset access from",
       },
       { href: "/settings", label: "Settings", icon: "settings", roles: ADMIN_ONLY },
