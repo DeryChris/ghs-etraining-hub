@@ -25,7 +25,10 @@ describe("navFor", () => {
     expect(facilitator).toEqual(expect.arrayContaining(["/authoring", "/notices"]));
     // The review queue is a sign-off duty: administrators and unit heads only.
     expect(facilitator).not.toContain("/review");
-    expect(facilitator).toContain("/help");
+    // The desk, not the public help pages: the Complaint Hub is for people who
+    // cannot sign in, so it is not a signed-in destination.
+    expect(facilitator).toContain("/complaints");
+    expect(facilitator).not.toContain("/help");
     expect(facilitator).not.toContain("/users");
     expect(facilitator).not.toContain("/settings");
     expect(facilitator).not.toContain("/geography");
@@ -36,7 +39,6 @@ describe("navFor", () => {
     expect(hrefs("LEARNER")).toEqual([
       "/dashboard",
       "/trainings",
-      "/catalogue",
       "/library",
       "/assessments",
       "/messages",
@@ -51,20 +53,20 @@ describe("navFor", () => {
     expect(admin.map((section) => section.id)).toEqual([
       "learn",
       "community",
-      "support",
       "record",
       "author",
       "administration",
     ]);
     for (const section of admin) expect(section.items.length).toBeGreaterThan(0);
     // Order within a section follows the declaration, not the role filter.
-    expect(admin[4]?.items.map((item) => item.href)).toEqual(["/review"]);
+    expect(admin[3]?.items.map((item) => item.href)).toEqual(["/review"]);
   });
 
-  it("renamed Programmes to Trainings for every role, with the catalogue beside it", () => {
+  it("files everything under Trainings: there is no separate catalogue tab any more", () => {
     for (const role of ROLES) {
       expect(hrefs(role)).toContain("/trainings");
-      expect(hrefs(role)).toContain("/catalogue");
+      // The catalogue lives at the top of the register; the old route redirects.
+      expect(hrefs(role)).not.toContain("/catalogue");
       // Directorates and spaces are gone: there is one taxonomy (ADR-0014).
       expect(hrefs(role)).not.toContain("/directorates");
       expect(hrefs(role)).not.toContain("/sessions");
@@ -108,7 +110,8 @@ describe("navFor", () => {
     const head = hrefs("FACILITATOR", { unitHead: true });
     expect(head.slice().sort()).toEqual([...plain, "/review"].sort());
     expect(head).not.toContain("/users");
-    expect(head).not.toContain("/complaints");
+    // The desk is open to every member of staff, head or not.
+    expect(head).toContain("/complaints");
   });
 });
 

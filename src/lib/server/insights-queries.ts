@@ -399,3 +399,41 @@ export async function getMyTraffic(userId: string, days = 30): Promise<{ opens: 
     days,
   };
 }
+
+/* ── Published material by type ──────────────────────────────────────────────
+ * The donut on both dashboards. Counted through the programme taxonomy, so a
+ * scoped facilitator sees their own areas' material and an administrator sees
+ * everything — the same shape, honestly narrowed.
+ */
+
+export const MATERIAL_TYPE_ORDER = ["DOCUMENT", "VIDEO", "LAB", "ASSESSMENT_LINK"] as const;
+export type MaterialTypeKey = (typeof MATERIAL_TYPE_ORDER)[number];
+
+export async function getTypeMix(viewer: Viewer): Promise<{ type: MaterialTypeKey; count: number }[]> {
+  const rows = await db
+    .select({ type: materials.type, n: sql<number>`count(*)::int` })
+    .from(materials)
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
+    .where(
+      and(
+        scopeFor(viewer),
+        eq(materials.isPublished, true),
+        eq(materials.state, "PUBLISHED"),
+        isNotNull(materials.currentVersionId),
+      ),
+    )
+    .groupBy(materials.type);
+  const byType = new Map(rows.map((row) => [row.type, row.n]));
+  return MATERIAL_TYPE_ORDER.map((type) => ({ type, count: byType.get(type) ?? 0 }));
+}
+
+/** Percentage change between the two halves of a series, or null when there is nothing to compare. */
+export function periodDelta(values: number[]): number | null {
+  if (values.length < 4) return null;
+  const half = Math.floor(values.length / 2);
+  const previous = values.slice(0, half).reduce((sum, value) => sum + value, 0);
+  const current = values.slice(half).reduce((sum, value) => sum + value, 0);
+  if (previous === 0) return current === 0 ? null : 100;
+  return ((current - previous) / previous) * 100;
+}

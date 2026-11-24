@@ -23,25 +23,41 @@ const globalForDb = globalThis as unknown as {
 };
 
 /**
- * Connections per instance. Serverless platforms keep a pool per function
- * instance, and several instances fan out quickly, so production sets this
- * lower than a long-lived server would.
+ * Connections per instance.
+ *
+ * Deliberately small. Supabase's transaction pooler (Supavisor, port 6543) holds
+ * a fixed number of server-side connections — 15 on the smaller compute sizes —
+ * and every warm Vercel instance that opens ten of them takes most of that pool
+ * for itself. The symptom is nasty and misleading: one query at a time answers in
+ * ~100 ms (so `/api/health` looks perfect), while a page that fans out four or
+ * five queries at once waits for a slot that never frees and hits its deadline.
+ *
+ * Three per instance is plenty — the queries themselves take milliseconds, so
+ * postgres.js queues the rest client-side instead of starving the server pool.
+ * Raise it only if the Supavisor pool size and the instance count allow it.
  */
-const poolMax = Number.parseInt(process.env.DB_POOL_MAX ?? "", 10) || 5;
+const poolMax = Number.parseInt(process.env.DB_POOL_MAX ?? "", 10) || 3;
 
 function createClient(url: string) {
   return postgres(url, {
     // Supabase's pooler cannot use prepared statements across connections.
     prepare: false,
     max: poolMax,
-    idle_timeout: 20,
+    // Short-lived: an idle connection here is a slot another instance cannot
+    // use. Serverless instances are evicted often enough that churn is cheap.
+    idle_timeout: 5,
     max_lifetime: 60 * 30,
-    connect_timeout: 5,
-    // A query that reaches Postgres and never returns is cut off here, so a
-    // stalled statement surfaces as an error the page can show rather than an
-    // endless spinner. Page-level deadlines live in `lib/server/deadline.ts`.
+    // A cold Vercel function in Washington opening a TLS connection to Paris can
+    // take longer than five seconds; at five it gave up and retried, which reads
+    // from the browser as a tab that never finishes loading.
+    connect_timeout: 15,
+    // A statement that reaches Postgres and never returns is cut off here, so a
+    // stalled query surfaces as an error the page can show rather than an endless
+    // spinner. Page-level deadlines live in `lib/server/deadline.ts`; a queued
+    // connection fails fast rather than waiting forever.
     connection: {
       statement_timeout: 15_000,
+      idle_in_transaction_session_timeout: 10_000,
       application_name: "ghs-training-library",
     },
     onnotice: () => {},

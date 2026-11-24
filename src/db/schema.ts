@@ -521,3 +521,21 @@ export const complaints = pgTable("complaints", {
   index("complaints_status_idx").on(t.status, t.createdAt),
   index("complaints_user_idx").on(t.userId),
 ]);
+
+/**
+ * The conversation on a complaint. A complaint is not a ticket that disappears
+ * when answered: the person can write back ("I still cannot get in"), and the
+ * administrator can answer again. Each message records who wrote it, so the
+ * thread is a record rather than a transcript somebody summarised later.
+ */
+export const complaintMessages = pgTable("complaint_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  complaintId: uuid("complaint_id").notNull().references(() => complaints.id, { onDelete: "cascade" }),
+  /** Null when the person wrote it from the public status page (no session). */
+  authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
+  /** STAFF (the person who lodged it), DESK (an administrator handling it). */
+  authorRole: varchar("author_role", { length: 16 }).notNull(),
+  authorName: text("author_name").notNull(),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("complaint_messages_thread_idx").on(t.complaintId, t.createdAt)]);

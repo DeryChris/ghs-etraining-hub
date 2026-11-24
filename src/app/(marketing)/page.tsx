@@ -62,7 +62,7 @@ const FEATURES: { icon: LucideIcon; title: string; body: string; tone: string }[
   },
   {
     icon: Search,
-    title: "Find it by programme, module or title",
+    title: "Find it by programme, area or title",
     body: "Search the whole catalogue, open the current version, or check what was in force when a session ran.",
     tone: "bg-accent/25 text-accent-ink dark:text-accent",
   },
@@ -83,7 +83,7 @@ const STEPS = [
   {
     icon: BookOpenCheck,
     title: "Open the programme",
-    body: "Find the directorate and the module that ran the training you attended.",
+    body: "Find the programme field and the area that ran the training you attended.",
   },
   {
     icon: FileCheck2,
@@ -203,7 +203,7 @@ export default async function LandingPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Modules</dt>
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Programme areas</dt>
                   <dd className="mt-1 text-3xl font-extrabold text-ink">
                     <CountUp value={stats.areas} />
                   </dd>
@@ -431,7 +431,7 @@ export default async function LandingPage() {
                       <h3 className="text-lg font-bold leading-snug text-ink">{item.name}</h3>
                       {item.description && <p className="line-clamp-2 text-sm leading-relaxed text-ink-muted">{item.description}</p>}
                       <span className="mt-auto inline-flex items-center gap-1.5 pt-2 text-sm font-semibold text-primary">
-                        {item.areaCount} {item.areaCount === 1 ? "module" : "modules"}
+                        {item.areaCount} {item.areaCount === 1 ? "programme area" : "programme areas"}
                         <ArrowRight className="h-4 w-4 transition-transform duration-base group-hover:translate-x-1" aria-hidden />
                       </span>
                     </Link>

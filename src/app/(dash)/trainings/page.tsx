@@ -1,15 +1,19 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, Users } from "lucide-react";
+import { CalendarDays, MapPin, Plus, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { DataUnavailable } from "@/components/ui/data-unavailable";
+import { withDeadline } from "@/lib/server/page-data";
 import { Stat } from "@/components/ui/stat";
 import { formatDate } from "@/lib/format";
 import { TRAINING_STATUSES, TRAINING_STATUS_LABELS, isTrainingStatus } from "@/lib/labels";
 import { can } from "@/lib/rbac/capabilities";
+import { fieldHref } from "@/lib/links";
+import { listFields } from "@/lib/server/learning-queries";
 import { requireSession } from "@/lib/server/rbac";
 import { listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
 import {
@@ -90,21 +94,35 @@ export default async function TrainingsPage({
     page: Math.max(1, Number.parseInt(single("page") ?? "1", 10) || 1),
   };
 
-  const [list, summary, options, fields] = await Promise.all([
-    listTrainings({
-      q: query.q || undefined,
-      year: query.year ?? undefined,
-      programmeFieldId: query.field ?? undefined,
-      programmeAreaId: query.area ?? undefined,
-      regionId: query.region ?? undefined,
-      districtId: query.district ?? undefined,
-      status: isTrainingStatus(query.status) ? query.status : undefined,
-      page: query.page,
-    }),
-    getTrainingSummary(),
-    getTrainingFilterOptions(),
-    listProgrammeFieldOptions(),
-  ]);
+  const loaded = await withDeadline(
+    "trainings",
+    Promise.all([
+      listTrainings({
+        q: query.q || undefined,
+        year: query.year ?? undefined,
+        programmeFieldId: query.field ?? undefined,
+        programmeAreaId: query.area ?? undefined,
+        regionId: query.region ?? undefined,
+        districtId: query.district ?? undefined,
+        status: isTrainingStatus(query.status) ? query.status : undefined,
+        page: query.page,
+      }),
+      getTrainingSummary(),
+      getTrainingFilterOptions(),
+      listProgrammeFieldOptions(),
+      listFields(session),
+    ]),
+  );
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="The training register did not load"
+        description="The register and the programme catalogue could not be read in time. Nothing was changed."
+        requestId={loaded.requestId}
+      />
+    );
+  }
+  const [list, summary, options, fields, catalogue] = loaded.data;
 
   const filtered =
     query.q.length > 0 ||
@@ -129,18 +147,60 @@ export default async function TrainingsPage({
         description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme field and the area inside it, so coverage can be counted by programme rather than by memory."
         actions={
           mayManage ? (
-            <Link href="/trainings/new" className={buttonClass()}>
-              New training
+            <Link href="/trainings/new" className={buttonClass({ className: "h-12 rounded-[var(--radius-pill)] px-6" })}>
+              <Plus className="h-4 w-4" aria-hidden />
+              Create new training
             </Link>
-          ) : (
-            <Link href="/catalogue" className={buttonClass({ variant: "secondary" })}>
-              Browse the catalogue
-            </Link>
-          )
+          ) : undefined
         }
       />
 
       <Notice notice={notice} error={error} />
+
+      {/* The programme catalogue, on the same screen as the register it files into. */}
+      <section id="catalogue" aria-labelledby="catalogue-heading" className="space-y-4 scroll-mt-24">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="catalogue-heading" className="text-lg font-bold text-ink">
+              Programme catalogue
+            </h2>
+            <p className="text-sm text-ink-muted">
+              Every programme field GHS trains in, with the areas inside it. Pick one to see its materials and the
+              trainings recorded against it.
+            </p>
+          </div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            {catalogue.length} {catalogue.length === 1 ? "programme field" : "programme fields"}
+          </span>
+        </div>
+
+        {catalogue.length === 0 ? (
+          <ListEmptyState
+            title="The programme taxonomy is empty"
+            description="An administrator maintains the fields and areas at Programme fields. They appear here as soon as they are published."
+          />
+        ) : (
+          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {catalogue.map((field) => (
+              <li key={field.id}>
+                <Link
+                  href={fieldHref(field.code)}
+                  className="group flex h-full flex-col rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  <span className="font-mono text-xs font-semibold tracking-wide text-ink-muted">{field.code}</span>
+                  <h3 className="mt-2 text-base font-semibold leading-snug text-ink group-hover:text-primary">{field.name}</h3>
+                  {field.description && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-muted">{field.description}</p>}
+                  <p className="mt-auto pt-4 text-xs font-semibold text-ink-muted">
+                    {field.areaCount} {field.areaCount === 1 ? "programme area" : "programme areas"} · {field.materialCount}{" "}
+                    {field.materialCount === 1 ? "material" : "materials"}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
 
       <section
         aria-label="Register totals"

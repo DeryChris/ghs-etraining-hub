@@ -6,6 +6,8 @@ import { ListEmptyState } from "@/components/ui/empty-state";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
+import { DataUnavailable } from "@/components/ui/data-unavailable";
+import { withDeadline } from "@/lib/server/page-data";
 import { Stat } from "@/components/ui/stat";
 import {
   assignAreaFacilitatorAction,
@@ -46,11 +48,20 @@ export default async function ProgrammeFieldsPage({
   const error = first(query.error);
   const focusField = first(query.field);
 
-  const [fields, totals, assignable] = await Promise.all([
-    listProgrammeTaxonomy(),
-    getReferenceTotals(),
-    listAssignableFacilitators(),
-  ]);
+  const loaded = await withDeadline(
+    "programme-fields",
+    Promise.all([listProgrammeTaxonomy(), getReferenceTotals(), listAssignableFacilitators()]),
+  );
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="Programme fields did not load"
+        description="The programme taxonomy could not be read in time. Nothing was changed."
+        requestId={loaded.requestId}
+      />
+    );
+  }
+  const [fields, totals, assignable] = loaded.data;
   const classified = fields.reduce(
     (total, field) => total + field.trainingCount,
     0,

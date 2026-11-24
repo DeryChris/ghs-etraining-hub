@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/index";
-import { complaints, users } from "@/db/schema";
+import { complaintMessages, complaints, directMessages, users } from "@/db/schema";
 import { displayOrigin } from "@/lib/app-url";
 import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
@@ -228,6 +228,31 @@ export async function respondToComplaintAction(
       })
       .where(eq(complaints.id, complaintId));
 
+    // The answer is also a message in the thread, so the conversation reads in
+    // order rather than as one field that keeps being overwritten.
+    await db.insert(complaintMessages).values({
+      complaintId,
+      authorId: session.sub,
+      authorRole: "DESK",
+      authorName: session.name,
+      body: response,
+    });
+
+    // And it reaches the person where they already look for messages, when the
+    // complaint is attached to a directory account.
+    const [target] = await db
+      .select({ userId: complaints.userId, reference: complaints.reference, subject: complaints.subject })
+      .from(complaints)
+      .where(eq(complaints.id, complaintId))
+      .limit(1);
+    if (target?.userId) {
+      await db.insert(directMessages).values({
+        senderId: session.sub,
+        recipientId: target.userId,
+        body: `About your complaint ${target.reference} (${target.subject}):\n\n${response}`,
+      });
+    }
+
     await logAudit({
       actor: { sub: session.sub, role: session.role, name: session.name, staffId: session.staffId },
       action: resolve ? "COMPLAINT_RESOLVED" : "COMPLAINT_ANSWERED",
@@ -421,4 +446,71 @@ export async function lookupComplaintsAction(
       resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
     })),
   };
+}
+
+/* ── The person writes back ─────────────────────────────────────────────────── */
+
+const replyInput = z
+  .object({
+    staffId: z.string().trim().min(1),
+    reference: z.string().trim().min(4),
+    body: z.string().trim().min(2, "Write your message first.").max(2000),
+  })
+  .strict();
+
+/**
+ * A staff member adds to their own complaint from the public status page. The
+ * reference is what proves the complaint is theirs — it is only shown to whoever
+ * lodged it — so this needs both the reference and the staff ID it was filed
+ * under. Writing back reopens a resolved complaint, which is honest: if it is
+ * still broken, it is not resolved.
+ */
+export async function staffReplyAction(_previous: ComplaintState, formData: FormData): Promise<ComplaintState> {
+  const parsed = replyInput.safeParse({
+    staffId: field(formData, "staffId"),
+    reference: field(formData, "reference"),
+    body: field(formData, "body"),
+  });
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Check your message and try again." };
+  }
+
+  const limiter = await consumeRateLimit(rateLimitKey("complaint-reply", await clientAddress()), 20, 10 * 60).catch(
+    () => null,
+  );
+  if (limiter && !limiter.allowed) {
+    return { ok: false, message: "Several messages in a short time. Wait a few minutes, then send this one." };
+  }
+
+  const [complaint] = await db
+    .select({ id: complaints.id, fullName: complaints.fullName, status: complaints.status })
+    .from(complaints)
+    .where(
+      and(
+        eq(complaints.reference, parsed.data.reference.toUpperCase()),
+        sql`lower(${complaints.staffId}) = ${parsed.data.staffId.toLowerCase()}`,
+      ),
+    )
+    .limit(1);
+
+  if (!complaint) {
+    return {
+      ok: false,
+      message: "That reference and Staff ID do not match a complaint. Check both, or lodge a new complaint.",
+    };
+  }
+
+  await db.insert(complaintMessages).values({
+    complaintId: complaint.id,
+    authorRole: "STAFF",
+    authorName: complaint.fullName,
+    body: parsed.data.body,
+  });
+  await db
+    .update(complaints)
+    .set({ status: "IN_PROGRESS", resolvedAt: null, updatedAt: new Date() })
+    .where(eq(complaints.id, complaint.id));
+
+  revalidatePath("/complaints");
+  return { ok: true, message: "Your message is with the desk. You will see the answer here." };
 }

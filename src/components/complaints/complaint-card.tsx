@@ -35,6 +35,13 @@ export interface ComplaintCardData {
   response: string | null;
   createdAt: string;
   resolvedAt: string | null;
+  messages: {
+    id: string;
+    authorRole: "STAFF" | "DESK";
+    authorName: string;
+    body: string;
+    createdAt: string;
+  }[];
 }
 
 function formatWhen(iso: string): string {
@@ -100,6 +107,19 @@ export function ComplaintCard({ complaint }: { complaint: ComplaintCardData }) {
       </div>
 
       <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-ink">{complaint.description}</p>
+
+      {complaint.messages.length > 0 && (
+        <ol className="mt-5 space-y-3 border-l-2 border-hairline pl-4">
+          {complaint.messages.map((message) => (
+            <li key={message.id}>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-ink-muted">
+                {message.authorRole === "DESK" ? "Desk" : "Staff"} · {message.authorName} · {formatWhen(message.createdAt)}
+              </p>
+              <p className="mt-0.5 whitespace-pre-line text-sm leading-relaxed text-ink">{message.body}</p>
+            </li>
+          ))}
+        </ol>
+      )}
 
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-muted">
         <a href={`mailto:${complaint.email}`} className="inline-flex items-center gap-1.5 hover:text-ink hover:underline">

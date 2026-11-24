@@ -147,7 +147,7 @@ export const COMPLAINT_ISSUE_LABELS: Record<ComplaintIssue, string> = {
 
 export const COMPLAINT_ISSUE_HELP: Record<ComplaintIssue, string> = {
   PERSONAL_DETAILS: "A wrong name, staff ID, facility or posting.",
-  COURSE_RELATED: "A module that will not open, or a training you were not credited for.",
+  COURSE_RELATED: "A material that will not open, or a training you were not credited for.",
   LOGIN_ACCESS: "Forgotten password, no account yet, or a locked account.",
   OTHERS: "Anything that does not fit the three above.",
 };

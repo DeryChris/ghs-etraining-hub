@@ -4,9 +4,16 @@ import { Inbox } from "lucide-react";
 import { ComplaintCard } from "@/components/complaints/complaint-card";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
+import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { PageHeader } from "@/components/ui/page-header";
 import { Stat } from "@/components/ui/stat";
-import { listComplaints, openComplaintCount } from "@/lib/server/complaint-queries";
+import {
+  listComplaints,
+  messagesByComplaint,
+  openComplaintCount,
+  type ComplaintMessage,
+} from "@/lib/server/complaint-queries";
+import { withDeadline } from "@/lib/server/page-data";
 import { requireRole } from "@/lib/server/rbac";
 
 export const metadata: Metadata = { title: "Complaints" };
@@ -23,13 +30,32 @@ export default async function ComplaintsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  await requireRole(["SYSTEM_ADMIN"]);
+  // A working desk, not an administrator-only archive: facilitators and unit
+  // heads answer what they are assigned; resetting access stays administrator-only.
+  await requireRole(["SYSTEM_ADMIN", "FACILITATOR"]);
   const params = await searchParams;
   const filter = FILTERS.some((entry) => entry.key === params.status)
     ? (params.status as "OPEN" | "RESOLVED" | "ALL")
     : "OPEN";
 
-  const [rows, openCount] = await Promise.all([listComplaints(filter), openComplaintCount()]);
+  const loaded = await withDeadline(
+    "complaints",
+    Promise.all([listComplaints(filter), openComplaintCount()]),
+  );
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="The complaint desk did not load"
+        description="The complaint list could not be read in time. Nothing was changed and no complaint was answered."
+        requestId={loaded.requestId}
+      />
+    );
+  }
+  const [rows, openCount] = loaded.data;
+  // The thread is a nicety: if it cannot be read, the complaint still shows.
+  const threads = await messagesByComplaint(rows.map((row) => row.id)).catch(
+    (): Map<string, ComplaintMessage[]> => new Map(),
+  );
 
   return (
     <div className="space-y-8">
@@ -96,6 +122,13 @@ export default async function ComplaintsPage({
                 response: row.response,
                 createdAt: row.createdAt.toISOString(),
                 resolvedAt: row.resolvedAt ? row.resolvedAt.toISOString() : null,
+                messages: (threads.get(row.id) ?? []).map((message) => ({
+                  id: message.id,
+                  authorRole: message.authorRole,
+                  authorName: message.authorName,
+                  body: message.body,
+                  createdAt: message.createdAt.toISOString(),
+                })),
               }}
             />
           ))}

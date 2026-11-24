@@ -142,7 +142,7 @@ export default async function MaterialPage({
                     className="aspect-video w-full rounded-card bg-black"
                   />
                   <p id="video-note" className="text-sm text-ink-muted">
-                    The video does not start on its own. Captions are not yet available for this module.
+                    The video does not start on its own. Captions are not yet available for this material.
                   </p>
                 </>
               ) : (

@@ -3,45 +3,31 @@ import { AlertTriangle, ClipboardCheck, Download, Eye, TrendingUp } from "lucide
 import { AreaChart } from "@/components/charts/area-chart";
 import { BarChart } from "@/components/charts/bar-chart";
 import { ChartCard, EmptyChart, chartColor } from "@/components/charts/chart-card";
+import { KpiCard, KpiGrid } from "@/components/charts/kpi-card";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { RankBars } from "@/components/charts/rank-bars";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { Stat } from "@/components/ui/stat";
-import { MATERIAL_TYPE_LABELS, type MaterialType } from "@/lib/labels";
+import { MATERIAL_TYPE_LABELS } from "@/lib/labels";
 import {
   getInsights,
   getProgrammeTraffic,
   getTrainingCounts,
   getTrainingSeries,
   getTrafficSeries,
+  getTypeMix,
   getUploadSeries,
+  periodDelta,
 } from "@/lib/server/insights-queries";
 
+import { DataUnavailable } from "@/components/ui/data-unavailable";
+import { withDeadline } from "@/lib/server/page-data";
 import { requireRole } from "@/lib/server/rbac";
-import { db } from "@/db/index";
-import { programmeFields, materials, programmeAreas } from "@/db/schema";
-import { and, eq, isNotNull, sql } from "drizzle-orm";
-import { scopeFor } from "@/lib/server/scope";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Insights" };
-
-const TYPE_ORDER: MaterialType[] = ["DOCUMENT", "VIDEO", "LAB", "ASSESSMENT_LINK"];
-
-async function publishedByType(viewer: { id: string; role: "SYSTEM_ADMIN" | "FACILITATOR" | "LEARNER"; region: string | null; directorate: string | null; cadre: string | null }) {
-  const rows = await db
-    .select({ type: materials.type, n: sql<number>`count(*)::int` })
-    .from(materials)
-    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(and(scopeFor(viewer), eq(materials.isPublished, true), eq(materials.state, "PUBLISHED"), isNotNull(materials.currentVersionId)))
-    .groupBy(materials.type);
-  const byType = new Map(rows.map((row) => [row.type, row.n]));
-  return TYPE_ORDER.map((type) => ({ type, count: byType.get(type) ?? 0 }));
-}
 
 export default async function InsightsPage() {
   const session = await requireRole(["SYSTEM_ADMIN", "FACILITATOR"]);
@@ -49,15 +35,28 @@ export default async function InsightsPage() {
   // The review queue is a sign-off duty: administrators and unit heads only.
   const reviewer = admin || session.unitHead === true;
 
-  const [insights, traffic, uploads, sessions, programmeTraffic, trainingCounts, typeMix] = await Promise.all([
-    getInsights(session),
-    getTrafficSeries(session, 12),
-    getUploadSeries(session, 12),
-    getTrainingSeries(session, 12),
-    getProgrammeTraffic(session, 30),
-    getTrainingCounts(session),
-    publishedByType(session),
-  ]);
+  const loaded = await withDeadline(
+    "insights",
+    Promise.all([
+      getInsights(session),
+      getTrafficSeries(session, 12),
+      getUploadSeries(session, 12),
+      getTrainingSeries(session, 12),
+      getProgrammeTraffic(session, 30),
+      getTrainingCounts(session),
+      getTypeMix(session),
+    ]),
+  );
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="Insights did not load"
+        description="The traffic and catalogue figures could not be read in time. The numbers on this page are recomputed per request, so nothing is stale or lost."
+        requestId={loaded.requestId}
+      />
+    );
+  }
+  const [insights, traffic, uploads, sessions, programmeTraffic, trainingCounts, typeMix] = loaded.data;
 
   const hasTraffic = traffic.totals.views + traffic.totals.downloads > 0;
   const hasUploads = uploads.total > 0;
@@ -88,15 +87,41 @@ export default async function InsightsPage() {
         }
       />
 
-      <section
-        aria-label="Headline numbers"
-        className="grid gap-5 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 xl:grid-cols-4"
-      >
-        <Stat value={traffic.totals.views} label="Material opens · last 12 weeks" />
-        <Stat value={traffic.totals.downloads} label="Downloads · last 12 weeks" />
-        <Stat value={trainingCounts.last90Days} label="Trainings run · last 90 days" />
-        <Stat value={insights.catalogue.published} label="Published materials" />
-      </section>
+      <KpiGrid>
+        <KpiCard
+          icon={Eye}
+          label="Material opens · 12 weeks"
+          value={traffic.totals.views}
+          hint="Once per person per day"
+          delta={periodDelta(traffic.views)}
+          spark={traffic.views}
+          color="var(--chart-4)"
+        />
+        <KpiCard
+          icon={Download}
+          label="Downloads · 12 weeks"
+          value={traffic.totals.downloads}
+          hint="From the audit trail"
+          delta={periodDelta(traffic.downloads)}
+          spark={traffic.downloads}
+          color="var(--chart-1)"
+        />
+        <KpiCard
+          icon={ClipboardCheck}
+          label="Trainings · 90 days"
+          value={trainingCounts.last90Days}
+          hint={`${trainingCounts.total} on record`}
+          spark={sessions.counts}
+          color="var(--chart-5)"
+        />
+        <KpiCard
+          icon={TrendingUp}
+          label="Published materials"
+          value={insights.catalogue.published}
+          hint={`${insights.catalogue.inReview} awaiting review`}
+          color="var(--chart-6)"
+        />
+      </KpiGrid>
 
       <ChartCard
         title="Traffic"
@@ -243,7 +268,7 @@ export default async function InsightsPage() {
               <dd className="tabular-nums font-semibold text-ink">{insights.catalogue.programmes}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Spaces / modules</dt>
+              <dt className="text-ink-muted">Programme areas</dt>
               <dd className="tabular-nums font-semibold text-ink">{insights.catalogue.programmeAreas}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">

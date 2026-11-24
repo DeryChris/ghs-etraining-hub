@@ -143,6 +143,20 @@ complaint we heard most.
   soon"; the geography admin makes every other region read-only with the same wording. Nothing is
   hidden and nothing is shown as broken.
 
+### Dashboards: the overview and the detail
+
+The signed-in dashboard opens with four KPI cards — a number, its change against the previous
+period and a sparkline — then one wide trend chart, then the two "shape" charts (materials by type,
+busiest programme areas). Insights repeats the same vocabulary in more detail. There is no
+"Mandatory protocols" list and no mandatory/in-progress/completed tile row: the dashboard is for
+orientation, and anything that needs doing appears as an action under Continue where you left off.
+
+Chart colour comes from the eight `--chart-*` tokens, so a series keeps its colour between the
+dashboard, insights and any table that lists the same thing. Colour carries identity, never
+judgement: the arrow says whether a number went up, the label says what the number is. Every chart
+ships its figures twice — in the "The numbers" disclosure and in a hidden table — because a picture
+of a number is not a number.
+
 ## 6. Accessibility contract
 
 * Landmarks: `<nav aria-label="Primary">`, `<main>`, one `<h1>` per page, heading levels never skipped.

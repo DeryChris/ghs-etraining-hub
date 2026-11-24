@@ -15,7 +15,7 @@ const CARDS = [
     href: "/help/report",
     icon: MessageSquareWarning,
     title: "Report an issue",
-    body: "Your password does not work, your name is spelled wrong, a module will not open. Write it once here and it reaches the person who can fix it.",
+    body: "Your password does not work, your name is spelled wrong, a material will not open. Write it once here and it reaches the person who can fix it.",
     action: "Lodge a complaint",
   },
   {
