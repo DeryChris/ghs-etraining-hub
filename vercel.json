@@ -4,6 +4,9 @@
   "buildCommand": "npm run build",
   "installCommand": "npm ci",
   "outputDirectory": ".next",
+  "env": {
+    "NEXT_TURBOPACK": "0"
+  },
   "github": {
     "silent": true
   }

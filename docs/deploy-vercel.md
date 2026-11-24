@@ -65,8 +65,9 @@ Settings to confirm on the import screen:
 | Install command | `npm ci` (from `vercel.json`) |
 | Node version | 22.x (from `package.json` `engines`) |
 
-Do not add an `env` block to `vercel.json`. A `@secret` reference that does not exist in the
-project fails the build outright — that is what broke the first attempt.
+`vercel.json` carries one literal: `NEXT_TURBOPACK=0`, which keeps the production build on
+webpack. Never put a **secret** there — a `@name` reference that does not exist in the project
+fails the build outright, which is what broke the first attempt.
 
 ---
 
