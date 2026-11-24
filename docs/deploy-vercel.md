@@ -183,6 +183,7 @@ creates a password in the repository.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
+| Build fails on `/_not-found` at "Collecting page data" | `NEXT_PUBLIC_APP_URL` is not a URL — usually one character short, e.g. `https//ghstl.vercel.app` | set it to `https://<domain>`. A typo is repaired and logged now, but fix the value: it feeds canonical links and password-reset redirects |
 | Build fails on `/` prerender | `NEXT_PUBLIC_SUPABASE_URL` or `ANON_KEY` missing | add both, redeploy |
 | `/api/health` → `db: "down"` | wrong password, or `db.<ref>.supabase.co` (IPv6-only) | use the 6543 pooler URL |
 | `prepared statement already exists` | `prepare: true` on a pooler | already `prepare: false`; check nobody re-enabled it |
