@@ -34,6 +34,22 @@ const contentSecurityPolicy = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  /*
+   * Keep a rendered dynamic route in the browser's router cache for 30 s.
+   *
+   * Every signed-in page is `force-dynamic`, so by default Next re-fetches a
+   * route the moment you come back to it — even if you left it four seconds ago.
+   * Hopping between tabs therefore multiplied the database work by the number of
+   * hops, which is how a fast page turns into a stalled one.
+   *
+   * Thirty seconds is the trade: a tab you just visited returns instantly, and
+   * anything older than half a minute is re-rendered. Mutations are unaffected —
+   * every server action calls `revalidatePath`, which drops the cached entry for
+   * the routes it names, so a save still shows the new row immediately.
+   */
+  experimental: {
+    staleTimes: { dynamic: 30, static: 180 },
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },

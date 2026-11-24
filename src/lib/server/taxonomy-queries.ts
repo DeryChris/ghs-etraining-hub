@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import {
@@ -190,9 +191,7 @@ export interface ProgrammeFieldOption {
 }
 
 /** Non-archived fields with their non-archived areas, for the training form. */
-export async function listProgrammeFieldOptions(): Promise<
-  ProgrammeFieldOption[]
-> {
+async function loadProgrammeFieldOptions(): Promise<ProgrammeFieldOption[]> {
   const [fields, areas] = await Promise.all([
     db
       .select({
@@ -222,6 +221,16 @@ export async function listProgrammeFieldOptions(): Promise<
       .map((area) => ({ id: area.id, code: area.code, name: area.name })),
   }));
 }
+
+/**
+ * Same reasoning as the register's filter options: fields and areas are
+ * reference data nobody edits between two clicks, and the cache keeps them off
+ * the pool for half a minute.
+ */
+export const listProgrammeFieldOptions = unstable_cache(loadProgrammeFieldOptions, ["programme-field-options"], {
+  revalidate: 30,
+  tags: ["taxonomy"],
+});
 
 /* ── Geography ──────────────────────────────────────────────────────────── */
 
