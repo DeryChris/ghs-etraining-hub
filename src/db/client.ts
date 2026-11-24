@@ -22,11 +22,18 @@ const globalForDb = globalThis as unknown as {
   __ghsPg?: ReturnType<typeof postgres>;
 };
 
+/**
+ * Connections per instance. Serverless platforms keep a pool per function
+ * instance, and several instances fan out quickly, so production sets this
+ * lower than a long-lived server would.
+ */
+const poolMax = Number.parseInt(process.env.DB_POOL_MAX ?? "", 10) || 5;
+
 function createClient(url: string) {
   return postgres(url, {
     // Supabase's pooler cannot use prepared statements across connections.
     prepare: false,
-    max: 5,
+    max: poolMax,
     idle_timeout: 20,
     max_lifetime: 60 * 30,
     connect_timeout: 5,

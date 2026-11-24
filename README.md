@@ -197,6 +197,9 @@ curl -s http://localhost:3000/api/health
 
 ## Deploying to Vercel
 
+A step-by-step walkthrough with this project's real values, the post-deploy checks and a
+troubleshooting table is in [docs/deploy-vercel.md](docs/deploy-vercel.md). The summary:
+
 The repository is deploy-ready: `vercel.json` declares the framework, `npm ci`, `.next` and
 nothing else. **Environment variables are set in the Vercel project, never in `vercel.json`** — a
 `@secret` reference that is missing from the project fails the build outright, which is what broke
@@ -213,7 +216,8 @@ the first attempt.
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | inlined at build time |
    | `NEXT_PUBLIC_APP_URL` | the production origin, e.g. `https://tl.ghs.gov.gh` (no trailing slash) |
    | `SUPABASE_SERVICE_ROLE_KEY` | server only; used to sign storage URLs |
-   | `DATABASE_URL` | Supabase pooler connection string, `?pgbouncer=true` |
+   | `DATABASE_URL` | Supabase **transaction** pooler, port 6543, `?sslmode=require&uselibpqcompat=true` |
+   | `DB_POOL_MAX` | optional; set `3` on Vercel — each warm function instance holds its own pool |
    | `DIRECT_URL` | direct connection; needed by `drizzle-kit`, harmless at runtime |
 
    `NEXT_PUBLIC_SUPPORT_EMAIL` / `NEXT_PUBLIC_SUPPORT_PHONE` are optional. `SEED_ADMIN_EMAIL` and
