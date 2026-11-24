@@ -59,7 +59,12 @@ function createClient(url: string) {
     // spinner. Page-level deadlines live in `lib/server/deadline.ts`; a queued
     // connection fails fast rather than waiting forever.
     connection: {
-      statement_timeout: 15_000,
+      // Below the page deadline on purpose (lib/server/deadline.ts, 10 s): a
+      // query that runs away is cut off while the page can still render an
+      // answer, and — the part that matters — it releases its pooled connection
+      // before the page gives up, instead of holding a slot that the next
+      // request on this instance is already queued behind.
+      statement_timeout: 8_000,
       idle_in_transaction_session_timeout: 10_000,
       application_name: "ghs-training-library",
     },

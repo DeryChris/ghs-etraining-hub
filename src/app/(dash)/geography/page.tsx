@@ -7,7 +7,7 @@ import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
-import { withDeadline } from "@/lib/server/page-data";
+import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { Stat } from "@/components/ui/stat";
 import { LIVE_REGION, isLiveRegion } from "@/lib/ghs-constants";
 import {
@@ -56,7 +56,7 @@ export default async function GeographyPage({
   const regionId = first(query.region);
   const districtId = first(query.district);
 
-  const loaded = await withDeadline("geography", Promise.all([listGeography(), getReferenceTotals()]));
+  const loaded = await withDeadline("geography", () => mapLimit([listGeography, getReferenceTotals]));
   if (!loaded.ok) {
     return (
       <DataUnavailable

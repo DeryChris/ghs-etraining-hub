@@ -13,7 +13,7 @@ import {
   openComplaintCount,
   type ComplaintMessage,
 } from "@/lib/server/complaint-queries";
-import { withDeadline } from "@/lib/server/page-data";
+import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { requireRole } from "@/lib/server/rbac";
 
 export const metadata: Metadata = { title: "Complaints" };
@@ -38,9 +38,8 @@ export default async function ComplaintsPage({
     ? (params.status as "OPEN" | "RESOLVED" | "ALL")
     : "OPEN";
 
-  const loaded = await withDeadline(
-    "complaints",
-    Promise.all([listComplaints(filter), openComplaintCount()]),
+  const loaded = await withDeadline("complaints", () =>
+    mapLimit([() => listComplaints(filter), openComplaintCount]),
   );
   if (!loaded.ok) {
     return (

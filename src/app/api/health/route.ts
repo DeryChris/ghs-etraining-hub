@@ -90,6 +90,10 @@ async function probe(
  * a session first. This mode times those five plus the Supabase Auth leg, so the
  * answer to "which part of the page never came back" is a URL, not a guess.
  *
+ * These six run at once, which is deliberately worse than a real page: pages
+ * now load their sections two at a time (see `mapLimit` in page-data.ts). So a
+ * slow result here is the pessimistic case, not necessarily what a tab does.
+ *
  * The page modules are imported lazily on purpose — a broken page must never be
  * able to take the liveness probe down with it.
  */
