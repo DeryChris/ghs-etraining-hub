@@ -112,3 +112,19 @@ so a new capability cannot ship untested.
   for a non‑facilitator is a confusing dead end; the same button disabled because *review is
   pending* is legitimate — always add a tooltip explaining the state).
 * Server Actions re‑check every capability: hiding a button is UX, not security.
+
+## 6. Unit heads
+
+A unit head is a **facilitator carrying one extra duty**: signing off the material filed under
+their programme fields. It is `users.is_unit_head`, not a fourth role, because everything else the
+person does is a facilitator's — their area assignments, trainings and materials are untouched
+whichever way the flag is set.
+
+* Effect: the review queue appears in their sidebar and on their dashboard, and `/review` opens.
+  A plain facilitator is redirected away from it: facilitators author, unit heads and
+  administrators sign off.
+* Granting and removing it is an administrator action (`setUnitHeadAction`, audited as
+  `USER_UNIT_HEAD_GRANTED` / `USER_UNIT_HEAD_REMOVED`), offered on the Users page for facilitator
+  rows only.
+* The flag widens a facilitator's menu; it never promotes a learner. `navFor` checks the role
+  before honouring it.

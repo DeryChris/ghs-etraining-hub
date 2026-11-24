@@ -46,6 +46,8 @@ async function publishedByType(viewer: { id: string; role: "SYSTEM_ADMIN" | "FAC
 export default async function InsightsPage() {
   const session = await requireRole(["SYSTEM_ADMIN", "FACILITATOR"]);
   const admin = session.role === "SYSTEM_ADMIN";
+  // The review queue is a sign-off duty: administrators and unit heads only.
+  const reviewer = admin || session.unitHead === true;
 
   const [insights, traffic, uploads, sessions, programmeTraffic, trainingCounts, typeMix] = await Promise.all([
     getInsights(session),
@@ -77,9 +79,11 @@ export default async function InsightsPage() {
             <Link href="/trainings" className={buttonClass({ variant: "secondary" })}>
               Open the register
             </Link>
-            <Link href="/review" className={buttonClass({ variant: "ghost" })}>
-              Review queue {insights.catalogue.inReview > 0 ? `(${insights.catalogue.inReview})` : ""}
-            </Link>
+            {reviewer && (
+              <Link href="/review" className={buttonClass({ variant: "ghost" })}>
+                Review queue {insights.catalogue.inReview > 0 ? `(${insights.catalogue.inReview})` : ""}
+              </Link>
+            )}
           </>
         }
       />

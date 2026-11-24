@@ -37,6 +37,14 @@ export const users = pgTable("users", {
   region: text("region"),
   facility: text("facility"),
   isActive: boolean("is_active").notNull().default(true),
+  /**
+   * A unit head is a facilitator who also signs off the material filed under
+   * their programme fields. It is a duty carried by an existing facilitator
+   * account rather than a fourth role: every permission they need beyond a
+   * facilitator's is "decide on the review queue", and keeping the role unchanged
+   * means their area assignments, trainings and materials keep working.
+   */
+  isUnitHead: boolean("is_unit_head").notNull().default(false),
   deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
   mfaEnabled: boolean("mfa_enabled").notNull().default(false),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
@@ -464,4 +472,52 @@ export const materialViews = pgTable("material_views", {
 }, (t) => [
   uniqueIndex("material_views_unique_idx").on(t.materialId, t.userId, t.viewedOn),
   index("material_views_day_idx").on(t.viewedOn),
+]);
+
+/* ── Complaints ────────────────────────────────────────────────────────────────
+ * The Complaint Hub is how a member of staff reaches a human when the system is
+ * the problem: a forgotten password, a wrong name, a course that will not open.
+ * The row is the record — who asked, what happened, what was done about it and
+ * who did it — so an answer is never lost in a phone call. Rows are readable by
+ * administrators; the person who lodged one can read theirs back with the staff
+ * ID they wrote it under.
+ */
+
+export const complaintIssueEnum = pgEnum("complaint_issue", [
+  "PERSONAL_DETAILS",
+  "COURSE_RELATED",
+  "LOGIN_ACCESS",
+  "OTHERS",
+]);
+
+export const complaintStatusEnum = pgEnum("complaint_status", ["SUBMITTED", "IN_PROGRESS", "RESOLVED"]);
+
+export const complaints = pgTable("complaints", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  /** Short human-quotable reference, e.g. CMP-7F3K9Q. */
+  reference: varchar("reference", { length: 16 }).notNull().unique(),
+  /** The staff ID as typed. No foreign key: someone without an account still gets help. */
+  staffId: varchar("staff_id", { length: 16 }),
+  /** Set when the staff ID matched a directory row, so the complaint follows the person. */
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone"),
+  region: text("region"),
+  facility: text("facility"),
+  issueType: complaintIssueEnum("issue_type").notNull(),
+  subject: text("subject").notNull(),
+  description: text("description").notNull(),
+  status: complaintStatusEnum("status").notNull().default("SUBMITTED"),
+  /** The answer, written by the person who handled it. */
+  response: text("response"),
+  respondedById: uuid("responded_by_id").references(() => users.id, { onDelete: "set null" }),
+  respondedAt: timestamp("responded_at", { withTimezone: true }),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index("complaints_staff_idx").on(sql`lower(${t.staffId})`),
+  index("complaints_status_idx").on(t.status, t.createdAt),
+  index("complaints_user_idx").on(t.userId),
 ]);

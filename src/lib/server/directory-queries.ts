@@ -28,6 +28,7 @@ export interface DirectoryRow {
   cadre: string | null;
   facility: string | null;
   isActive: boolean;
+  isUnitHead: boolean;
   lastLoginAt: Date | null;
   createdAt: Date;
 }
@@ -78,6 +79,7 @@ export async function listDirectory(input: DirectoryFilters & { page?: number })
       cadre: users.cadre,
       facility: users.facility,
       isActive: users.isActive,
+      isUnitHead: users.isUnitHead,
       lastLoginAt: users.lastLoginAt,
       createdAt: users.createdAt,
     })

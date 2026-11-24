@@ -4,8 +4,8 @@ import { activeHref, isActiveHref, navFor } from "@/lib/nav";
 
 const ROLES = ["SYSTEM_ADMIN", "FACILITATOR", "LEARNER"] as const;
 
-function hrefs(role: Role): string[] {
-  return navFor(role).flatMap((section) => section.items.map((item) => item.href));
+function hrefs(role: Role, options: { unitHead?: boolean } = {}): string[] {
+  return navFor(role, options).flatMap((section) => section.items.map((item) => item.href));
 }
 
 describe("navFor", () => {
@@ -20,11 +20,12 @@ describe("navFor", () => {
     expect(admin).not.toContain("/notices");
   });
 
-  it("gives a facilitator authoring, review and notices but no administration", () => {
+  it("gives a facilitator authoring and notices but no administration and no review queue", () => {
     const facilitator = hrefs("FACILITATOR");
-    expect(facilitator).toEqual(
-      expect.arrayContaining(["/authoring", "/review", "/notices"]),
-    );
+    expect(facilitator).toEqual(expect.arrayContaining(["/authoring", "/notices"]));
+    // The review queue is a sign-off duty: administrators and unit heads only.
+    expect(facilitator).not.toContain("/review");
+    expect(facilitator).toContain("/help");
     expect(facilitator).not.toContain("/users");
     expect(facilitator).not.toContain("/settings");
     expect(facilitator).not.toContain("/geography");
@@ -47,10 +48,17 @@ describe("navFor", () => {
 
   it("drops sections that have no items for the role, and never reorders the rest", () => {
     const admin = navFor("SYSTEM_ADMIN");
-    expect(admin.map((section) => section.id)).toEqual(["learn", "community", "record", "author", "administration"]);
+    expect(admin.map((section) => section.id)).toEqual([
+      "learn",
+      "community",
+      "support",
+      "record",
+      "author",
+      "administration",
+    ]);
     for (const section of admin) expect(section.items.length).toBeGreaterThan(0);
     // Order within a section follows the declaration, not the role filter.
-    expect(admin[3]?.items.map((item) => item.href)).toEqual(["/review"]);
+    expect(admin[4]?.items.map((item) => item.href)).toEqual(["/review"]);
   });
 
   it("renamed Programmes to Trainings for every role, with the catalogue beside it", () => {
@@ -79,18 +87,28 @@ describe("navFor", () => {
       "Users",
       "Geography & facilities",
       "Programme fields",
+      "Complaints",
       "Settings",
     ]);
   });
 
-  it("counts the review queue for staff only", () => {
-    const review = (role: Role) =>
-      navFor(role)
+  it("puts the review queue on administrators and unit heads, and counts it for them", () => {
+    const review = (role: Role, options: { unitHead?: boolean } = {}) =>
+      navFor(role, options)
         .flatMap((section) => section.items)
         .find((item) => item.href === "/review");
     expect(review("SYSTEM_ADMIN")?.count).toBe("reviews");
-    expect(review("FACILITATOR")?.count).toBe("reviews");
-    expect(review("LEARNER")).toBeUndefined();
+    expect(review("FACILITATOR")).toBeUndefined();
+    expect(review("FACILITATOR", { unitHead: true })?.count).toBe("reviews");
+    expect(review("LEARNER", { unitHead: true })).toBeUndefined();
+  });
+
+  it("gives unit heads their facilitator menu plus the review queue, and nothing else", () => {
+    const plain = hrefs("FACILITATOR");
+    const head = hrefs("FACILITATOR", { unitHead: true });
+    expect(head.slice().sort()).toEqual([...plain, "/review"].sort());
+    expect(head).not.toContain("/users");
+    expect(head).not.toContain("/complaints");
   });
 });
 

@@ -13,6 +13,8 @@ export interface Viewer {
   region: string | null;
   directorate: string | null;
   cadre: string | null;
+  /** Facilitators who also decide the review queue for their programme fields. */
+  unitHead?: boolean;
 }
 
 /**

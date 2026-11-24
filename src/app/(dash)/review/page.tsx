@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
@@ -11,7 +12,12 @@ import { requireRole } from "@/lib/server/rbac";
 export const dynamic = "force-dynamic";
 
 export default async function ReviewQueuePage() {
+  // Reviewing is an administrator duty, or a unit head's for their own fields —
+  // facilitators author material, they do not sign it off.
   const session = await requireRole(["SYSTEM_ADMIN", "FACILITATOR"]);
+  if (session.role === "FACILITATOR" && !session.unitHead) {
+    redirect("/dashboard");
+  }
   const queue = await listReviewQueue(session);
 
   return (

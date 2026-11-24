@@ -35,6 +35,6 @@ export const SITE = {
 export const PRIMARY_NAV = [
   { href: "/programmes", label: "Programmes" },
   { href: "/about", label: "About" },
-  { href: "/verify", label: "Verify certificate" },
+  { href: "/help", label: "Help" },
   { href: "/contact", label: "Contact" },
 ] as const;

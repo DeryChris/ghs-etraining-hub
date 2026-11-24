@@ -25,8 +25,8 @@ import { Faq } from "@/components/marketing/faq";
 import { Reveal } from "@/components/marketing/reveal";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { buttonClass } from "@/components/ui/button";
-import { GHS_REGIONS } from "@/lib/ghs-constants";
 import { SITE } from "@/lib/site";
+import { GHS_REGIONS, LIVE_REGION } from "@/lib/ghs-constants";
 import { listPublicFields } from "@/lib/server/learning-queries";
 import { getPublicStatsCached } from "@/lib/server/public-queries";
 
@@ -358,17 +358,42 @@ export default async function LandingPage() {
         <Reveal delay={0.08}>
           <div className="space-y-6">
             <SectionHeading
-              eyebrow="Across Ghana"
-              title={<span id="regions-title">Present in all {SITE.regionCount} regions.</span> as unknown as string}
-              description="A district hospital in the north opens the same document, at the same version, as a teaching hospital in Accra. Nobody works from a stale copy because of where they serve."
+              eyebrow="Where it is live"
+              title={<span id="regions-title">Live in {LIVE_REGION.name}. {SITE.regionCount - 1} regions to follow.</span> as unknown as string}
+              description={`The library is running in the ${LIVE_REGION.name} Region, with Wa as its hub. The other fifteen regions are already on the rollout map and are next; nothing is half-live elsewhere, so what you see here is what you get.`}
             />
             <ul className="flex flex-wrap gap-2">
-              {GHS_REGIONS.map((region) => (
-                <li key={region} className="rounded-[var(--radius-pill)] border border-hairline bg-surface px-3 py-1.5 text-xs font-semibold text-ink-muted">
-                  {region}
-                </li>
-              ))}
+              {GHS_REGIONS.map((region) => {
+                const live = region === LIVE_REGION.name;
+                return (
+                  <li
+                    key={region}
+                    className={
+                      live
+                        ? "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-primary bg-primary px-3 py-1.5 text-xs font-bold text-primary-ink"
+                        : "rounded-[var(--radius-pill)] border border-dashed border-hairline px-3 py-1.5 text-xs font-semibold text-ink-muted"
+                    }
+                  >
+                    {region}
+                    {live ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary-ink/15 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide">
+                        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary-ink" />
+                        Live
+                      </span>
+                    ) : (
+                      <span className="ml-1 text-[10px] font-bold uppercase tracking-wide opacity-70">Soon</span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
+            <p className="text-xs text-ink-muted">
+              Working in a region that is not live yet?{" "}
+              <Link href="/help/report" className="font-semibold text-primary hover:underline underline-offset-4">
+                Tell us through the Complaint Hub
+              </Link>{" "}
+              and you will be told as soon as it opens.
+            </p>
           </div>
         </Reveal>
       </section>

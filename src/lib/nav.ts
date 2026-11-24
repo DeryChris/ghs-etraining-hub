@@ -36,6 +36,7 @@ export type NavIcon =
   | "review"
   | "notice"
   | "users"
+  | "complaint"
   | "settings";
 
 /** Unread/outstanding counts the shell already knows how to fetch. */
@@ -49,6 +50,8 @@ export interface NavItem {
   count?: NavCount;
   /** One line used as the link's title attribute where the label is terse. */
   hint?: string;
+  /** Also shown to facilitators who are unit heads (they carry an extra duty). */
+  unitHeadOnly?: boolean;
 }
 
 export interface NavSection {
@@ -113,6 +116,19 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     ],
   },
   {
+    id: "support",
+    label: "Support",
+    items: [
+      {
+        href: "/help",
+        label: "Complaint Hub",
+        icon: "complaint",
+        roles: STAFF,
+        hint: "Report a problem with your account, a course or your details",
+      },
+    ],
+  },
+  {
     id: "record",
     label: "My record",
     items: [
@@ -131,7 +147,15 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: "Author",
     items: [
       { href: "/authoring", label: "My materials", icon: "materials", roles: FACILITATOR_ONLY },
-      { href: "/review", label: "Review queue", icon: "review", roles: STAFF, count: "reviews" },
+      {
+        href: "/review",
+        label: "Review queue",
+        icon: "review",
+        roles: ADMIN_ONLY,
+        unitHeadOnly: true,
+        count: "reviews",
+        hint: "Versions waiting for a decision before anything goes live",
+      },
       { href: "/notices", label: "Send notice", icon: "notice", roles: FACILITATOR_ONLY },
     ],
   },
@@ -154,6 +178,13 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         roles: ADMIN_ONLY,
         hint: "The programme fields and areas a training plan is filed under",
       },
+      {
+        href: "/complaints",
+        label: "Complaints",
+        icon: "complaint",
+        roles: ADMIN_ONLY,
+        hint: "What staff have reported, to answer or reset access from",
+      },
       { href: "/settings", label: "Settings", icon: "settings", roles: ADMIN_ONLY },
     ],
   },
@@ -164,11 +195,16 @@ export const NAV_SECTIONS: readonly NavSection[] = [
  * of `NAV_SECTIONS` is the order on screen, so a role's menu is never reordered
  * between pages.
  */
-export function navFor(role: Role): NavGroup[] {
+export function navFor(role: Role, options: { unitHead?: boolean } = {}): NavGroup[] {
   return NAV_SECTIONS.map((section) => ({
     id: section.id,
     label: section.label,
-    items: section.items.filter((item) => item.roles.includes(role)),
+    items: section.items.filter(
+      (item) =>
+        item.roles.includes(role) ||
+        // The extra duty only widens a facilitator's menu; it never promotes anyone.
+        (role === "FACILITATOR" && options.unitHead === true && item.unitHeadOnly === true),
+    ),
   })).filter((section) => section.items.length > 0);
 }
 
@@ -183,8 +219,8 @@ export function isActiveHref(pathname: string, href: string): boolean {
 }
 
 /** The active href for a pathname, if any — useful for breadcrumbs and tests. */
-export function activeHref(pathname: string, role: Role): string | undefined {
-  const items = navFor(role).flatMap((section) => section.items);
+export function activeHref(pathname: string, role: Role, options: { unitHead?: boolean } = {}): string | undefined {
+  const items = navFor(role, options).flatMap((section) => section.items);
   const match = items.filter((item) => isActiveHref(pathname, item.href)).sort((a, b) => b.href.length - a.href.length)[0];
   return match?.href;
 }

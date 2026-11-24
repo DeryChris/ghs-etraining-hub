@@ -4,7 +4,13 @@ import { useActionState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { hintClass, inputClass } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { changeUserRoleAction, sendPasswordResetAction, setUserActiveAction, type UserActionState } from "@/lib/server/actions/users";
+import {
+  changeUserRoleAction,
+  sendPasswordResetAction,
+  setUnitHeadAction,
+  setUserActiveAction,
+  type UserActionState,
+} from "@/lib/server/actions/users";
 import { ROLE_LABELS } from "@/lib/labels";
 import type { Role } from "@/lib/rbac/capabilities";
 
@@ -32,17 +38,20 @@ export function UserRowActions({
   fullName,
   role,
   isActive,
+  isUnitHead,
   isSelf,
 }: {
   userId: string;
   fullName: string;
   role: Role;
   isActive: boolean;
+  isUnitHead: boolean;
   isSelf: boolean;
 }) {
   const [roleState, roleAction] = useActionState(changeUserRoleAction, INITIAL);
   const [activeState, activeAction] = useActionState(setUserActiveAction, INITIAL);
   const [resetState, resetAction] = useActionState(sendPasswordResetAction, INITIAL);
+  const [unitHeadState, unitHeadAction] = useActionState(setUnitHeadAction, INITIAL);
 
   if (isSelf) {
     return (
@@ -88,11 +97,20 @@ export function UserRowActions({
             Send reset link
           </SubmitButton>
         </form>
+        {role === "FACILITATOR" && (
+          <form action={unitHeadAction}>
+            <input type="hidden" name="userId" value={userId} />
+            <SubmitButton variant={isUnitHead ? "secondary" : "ghost"} size="sm" pendingLabel={isUnitHead ? "Removing…" : "Granting…"}>
+              {isUnitHead ? "Remove unit head" : "Make unit head"}
+            </SubmitButton>
+          </form>
+        )}
       </div>
 
       <Result state={roleState} />
       <Result state={activeState} />
       <Result state={resetState} />
+      <Result state={unitHeadState} />
     </div>
   );
 }

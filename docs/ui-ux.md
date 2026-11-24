@@ -119,6 +119,30 @@ Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard opera
 * Timezone always `Africa/Accra`, dates as `12 Feb 2026, 14:05 GMT`, durations as `1 h 20 m`,
   sizes as `8.4 MB` (via `src/lib/format.ts`).
 
+### Feedback on every action
+
+Nothing waits for the page to settle before admitting it was pressed. A menu item carries a
+spinner the moment it is clicked (`useLinkStatus` in the sidebar), a submit button swaps its label
+for the present participle ("Signing out…", "Lodging your complaint…") and disables itself, and
+every slow tab has a `loading.tsx` whose skeleton matches the layout it replaces. Sign-out is the
+loudest case: the menu button changes under the finger, because a dead-looking sign-out is the
+complaint we heard most.
+
+### Public pages: the Getting-started panel and the Complaint Hub
+
+* Sign-in uses a split card. The left, GHS-green panel answers the three questions a first-time
+  visitor has — *do I have an account, which email, who do I ask* — as a numbered four-step guide,
+  with a gold-bordered "Used an older portal before?" notice. The right column is the form, then
+  "Create an account" (gold, the accepted exception to the brand-colour rule), then a
+  "Trouble signing in?" divider and the red Complaint Hub button.
+* `/help` is the Complaint Hub: report an issue, or check a complaint by Staff ID. It is public on
+  purpose — somebody locked out of their account cannot sign in to ask for help. `/help/report`
+  and `/help/status` never require a session and never ask for a password.
+* Only the Upper West Region is presented as live. The landing page map draws all sixteen regions
+  from real 2019 boundaries (`src/lib/ghana-map.ts`), fills Upper West, and labels the rest "coming
+  soon"; the geography admin makes every other region read-only with the same wording. Nothing is
+  hidden and nothing is shown as broken.
+
 ## 6. Accessibility contract
 
 * Landmarks: `<nav aria-label="Primary">`, `<main>`, one `<h1>` per page, heading levels never skipped.

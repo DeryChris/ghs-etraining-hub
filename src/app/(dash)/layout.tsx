@@ -80,6 +80,7 @@ export default async function DashboardLayout({
         name: session.name,
         role: session.role,
         staffId: session.staffId,
+        unitHead: session.unitHead,
       }}
       counts={{
         messages: unreadMessages,

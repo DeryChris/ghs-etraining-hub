@@ -1,0 +1,92 @@
+import "server-only";
+import { desc, sql } from "drizzle-orm";
+import { db } from "@/db/index";
+import { complaints } from "@/db/schema";
+
+/**
+ * Reads for the Complaint Hub. The public read is deliberately narrow: a staff ID
+ * shows the complaints lodged under it, and each one shows its status, its dates,
+ * the subject and the answer — never the phone number, the email or the other
+ * complaints' detail.
+ */
+
+export interface PublicComplaint {
+  reference: string;
+  issueType: "PERSONAL_DETAILS" | "COURSE_RELATED" | "LOGIN_ACCESS" | "OTHERS";
+  subject: string;
+  status: "SUBMITTED" | "IN_PROGRESS" | "RESOLVED";
+  response: string | null;
+  createdAt: Date;
+  resolvedAt: Date | null;
+}
+
+export async function complaintsForStaffId(staffId: string): Promise<PublicComplaint[]> {
+  return db
+    .select({
+      reference: complaints.reference,
+      issueType: complaints.issueType,
+      subject: complaints.subject,
+      status: complaints.status,
+      response: complaints.response,
+      createdAt: complaints.createdAt,
+      resolvedAt: complaints.resolvedAt,
+    })
+    .from(complaints)
+    .where(sql`lower(${complaints.staffId}) = ${staffId.trim().toLowerCase()}`)
+    .orderBy(desc(complaints.createdAt))
+    .limit(10);
+}
+
+export interface AdminComplaint extends PublicComplaint {
+  id: string;
+  staffId: string | null;
+  userId: string | null;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  region: string | null;
+  facility: string | null;
+  description: string;
+}
+
+/** The whole queue, newest first. Administrators read the contact details here. */
+export async function listComplaints(status?: "OPEN" | "RESOLVED" | "ALL"): Promise<AdminComplaint[]> {
+  const where =
+    status === "RESOLVED"
+      ? sql`${complaints.status} = 'RESOLVED'`
+      : status === "ALL" || status === undefined
+        ? undefined
+        : sql`${complaints.status} <> 'RESOLVED'`;
+
+  return db
+    .select({
+      id: complaints.id,
+      reference: complaints.reference,
+      staffId: complaints.staffId,
+      userId: complaints.userId,
+      fullName: complaints.fullName,
+      email: complaints.email,
+      phone: complaints.phone,
+      region: complaints.region,
+      facility: complaints.facility,
+      issueType: complaints.issueType,
+      subject: complaints.subject,
+      description: complaints.description,
+      status: complaints.status,
+      response: complaints.response,
+      createdAt: complaints.createdAt,
+      resolvedAt: complaints.resolvedAt,
+    })
+    .from(complaints)
+    .where(where)
+    .orderBy(desc(complaints.createdAt))
+    .limit(200);
+}
+
+export async function openComplaintCount(): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(complaints)
+    .where(sql`${complaints.status} <> 'RESOLVED'`);
+  return row?.n ?? 0;
+}

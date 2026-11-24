@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   Bell,
   ChevronDown,
-  LogOut,
   Menu,
   Search,
   Settings,
@@ -15,6 +14,7 @@ import type { ShellUser } from "@/components/layout/types";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { inputClass } from "@/components/ui/input";
 import { ROLE_LABELS } from "@/lib/labels";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 import { signOutAction } from "@/lib/server/actions/auth";
 
 const TITLES = /^(dr|mr|mrs|ms|miss|prof|sr|sister|nurse|madam|mama)\.?\s+/i;
@@ -214,13 +214,7 @@ function AccountMenu({ user }: { user: ShellUser }) {
         </div>
 
         <form action={signOutAction} className="border-t border-hairline p-1.5">
-          <button
-            type="submit"
-            className="flex min-h-10 w-full items-center gap-2.5 rounded-control px-2.5 text-sm font-semibold text-ink hover:bg-surface-2"
-          >
-            <LogOut className="h-4 w-4 text-ink-muted" aria-hidden />
-            Sign out
-          </button>
+          <SignOutButton />
         </form>
       </div>
     </details>

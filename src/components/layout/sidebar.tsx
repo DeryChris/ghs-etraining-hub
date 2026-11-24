@@ -14,6 +14,7 @@ import {
   MapPinned,
   Megaphone,
   MessageSquare,
+  MessageSquareWarning,
   PenLine,
   Settings,
   TrendingUp,
@@ -25,6 +26,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId } from "react";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { NavLinkPending } from "@/components/layout/nav-link-pending";
 import { SidebarFlagLine, SidebarStar, SidebarWeave } from "@/components/layout/sidebar-art";
 import type { ShellUser } from "@/components/layout/types";
 import { ROLE_LABELS } from "@/lib/labels";
@@ -48,6 +50,7 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   users: Users,
   geography: MapPinned,
   taxonomy: FolderTree,
+  complaint: MessageSquareWarning,
   settings: Settings,
 };
 
@@ -76,7 +79,7 @@ interface SidebarProps {
 export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
   const pathname = usePathname();
   const indicatorId = `${useId()}-sidebar-indicator`;
-  const groups = navFor(user.role);
+  const groups = navFor(user.role, { unitHead: user.unitHead });
 
   return (
     <div className="nav-surface relative flex h-full flex-col overflow-hidden">
@@ -158,6 +161,7 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
                         aria-hidden
                       />
                       <span className="relative flex-1">{item.label}</span>
+                      <NavLinkPending />
                       {count > 0 && (
                         <span
                           className={cn(
@@ -186,7 +190,7 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-[var(--nav-ink)]">{user.name}</p>
             <p className="truncate text-xs text-[var(--nav-muted)]">
-              {ROLE_LABELS[user.role]} · {user.staffId}
+              {user.unitHead && user.role === "FACILITATOR" ? "Unit head" : ROLE_LABELS[user.role]} · {user.staffId}
             </p>
           </div>
         </div>

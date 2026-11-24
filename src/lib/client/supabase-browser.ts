@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
+import { createBrowserClient, type CookieOptionsWithName } from "@supabase/ssr";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -12,8 +12,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const url: string = supabaseUrl;
 const key: string = supabaseAnonKey;
 
-export function createClient() {
-  return createBrowserClient(url, key);
+/**
+ * `cookieOptions` is only passed for "remember me": with no `maxAge` the auth
+ * cookies are session cookies, which is the behaviour we want when the person
+ * signing in is on a shared facility computer.
+ */
+export function createClient(options?: { cookieOptions?: CookieOptionsWithName }) {
+  return createBrowserClient(url, key, options);
 }
 
 export async function signIn(params: { email: string; password: string }) {
