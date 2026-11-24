@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { poolMax, poolMaxSource } from "@/db/client";
+import { poolMax, poolMaxConfigured, poolMaxSource } from "@/db/client";
 import { complaints, districts, materials, programmeFields, regions, trainingSessions, users } from "@/db/schema";
 import { databaseTarget } from "@/lib/db-target";
 import { within } from "@/lib/server/deadline";
+import { mapLimit } from "@/lib/server/page-data";
 import { log } from "@/lib/server/logger";
 import { currentRequestId } from "@/lib/server/request-context";
 
@@ -20,8 +21,11 @@ import { currentRequestId } from "@/lib/server/request-context";
  */
 
 /** Tables added by the newest migration first, so a stale database names itself. */
-/** `?deep=serial` isolates the pool, `?deep=pages` the page's own data path. */
-type DeepMode = "parallel" | "serial" | "pages";
+/**
+ * `?deep=serial` isolates the pool, `?deep=pages` the page's own data path and
+ * `?deep=pages-burst` the all-at-once shape that a page used to have.
+ */
+type DeepMode = "parallel" | "serial" | "pages" | "pages-burst";
 
 const REQUIRED_TABLES = [
   "complaint_messages",
@@ -70,10 +74,11 @@ async function probe(
   label: string,
   work: () => Promise<unknown>,
   countOf?: (result: unknown) => number | undefined,
+  ms = 4_000,
 ): Promise<ProbeResult> {
   const started = Date.now();
   try {
-    const result = await within(`health.${label}`, Promise.resolve().then(work), 4_000);
+    const result = await within(`health.${label}`, Promise.resolve().then(work), ms);
     const rows = countOf ? countOf(result) : Array.isArray(result) ? result.length : undefined;
     return { label, ms: Date.now() - started, rows };
   } catch (error) {
@@ -90,37 +95,54 @@ async function probe(
  * a session first. This mode times those five plus the Supabase Auth leg, so the
  * answer to "which part of the page never came back" is a URL, not a guess.
  *
- * These six run at once, which is deliberately worse than a real page: pages
- * now load their sections two at a time (see `mapLimit` in page-data.ts). So a
- * slow result here is the pessimistic case, not necessarily what a tab does.
+ * `?deep=pages` paces those sections two at a time, exactly as the page does
+ * now (see `mapLimit` in page-data.ts), so its verdict matches the tab.
+ * `?deep=pages-burst` fires everything at once — the shape that was failing —
+ * to keep the worst case observable.
  *
  * The page modules are imported lazily on purpose — a broken page must never be
  * able to take the liveness probe down with it.
  */
-async function pageProbes(mode: "parallel" | "serial" = "parallel"): Promise<ProbeResult[]> {
+async function pageProbes(mode: "mirror" | "burst" | "serial" = "mirror"): Promise<ProbeResult[]> {
   const { listTrainings, getTrainingSummary, getTrainingFilterOptions } = await import("@/lib/server/training-queries");
   const { listProgrammeFieldOptions } = await import("@/lib/server/taxonomy-queries");
   const { listFields } = await import("@/lib/server/learning-queries");
 
-  const probes = [
-    probe(
-      "page: trainings list",
-      () => listTrainings({ page: 1 }),
-      (result) => (result as { items?: unknown[] }).items?.length,
-    ),
-    probe("page: trainings summary", () => getTrainingSummary()),
-    probe("page: training filter options", () => getTrainingFilterOptions()),
-    probe("page: programme field options", () => listProgrammeFieldOptions()),
-    probe("page: programme catalogue", () => listFields(null)),
-    authProbe(),
+  // 1.5 s is generous for reads that answer in 150 ms, and it keeps the
+  // whole probe inside one function invocation even when several sections hang.
+  const ms = 1_500;
+
+  // The three statements inside "filter options", each timed on its own. If the
+  // group hangs while every statement in it answers, the fault is not in the SQL.
+  const statements: (() => Promise<ProbeResult>)[] = [
+    () => probe("sql: filter years", () => db.selectDistinct({ year: trainingSessions.year }).from(trainingSessions).where(eq(trainingSessions.isArchived, false)), undefined, ms),
+    () => probe("sql: filter regions", () => db.select({ id: regions.id, name: regions.name }).from(regions).orderBy(asc(regions.name)), undefined, ms),
+    () => probe("sql: filter districts", () => db.select({ id: districts.id, name: districts.name }).from(districts).orderBy(asc(districts.name)), undefined, ms),
+  ];
+
+  const sections: (() => Promise<ProbeResult>)[] = [
+    () =>
+      probe("page: trainings list", () => listTrainings({ page: 1 }), (result) => (result as { items?: unknown[] }).items?.length, ms),
+    () => probe("page: trainings summary", () => getTrainingSummary(), undefined, ms),
+    () => probe("page: training filter options", () => getTrainingFilterOptions(), undefined, ms),
+    () => probe("page: programme field options", () => listProgrammeFieldOptions(), undefined, ms),
+    () => probe("page: programme catalogue", () => listFields(null), undefined, ms),
+    () => authProbe(),
   ];
 
   if (mode === "serial") {
     const results: ProbeResult[] = [];
-    for (const run of probes) results.push(await run);
+    for (const run of [...sections, ...statements]) results.push(await run());
     return results;
   }
-  return Promise.all(probes);
+  if (mode === "burst") {
+    // What the page used to do: everything leaves the instance at once.
+    return Promise.all([...sections.map((run) => run()), ...statements.map((run) => run())]);
+  }
+  // What the page does now: two sections at a time, the statements afterwards.
+  const mirrored = await mapLimit(sections, 2);
+  const after = await mapLimit(statements, 1);
+  return [...mirrored, ...after];
 }
 
 /**
@@ -149,7 +171,8 @@ async function authProbe(): Promise<ProbeResult> {
 }
 
 async function deepProbes(mode: DeepMode = "parallel"): Promise<ProbeResult[]> {
-  if (mode === "pages") return pageProbes();
+  if (mode === "pages") return pageProbes("mirror");
+  if (mode === "pages-burst") return pageProbes("burst");
 
   const probes = [
     probe("session (users)", () => db.select({ id: users.id }).from(users).limit(1)),
@@ -176,7 +199,14 @@ export async function GET(request: Request) {
   const deep = deepParam !== null;
   // `serial` and `pages` each answer a different question; anything else (1, true,
   // an empty value) keeps the original parallel behaviour.
-  const deepMode: DeepMode = deepParam === "serial" ? "serial" : deepParam === "pages" ? "pages" : "parallel";
+  const deepMode: DeepMode =
+    deepParam === "serial"
+      ? "serial"
+      : deepParam === "pages"
+        ? "pages"
+        : deepParam === "pages-burst"
+          ? "pages-burst"
+          : "parallel";
   const requestId = await currentRequestId();
   let dbStatus: "up" | "down" = "down";
   let schemaStatus: "current" | "outdated" | "unknown" = "unknown";
@@ -204,6 +234,9 @@ export async function GET(request: Request) {
     {
       ok,
       version: "2.0.0",
+      // Which build answered. Without this, "still broken" cannot be told apart
+      // from "still the previous deploy".
+      build: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev",
       uptime: process.uptime(),
       checks: { db: dbStatus, schema: schemaStatus },
       // Host and port only — never the password. This is the single most useful
@@ -219,6 +252,7 @@ export async function GET(request: Request) {
               // Connections this instance may open. An old DB_POOL_MAX in the
               // host's environment overrides the fix silently, so report both.
               poolMax,
+              poolMaxConfigured,
               poolMaxSource,
               // Supabase's direct host (`db.<ref>.supabase.co`) is IPv6-only;
               // Vercel functions cannot reach it at all.
