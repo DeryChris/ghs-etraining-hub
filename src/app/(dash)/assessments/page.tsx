@@ -22,7 +22,7 @@ function TestRow({ item }: { item: AssessmentCard }) {
       >
         <div className="min-w-0 space-y-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
-            {item.categoryName} · {item.spaceTitle}
+            {item.fieldName} · {item.areaName}
           </p>
           <h3 className="text-base font-bold text-ink">{item.title}</h3>
           <p className="text-sm leading-relaxed text-ink-muted">
@@ -70,7 +70,7 @@ function LabRow({ item }: { item: AssessmentCard }) {
       >
         <div className="min-w-0 space-y-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
-            {item.categoryName} · {item.spaceTitle}
+            {item.fieldName} · {item.areaName}
           </p>
           <h3 className="flex items-center gap-2 text-base font-bold text-ink">
             <FlaskConical className="h-4 w-4 shrink-0 text-primary" aria-hidden />
@@ -139,7 +139,7 @@ export default async function AssessmentsPage() {
                 : "When a programme you can access publishes a pre-test or post-test, it appears here."
             }
             actionText="Browse programmes"
-            actionHref="/directorates"
+            actionHref="/catalogue"
             art="folder"
           />
         ) : (
@@ -166,7 +166,7 @@ export default async function AssessmentsPage() {
             title="No practical labs published yet"
             description="Programmes that include a hands-on component list it here once it is published."
             actionText="Browse programmes"
-            actionHref="/directorates"
+            actionHref="/catalogue"
             art="folder"
           />
         ) : (

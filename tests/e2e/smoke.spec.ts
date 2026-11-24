@@ -1,4 +1,4 @@
-﻿import { expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 /**
  * Smoke suite for the learner journey. Requires a seeded learner account:

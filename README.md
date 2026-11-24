@@ -1,7 +1,7 @@
-﻿# GHS-TL ΓÇö Ghana Health Service Training Library
+# GHS-TL — Ghana Health Service Training Library
 
 The catalogue of record for Ghana Health Service training programmes. Material from a training
-session ΓÇö slides, protocols, videos, references ΓÇö is filed under the directorate and module that ran
+session — slides, protocols, videos, references — is filed under the directorate and module that ran
 it, as a numbered version that a second reviewer has to approve before staff see it. Nothing is
 deleted silently: material is archived, and a hash-chained audit trail records who uploaded,
 reviewed, published, downloaded or withdrew it. Built on **Next.js 16**, **React 19**,
@@ -28,19 +28,26 @@ reviewed, published, downloaded or withdrew it. Built on **Next.js 16**, **React
 
 ## What is implemented today
 
-**Shipped:** staff sign-in / password reset; dashboard with mandatory protocols; directorates ΓåÆ
-spaces ΓåÆ material viewer; library search with server-side pagination; progress
-(start ┬╖ acknowledge ┬╖ complete) with per-version re-acknowledgement; a personal record of what you
-opened, downloaded and finished; **training sessions** recorded under a programme at region ΓåÆ
-district ΓåÆ sub-district ΓåÆ facility; **traffic insights** (opens, downloads, upload rate, trainings
+**Shipped:** staff sign-in / password reset; dashboard with mandatory protocols; a **catalogue** of
+programme fields → areas → material viewer; library search with server-side pagination; progress
+(start · acknowledge · complete) with per-version re-acknowledgement; a personal record of what you
+opened, downloaded and finished; a **Trainings register** (the Learn section's "Trainings" tab) with a
+filter bar, plan form — title, year, programme field and area, target group, region → district →
+sub-district → facility, start/end dates, duration, venue — and an audited archive; **training
+**trainings** recorded at region → district → sub-district → facility; **traffic insights** (opens, downloads, upload rate, trainings
 per programme) drawn as server-rendered SVG charts; staff messaging (paginated threads); notifications;
-**authoring pipeline** (draft ΓåÆ signed upload ΓåÆ review ΓåÆ publish ΓåÆ supersede ΓåÆ archive) with the
+**authoring pipeline** (draft → signed upload → review → publish → supersede → archive) with the
 two-person publish rule; **cohort-targeted notices**; marketing site and the GHS emblem brand set.
 
-**Enforced, not just documented:** capability matrix (role ├ù action ├ù scope), facilitator scope
+**Enforced, not just documented:** capability matrix (role × action × scope), facilitator scope
 resolved from `category_facilitators`, cohort visibility (`spaces.audience_*`,
 `categories.is_restricted`), hash-chained audit log written in the same transaction as each
 mutation, rate limits on progress/messages/certificate lookups, RLS lock-down of the public API.
+
+**Reference data is administrable:** `/programme-fields` (ten fields, forty-one areas from the GHS
+list) and `/geography` (regions → districts → sub-districts → facilities) are full CRUD surfaces for
+administrators, with archive-instead-of-delete for anything a training already refers to. The
+signed-in sidebar is GHS green in both themes (ADR-0013).
 
 **Not built yet:** category/space administration and the audit-log viewer, comments/discussion,
 assessments and grading, message reporting, MFA enforcement and account lockout, server-rendered
@@ -48,7 +55,7 @@ certificate PDFs, and time-to-publish. The tables exist; the flows do not. See `
 for the prioritised gap list.
 
 **Retired, deliberately:** CPD points, cycle targets and certificate awarding (ADR-0011). The
-`certificates` table, `GHS-CPD-ΓÇª` serials, `/verify` and the printable award remain, so certificates
+`certificates` table, `GHS-CPD-…` serials, `/verify` and the printable award remain, so certificates
 already issued still check out; nothing new is issued.
 
 ---
@@ -70,8 +77,8 @@ src/
   app/
     (marketing)/               # public: home, programmes, about, verify, legal, contact
     (auth)/                    # login, forgot-password, reset-password
-    (dash)/                    # protected shell: dashboard, directorates, spaces, library,
-                               # materials, messages, notifications, analytics
+    (dash)/                    # protected shell: dashboard, trainings, catalogue, library,
+                               # catalogue, geography, programme-fields, messages, analytics
     api/health/                # liveness/readiness probe
     api/materials/[id]/file/   # audit-logged signed-URL redirect for controlled documents
     auth/callback/             # PKCE code exchange for reset links
@@ -111,7 +118,7 @@ src/
 ```bash
 npm ci
 cp .env.example .env.local     # then fill in the Supabase values
-npm run db:migrate             # drizzle/0000ΓÇª0003
+npm run db:migrate             # drizzle/0000…0003
 psql "$DIRECT_URL" -f supabase/migrations/20260113000000_lock_public_api.sql
 npm run db:seed
 npm run dev                    # http://localhost:3000
@@ -119,10 +126,10 @@ npm run dev                    # http://localhost:3000
 
 | Variable | Source |
 |---|---|
-| `DATABASE_URL` | Supabase ΓåÆ Database ΓåÆ Pooler (port 6543) + `?pgbouncer=true` ΓÇö runtime only |
-| `DIRECT_URL` | Database ΓåÆ **Session pooler** (5432, `sslmode=require`) ΓÇö drizzle-kit only. `db.<ref>.supabase.co` is IPv6-only now and fails on IPv4 with `ENOTFOUND` |
+| `DATABASE_URL` | Supabase → Database → Pooler (port 6543) + `?pgbouncer=true` — runtime only |
+| `DIRECT_URL` | Database → **Session pooler** (5432, `sslmode=require`) — drizzle-kit only. `db.<ref>.supabase.co` is IPv6-only now and fails on IPv4 with `ENOTFOUND` |
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | API settings (anon key is public-safe) |
-| `SUPABASE_SERVICE_ROLE_KEY` | API settings ΓÇö **server only**, used to sign storage URLs |
+| `SUPABASE_SERVICE_ROLE_KEY` | API settings — **server only**, used to sign storage URLs |
 | `NEXT_PUBLIC_APP_URL` | The public origin (`http://localhost:3000` locally) |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` / `_PHONE` | Optional; the site says how to reach ICT when unset |
 | `SEED_ADMIN_EMAIL`, `ALLOW_PROD_SEED` | Seeder only; refuses production by default |
@@ -132,69 +139,89 @@ procedure in `docs/migrations.md` before `db:migrate` will work.
 
 ### Updating an existing database
 
-A database created before the sessions and traffic release is missing migration `0003`. The
+A database created before the registrations and traffic release is missing migration `0003`. The
 symptom is a page failing with `relation "material_views" does not exist` (or
 `training_sessions`, `districts`). Fix it, then reload:
 
 ```bash
 npm run db:migrate   # applies drizzle/0003; needs DIRECT_URL
-npm run db:seed      # idempotent; loads the Upper West geography used by the sessions form
+npm run db:seed            # idempotent; taxonomy + geography + starter content and accounts
+npm run db:seed:geography  # geography only — safe on a database that already has real people in it
 ```
 
-If the connection itself fails — `getaddrinfo ENOTFOUND`, `ECONNREFUSED`, or `read ECONNRESET` — run the
-doctor first. It checks both URLs, resolves the hosts, connects twice (with `pg`, the driver
-drizzle-kit uses, and with postgres.js, the driver the app uses), and names the fix without changing
-anything:
+`db:seed:geography` exists because the full seeder also creates a demo administrator, a facilitator
+and three starter materials. If the app is live and only the district/facility pickers are empty
+(`db:doctor` says *"No districts or facilities"*), run the geography command instead: it upserts
+regions, the eleven Upper West districts, their sub-districts and 24 facilities, and touches
+nothing else.
+
+If the connection itself fails — `getaddrinfo ENOTFOUND`, `ECONNREFUSED`, `CONNECT_TIMEOUT`, or
+`read ECONNRESET` — run the doctor first. It checks both URLs, resolves the hosts, connects, and names the fix
+without changing anything:
 
 ```bash
 npm run db:doctor
 ```
 
-`Error: self-signed certificate in certificate chain` (`SELF_SIGNED_CERT_IN_CHAIN`) is not a wrong
-password or a wrong host: the URL is fine, the machine's trust store is not. Antivirus HTTPS
-scanning, a corporate proxy (Zscaler, Netskope) and similar products re-sign TLS with a root Node
-does not know, so node-postgres — which since v8.11 treats `sslmode=require` as `verify-full` —
-rejects the chain. `drizzle.config.ts` therefore applies `sslmode=require` with libpq semantics
-(encrypted, chain not verified), which is exactly the trust level the app's runtime driver already
-uses, so `db:migrate`, `db:push` and `db:studio` connect wherever the app connects. To verify
-instead, say so: `sslmode=verify-full&sslrootcert=<path-to-inspecting-ca>.pem`.
+`write CONNECT_TIMEOUT` deserves its own note, because the cause is almost always the host and not the password.
+Supabase's direct host, `db.<project-ref>.supabase.co`, resolves **only to IPv6**. On a network without IPv6
+(most office Wi-Fi, some ISPs) the TCP handshake never completes, and every query waits out `connect_timeout`.
+Use the pooler instead — Supabase → **Connect** → *Session pooler* — which resolves to IPv4:
+
+```dotenv
+# wrong on an IPv4-only network: IPv6-only host, connect times out
+DATABASE_URL=postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres
+
+# right: Supavisor pooler, IPv4, session mode on 5432 (6543 for transaction mode)
+DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-1-<region>.pooler.supabase.com:5432/postgres?sslmode=require&uselibpqcompat=true
+```
+
+Check the DNS answer before guessing which of the two is wrong:
+
+```bash
+node -e "require('dns').lookup('db.<ref>.supabase.co',{all:true},console.log)"   # [{family:6,…}] explains it
+```
 
 `GET /api/health` now reports schema drift directly: `{"ok":false,"checks":{"db":"up","schema":"outdated"},
-"missingTables":["material_views"],"error":{"code":"SCHEMA_OUTDATED",ΓÇª}}`. It answers `503` until the
+"missingTables":["material_views"],"error":{"code":"SCHEMA_OUTDATED",…}}`. It answers `503` until the
 migration is applied, so a deploy that skips the step is caught by the probe rather than by a user.
 
 ### Health check
 
 ```bash
 curl -s http://localhost:3000/api/health
-# {"ok":true,"version":"2.0.0","uptime":ΓÇª,"checks":{"db":"up"},"latencyMs":ΓÇª}
+# {"ok":true,"version":"2.0.0","uptime":…,"checks":{"db":"up"},"latencyMs":…}
 ```
 
 ---
 
 ## Deploying to Vercel
 
+A step-by-step walkthrough with this project's real values, the post-deploy checks and a
+troubleshooting table is in [docs/deploy-vercel.md](docs/deploy-vercel.md). The summary:
+
 The repository is deploy-ready: `vercel.json` declares the framework, `npm ci`, `.next` and
-nothing else. **Environment variables are set in the Vercel project, never in `vercel.json`** ΓÇö a
+nothing else. **Environment variables are set in the Vercel project, never in `vercel.json`** — a
 `@secret` reference that is missing from the project fails the build outright, which is what broke
 the first attempt.
 
-1. **Import the repository** (Vercel ΓåÆ Add New ΓåÆ Project ΓåÆ this repo). Framework preset is detected
+1. **Import the repository** (Vercel → Add New → Project → this repo). Framework preset is detected
    as Next.js; leave the build and install commands alone.
-2. **Add the variables** under Project ΓåÆ Settings ΓåÆ Environment Variables, for Production *and*
+2. **Add the variables** under Project → Settings → Environment Variables, for Production *and*
    Preview. Only these six are required to build and boot:
 
    | Name | Notes |
    | --- | --- |
-   | `NEXT_PUBLIC_SUPABASE_URL` | inlined at build time ΓÇö set before the first deploy |
+   | `NEXT_PUBLIC_SUPABASE_URL` | inlined at build time — set before the first deploy |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | inlined at build time |
    | `NEXT_PUBLIC_APP_URL` | the production origin, e.g. `https://tl.ghs.gov.gh` (no trailing slash) |
    | `SUPABASE_SERVICE_ROLE_KEY` | server only; used to sign storage URLs |
-   | `DATABASE_URL` | Supabase pooler connection string, `?pgbouncer=true` |
+   | `DATABASE_URL` | Supabase **transaction** pooler, port 6543, `?sslmode=require&uselibpqcompat=true` |
+   | `DB_POOL_MAX` | optional; set `3` on Vercel — each warm function instance holds its own pool |
    | `DIRECT_URL` | direct connection; needed by `drizzle-kit`, harmless at runtime |
 
    `NEXT_PUBLIC_SUPPORT_EMAIL` / `NEXT_PUBLIC_SUPPORT_PHONE` are optional. `SEED_ADMIN_EMAIL` and
-   `ALLOW_PROD_SEED` belong to local seeding only ΓÇö do not set them in Vercel.
+   `ALLOW_PROD_SEED` belong to local seeding only — do not set them in Vercel.
 3. **Deploy**, then smoke-test the deployment:
 
    ```bash
@@ -203,9 +230,9 @@ the first attempt.
 
    A 503 with `checks.db = "down"` means `DATABASE_URL` is wrong (or the pooler host is not
    reachable from Vercel). The site still renders; only data-backed queries fail.
-4. **Point Supabase at the deployment**: Authentication ΓåÆ URL configuration ΓåÆ Site URL and
+4. **Point Supabase at the deployment**: Authentication → URL configuration → Site URL and
    `https://<your-domain>/auth/callback` in the redirect allow-list, or password-reset links break.
-5. **Create the private storage bucket** `ghs-materials` (Storage ΓåÆ New bucket, public off).
+5. **Create the private storage bucket** `ghs-materials` (Storage → New bucket, public off).
 6. **First administrator**: `npm run db:seed` against the production database with
    `ALLOW_PROD_SEED=true` (seed is idempotent), or insert the directory row by hand and run
    `npm run user:create-auth you@ghs.gov.gh`.
@@ -237,7 +264,7 @@ Anything `NEXT_PUBLIC_*` changed later needs a redeploy, because it is compiled 
 3. The staff member signs in and changes the password. Role always comes from the database, never
    from Auth metadata.
 
-Allow `<origin>/auth/callback` in Supabase ΓåÆ Authentication ΓåÆ URL configuration so reset links
+Allow `<origin>/auth/callback` in Supabase → Authentication → URL configuration so reset links
 work. Create a **private** storage bucket named `ghs-materials` for controlled documents.
 
 ---
@@ -247,7 +274,7 @@ work. Create a **private** storage bucket named `ghs-materials` for controlled d
 * **Migrations:** `docs/migrations.md`. Schema changes are generated, reviewed and committed;
   `drizzle-kit push` is sandbox-only.
 * **Audit integrity:** `npm run db:verify-chain` recomputes the hash chain (exit 1 on tamper).
-  Run it after every restore and on a schedule. Staff are deactivated, never deleted ΓÇö the chain
+  Run it after every restore and on a schedule. Staff are deactivated, never deleted — the chain
   covers the actor id.
 * **Rate limits:** fixed windows in `rate_limit_windows`, keyed by a SHA-256 of the identifier
   (progress 60/5 min, messages 30/5 min, certificate verification 20/5 min per connection).

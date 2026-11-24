@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { auditLogs, categories, certificates, materialProgress, materialVersions, materialViews, materials, spaces, trainingSessions, users } from "@/db/schema";
+import { auditLogs, programmeFields, certificates, materialProgress, materialVersions, materialViews, materials, programmeAreas, trainingSessions, users } from "@/db/schema";
 import { scopeFor } from "@/lib/server/scope";
 import { isStaffRole, type Viewer } from "@/lib/viewer";
 
@@ -22,14 +22,14 @@ export interface ProgrammeInsight {
   code: string;
   published: number;
   inReview: number;
-  spaces: number;
+  programmeAreas: number;
 }
 
 export interface Insights {
   /** "all" for an administrator, "assigned" for a facilitator. */
   scope: "all" | "assigned";
   people: { learners: number; facilitators: number; admins: number; total: number } | null;
-  catalogue: { programmes: number; spaces: number; published: number; inReview: number; draft: number; archived: number };
+  catalogue: { programmes: number; programmeAreas: number; published: number; inReview: number; draft: number; archived: number };
   learning: { completionsInWindow: number; certificatesInWindow: number; certificatesTotal: number; verifications: number | null };
   /** Every programme in scope, busiest first, capped for the page. */
   programmes: ProgrammeInsight[];
@@ -49,44 +49,44 @@ export async function getInsights(viewer: Viewer): Promise<Insights> {
 
   const since = windowStart();
   const scope = scopeFor(viewer);
-  const scopedCategories = and(scope, eq(categories.isArchived, false));
+  const scopedCategories = and(scope, eq(programmeFields.isArchived, false));
 
   const programmeRows = await db
     .select({
-      id: categories.id,
-      name: categories.name,
-      code: categories.code,
+      id: programmeFields.id,
+      name: programmeFields.name,
+      code: programmeFields.code,
       published: sql<number>`count(distinct ${materials.id}) filter (where ${materials.state} = 'PUBLISHED')::int`,
       inReview: sql<number>`count(distinct ${materials.id}) filter (where ${materials.state} = 'IN_REVIEW')::int`,
-      spaces: sql<number>`count(distinct ${spaces.id})::int`,
+      programmeAreas: sql<number>`count(distinct ${programmeAreas.id})::int`,
     })
-    .from(categories)
-    .leftJoin(spaces, and(eq(spaces.categoryId, categories.id), eq(spaces.isArchived, false)))
-    .leftJoin(materials, eq(materials.spaceId, spaces.id))
+    .from(programmeFields)
+    .leftJoin(programmeAreas, and(eq(programmeAreas.fieldId, programmeFields.id), eq(programmeAreas.isArchived, false)))
+    .leftJoin(materials, eq(materials.programmeAreaId, programmeAreas.id))
     .where(scopedCategories)
-    .groupBy(categories.id, categories.name, categories.code)
-    .orderBy(desc(sql`count(distinct ${materials.id}) filter (where ${materials.state} = 'PUBLISHED')`), categories.name);
+    .groupBy(programmeFields.id, programmeFields.name, programmeFields.code)
+    .orderBy(desc(sql`count(distinct ${materials.id}) filter (where ${materials.state} = 'PUBLISHED')`), programmeFields.name);
 
   const [catalogueRow] = await db
     .select({
-      programmes: sql<number>`count(distinct ${categories.id})::int`,
-      spaces: sql<number>`count(distinct ${spaces.id})::int`,
+      programmes: sql<number>`count(distinct ${programmeFields.id})::int`,
+      programmeAreas: sql<number>`count(distinct ${programmeAreas.id})::int`,
       published: sql<number>`count(distinct ${materials.id}) filter (where ${materials.isPublished} and ${materials.state} = 'PUBLISHED')::int`,
       inReview: sql<number>`count(distinct ${materials.id}) filter (where ${materials.state} = 'IN_REVIEW')::int`,
       draft: sql<number>`count(distinct ${materials.id}) filter (where ${materials.state} = 'DRAFT')::int`,
       archived: sql<number>`count(distinct ${materials.id}) filter (where ${materials.state} = 'ARCHIVED')::int`,
     })
-    .from(categories)
-    .leftJoin(spaces, and(eq(spaces.categoryId, categories.id), eq(spaces.isArchived, false)))
-    .leftJoin(materials, eq(materials.spaceId, spaces.id))
+    .from(programmeFields)
+    .leftJoin(programmeAreas, and(eq(programmeAreas.fieldId, programmeFields.id), eq(programmeAreas.isArchived, false)))
+    .leftJoin(materials, eq(materials.programmeAreaId, programmeAreas.id))
     .where(scopedCategories);
 
   const [completionsRow] = await db
     .select({ n: count() })
     .from(materialProgress)
     .innerJoin(materials, eq(materials.id, materialProgress.materialId))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(and(scope, gte(materialProgress.completedAt, since), isNotNull(materialProgress.completedAt)));
 
   const [certificatesRow] = await db
@@ -97,8 +97,8 @@ export async function getInsights(viewer: Viewer): Promise<Insights> {
     })
     .from(certificates)
     .innerJoin(materials, eq(materials.id, certificates.materialId))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(scope);
 
   // Staff headcount is directory data, so only an administrator sees it.
@@ -125,7 +125,7 @@ export async function getInsights(viewer: Viewer): Promise<Insights> {
     people,
     catalogue: {
       programmes: catalogueRow?.programmes ?? 0,
-      spaces: catalogueRow?.spaces ?? 0,
+      programmeAreas: catalogueRow?.programmeAreas ?? 0,
       published: catalogueRow?.published ?? 0,
       inReview: catalogueRow?.inReview ?? 0,
       draft: catalogueRow?.draft ?? 0,
@@ -201,8 +201,8 @@ export async function getTrafficSeries(viewer: Viewer, weeks = 12): Promise<Traf
     })
     .from(materialViews)
     .innerJoin(materials, eq(materials.id, materialViews.materialId))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(and(scopeFor(viewer), gte(materialViews.viewedOn, since)))
     .groupBy(sql`date_trunc('week', ${materialViews.viewedOn})`);
 
@@ -213,8 +213,8 @@ export async function getTrafficSeries(viewer: Viewer, weeks = 12): Promise<Traf
     })
     .from(auditLogs)
     .innerJoin(materials, eq(materials.id, sql`${auditLogs.entityId}::uuid`))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(and(eq(auditLogs.action, "MATERIAL_FILE_ISSUED"), scopeFor(viewer), gte(auditLogs.createdAt, new Date(`${since}T00:00:00Z`))))
     .groupBy(sql`date_trunc('week', ${auditLogs.createdAt})`);
 
@@ -251,20 +251,20 @@ export async function getUploadSeries(viewer: Viewer, months = 12, topProgrammes
   const rows = await db
     .select({
       month: sql<string>`to_char(date_trunc('month', ${materialVersions.createdAt}), 'YYYY-MM')`,
-      categoryId: categories.id,
-      categoryName: categories.name,
+      categoryId: programmeFields.id,
+      fieldName: programmeFields.name,
       n: sql<number>`count(*)::int`,
     })
     .from(materialVersions)
     .innerJoin(materials, eq(materials.id, materialVersions.materialId))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(and(scopeFor(viewer), gte(materialVersions.createdAt, since)))
-    .groupBy(sql`date_trunc('month', ${materialVersions.createdAt})`, categories.id, categories.name);
+    .groupBy(sql`date_trunc('month', ${materialVersions.createdAt})`, programmeFields.id, programmeFields.name);
 
   const totals = new Map<string, { name: string; n: number }>();
   for (const row of rows) {
-    const current = totals.get(row.categoryId) ?? { name: row.categoryName, n: 0 };
+    const current = totals.get(row.categoryId) ?? { name: row.fieldName, n: 0 };
     current.n += row.n;
     totals.set(row.categoryId, current);
   }
@@ -291,7 +291,7 @@ export async function getUploadSeries(viewer: Viewer, months = 12, topProgrammes
   return { buckets, series: series.length ? series : [{ label: "Uploads", values: buckets.map(() => 0) }], total: [...totals.values()].reduce((sum, value) => sum + value.n, 0) };
 }
 
-export interface SessionSeries {
+export interface TrainingSeries {
   buckets: Bucket[];
   counts: number[];
   byProgramme: { label: string; value: number }[];
@@ -299,7 +299,31 @@ export interface SessionSeries {
 }
 
 /** Trainings that actually ran, per month and per programme. */
-export async function getSessionSeries(viewer: Viewer, months = 12): Promise<SessionSeries> {
+/** Trainings on record, scoped: the dashboard's "Trainings · 90 days" tile. */
+export interface TrainingCounts {
+  total: number;
+  last90Days: number;
+  attendees: number;
+}
+
+export async function getTrainingCounts(viewer: Viewer): Promise<TrainingCounts> {
+  const since = new Date();
+  since.setUTCDate(since.getUTCDate() - 90);
+  const sinceDate = since.toISOString().slice(0, 10);
+
+  const [row] = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      last90Days: sql<number>`count(*) filter (where ${trainingSessions.organisedOn} >= ${sinceDate})::int`,
+      attendees: sql<number>`coalesce(sum(${trainingSessions.attendeeCount}), 0)::int`,
+    })
+    .from(trainingSessions)
+    .where(and(scopeFor(viewer), eq(trainingSessions.isArchived, false)));
+
+  return { total: row?.total ?? 0, last90Days: row?.last90Days ?? 0, attendees: row?.attendees ?? 0 };
+}
+
+export async function getTrainingSeries(viewer: Viewer, months = 12): Promise<TrainingSeries> {
   const buckets = monthBuckets(months);
   const since = new Date();
   since.setUTCDate(1);
@@ -309,16 +333,16 @@ export async function getSessionSeries(viewer: Viewer, months = 12): Promise<Ses
   const rows = await db
     .select({
       month: sql<string>`to_char(date_trunc('month', ${trainingSessions.organisedOn}), 'YYYY-MM')`,
-      categoryName: categories.name,
+      fieldName: programmeFields.name,
       n: sql<number>`count(*)::int`,
     })
     .from(trainingSessions)
-    .innerJoin(categories, eq(categories.id, trainingSessions.categoryId))
+    .innerJoin(programmeFields, eq(programmeFields.id, trainingSessions.programmeFieldId))
     .where(and(scopeFor(viewer), eq(trainingSessions.isArchived, false), gte(trainingSessions.organisedOn, sinceDate)))
-    .groupBy(sql`date_trunc('month', ${trainingSessions.organisedOn})`, categories.name);
+    .groupBy(sql`date_trunc('month', ${trainingSessions.organisedOn})`, programmeFields.name);
 
   const byProgramme = new Map<string, number>();
-  for (const row of rows) byProgramme.set(row.categoryName, (byProgramme.get(row.categoryName) ?? 0) + row.n);
+  for (const row of rows) byProgramme.set(row.fieldName, (byProgramme.get(row.fieldName) ?? 0) + row.n);
 
   return {
     buckets,
@@ -334,13 +358,13 @@ export async function getSessionSeries(viewer: Viewer, months = 12): Promise<Ses
 export async function getProgrammeTraffic(viewer: Viewer, days = 30): Promise<{ label: string; value: number }[]> {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const rows = await db
-    .select({ label: categories.name, n: sql<number>`coalesce(sum(${materialViews.viewCount}), 0)::int` })
+    .select({ label: programmeFields.name, n: sql<number>`coalesce(sum(${materialViews.viewCount}), 0)::int` })
     .from(materialViews)
     .innerJoin(materials, eq(materials.id, materialViews.materialId))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(and(scopeFor(viewer), gte(materialViews.viewedOn, since)))
-    .groupBy(categories.name)
+    .groupBy(programmeFields.name)
     .orderBy(desc(sql`coalesce(sum(${materialViews.viewCount}), 0)`));
   return rows.map((row) => ({ label: row.label, value: row.n }));
 }

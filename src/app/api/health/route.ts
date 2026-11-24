@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { users } from "@/db/schema";
@@ -7,7 +7,7 @@ import { currentRequestId } from "@/lib/server/request-context";
 
 /**
  * Liveness probe for the hosting platform and the uptime monitor. It answers
- * even when the database is down (503) ΓÇö that is the point of a health check ΓÇö
+ * even when the database is down (503) — that is the point of a health check —
  * and the body carries the same request id the logs use, so a page can quote it.
  *
  * It also checks that the tables this build expects actually exist. A deploy
@@ -18,6 +18,9 @@ import { currentRequestId } from "@/lib/server/request-context";
 
 /** Tables added by the newest migration first, so a stale database names itself. */
 const REQUIRED_TABLES = [
+  "programme_fields",
+  "programme_areas",
+  "area_facilitators",
   "regions",
   "districts",
   "sub_districts",

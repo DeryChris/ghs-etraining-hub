@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { BroadcastForm } from "@/components/notices/broadcast-form";
 import { formatDateTime } from "@/lib/format";
 import { notificationTypeLabel } from "@/lib/labels";
-import { listAuthoringSpaces } from "@/lib/server/authoring-queries";
+import { listAuthoringAreas } from "@/lib/server/authoring-queries";
 import { listSentNotices } from "@/lib/server/notification-queries";
 import { requireRole } from "@/lib/server/rbac";
 
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NoticesPage() {
   const session = await requireRole(["SYSTEM_ADMIN", "FACILITATOR"]);
-  const [spaces, sent] = await Promise.all([listAuthoringSpaces(session), listSentNotices(10)]);
+  const [areas, sent] = await Promise.all([listAuthoringAreas(session), listSentNotices(10)]);
 
   return (
     <div className="space-y-8">
@@ -39,7 +39,7 @@ export default async function NoticesPage() {
         <p className="mt-1 mb-4 text-sm text-ink-muted">
           A notice is an instruction to staff, so the sender, audience and text are recorded in the audit trail.
         </p>
-        <BroadcastForm spaces={spaces} canAddressEveryone={session.role === "SYSTEM_ADMIN"} />
+        <BroadcastForm areas={areas} canAddressEveryone={session.role === "SYSTEM_ADMIN"} />
       </section>
 
       <section aria-labelledby="sent-heading" className="space-y-4">

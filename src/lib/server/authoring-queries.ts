@@ -1,7 +1,7 @@
-﻿import "server-only";
+import "server-only";
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { categories, materialVersions, materials, reviewAssignments, spaces, users } from "@/db/schema";
+import { programmeFields, materialVersions, materials, reviewAssignments, programmeAreas, users } from "@/db/schema";
 import type { MaterialState, ReviewDecision } from "@/lib/material-workflow";
 import type { MaterialType, PriorityLevel } from "@/lib/labels";
 import { scopeFor } from "@/lib/server/scope";
@@ -13,9 +13,9 @@ export interface AuthoringMaterialRow {
   state: MaterialState;
   type: MaterialType;
   priority: PriorityLevel;
-  categoryId: string;
-  categoryName: string;
-  spaceTitle: string;
+  fieldId: string;
+  fieldName: string;
+  areaName: string;
   authorName: string;
   updatedAt: Date;
   currentVersionNumber: number | null;
@@ -40,17 +40,17 @@ export async function listAuthoringMaterials(viewer: Viewer): Promise<AuthoringM
       state: materials.state,
       type: materials.type,
       priority: materials.priority,
-      categoryId: categories.id,
-      categoryName: categories.name,
-      spaceTitle: spaces.title,
+      fieldId: programmeFields.id,
+      fieldName: programmeFields.name,
+      areaName: programmeAreas.name,
       authorName: users.fullName,
       updatedAt: materials.updatedAt,
       currentVersionNumber: sql<number | null>`(${defaultVersion})`,
       versionCount: sql<number>`coalesce((${versionTotal}), 0)::int`,
     })
     .from(materials)
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .innerJoin(users, eq(users.id, materials.authorId))
     .where(and(scopeFor(viewer)))
     .orderBy(asc(materials.title));
@@ -83,11 +83,11 @@ export interface AuthoringMaterialDetail {
   estimatedMinutes: number | null;
   cpdCreditsX10: number;
   recertificationMonths: number | null;
-  spaceId: string;
-  spaceTitle: string;
-  spaceSlug: string;
-  categoryId: string;
-  categoryName: string;
+  programmeAreaId: string;
+  areaName: string;
+  areaCode: string;
+  fieldId: string;
+  fieldName: string;
   authorId: string;
   authorName: string;
   currentVersionId: string | null;
@@ -98,16 +98,16 @@ export async function getAuthoringMaterial(materialId: string, viewer: Viewer): 
   const [row] = await db
     .select({
       material: materials,
-      spaceTitle: spaces.title,
-      spaceSlug: spaces.slug,
-      categoryId: categories.id,
-      categoryName: categories.name,
+      areaName: programmeAreas.name,
+      areaCode: programmeAreas.code,
+      fieldId: programmeFields.id,
+      fieldName: programmeFields.name,
       authorId: users.id,
       authorName: users.fullName,
     })
     .from(materials)
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .innerJoin(users, eq(users.id, materials.authorId))
     .where(and(eq(materials.id, materialId), scopeFor(viewer)))
     .limit(1);
@@ -174,11 +174,11 @@ export async function getAuthoringMaterial(materialId: string, viewer: Viewer): 
     estimatedMinutes: row.material.estimatedMinutes,
     cpdCreditsX10: row.material.cpdCreditsX10,
     recertificationMonths: row.material.recertificationMonths,
-    spaceId: row.material.spaceId,
-    spaceTitle: row.spaceTitle,
-    spaceSlug: row.spaceSlug,
-    categoryId: row.categoryId,
-    categoryName: row.categoryName,
+    programmeAreaId: row.material.programmeAreaId,
+    areaName: row.areaName,
+    areaCode: row.areaCode,
+    fieldId: row.fieldId,
+    fieldName: row.fieldName,
     authorId: row.authorId,
     authorName: row.authorName,
     currentVersionId: row.material.currentVersionId,
@@ -186,42 +186,44 @@ export async function getAuthoringMaterial(materialId: string, viewer: Viewer): 
   };
 }
 
-export interface AuthoringSpace {
+export interface AuthoringArea {
   id: string;
-  title: string;
-  categoryId: string;
-  categoryName: string;
+  code: string;
+  name: string;
+  fieldId: string;
+  fieldCode: string;
+  fieldName: string;
 }
 
-/** Spaces a staff member may author into. */
-export async function listAuthoringSpaces(viewer: Viewer): Promise<AuthoringSpace[]> {
+/** Programme areas a staff member may author into — the ones they are assigned to. */
+export async function listAuthoringAreas(viewer: Viewer): Promise<AuthoringArea[]> {
   return db
     .select({
-      id: spaces.id,
-      title: spaces.title,
-      categoryId: categories.id,
-      categoryName: categories.name,
+      id: programmeAreas.id,
+      code: programmeAreas.code,
+      name: programmeAreas.name,
+      fieldId: programmeFields.id,
+      fieldCode: programmeFields.code,
+      fieldName: programmeFields.name,
     })
-    .from(spaces)
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
-    .where(and(eq(spaces.isArchived, false), eq(categories.isArchived, false), scopeFor(viewer)))
-    .orderBy(asc(categories.name), asc(spaces.title));
+    .from(programmeAreas)
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
+    .where(and(eq(programmeAreas.isArchived, false), eq(programmeFields.isArchived, false), scopeFor(viewer)))
+    .orderBy(asc(programmeFields.name), asc(programmeAreas.name));
 }
 
-/** Category of the space a material lives in ΓÇö the scope key for every authoring action. */
-export async function categoryIdForMaterial(materialId: string): Promise<string | null> {
+/**
+ * The programme area a material is filed under — the scope key for every
+ * authoring action. Authority is per area since ADR-0014, so this is both the
+ * key and the answer.
+ */
+export async function areaIdForMaterial(materialId: string): Promise<string | null> {
   const [row] = await db
-    .select({ categoryId: spaces.categoryId })
+    .select({ areaId: materials.programmeAreaId })
     .from(materials)
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
     .where(eq(materials.id, materialId))
     .limit(1);
-  return row?.categoryId ?? null;
-}
-
-export async function categoryIdForSpace(spaceId: string): Promise<string | null> {
-  const [row] = await db.select({ categoryId: spaces.categoryId }).from(spaces).where(eq(spaces.id, spaceId)).limit(1);
-  return row?.categoryId ?? null;
+  return row?.areaId ?? null;
 }
 
 export interface ReviewQueueRow {
@@ -229,7 +231,7 @@ export interface ReviewQueueRow {
   materialTitle: string;
   versionId: string;
   version: number;
-  categoryName: string;
+  fieldName: string;
   uploadedById: string;
   uploadedByName: string;
   uploadedAt: Date;
@@ -239,12 +241,12 @@ export interface ReviewQueueRow {
 }
 
 /**
- * Versions waiting for a decision, limited to the categories the viewer is
- * assigned to. Versions they uploaded are included but flagged by the UI ΓÇö
+ * Versions waiting for a decision, limited to the programmeFields the viewer is
+ * assigned to. Versions they uploaded are included but flagged by the UI —
  * the two-person rule is enforced again when they press a button.
  */
 /**
- * How many versions are waiting for a decision ΓÇö the sidebar badge. It uses the
+ * How many versions are waiting for a decision — the sidebar badge. It uses the
  * same predicate as the queue itself, so the number always matches the page.
  */
 export async function countReviewQueue(viewer: Viewer): Promise<number> {
@@ -252,8 +254,8 @@ export async function countReviewQueue(viewer: Viewer): Promise<number> {
     .select({ n: count() })
     .from(materialVersions)
     .innerJoin(materials, eq(materials.id, materialVersions.materialId))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(and(eq(materialVersions.state, "IN_REVIEW"), scopeFor(viewer)));
   return row?.n ?? 0;
 }
@@ -275,7 +277,7 @@ export async function listReviewQueue(viewer: Viewer): Promise<ReviewQueueRow[]>
       materialTitle: materials.title,
       versionId: materialVersions.id,
       version: materialVersions.version,
-      categoryName: categories.name,
+      fieldName: programmeFields.name,
       uploadedById: materialVersions.uploadedById,
       uploadedByName: users.fullName,
       uploadedAt: materialVersions.createdAt,
@@ -285,8 +287,8 @@ export async function listReviewQueue(viewer: Viewer): Promise<ReviewQueueRow[]>
     })
     .from(materialVersions)
     .innerJoin(materials, eq(materials.id, materialVersions.materialId))
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .innerJoin(users, eq(users.id, materialVersions.uploadedById))
     .leftJoin(approvalTotals, eq(approvalTotals.materialVersionId, materialVersions.id))
     .where(and(eq(materialVersions.state, "IN_REVIEW"), scopeFor(viewer)))

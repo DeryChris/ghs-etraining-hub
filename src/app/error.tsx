@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
@@ -7,7 +7,7 @@ import { readRequestIdCookie, shortRequestId } from "@/lib/request-id";
 /**
  * Route-level error boundary. It shows one reference the user can quote and
  * never a stack trace: the server log holds the detail under the same
- * `x-request-id` (docs/architecture.md ┬º4).
+ * `x-request-id` (docs/architecture.md §4).
  */
 /** The cookie does not change during a page's lifetime, so nothing to subscribe to. */
 const noSubscription = () => () => {};

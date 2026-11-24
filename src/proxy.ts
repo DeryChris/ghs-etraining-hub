@@ -1,4 +1,4 @@
-﻿import { SITE } from "@/lib/site";
+import { SITE } from "@/lib/site";
 import { REQUEST_ID_COOKIE } from "@/lib/request-id";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";

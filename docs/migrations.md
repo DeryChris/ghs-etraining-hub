@@ -1,4 +1,4 @@
-﻿# Database migrations
+# Database migrations
 
 Two complementary migration streams live in this repository:
 
@@ -14,8 +14,8 @@ schema, never a production step.
 ## Fresh environment
 
 ```bash
-export DIRECT_URL="postgresql://postgres.<ref>:ΓÇª@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require"
-npm run db:migrate                       # drizzle/0000_baseline.sql, 0001_ΓÇª, 0002_ΓÇª, 0003_ΓÇª
+export DIRECT_URL="postgresql://postgres.<ref>:…@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require"
+npm run db:migrate                       # drizzle/0000_baseline.sql, 0001_…, 0002_…, 0003_…
 psql "$DIRECT_URL" -f supabase/migrations/20260113000000_lock_public_api.sql
 npm run db:seed
 ```
@@ -26,47 +26,15 @@ Such a database has the tables but no `drizzle.__drizzle_migrations` history. Do
 `db:migrate` blindly: `0000_baseline.sql` would try to create existing tables.
 
 1. Compare the live schema with `drizzle/0000_baseline.sql` (or run `npx drizzle-kit check`).
-2. Apply the delta by hand, in order ΓÇö `0001_integrity_and_indexes.sql` is written to be
+2. Apply the delta by hand, in order — `0001_integrity_and_indexes.sql` is written to be
    re-runnable against an existing schema. Check for duplicates first; the two `UNIQUE`
    constraints will fail on dirty data (the header of that file has the queries).
 3. Record the applied migrations in `drizzle.__drizzle_migrations` so future runs start at the
    right point (insert the two journal rows with their `created_at` timestamps from
    `drizzle/meta/_journal.json`).
 
-From that point on, every schema change is: edit `src/db/schema.ts` ΓåÆ `npm run db:generate` ΓåÆ
-review the SQL ΓåÆ `npm run db:migrate` in each environment.
-
-## When TLS is the failure
-
-```
-Error: self-signed certificate in certificate chain
-  code: 'SELF_SIGNED_CERT_IN_CHAIN'
-```
-
-`db:doctor` prints `✓ Connected` in the same session, because the two tools do not agree on what
-`sslmode=require` means:
-
-| Tool | Driver | `sslmode=require` |
-| --- | --- | --- |
-| `db:doctor`, the app, `db:seed` | postgres.js | encrypt, do not verify the chain |
-| `db:migrate`, `db:push`, `db:studio` | node-postgres via drizzle-kit | since pg-connection-string 2.7: an alias for `verify-full` |
-
-On a machine whose TLS is intercepted — antivirus HTTPS scanning, a corporate proxy — verify-full
-sees the interceptor's self-signed root and refuses, while the app quietly keeps working. That
-divergence, not the URL, is the bug, so `drizzle.config.ts` passes
-`?sslmode=require&uselibpqcompat=true` (the libpq semantics pg's own warning points at) via
-`src/db/connection-url.ts`. Migrations now hold the same trust level as the runtime.
-
-`sslmode=verify-full`, and any URL carrying `sslrootcert`, are passed through untouched: a deliberate
-choice is never downgraded. To verify against an inspecting CA:
-
-```bash
-export DIRECT_URL="postgresql://postgres.<ref>:…@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=verify-full&sslrootcert=/etc/ssl/certs/corp-root.pem"
-```
-
-Windows, exporting the interceptor's root from `certmgr.msc` → Trusted Root Certification
-Authorities, then pointing `sslrootcert` at the `.cer` file, is the equivalent. `npm run db:doctor`
-names this case explicitly instead of reporting a generic connection failure.
+From that point on, every schema change is: edit `src/db/schema.ts` → `npm run db:generate` →
+review the SQL → `npm run db:migrate` in each environment.
 
 ## Rules
 
@@ -76,3 +44,21 @@ names this case explicitly instead of reporting a generic connection failure.
   back-fill in the same migration and are called out in the PR description.
 * `supabase/migrations/` runs last, so a new table needs its RLS lock-down statement added
   there in the same change.
+
+The programme-areas cutover of 17 November 2026 has its own note: [cutover-2026-11-17](cutover-2026-11-17-programme-areas.md).
+
+## Applied migrations carry a hash
+
+`drizzle.__drizzle_migrations` stores a SHA-256 of each migration file. If a file is edited
+after it has been applied anywhere — including a fix applied during rollout — that hash no
+longer matches and `drizzle-kit migrate` will try to run the file again.
+
+`0005_programme_areas_replace_spaces.sql` is in exactly that state. Its first version expanded
+`category_facilitators` with a straight `SELECT`, which collided on `area_facilitators_unique_idx`
+wherever two directorate grants mapped into the same area (live data did; the PGlite fixture did
+not). The fix — `SELECT DISTINCT a.id, cf.user_id` — went in and the migration was applied as
+`programme_areas_replace_spaces_v2`, so the live hash is the pre-fix one.
+
+Until the database is recreated from scratch, treat `0005` as already applied: never re-run it,
+and if a future environment is built by `drizzle-kit migrate` from zero, that run is the one that
+produces a matching hash. Do not "fix" the recorded hash by hand.

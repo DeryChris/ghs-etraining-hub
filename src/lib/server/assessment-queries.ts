@@ -1,9 +1,9 @@
 import "server-only";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/index";
-import { assessmentAttempts, assessments, categories, materialProgress, materials, spaces } from "@/db/schema";
+import { assessmentAttempts, assessments, programmeFields, materialProgress, materials, programmeAreas } from "@/db/schema";
 import type { MaterialType, ProgressStatus } from "@/lib/labels";
-import { audienceFor, categoryFor, liveCategory, liveSpace, publishedMaterial } from "@/lib/server/visibility";
+import { audienceFor, fieldFor, liveField, liveArea, publishedMaterial } from "@/lib/server/visibility";
 import type { Viewer } from "@/lib/viewer";
 
 /*
@@ -21,9 +21,9 @@ export interface AssessmentCard {
   materialId: string;
   title: string;
   type: MaterialType;
-  spaceTitle: string;
-  spaceSlug: string;
-  categoryName: string;
+  areaName: string;
+  areaCode: string;
+  fieldName: string;
   estimatedMinutes: number | null;
   /** Assessment configuration, when a published assessment is attached. */
   assessmentId: string | null;
@@ -51,9 +51,9 @@ export async function listTestsAndLabs(viewer: Viewer): Promise<AssessmentCard[]
       title: materials.title,
       type: materials.type,
       estimatedMinutes: materials.estimatedMinutes,
-      spaceTitle: spaces.title,
-      spaceSlug: spaces.slug,
-      categoryName: categories.name,
+      areaName: programmeAreas.name,
+      areaCode: programmeAreas.code,
+      fieldName: programmeFields.name,
       assessmentId: assessments.id,
       passMarkPercent: assessments.passMarkPercent,
       maxAttempts: assessments.maxAttempts,
@@ -62,8 +62,8 @@ export async function listTestsAndLabs(viewer: Viewer): Promise<AssessmentCard[]
       progress: materialProgress.status,
     })
     .from(materials)
-    .innerJoin(spaces, eq(spaces.id, materials.spaceId))
-    .innerJoin(categories, eq(categories.id, spaces.categoryId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .leftJoin(assessments, eq(assessments.materialId, materials.id))
     .leftJoin(
       materialProgress,
@@ -72,14 +72,14 @@ export async function listTestsAndLabs(viewer: Viewer): Promise<AssessmentCard[]
     .where(
       and(
         publishedMaterial,
-        liveSpace,
-        liveCategory,
-        categoryFor(viewer),
+        liveArea,
+        liveField,
+        fieldFor(viewer),
         audienceFor(viewer),
         inArray(materials.type, [...ASSESSMENT_TYPES]),
       ),
     )
-    .orderBy(asc(categories.name), asc(materials.title));
+    .orderBy(asc(programmeFields.name), asc(materials.title));
 
   // Attempts are fetched once for the viewer and folded in, rather than aggregated
   // per row: a person sits a handful of tests, and this keeps the SQL portable.

@@ -1,4 +1,4 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 import { requireEnv } from "./lib/env";
 
@@ -36,15 +36,15 @@ async function main() {
   });
 
   if (error) {
-    console.error("Γ£ù Failed to create the user:", error.message);
+    console.error("✗ Failed to create the user:", error.message);
     process.exit(1);
   }
 
-  console.log("Γ£ô Auth user created:", data.user?.id);
-  console.log("  Next: create the matching public.users row (npm run db:seed, or the admin UI) ΓÇö the app never reads the role from auth metadata.");
+  console.log("✓ Auth user created:", data.user?.id);
+  console.log("  Next: create the matching public.users row (npm run db:seed, or the admin UI) — the app never reads the role from auth metadata.");
 }
 
 main().catch((error: unknown) => {
-  console.error("Γ£ù Script failed:", error instanceof Error ? error.message : error);
+  console.error("✗ Script failed:", error instanceof Error ? error.message : error);
   process.exit(1);
 });

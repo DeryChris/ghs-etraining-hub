@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { BookOpen, Download, Eye } from "lucide-react";
 import { KindLabel } from "@/components/ui/kind-label";
 import { ListEmptyState } from "@/components/ui/empty-state";
@@ -39,8 +39,8 @@ export default async function ActivityPage() {
       />
 
       <section aria-label="Your activity" className="grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-3">
-        <Stat value={traffic.opens} label={`Material opens ┬╖ last ${traffic.days} days`} />
-        <Stat value={traffic.downloads} label={`Downloads ┬╖ last ${traffic.days} days`} />
+        <Stat value={traffic.opens} label={`Material opens · last ${traffic.days} days`} />
+        <Stat value={traffic.downloads} label={`Downloads · last ${traffic.days} days`} />
         <Stat value={completions.length} label="Marked as finished" />
       </section>
 
@@ -89,7 +89,7 @@ export default async function ActivityPage() {
                       </Link>
                       <p className="mt-0.5 text-xs text-ink-muted">{MATERIAL_TYPE_LABELS[completion.type]}</p>
                     </td>
-                    <td className="px-4 py-3 text-ink-muted">{completion.spaceTitle}</td>
+                    <td className="px-4 py-3 text-ink-muted">{completion.areaName}</td>
                     <td className="px-4 py-3 text-ink-muted">{formatDate(completion.completedAt)}</td>
                   </tr>
                 ))}
@@ -110,7 +110,7 @@ export default async function ActivityPage() {
           Certificates already issued
         </h2>
         <p className="text-sm leading-relaxed text-ink-muted">
-          The library no longer awards certificates ΓÇö material is here to be read, not to be scored. Any certificate
+          The library no longer awards certificates — material is here to be read, not to be scored. Any certificate
           issued before that change remains valid and can still be checked on the{" "}
           <Link href="/verify" className="font-semibold text-primary underline-offset-4 hover:underline">
             verification page

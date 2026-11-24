@@ -71,7 +71,7 @@ export default async function CertificateAwardPage({ params }: { params: Promise
           <p className="text-sm text-ink-muted">has completed</p>
           <p className="text-xl font-semibold text-ink">{award.title}</p>
           <p className="text-sm text-ink-muted">
-            {award.spaceTitle} · {award.categoryName}
+            {award.areaName} · {award.fieldName}
           </p>
         </div>
 

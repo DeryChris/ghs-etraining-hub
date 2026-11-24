@@ -30,14 +30,14 @@ Soft‑delete only. Deactivation preserves history and anonymises the display na
 Purpose: revocable sessions (role change, deactivation, "sign out everywhere"). Store only the
 SHA‑256 of the token, never the token.
 
-### categories (directorates / national programmes)
+### ~~categories~~ (retired — see programme_fields)
 `code` (unique, `CAT-XXX-nn`), `name`, `description`, `isRestricted`, `isArchived`, timestamps.
 
-### category_facilitators
+### ~~category_facilitators~~ (retired — see area_facilitators)
 `categoryId`, `userId`, `scope` (`ALL_SPACES | OWN_SPACES`), `assignedAt`, unique on the pair.
 This table is the object‑level scope source for every facilitator capability check.
 
-### spaces
+### ~~spaces~~ (retired — see programme_areas)
 `slug` (unique, kebab‑case, immutable after creation — it appears in audit URLs), `title`,
 `description`, `categoryId`, `createdById`, `audienceRegion`, `audienceDirectorate`, `audienceCadre`
 (nullable audience filters), `isArchived`, timestamps.
@@ -45,7 +45,7 @@ This table is the object‑level scope source for every facilitator capability c
 ### materials
 `title`, `summary`, `type` (`DOCUMENT | VIDEO | LAB | ASSESSMENT_LINK`), `priority`
 (`LOW | MEDIUM | HIGH | CRITICAL`), `requiresAcknowledgement`, `estimatedMinutes`, `cpdCreditsX10`,
-`recertificationMonths`, `spaceId`, `authorId`, `currentVersionId`, `state`, `isPublished`,
+`recertificationMonths`, `programmeAreaId`, `authorId`, `currentVersionId`, `state`, `isPublished`,
 timestamps. `currentVersionId` is the single pointer learners read; it flips only on publish.
 
 ### material_versions
@@ -56,8 +56,8 @@ timestamps. `currentVersionId` is the single pointer learners read; it flips onl
 Immutable once `PUBLISHED`. Superseding inserts a new row and marks the old one, never updates bytes.
 
 ### enrollments
-`userId`, `spaceId`, `source` (`SELF | ASSIGNED`), `assignedById`, `dueAt`, `completedAt`,
-`lastRemindedAt`, unique on (`userId`, `spaceId`).
+`userId`, `programmeAreaId`, `source` (`SELF | ASSIGNED`), `assignedById`, `dueAt`, `completedAt`,
+`lastRemindedAt`, unique on (`userId`, `programmeAreaId`).
 
 ### material_progress
 `userId`, `materialId`, `materialVersionId`, `status` (`NOT_STARTED | IN_PROGRESS | COMPLETED`),
@@ -95,6 +95,27 @@ Recipients rows are created **only** for `USER_IDS` audiences; everything else i
 time against `notification_read_cursors (userId, notificationId, readAt)` — the broadcast‑fan‑out
 rule from PRD §5.7.
 
+### programme_fields, programme_areas, area_facilitators
+The vocabulary a training plan is written in: `programme_fields` (`code` unique, `name` unique,
+`description`, `sortOrder`, `isArchived`) and `programme_areas` (`fieldId` → programme_fields,
+`code` unique, `name`, `description`, `sortOrder`, `isArchived`; unique on (`fieldId`, `name`)).
+Seeded from the GHS list in `src/db/data/programme-taxonomy.ts` (10 fields, 41 areas) and maintained
+at `/programme-fields`. They carry the whole taxonomy since ADR‑0014: `programme_fields.is_restricted`
+marks staff-only programmes, `programme_areas.audience_region|directorate|cadre` targets a cohort (null
+means everyone), and `area_facilitators` (`area_id`, `user_id`, unique together) grants a facilitator
+the right to author and review in that area. Directorates and spaces — the earlier `categories` →
+`spaces` pair — are gone; the migration that removed them left a JSON snapshot in
+`legacy_taxonomy_backup`.
+
+### training_sessions (the Trainings register)
+`title`, `year` (defaults to the current year, corrected to the start date's year on backfill),
+`programmeFieldId`, `programmeAreaId`, `targetGroup`, `organisedOn` (start date), `endsOn`,
+`durationText`, `status` (`PLANNED | COMPLETED | CANCELLED`), `venue`, `regionId`, `districtId`,
+`subDistrictId`, `facilityId`, `attendeeCount`, `notes`, `isArchived`, `createdById`, timestamps.
+A training carries no category and no space since ADR‑0014: the field and the area are the whole
+classification. Indexes on (`year`, `organisedOn`) and `programmeAreaId` back the register's filters.
+Rows are archived, never deleted.
+
 ### audit_logs
 `userId` (nullable — `SYSTEM` actor), `action`, `entity`, `entityId`, `metadata jsonb`,
 `ipAddress`, `userAgent`, `prevHash`, `hash`, `createdAt`. Append‑only; `INSERT|SELECT` grants only.
@@ -104,12 +125,14 @@ Support tables for abuse handling, the two‑person publish rule, and login/uplo
 
 ## 3. Suggested seed data (`src/db/seed.ts`)
 
-Six categories with real GHS directorate names, 12 spaces (IPC, cold chain, malaria case
-management, integrated disease surveillance & response, maternal & newborn care, AMR stewardship,
-mental health, health records & DHIMS, emergency triage, HIV/STI, NTDs, quality of care), three
-materials per space with at least one `CRITICAL` SOP requiring acknowledgement, a demo roster of
-~40 staff spread across all 16 regions with fake PINs (`GHS-000001`…), and one superadmin whose
-credentials come from `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD`. Idempotent: keyed upserts, safe to
+The ten programme fields and forty-one areas GHS supplied (`PROGRAMME_FIELDS`), keyed on their
+codes so a revised list updates rather than duplicates. Three starter materials filed under real
+programme areas (standard precautions → Quality Assurance, cold chain → EPI, surveillance → Surveillance),
+one of them a `CRITICAL` SOP requiring acknowledgement; the sixteen regions; the eleven Upper West
+districts with their Nadowli‑Kaleo sub-districts and hospitals; a facilitator assigned to two areas so
+the authoring and review queues are not empty; a demo roster of staff across all 16 regions with fake
+PINs (`GHS-000001`…); and one superadmin whose credentials come from
+`SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD`. Idempotent: keyed upserts, safe to
 re‑run, refuses to run in production unless `ALLOW_PROD_SEED=true`.
 
 ## 4. Migration discipline

@@ -9,14 +9,14 @@ import { materialStateBadge } from "@/components/authoring/state-badge";
 import { formatDate } from "@/lib/format";
 import { MATERIAL_TYPE_LABELS, PRIORITY_LABELS } from "@/lib/labels";
 import { MATERIAL_STATE_LABELS } from "@/lib/material-workflow";
-import { listAuthoringMaterials, listAuthoringSpaces } from "@/lib/server/authoring-queries";
+import { listAuthoringMaterials, listAuthoringAreas } from "@/lib/server/authoring-queries";
 import { requireRole } from "@/lib/server/rbac";
 
 export const dynamic = "force-dynamic";
 
 export default async function AuthoringPage() {
   const session = await requireRole(["SYSTEM_ADMIN", "FACILITATOR"]);
-  const [materials, spaces] = await Promise.all([listAuthoringMaterials(session), listAuthoringSpaces(session)]);
+  const [materials, programmeAreas] = await Promise.all([listAuthoringMaterials(session), listAuthoringAreas(session)]);
 
   return (
     <div className="space-y-8">
@@ -42,7 +42,7 @@ export default async function AuthoringPage() {
         <p className="mt-1 mb-4 text-sm text-ink-muted">
           Start with the details. You can upload the file on the next screen, then send it for review.
         </p>
-        <NewDraftForm spaces={spaces} />
+        <NewDraftForm programmeAreas={programmeAreas} />
       </section>
 
       <section aria-labelledby="materials-heading" className="space-y-4">
@@ -69,7 +69,7 @@ export default async function AuthoringPage() {
                     </div>
                     <p className="mt-2 truncate text-sm font-semibold text-ink">{material.title}</p>
                     <p className="mt-1 text-xs text-ink-muted">
-                      {material.categoryName} · {material.spaceTitle} · {material.versionCount} version
+                      {material.fieldName} · {material.areaName} · {material.versionCount} version
                       {material.versionCount === 1 ? "" : "s"}
                       {material.currentVersionNumber ? ` · published v${material.currentVersionNumber}` : ""} · updated{" "}
                       {formatDate(material.updatedAt)}

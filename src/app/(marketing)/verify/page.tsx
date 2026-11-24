@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Search, ShieldCheck, ShieldX } from "lucide-react";
 import { CertificateSeal } from "@/components/brand/illustrations";
 import { Reveal } from "@/components/marketing/reveal";

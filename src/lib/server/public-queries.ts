@@ -4,21 +4,21 @@ import { and, count, eq, sql } from "drizzle-orm";
 import { isCertificateCode } from "@/lib/certificate-code";
 import { log } from "@/lib/server/logger";
 import { db } from "@/db/index";
-import { categories, certificates, materials, spaces, users } from "@/db/schema";
+import { programmeFields, certificates, materials, programmeAreas, users } from "@/db/schema";
 
 /** Aggregate counts only. No individual learner or content detail is exposed. */
-export async function getPublicStats(): Promise<{ directorates: number; spaces: number; materials: number }> {
-  const [directorateRows, spaceRows, materialRows] = await Promise.all([
-    db.select({ n: count() }).from(categories).where(eq(categories.isArchived, false)),
-    db.select({ n: count() }).from(spaces).where(eq(spaces.isArchived, false)),
+export async function getPublicStats(): Promise<{ fields: number; areas: number; materials: number }> {
+  const [fieldRows, areaRows, materialRows] = await Promise.all([
+    db.select({ n: count() }).from(programmeFields).where(eq(programmeFields.isArchived, false)),
+    db.select({ n: count() }).from(programmeAreas).where(eq(programmeAreas.isArchived, false)),
     db
       .select({ n: count() })
       .from(materials)
       .where(and(eq(materials.isPublished, true), eq(materials.state, "PUBLISHED"))),
   ]);
   return {
-    directorates: directorateRows[0]?.n ?? 0,
-    spaces: spaceRows[0]?.n ?? 0,
+    fields: fieldRows[0]?.n ?? 0,
+    areas: areaRows[0]?.n ?? 0,
     materials: materialRows[0]?.n ?? 0,
   };
 }
@@ -28,7 +28,7 @@ export async function getPublicStats(): Promise<{ directorates: number; spaces: 
  * caller, and a stale-by-minutes count is preferable to three aggregates on
  * every visit from a metered mobile connection.
  */
-export type PublicStats = { directorates: number; spaces: number; materials: number };
+export type PublicStats = { fields: number; areas: number; materials: number };
 
 /**
  * Cached public counters, with a deliberate soft failure: if the database is

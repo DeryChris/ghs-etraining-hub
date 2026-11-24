@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MaterialProgressPanel } from "@/components/materials/material-progress-panel";
+import { areaHref, fieldHref } from "@/lib/links";
 import { ViewBeacon } from "@/components/materials/view-beacon";
 import { PriorityChip } from "@/components/ui/priority-chip";
 import { PageHeader } from "@/components/ui/page-header";
@@ -33,7 +34,7 @@ export default async function MaterialPage({
   const detail = await getMaterialDetail(id, session);
   if (!detail) notFound();
 
-  const { material, space, category, authorName, version, progress } = detail;
+  const { material, area, field, authorName, version, progress } = detail;
   const status: ProgressStatus = progress?.status ?? "NOT_STARTED";
   const acknowledged = progress?.acknowledgedAt != null && progress.materialVersionId === material.currentVersionId;
   const hasFile = Boolean(version?.storageKey);
@@ -45,20 +46,20 @@ export default async function MaterialPage({
       <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
         <ol className="flex flex-wrap items-center gap-2">
           <li>
-            <Link href="/directorates" className="hover:text-ink">
-              Directorates
+            <Link href="/catalogue" className="hover:text-ink">
+              Catalogue
             </Link>
           </li>
           <li aria-hidden>/</li>
           <li>
-            <Link href={`/directorates/${category.id}`} className="hover:text-ink">
-              {category.name}
+            <Link href={fieldHref(field.code)} className="hover:text-ink">
+              {field.name}
             </Link>
           </li>
           <li aria-hidden>/</li>
           <li>
-            <Link href={`/spaces/${space.slug}`} className="hover:text-ink">
-              {space.title}
+            <Link href={areaHref(field.code, area.code)} className="hover:text-ink">
+              {area.name}
             </Link>
           </li>
         </ol>

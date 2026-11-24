@@ -1,4 +1,4 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 import { requireEnv } from "./lib/env";
 
@@ -6,7 +6,7 @@ import { requireEnv } from "./lib/env";
  * Resets one staff member's password through the Supabase admin API, for the
  * "locked out before e-mail delivery works" case.
  *
- *   SEED_ADMIN_PASSWORD='ΓÇª' npx tsx scripts/reset-admin-password.ts you@ghs.gov.gh
+ *   SEED_ADMIN_PASSWORD='…' npx tsx scripts/reset-admin-password.ts you@ghs.gov.gh
  */
 const supabase = createClient(requireEnv("NEXT_PUBLIC_SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"), {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -29,26 +29,26 @@ async function main() {
 
   const { data: list, error: listError } = await supabase.auth.admin.listUsers();
   if (listError) {
-    console.error("Γ£ù Failed to list users:", listError.message);
+    console.error("✗ Failed to list users:", listError.message);
     process.exit(1);
   }
 
   const user = list.users.find((candidate) => candidate.email?.toLowerCase() === email);
   if (!user) {
-    console.error("Γ£ù No auth user with that e-mail:", email);
+    console.error("✗ No auth user with that e-mail:", email);
     process.exit(1);
   }
 
   const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, { password });
   if (updateError) {
-    console.error("Γ£ù Failed to update the password:", updateError.message);
+    console.error("✗ Failed to update the password:", updateError.message);
     process.exit(1);
   }
 
-  console.log("Γ£ô Password reset. Tell the user to change it after signing in.");
+  console.log("✓ Password reset. Tell the user to change it after signing in.");
 }
 
 main().catch((error: unknown) => {
-  console.error("Γ£ù Script failed:", error instanceof Error ? error.message : error);
+  console.error("✗ Script failed:", error instanceof Error ? error.message : error);
   process.exit(1);
 });

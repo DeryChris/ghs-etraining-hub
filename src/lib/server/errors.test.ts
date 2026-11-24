@@ -40,17 +40,17 @@ describe("toFieldErrors", () => {
     const schema = z
       .object({
         title: z.string().min(3, "Give the material a title of at least 3 characters."),
-        spaceId: z.string().uuid("Choose a space."),
+        programmeAreaId: z.string().uuid("Choose a space."),
       })
       .strict();
 
-    const parsed = schema.safeParse({ title: "ab", spaceId: "not-a-uuid" });
+    const parsed = schema.safeParse({ title: "ab", programmeAreaId: "not-a-uuid" });
     expect(parsed.success).toBe(false);
     if (parsed.success) return;
 
     expect(toFieldErrors(parsed.error)).toEqual({
       title: "Give the material a title of at least 3 characters.",
-      spaceId: "Choose a space.",
+      programmeAreaId: "Choose a space.",
     });
   });
 

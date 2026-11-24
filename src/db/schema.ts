@@ -1,4 +1,4 @@
-﻿import { sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -62,40 +62,6 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("sessions_user_id_idx").on(t.userId)]);
 
-export const categories = pgTable("categories", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  code: varchar("code", { length: 20 }).notNull().unique(),
-  name: text("name").notNull(),
-  description: text("description"),
-  isRestricted: boolean("is_restricted").notNull().default(false),
-  isArchived: boolean("is_archived").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
-
-export const categoryFacilitators = pgTable("category_facilitators", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  categoryId: uuid("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  scope: text("scope").notNull().default("ALL_SPACES"),
-  assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [unique().on(t.categoryId, t.userId)]);
-
-export const spaces = pgTable("spaces", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  slug: varchar("slug", { length: 100 }).notNull().unique(),
-  title: text("title").notNull(),
-  description: text("description"),
-  categoryId: uuid("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
-  createdById: uuid("created_by_id").notNull().references(() => users.id),
-  audienceRegion: text("audience_region"),
-  audienceDirectorate: text("audience_directorate"),
-  audienceCadre: text("audience_cadre"),
-  isArchived: boolean("is_archived").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("spaces_category_id_idx").on(t.categoryId)]);
-
 export const materials = pgTable("materials", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
@@ -106,7 +72,7 @@ export const materials = pgTable("materials", {
   estimatedMinutes: integer("estimated_minutes"),
   cpdCreditsX10: integer("cpd_credits_x10").notNull().default(0),
   recertificationMonths: integer("recertification_months"),
-  spaceId: uuid("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  programmeAreaId: uuid("programme_area_id").notNull().references(() => programmeAreas.id, { onDelete: "cascade" }),
   authorId: uuid("author_id").notNull().references(() => users.id),
   currentVersionId: uuid("current_version_id"),
   state: materialStateEnum("state").notNull().default("DRAFT"),
@@ -114,9 +80,9 @@ export const materials = pgTable("materials", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
-  index("materials_space_id_idx").on(t.spaceId),
-  index("materials_visibility_idx").on(t.state, t.isPublished, t.spaceId),
-  unique("materials_space_title_key").on(t.spaceId, t.title),
+  index("materials_programme_area_idx").on(t.programmeAreaId),
+  index("materials_visibility_idx").on(t.state, t.isPublished, t.programmeAreaId),
+  unique("materials_area_title_key").on(t.programmeAreaId, t.title),
 ]);
 
 export const materialVersions = pgTable("material_versions", {
@@ -143,13 +109,13 @@ export const materialVersions = pgTable("material_versions", {
 export const enrollments = pgTable("enrollments", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  spaceId: uuid("space_id").notNull().references(() => spaces.id, { onDelete: "cascade" }),
+  programmeAreaId: uuid("programme_area_id").notNull().references(() => programmeAreas.id, { onDelete: "cascade" }),
   source: enrollmentSourceEnum("source").notNull().default("SELF"),
   assignedById: uuid("assigned_by_id").references(() => users.id),
   dueAt: timestamp("due_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   lastRemindedAt: timestamp("last_reminded_at", { withTimezone: true }),
-}, (t) => [unique().on(t.userId, t.spaceId), index("enrollments_space_idx").on(t.spaceId)]);
+}, (t) => [unique().on(t.userId, t.programmeAreaId), index("enrollments_area_idx").on(t.programmeAreaId)]);
 
 export const materialProgress = pgTable("material_progress", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -324,9 +290,9 @@ export const rateLimitWindows = pgTable("rate_limit_windows", {
   resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
 }, (t) => [index("rate_limit_windows_reset_idx").on(t.resetAt)]);
 
-/* ΓöÇΓöÇ Geography (reference data) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+/* ── Geography (reference data) ─────────────────────────────────────────────
  * The Upper West Region is the pilot: personnel, trainings and facilities are
- * named by region ΓåÆ district ΓåÆ sub-district ΓåÆ facility. Reference rows are
+ * named by region → district → sub-district → facility. Reference rows are
  * maintained here rather than typed per session, so a district is spelled one
  * way and the charts can group by it. GHS supplies the authoritative list;
  * docs/decisions/0011 records what is seeded and where it came from.
@@ -376,18 +342,92 @@ export const facilities = pgTable("facilities", {
   isActive: boolean("is_active").notNull().default(true),
 }, (t) => [uniqueIndex("facilities_district_name_idx").on(t.districtId, t.name)]);
 
-/* ΓöÇΓöÇ Training sessions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
- * A session is a training that actually happened: a programme (category) and
- * area (space) delivered on a date, at a place. It is the unit the insights
- * charts count, and the thing uploaded material belongs to in practice.
+/* ── Programme taxonomy (fields → areas) ────────────────────────────────────
+ * The vocabulary a training plan is written in: "Administration and Support
+ * Services" is a field, "Biomedical Equipment" an area inside it. GHS supplied
+ * the list (src/db/data/programme-taxonomy.ts) and administrators maintain it
+ * at /programme-fields.
+ *
+ * This is the only taxonomy in the product (ADR-0014). A field holds areas; an
+ * area holds the materials that teach it, the facilitators who author and review
+ * them, and the trainings that were planned or run under it. The directorates
+ * and programmeAreas this replaced are gone: they were a second vocabulary for the same
+ * question, and a material filed under one and a training under the other could
+ * never be counted together.
  */
+
+export const programmeFields = pgTable("programme_fields", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: varchar("code", { length: 24 }).notNull().unique(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  /** Sensitive programmes are staff-only, whatever their audience columns say. */
+  isRestricted: boolean("is_restricted").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isArchived: boolean("is_archived").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const programmeAreas = pgTable("programme_areas", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fieldId: uuid("field_id").notNull().references(() => programmeFields.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 24 }).notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  /** Cohort targeting: null means "for everyone"; see visibility.ts. */
+  audienceRegion: text("audience_region"),
+  audienceDirectorate: text("audience_directorate"),
+  audienceCadre: text("audience_cadre"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isArchived: boolean("is_archived").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("programme_areas_field_name_idx").on(t.fieldId, t.name),
+  index("programme_areas_field_idx").on(t.fieldId),
+]);
+
+/**
+ * Who may author and review in an area. Replaces category_facilitators: the old
+ * table granted a facilitator a whole directorate, which is no longer the unit
+ * content is filed under.
+ */
+export const areaFacilitators = pgTable("area_facilitators", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  areaId: uuid("area_id").notNull().references(() => programmeAreas.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("area_facilitators_unique_idx").on(t.areaId, t.userId),
+  index("area_facilitators_user_idx").on(t.userId),
+]);
+
+/* ── Trainings (physical table: training_sessions) ───────────────────────────
+ * The registry behind the Trainings tab. A row is either a training that ran
+ * (status COMPLETED, attendance and notes filled in) or one that is planned
+ * (PLANNED), which is what makes the same table serve both the calendar and
+ * the record.
+ *
+ * A training is classified by programme field and the area inside it — nothing
+ * else. `organisedOn` is the start date, `endsOn` the last day, and `year` the
+ * plan year the register is reported by.
+ */
+
+export const trainingStatusEnum = pgEnum("training_status", ["PLANNED", "COMPLETED", "CANCELLED"]);
 
 export const trainingSessions = pgTable("training_sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
-  categoryId: uuid("category_id").notNull().references(() => categories.id),
-  spaceId: uuid("space_id").references(() => spaces.id, { onDelete: "set null" }),
+  year: integer("year").notNull().default(sql`extract(year from current_date)::int`),
+  programmeFieldId: uuid("programme_field_id").references(() => programmeFields.id, { onDelete: "set null" }),
+  programmeAreaId: uuid("programme_area_id").references(() => programmeAreas.id, { onDelete: "set null" }),
+  targetGroup: text("target_group"),
   organisedOn: date("organised_on").notNull(),
+  endsOn: date("ends_on"),
+  durationText: text("duration_text"),
+  status: trainingStatusEnum("status").notNull().default("COMPLETED"),
+  venue: text("venue"),
   regionId: uuid("region_id").references(() => regions.id, { onDelete: "set null" }),
   districtId: uuid("district_id").references(() => districts.id, { onDelete: "set null" }),
   subDistrictId: uuid("sub_district_id").references(() => subDistricts.id, { onDelete: "set null" }),
@@ -402,10 +442,11 @@ export const trainingSessions = pgTable("training_sessions", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index("training_sessions_organised_idx").on(t.organisedOn),
-  index("training_sessions_category_idx").on(t.categoryId, t.organisedOn),
+  index("training_sessions_year_idx").on(t.year, t.organisedOn),
+  index("training_sessions_area_idx").on(t.programmeAreaId),
 ]);
 
-/* ΓöÇΓöÇ Views ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+/* ── Views ──────────────────────────────────────────────────────────────────
  * Traffic, counted honestly: one row per person, material and day, so a refresh
  * loop cannot inflate a number and a repeat visit is a visit. Downloads are
  * already in the audit trail; together they answer "is this programme being

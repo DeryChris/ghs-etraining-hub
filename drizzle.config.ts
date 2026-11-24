@@ -1,6 +1,5 @@
 import "dotenv/config";
 import type { Config } from "drizzle-kit";
-import { planMigrationConnection } from "./src/db/connection-url";
 
 /*
  * drizzle-kit runs schema pushes, migrations and studio against the DIRECT
@@ -38,31 +37,12 @@ try {
   // Not a parseable URL: let drizzle-kit report it.
 }
 
-/*
- * TLS: drizzle-kit hands dbCredentials.url to node-postgres, where
- * `sslmode=require` now means "verify the full chain" — which fails with
- * "self-signed certificate in certificate chain" on any machine that intercepts
- * TLS (antivirus scanning, corporate proxy). planMigrationConnection pins
- * sslmode=require to libpq semantics instead, matching what the app's runtime
- * driver already does, and leaves sslmode=verify-full / sslrootcert untouched.
- * See src/db/connection-url.ts for the whole story.
- */
-const connection = planMigrationConnection(directUrl);
-
-if (connection.changed) {
-  console.warn(
-    "\nℹ DIRECT_URL sslmode=require is applied with libpq semantics: encrypted, certificate chain not verified.\n" +
-      "  That is what prevents \"self-signed certificate in certificate chain\" on machines with TLS inspection.\n" +
-      "  Want the chain verified? Use sslmode=verify-full (add sslrootcert=<ca>.pem when a proxy re-signs it).\n",
-  );
-}
-
 export default {
   schema: "./src/db/schema.ts",
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: connection.url,
+    url: directUrl,
   },
   strict: true,
   verbose: true,

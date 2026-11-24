@@ -12,13 +12,20 @@
  * viewer disappears, and a section that loses all of its items disappears with
  * it — which is why the administrator sees "Author" holding only the review
  * queue, while a facilitator sees their materials and notices there too.
+ *
+ * "Trainings" is the register (ADR-0013); "Catalogue" is the way into the
+ * programme taxonomy it is filed under (ADR-0014). There is no longer a Sessions
+ * tab: a session is a training, and it is recorded on the register.
  */
 import type { Role } from "@/lib/rbac/capabilities";
 
 /** Icon names are resolved to components by the sidebar, keeping this module pure. */
 export type NavIcon =
   | "dashboard"
-  | "programmes"
+  | "training"
+  | "geography"
+  | "taxonomy"
+  | "catalogue"
   | "library"
   | "assessment"
   | "messages"
@@ -26,7 +33,6 @@ export type NavIcon =
   | "cpd"
   | "insights"
   | "materials"
-  | "sessions"
   | "review"
   | "notice"
   | "users"
@@ -68,7 +74,20 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: "Learn",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: "dashboard", roles: EVERYONE },
-      { href: "/directorates", label: "Programmes", icon: "programmes", roles: EVERYONE },
+      {
+        href: "/trainings",
+        label: "Trainings",
+        icon: "training",
+        roles: EVERYONE,
+        hint: "Every training GHS has planned or run, by programme field and area",
+      },
+      {
+        href: "/catalogue",
+        label: "Catalogue",
+        icon: "catalogue",
+        roles: EVERYONE,
+        hint: "Programme fields and the areas inside them, with the material filed under each",
+      },
       { href: "/library", label: "Library", icon: "library", roles: EVERYONE },
       {
         href: "/assessments",
@@ -112,13 +131,6 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: "Author",
     items: [
       { href: "/authoring", label: "My materials", icon: "materials", roles: FACILITATOR_ONLY },
-      {
-        href: "/sessions",
-        label: "Sessions",
-        icon: "sessions",
-        roles: STAFF,
-        hint: "Record the trainings that ran, and where",
-      },
       { href: "/review", label: "Review queue", icon: "review", roles: STAFF, count: "reviews" },
       { href: "/notices", label: "Send notice", icon: "notice", roles: FACILITATOR_ONLY },
     ],
@@ -128,6 +140,20 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     label: "Administration",
     items: [
       { href: "/users", label: "Users", icon: "users", roles: ADMIN_ONLY },
+      {
+        href: "/geography",
+        label: "Geography & facilities",
+        icon: "geography",
+        roles: ADMIN_ONLY,
+        hint: "Regions, districts, sub-districts and the facilities a training is held at",
+      },
+      {
+        href: "/programme-fields",
+        label: "Programme fields",
+        icon: "taxonomy",
+        roles: ADMIN_ONLY,
+        hint: "The programme fields and areas a training plan is filed under",
+      },
       { href: "/settings", label: "Settings", icon: "settings", roles: ADMIN_ONLY },
     ],
   },

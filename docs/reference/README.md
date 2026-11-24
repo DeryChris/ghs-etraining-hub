@@ -1,8 +1,8 @@
-﻿# Design references (not shipped code)
+# Design references (not shipped code)
 
 These two standalone HTML mock-ups were part of the original client hand-over. They are kept as
 design references only: nothing in `src/` imports them, they are not served by the app, and they are
-**not** a specification ΓÇö `docs/PRD.md` and `docs/ui-ux.md` are the contract, and the running app is
+**not** a specification — `docs/PRD.md` and `docs/ui-ux.md` are the contract, and the running app is
 the truth.
 
 | File | What it shows |
