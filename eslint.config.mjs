@@ -15,6 +15,17 @@ const config = [
       "@typescript-eslint/no-non-null-assertion": "error",
     },
   },
+  {
+    // Operator scripts are run by a person against a database they already have
+    // credentials for; they are not bundled, not imported by the app, and several
+    // were written mid-incident. `any` over a raw `pg` row and a non-null
+    // assertion on DATABASE_URL are acceptable there and nowhere else.
+    files: ["scripts/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-non-null-assertion": "off",
+    },
+  },
 ];
 
 export default config;
