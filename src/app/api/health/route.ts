@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { db } from "@/db/index";
+import { poolMax, poolMaxSource } from "@/db/client";
 import { complaints, districts, materials, programmeFields, regions, trainingSessions, users } from "@/db/schema";
 import { databaseTarget } from "@/lib/db-target";
 import { within } from "@/lib/server/deadline";
@@ -211,6 +212,10 @@ export async function GET(request: Request) {
               host: target.host,
               port: target.port,
               pooled: target.port === "6543",
+              // Connections this instance may open. An old DB_POOL_MAX in the
+              // host's environment overrides the fix silently, so report both.
+              poolMax,
+              poolMaxSource,
               // Supabase's direct host (`db.<ref>.supabase.co`) is IPv6-only;
               // Vercel functions cannot reach it at all.
               directIpv6Host: target.isSupabaseDirect,

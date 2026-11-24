@@ -36,7 +36,10 @@ const globalForDb = globalThis as unknown as {
  * postgres.js queues the rest client-side instead of starving the server pool.
  * Raise it only if the Supavisor pool size and the instance count allow it.
  */
-const poolMax = Number.parseInt(process.env.DB_POOL_MAX ?? "", 10) || 3;
+const configuredPoolMax = Number.parseInt(process.env.DB_POOL_MAX ?? "", 10);
+export const poolMax = configuredPoolMax > 0 ? configuredPoolMax : 3;
+/** `env` means the host's DB_POOL_MAX won; `default` means the 3 above is in force. */
+export const poolMaxSource: "env" | "default" = configuredPoolMax > 0 ? "env" : "default";
 
 function createClient(url: string) {
   return postgres(url, {
