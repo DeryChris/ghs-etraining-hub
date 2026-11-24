@@ -45,6 +45,23 @@ and use the utility it generates.
 * Content column max width 1200 px; long‑form reading width 72 ch.
 * Grid: 12‑column desktop, 4‑column tablet, 1‑column mobile, 24 px gutters.
 
+### Public pages: art and photography
+
+The landing page carries no background grid. A 44 px boxed grid reads as graph paper and squares
+off every section it touches, so the hero instead uses layered vector art
+(`src/components/marketing/landing-art.tsx`): woven kente bands on a gradient mask, contour rings
+drawn from the choropleth map, the black star, and a soft dot field. Colour transitions are
+gradients — never `filter: blur()` — and each layer is `aria-hidden`, `pointer-events-none`, and
+masked so it stops before the text column. `hero-glow` is a `::before` at `z-index: -1` inside an
+`isolation: isolate`, which is what keeps the wash behind the copy on the other public pages.
+
+Photography lives in `public/images/stock/` and is referenced by path, so `next/image` optimises it
+and the build stays hermetic (no remote fetch at render time). Three images: a hero team in a
+hospital corridor, two nurses reading a protocol at a desk, and a clinician portrait used by the
+sign-in and about pages. They are illustrative — swap them for GHS photography when it is cleared
+for publication; keep the descriptive `alt` text, which names the scene and never claims an
+identity.
+
 ## 3. Component inventory (`src/components/`)
 
 `ui/`: `button` (primary/secondary/ghost/destructive, 36/44 px heights, loading state that

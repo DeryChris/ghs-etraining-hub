@@ -60,9 +60,10 @@
   --danger: #b42318;
   --elevation: 0 1px 2px rgb(15 31 23 / 0.06), 0 12px 32px -14px rgb(15 31 23 / 0.2);
   --elevation-lift: 0 2px 6px rgb(15 31 23 / 0.08), 0 28px 56px -18px rgb(15 31 23 / 0.32);
-  --glow-a: rgb(0 107 63 / 0.14);
-  --glow-b: rgb(252 209 22 / 0.22);
+  --glow-a: rgb(0 107 63 / 0.1);
+  --glow-b: rgb(252 209 22 / 0.11);
   --grid-line: rgb(15 31 23 / 0.05);
+  --grid-line-strong: rgb(15 31 23 / 0.16);
 }
 
 /* Dark theme, chosen explicitly. */
@@ -82,9 +83,10 @@
   --danger: #ff7a70;
   --elevation: 0 0 0 1px rgb(255 255 255 / 0.03), 0 16px 40px -16px rgb(0 0 0 / 0.75);
   --elevation-lift: 0 0 0 1px rgb(52 199 132 / 0.22), 0 28px 64px -20px rgb(0 0 0 / 0.85);
-  --glow-a: rgb(52 199 132 / 0.2);
-  --glow-b: rgb(252 209 22 / 0.09);
+  --glow-a: rgb(52 199 132 / 0.14);
+  --glow-b: rgb(252 209 22 / 0.06);
   --grid-line: rgb(154 181 165 / 0.06);
+  --grid-line-strong: rgb(154 181 165 / 0.2);
 }
 
 /* System preference, used only when the visitor has not chosen a theme. */
@@ -105,9 +107,10 @@
     --danger: #ff7a70;
     --elevation: 0 0 0 1px rgb(255 255 255 / 0.03), 0 16px 40px -16px rgb(0 0 0 / 0.75);
     --elevation-lift: 0 0 0 1px rgb(52 199 132 / 0.22), 0 28px 64px -20px rgb(0 0 0 / 0.85);
-    --glow-a: rgb(52 199 132 / 0.2);
-    --glow-b: rgb(252 209 22 / 0.09);
+    --glow-a: rgb(52 199 132 / 0.14);
+    --glow-b: rgb(252 209 22 / 0.06);
     --grid-line: rgb(154 181 165 / 0.06);
+    --grid-line-strong: rgb(154 181 165 / 0.2);
   }
 }
 
@@ -307,17 +310,33 @@
 }
 
 @layer components {
+  /* A wash, not a lamp. The old version put a 22% gold radial at 96% 12% — close
+     enough to the hero photo and the header that it read as a stain over the
+     content it was supposed to sit behind. Two softer stops, both under 12%, and
+     the whole layer lives on a ::before at z-index -1 so it can never cover text.
+     `isolation` keeps that negative index inside the section. */
   .hero-glow {
-    background:
-      radial-gradient(60% 55% at 12% 0%, var(--glow-a), transparent 70%),
-      radial-gradient(45% 45% at 96% 12%, var(--glow-b), transparent 70%);
+    position: relative;
+    isolation: isolate;
   }
+  .hero-glow::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(52% 48% at 4% -8%, var(--glow-a), transparent 72%),
+      radial-gradient(38% 34% at 100% 0%, var(--glow-b), transparent 76%);
+  }
+
+  /* Fine dot field instead of a 44px boxed grid. The grid read as graph paper and
+     squared off every section it touched; dots fade out before they reach an edge. */
   .grid-texture {
-    background-image:
-      linear-gradient(var(--grid-line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: radial-gradient(ellipse at top, black 30%, transparent 75%);
+    background-image: radial-gradient(circle, var(--grid-line-strong) 1px, transparent 1.5px);
+    background-size: 22px 22px;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, black 10%, transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, black 10%, transparent 78%);
   }
   .flag-stripe {
     background: linear-gradient(90deg, #cf2027 0 33.33%, #fcd116 33.33% 66.66%, #006b3f 66.66% 100%);
