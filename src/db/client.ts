@@ -70,12 +70,11 @@ function createClient(url: string) {
     // spinner. Page-level deadlines live in `lib/server/deadline.ts`; a queued
     // connection fails fast rather than waiting forever.
     connection: {
-      // Below the page deadline on purpose (lib/server/deadline.ts, 10 s): a
-      // query that runs away is cut off while the page can still render an
-      // answer, and — the part that matters — it releases its pooled connection
-      // before the page gives up, instead of holding a slot that the next
-      // request on this instance is already queued behind.
-      statement_timeout: 8_000,
+      // Dev-friendly: Supabase free tier is often slow on cold starts and
+      // simple lookups. Give queries room to breathe so a slow round trip
+      // doesn't surface as a statement timeout to the user. Page-level
+      // deadlines in lib/server/deadline.ts (4 s) still cap the total wait.
+      statement_timeout: 30_000,
       idle_in_transaction_session_timeout: 10_000,
       application_name: "ghs-training-library",
     },
