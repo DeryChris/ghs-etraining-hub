@@ -78,21 +78,28 @@ export async function signInAction(_previous: SignInState, formData: FormData): 
   }
 
   const { user } = attempt;
-  await setSessionCookie(
-    {
-      sub: user.id,
-      id: user.id,
-      role: user.role,
-      name: user.name,
-      staffId: user.staffId,
-      email: user.email,
-      region: user.region ?? null,
-      directorate: user.directorate ?? null,
-      cadre: user.cadre ?? null,
-      unitHead: user.unitHead ?? false,
-    },
-    remember ? REMEMBER_SECONDS : SESSION_SECONDS,
-  );
+  try {
+    await setSessionCookie(
+      {
+        sub: user.id,
+        id: user.id,
+        role: user.role,
+        name: user.name,
+        staffId: user.staffId,
+        email: user.email,
+        region: user.region ?? null,
+        directorate: user.directorate ?? null,
+        cadre: user.cadre ?? null,
+        unitHead: user.unitHead ?? false,
+      },
+      remember ? REMEMBER_SECONDS : SESSION_SECONDS,
+    );
+  } catch (error) {
+    // Almost always a missing or too-short SESSION_SECRET. Password was right,
+    // but no cookie can be trusted, so say so instead of looping back to /login.
+    log.error({ event: "auth.session_cookie_failed", email, error: String(error) });
+    return { error: "Sign-in is not configured correctly on the server. Tell ICT the session key is missing.", email };
+  }
 
   redirect(next);
 }

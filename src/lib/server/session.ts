@@ -47,20 +47,39 @@ function hashToken(token: string): string {
 
 export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/**
+ * The signing key. It must be present and long enough, because the alternative
+ * is worse than a crash: `sha256(payload + undefined)` is a constant everybody
+ * can reproduce, so every cookie would be forgeable by anyone who read this file.
+ * Better to fail loudly on the first sign-in than to hand out admin sessions.
+ */
+function signingSecret(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      "SESSION_SECRET is missing or shorter than 32 characters. Generate one with `openssl rand -base64 48` and set it in .env / Vercel (see .env.example).",
+    );
+  }
+  return secret;
+}
+
 export function createSessionToken(session: Session, ttlMs = SESSION_TTL_MS): string {
   const payload = Buffer.from(JSON.stringify({ ...session, exp: Date.now() + ttlMs })).toString("base64url");
   const sig = createHash("sha256")
-    .update(`${payload}.${process.env.SESSION_SECRET}`)
+    .update(`${payload}.${signingSecret()}`)
     .digest("hex");
   return `${payload}.${sig}`;
 }
 
 export function verifySessionToken(token: string): Session | null {
   try {
+    // A missing secret surfaces here as "no session", which sends people to
+    // sign-in instead of accepting a token signed with a guessable constant.
+    const secret = signingSecret();
     const [payload, sig] = token.split(".");
     if (!payload || !sig) return null;
     const expected = createHash("sha256")
-      .update(`${payload}.${process.env.SESSION_SECRET}`)
+      .update(`${payload}.${secret}`)
       .digest("hex");
     if (sig !== expected) return null;
     const session: Session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
