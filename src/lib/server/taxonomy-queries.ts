@@ -67,7 +67,7 @@ export interface ProgrammeFieldRow {
   trainingCount: number;
 }
 
-export async function listProgrammeTaxonomy(): Promise<ProgrammeFieldRow[]> {
+const loadProgrammeTaxonomy = async (): Promise<ProgrammeFieldRow[]> => {
   const [fields, areas, usage, assignments, materialCounts] = await Promise.all(
     [
       db
@@ -155,7 +155,13 @@ export async function listProgrammeTaxonomy(): Promise<ProgrammeFieldRow[]> {
       ),
     };
   });
-}
+};
+
+export const listProgrammeTaxonomy = unstable_cache(
+  loadProgrammeTaxonomy,
+  ["programme-taxonomy"],
+  { revalidate: 30, tags: ["taxonomy"] },
+);
 
 /** The people a programme area can be assigned to: active facilitators and admins. */
 export async function listAssignableFacilitators(): Promise<
