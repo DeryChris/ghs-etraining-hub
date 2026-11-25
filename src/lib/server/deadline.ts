@@ -14,7 +14,7 @@ import { log } from "@/lib/server/logger";
  * Default is deliberately below the proxy's own limit, so the page can render a
  * "try again" card instead of the platform killing the request.
  */
-export const DEFAULT_DEADLINE_MS = 10_000;
+export const DEFAULT_DEADLINE_MS = 4_000;
 
 export class DeadlineError extends Error {
   constructor(readonly label: string) {

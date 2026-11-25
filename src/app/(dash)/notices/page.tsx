@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { PageHeader } from "@/components/ui/page-header";
 import { BroadcastForm } from "@/components/notices/broadcast-form";
 import { formatDateTime } from "@/lib/format";
@@ -8,12 +9,25 @@ import { notificationTypeLabel } from "@/lib/labels";
 import { listAuthoringAreas } from "@/lib/server/authoring-queries";
 import { listSentNotices } from "@/lib/server/notification-queries";
 import { requireRole } from "@/lib/server/rbac";
+import { mapLimit, withDeadline } from "@/lib/server/page-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function NoticesPage() {
   const session = await requireRole(["SYSTEM_ADMIN", "FACILITATOR"]);
-  const [areas, sent] = await Promise.all([listAuthoringAreas(session), listSentNotices(10)]);
+  const loaded = await withDeadline("notices", () =>
+    mapLimit([() => listAuthoringAreas(session), () => listSentNotices(10)]),
+  );
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="Notices did not load"
+        description="Programme areas and sent notices could not be read in time. Nothing was changed."
+        requestId={loaded.requestId}
+      />
+    );
+  }
+  const [areas, sent] = loaded.data;
 
   return (
     <div className="space-y-8">

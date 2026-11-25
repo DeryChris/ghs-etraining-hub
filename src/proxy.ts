@@ -1,13 +1,15 @@
 import { SITE } from "@/lib/site";
 import { REQUEST_ID_COOKIE } from "@/lib/request-id";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { verifySessionToken } from "@/lib/server/session";
+import { cookies } from "next/headers";
 
 /**
- * Edge proxy (Next 16 successor to middleware). It refreshes the Supabase session
- * cookie and redirects anonymous visitors to sign-in. It is a convenience layer:
- * authority is re-checked in server layouts, pages and actions against public.users.
+ * Edge proxy (Next 16 successor to middleware). It checks the ghs_session cookie
+ * and redirects anonymous visitors to sign-in. Authority is re-checked in server
+ * layouts, pages and actions against public.users.
  */
+
 // Public surface: the marketing site, the sign-in pages, certificate verification and the health probe.
 // Everything else (the signed-in workspace) requires a session.
 const PUBLIC_PATHS = [
@@ -48,47 +50,25 @@ function withRequestId(response: NextResponse, requestId: string): NextResponse 
 export async function proxy(request: NextRequest) {
   // Correlates this request with the JSON log lines and the error boundary's digest.
   const requestId = crypto.randomUUID();
-  // Downstream server code (logger, error boundary, actions) logs the same id that
-  // the browser receives in the response header, so one reference finds everything.
   request.headers.set("x-request-id", requestId);
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !anonKey) {
-    return withRequestId(
-      new NextResponse(`${SITE.name} is not configured. Contact the ICT helpdesk.`, { status: 500 }),
-      requestId,
-    );
-  }
 
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(supabaseUrl, anonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
-        for (const { name, value } of cookiesToSet) request.cookies.set(name, value);
-        response = NextResponse.next({ request });
-        for (const { name, value, options } of cookiesToSet) response.cookies.set(name, value, options);
-      },
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Check for our own session cookie
+  const cookieStore = await cookies();
+  const token = cookieStore.get("ghs_session")?.value;
+  const session = token ? verifySessionToken(token) : null;
 
   const { pathname, search } = request.nextUrl;
 
-  if (!user && !isPublic(pathname)) {
+  if (!session && !isPublic(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = `?next=${encodeURIComponent(`${pathname}${search}`)}`;
     return withRequestId(NextResponse.redirect(url), requestId);
   }
 
-  if (user && pathname === "/login") {
+  if (session && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";

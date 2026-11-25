@@ -57,3 +57,12 @@ drizzle/**/*.tmp
 
 # Local generator output
 outputs/
+
+# Dev server logs
+dev-server.log
+
+# Temporary test scripts
+scripts/test-*.ts
+scripts/reset-*.ts
+scripts/create-missing-tables.ts
+scripts/create-programme-tables.ts

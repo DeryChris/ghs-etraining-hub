@@ -1,23 +1,32 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { appOrigin } from "@/lib/app-origin";
 import { safeNextPath } from "@/lib/safe-redirect";
-import { createSupabaseServerClient } from "@/lib/server/supabase-server";
+import { resetPassword } from "@/lib/server/auth";
 
 /**
- * Exchanges the one-time PKCE code from password-reset (or confirmation) emails
- * for a session cookie, then continues to a same-origin page.
+ * Legacy Supabase OAuth callback — no longer used. Supabase Auth has been
+ * replaced with local cookie sessions.
+ *
+ * If a reset token is passed (?token=xxx), verifies it and signs the user in
+ * directly, then redirects to the password-reset page so they can set a new
+ * password. Otherwise redirects to /login.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const origin = appOrigin(request);
-  const code = searchParams.get("code");
+  const origin = new URL(request.url).origin;
   const next = safeNextPath(searchParams.get("next"));
 
-  if (!code) return NextResponse.redirect(new URL("/login?error=link-expired", origin));
+  const token = searchParams.get("token");
+  if (token) {
+    const result = await resetPassword(token, "reset-required");
+    if (result.ok) {
+      // Token consumed — user must set a new password on next page
+      const url = new URL("/reset-password", origin);
+      url.search = `?token=${encodeURIComponent(token)}`;
+      return NextResponse.redirect(url);
+    }
+  }
 
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) return NextResponse.redirect(new URL("/login?error=link-expired", origin));
-
-  return NextResponse.redirect(new URL(next, origin));
+  return NextResponse.redirect(
+    new URL(`/login?error=link-expired&next=${encodeURIComponent(next ?? "/dashboard")}`, origin),
+  );
 }

@@ -499,3 +499,13 @@ refuses to run when `NODE_ENV=production` unless `ALLOW_PROD_SEED=true`.
 * Staff PIN regex: `^GHS-\d{6}$`.
 * The UI is **dark‑first**: `Slate-950` canvas, `Teal-400/500` primary, `Emerald` success,
   `Amber` warning, `Rose` critical — tokens in `src/app/globals.css`, never raw hex in components.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

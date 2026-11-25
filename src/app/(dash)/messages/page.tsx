@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ComposeMessage, type Recipient } from "@/components/messages/compose-message";
 import { MarkThreadRead } from "@/components/messages/mark-thread-read";
+import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatDateTime } from "@/lib/format";
@@ -9,6 +10,7 @@ import { ROLE_LABELS } from "@/lib/labels";
 import { firstNameOf } from "@/lib/names";
 import { getThread, listConversations, listDirectory } from "@/lib/server/messaging-queries";
 import { requireSession } from "@/lib/server/rbac";
+import { mapLimit, withDeadline } from "@/lib/server/page-data";
 
 function parseBefore(value: string | undefined): Date | undefined {
   if (!value) return undefined;
@@ -26,7 +28,19 @@ export default async function MessagesPage({
   const withParam = params.with;
   const before = parseBefore(params.before);
 
-  const [conversations, directory] = await Promise.all([listConversations(session.sub), listDirectory(session.sub)]);
+  const loaded = await withDeadline("messages", () =>
+    mapLimit([() => listConversations(session.sub), () => listDirectory(session.sub)]),
+  );
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="Messages did not load"
+        description="Conversations and the staff directory could not be read in time. Nothing was changed."
+        requestId={loaded.requestId}
+      />
+    );
+  }
+  const [conversations, directory] = loaded.data;
   const activeId = isUuid(withParam) ? withParam : null;
   const thread = activeId ? await getThread(session.sub, activeId, { before }) : null;
 

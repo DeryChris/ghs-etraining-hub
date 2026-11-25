@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { NewDraftForm } from "@/components/authoring/new-draft-form";
@@ -11,6 +12,7 @@ import { MATERIAL_TYPE_LABELS, PRIORITY_LABELS } from "@/lib/labels";
 import { MATERIAL_STATE_LABELS } from "@/lib/material-workflow";
 import { listAuthoringMaterials, listAuthoringAreas } from "@/lib/server/authoring-queries";
 import { requireRole } from "@/lib/server/rbac";
+import { mapLimit, withDeadline } from "@/lib/server/page-data";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,19 @@ export default async function AuthoringPage() {
   // Facilitators author and send for review; signing it off is an administrator or
   // unit-head duty, so the door is not offered to people who cannot walk through it.
   const canReview = session.role === "SYSTEM_ADMIN" || session.unitHead === true;
-  const [materials, programmeAreas] = await Promise.all([listAuthoringMaterials(session), listAuthoringAreas(session)]);
+  const loaded = await withDeadline("authoring", () =>
+    mapLimit([() => listAuthoringMaterials(session), () => listAuthoringAreas(session)]),
+  );
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="Your materials did not load"
+        description="Your drafts and programme areas could not be read in time. Nothing was changed."
+        requestId={loaded.requestId}
+      />
+    );
+  }
+  const [materials, programmeAreas] = loaded.data;
 
   return (
     <div className="space-y-8">

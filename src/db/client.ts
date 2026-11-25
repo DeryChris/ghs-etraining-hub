@@ -25,28 +25,13 @@ const globalForDb = globalThis as unknown as {
 /**
  * Connections per instance.
  *
- * Deliberately small. Supabase's transaction pooler (Supavisor, port 6543) holds
- * a fixed number of server-side connections — 15 on the smaller compute sizes —
- * and every warm Vercel instance that opens ten of them takes most of that pool
- * for itself. The symptom is nasty and misleading: one query at a time answers in
- * ~100 ms (so `/api/health` looks perfect), while a page that fans out four or
- * five queries at once waits for a slot that never frees and hits its deadline.
- *
- * Two per instance is plenty — the queries themselves take milliseconds, so
- * postgres.js queues the rest client-side instead of starving the server pool.
+ * Neon is serverless Postgres with no PgBouncer and no transaction pooler
+ * connection limits. Each serverless function instance opens its own
+ * connections directly. A ceiling of 5 per instance is plenty — the queries
+ * themselves take milliseconds, so postgres.js queues the rest client-side
+ * instead of starving the pool.
  */
-/**
- * Two, even when the environment asks for more.
- *
- * Measured against the live project: every shape that hung needed a *third*
- * connection opened during a cold start, and every shape that worked needed two
- * or fewer — or three, but on an instance that had been warm for a while. When
- * Supavisor drops that third concurrent connection attempt, postgres.js waits on
- * it without a timeout of its own, so the page sits on its skeleton while every
- * single-query probe answers in 150 ms. `DB_POOL_MAX` can lower this; it cannot
- * raise it past the number that breaks.
- */
-const POOL_MAX_CEILING = 2;
+const POOL_MAX_CEILING = 5;
 
 const configuredPoolMax = Number.parseInt(process.env.DB_POOL_MAX ?? "", 10);
 /** What the environment asked for, before the ceiling — reported by /api/health. */
@@ -72,12 +57,11 @@ function createClient(url: string) {
     // spinner. Page-level deadlines live in `lib/server/deadline.ts`; a queued
     // connection fails fast rather than waiting forever.
     connection: {
-      // Below the page deadline on purpose (lib/server/deadline.ts, 10 s): a
-      // query that runs away is cut off while the page can still render an
-      // answer, and — the part that matters — it releases its pooled connection
-      // before the page gives up, instead of holding a slot that the next
-      // request on this instance is already queued behind.
-      statement_timeout: 8_000,
+      // Dev-friendly: Neon auto-scales but cold starts can add latency.
+      // Give queries room to breathe so a slow round trip doesn't surface as
+      // a statement timeout to the user. Page-level deadlines in
+      // lib/server/deadline.ts (4 s) still cap the total wait.
+      statement_timeout: 30_000,
       idle_in_transaction_session_timeout: 10_000,
       application_name: "ghs-training-library",
     },

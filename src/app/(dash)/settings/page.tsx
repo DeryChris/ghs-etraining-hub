@@ -3,6 +3,7 @@ import { desc } from "drizzle-orm";
 import { CheckCircle2, CircleDashed } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { PageHeader } from "@/components/ui/page-header";
 import { db } from "@/db/index";
 import { auditLogs } from "@/db/schema";
@@ -12,6 +13,7 @@ import { ROLE_LABELS } from "@/lib/labels";
 import { getDirectorySummary } from "@/lib/server/directory-queries";
 import { requireRole } from "@/lib/server/rbac";
 import { SITE } from "@/lib/site";
+import { mapLimit, withDeadline } from "@/lib/server/page-data";
 
 export const dynamic = "force-dynamic";
 
@@ -44,14 +46,27 @@ function Planned({ done, children }: { done: boolean; children: React.ReactNode 
  */
 export default async function SettingsPage() {
   const session = await requireRole(["SYSTEM_ADMIN"]);
-  const [summary, latestAudit] = await Promise.all([
-    getDirectorySummary(),
-    db
-      .select({ action: auditLogs.action, entity: auditLogs.entity, createdAt: auditLogs.createdAt })
-      .from(auditLogs)
-      .orderBy(desc(auditLogs.createdAt))
-      .limit(1),
-  ]);
+  const loaded = await withDeadline("settings", () =>
+    mapLimit([
+      () => getDirectorySummary(),
+      () =>
+        db
+          .select({ action: auditLogs.action, entity: auditLogs.entity, createdAt: auditLogs.createdAt })
+          .from(auditLogs)
+          .orderBy(desc(auditLogs.createdAt))
+          .limit(1),
+    ]),
+  );
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="Settings did not load"
+        description="Directory summary and audit log could not be read in time. Nothing was changed."
+        requestId={loaded.requestId}
+      />
+    );
+  }
+  const [summary, latestAudit] = loaded.data;
 
   const origin = displayOrigin();
   const lastAudit = latestAudit[0];
