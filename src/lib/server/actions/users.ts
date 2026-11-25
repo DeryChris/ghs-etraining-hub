@@ -7,11 +7,10 @@ import { db } from "@/db/index";
 import { users } from "@/db/schema";
 import { displayOrigin } from "@/lib/app-url";
 import { field } from "@/lib/schemas/authoring";
-import { getSupabaseAdminClient } from "@/lib/server/supabase-admin";
-import { createSupabaseServerClient } from "@/lib/server/supabase-server";
 import { logAudit } from "@/lib/server/audit";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
+import { authenticateUser, createUserWithPassword, createPasswordResetToken } from "@/lib/server/auth";
 
 /*
  * Directory administration. Every action re-checks the capability on the server
@@ -83,11 +82,6 @@ function auditActor(session: { sub: string; role: string; name: string; staffId:
   return { sub: session.sub, role: session.role, name: session.name, staffId: session.staffId };
 }
 
-/** A random, never-shown password: the account holder sets their own by e-mail. */
-function randomPassword(): string {
-  return `${crypto.randomUUID()}${crypto.randomUUID()}`.slice(0, 40);
-}
-
 async function activeAdminCount(excludingId?: string): Promise<number> {
   const [row] = await db
     .select({ n: count() })
@@ -102,12 +96,6 @@ async function activeAdminCount(excludingId?: string): Promise<number> {
   return row?.n ?? 0;
 }
 
-/**
- * Creates the directory row first — that is what grants access — and then tries
- * to provision the Supabase login. When provisioning is not possible the person
- * is still in the directory and the message says exactly what to run, rather
- * than failing the whole operation or pretending the account is ready.
- */
 export async function createUserAction(_previous: UserActionState, formData: FormData): Promise<UserActionState> {
   const parsed = createInput.safeParse({
     staffId: field(formData, "staffId"),
@@ -158,6 +146,7 @@ export async function createUserAction(_previous: UserActionState, formData: For
           cadre: input.cadre,
           facility: input.facility,
           phone: input.phone,
+          passwordHash: null, // No password set — must be set via reset link
         })
         .returning({ id: users.id });
 
@@ -177,49 +166,14 @@ export async function createUserAction(_previous: UserActionState, formData: For
     return { ok: false, message: "The directory record was not created. Try again in a moment." };
   }
 
-  // Provision the login. A failure here does not undo the directory row: the
-  // person exists, they simply cannot sign in until a login is issued.
-  const admin = getSupabaseAdminClient();
-  if (!admin) {
-    revalidatePath("/users");
-    return {
-      ok: true,
-      message: `${input.fullName} is in the directory. No auth login was created — SUPABASE_SERVICE_ROLE_KEY is not set, so run: npm run user:provision -- ${input.email}`,
-    };
-  }
-
-  const { error: authError } = await admin.auth.admin.createUser({
-    email: input.email,
-    password: randomPassword(),
-    email_confirm: true,
-    user_metadata: { full_name: input.fullName },
-  });
-
-  if (authError && authError.code !== "email_exists") {
-    log.error({ event: "user.auth_provision_failed", err: authError.message });
-    revalidatePath("/users");
-    return {
-      ok: true,
-      message: `${input.fullName} is in the directory, but the sign-in could not be created (${authError.message}). Run: npm run user:provision -- ${input.email}`,
-    };
-  }
-
-  // Send the "set your password" link. Without it a freshly created login has an
-  // unknown password, which is a support call waiting to happen.
-  const origin = displayOrigin();
-  const supabase = await createSupabaseServerClient();
-  const { error: mailError } = await supabase.auth.resetPasswordForEmail(input.email, {
-    redirectTo: origin ? `${origin}/auth/callback?next=${encodeURIComponent("/reset-password")}` : undefined,
-  });
-
+  // No Supabase Auth — the person is in the directory but cannot sign in
+  // until an administrator sends them a password reset link.
   revalidatePath("/users");
   log.info({ event: "user.created", actor: session.sub, role: input.role });
 
   return {
     ok: true,
-    message: mailError
-      ? `${input.fullName} can now be provisioned, but the set-password e-mail did not send. Ask ICT to issue a password.`
-      : `${input.fullName} is in the directory and a set-password link is on its way to ${input.email}.`,
+    message: `${input.fullName} is in the directory. Send them a password reset link so they can sign in.`,
   };
 }
 
@@ -350,11 +304,7 @@ export async function sendPasswordResetAction(_previous: UserActionState, formDa
   if (!target) return { ok: false, message: "That person is no longer in the directory." };
   if (!target.isActive) return { ok: false, message: "Reactivate the account before sending a reset link." };
 
-  const origin = displayOrigin();
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(target.email, {
-    redirectTo: origin ? `${origin}/auth/callback?next=${encodeURIComponent("/reset-password")}` : undefined,
-  });
+  const result = await createPasswordResetToken(target.email);
 
   await logAudit({
     actor: auditActor(session),
@@ -363,12 +313,18 @@ export async function sendPasswordResetAction(_previous: UserActionState, formDa
     entityId: target.id,
   });
 
-  if (error) {
-    log.error({ event: "user.reset_mail_failed", err: error.message });
-    return { ok: false, message: "The e-mail was not sent. Try again in a few minutes." };
+  if (!result.ok) {
+    log.error({ event: "user.reset_mail_failed", err: result.message });
+    return { ok: false, message: "The reset link was not created. Try again in a few minutes." };
   }
 
-  return { ok: true, message: `A set-password link was sent to ${target.email}. It works once and expires.` };
+  // Log the reset token for the administrator to deliver (since no SMTP is configured)
+  log.info({ event: "user.reset_token", actor: session.sub, target: target.id, token: result.token });
+
+  return {
+    ok: true,
+    message: `Reset token for ${target.email}: ${result.token}. Share this securely with the user.`,
+  };
 }
 
 /* ── Unit heads ─────────────────────────────────────────────────────────────── */

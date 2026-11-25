@@ -10,8 +10,7 @@ import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
 import { complaintsForStaffId } from "@/lib/server/complaint-queries";
 import { log } from "@/lib/server/logger";
-import { getSupabaseAdminClient } from "@/lib/server/supabase-admin";
-import { createSupabaseServerClient } from "@/lib/server/supabase-server";
+import { hashPassword } from "@/lib/server/auth";
 import { requireRole } from "@/lib/server/rbac";
 import { consumeRateLimit, rateLimitKey, retryAfterText } from "@/lib/server/rate-limit";
 import { clientAddress } from "@/lib/server/request-context";
@@ -270,9 +269,8 @@ export async function respondToComplaintAction(
 }
 
 /**
- * Resets a person's access from inside a complaint: a new temporary password, an
- * optional corrected email, and — when Supabase has SMTP configured — the usual
- * "choose your own password" link. The temporary password is returned once so the
+ * Resets a person's access from inside a complaint: sets a new temporary password,
+ * an optional corrected email. The temporary password is returned once so the
  * administrator can read it down the phone; it is never stored in clear text.
  */
 export async function resetAccessAction(_previous: ComplaintState, formData: FormData): Promise<ComplaintState> {
@@ -302,63 +300,25 @@ export async function resetAccessAction(_previous: ComplaintState, formData: For
     };
   }
 
-  const admin = getSupabaseAdminClient();
-  if (!admin) {
-    return {
-      ok: false,
-      message:
-        "Access cannot be reset from here: SUPABASE_SERVICE_ROLE_KEY is not set. Run the password reset script on the server instead.",
-    };
-  }
-
   const password = temporaryPassword();
+  const passwordHash = await hashPassword(password);
 
-  // The auth user is matched by the directory email before it is changed, so a
-  // corrected address moves the same identity rather than creating a second one.
-  const { data: list, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
-  if (listError) {
-    log.error({ event: "complaint.reset_list_failed", err: listError.message });
-    return { ok: false, message: "Supabase did not answer. Try again in a moment." };
-  }
-  const authUser = list.users.find((candidate) => candidate.email?.toLowerCase() === person.email.toLowerCase());
-
-  if (!authUser) {
-    return {
-      ok: false,
-      message: `${person.fullName} has a directory record but no sign-in yet. Create the login from Users, then reset.`,
-    };
-  }
-
-  const { error: updateError } = await admin.auth.admin.updateUserById(authUser.id, {
-    password,
-    email: email.data !== person.email.toLowerCase() ? email.data : undefined,
-    email_confirm: true,
-  });
-  if (updateError) {
-    log.error({ event: "complaint.reset_failed", err: updateError.message });
-    return { ok: false, message: `Supabase refused the change: ${updateError.message}` };
-  }
-
+  // Update the email if corrected, and set the new password hash
   await db
     .update(users)
-    .set({ email: email.data, updatedAt: new Date() })
+    .set({
+      email: email.data,
+      passwordHash,
+      updatedAt: new Date(),
+    })
     .where(eq(users.id, person.id));
 
-  // A recovery link is the better experience when mail is configured; the
-  // temporary password is the fallback that always works.
-  const origin = displayOrigin();
-  const supabase = await createSupabaseServerClient();
-  const { error: mailError } = await supabase.auth.resetPasswordForEmail(email.data, {
-    redirectTo: origin ? `${origin}/auth/callback?next=${encodeURIComponent("/reset-password")}` : undefined,
-  });
-
-  const detail = `Access reset. Temporary password: ${password}. Sign in with it and change it straight away.`;
   if (complaintId) {
     await db
       .update(complaints)
       .set({
         status: "RESOLVED",
-        response: note ? `${note}\n\n${detail}` : detail,
+        response: note ? `${note}\n\nAccess reset. Temporary password: ${password}. Sign in with it and change it straight away.` : `Access reset. Temporary password: ${password}. Sign in with it and change it straight away.`,
         respondedById: session.sub,
         respondedAt: new Date(),
         resolvedAt: new Date(),
@@ -373,15 +333,13 @@ export async function resetAccessAction(_previous: ComplaintState, formData: For
     action: "ACCESS_RESET",
     entity: "user",
     entityId: person.id,
-    metadata: { complaintId, emailChanged: email.data !== person.email.toLowerCase(), mailSent: !mailError },
+    metadata: { complaintId, emailChanged: email.data !== person.email.toLowerCase() },
   });
 
   return {
     ok: true,
     credentials: { email: email.data, password },
-    message: mailError
-      ? `${person.fullName}: ${detail} Read it to them — email is not configured, so nothing was sent.`
-      : `${person.fullName}: a "choose a new password" email was sent to ${email.data}. The temporary password below works too, if they would rather be read it over the phone.`,
+    message: `${person.fullName}: Access reset. Temporary password: ${password}. Sign in with it and change it straight away.`,
   };
 }
 
