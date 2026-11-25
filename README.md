@@ -5,7 +5,7 @@ session — slides, protocols, videos, references — is filed under the directo
 it, as a numbered version that a second reviewer has to approve before staff see it. Nothing is
 deleted silently: material is archived, and a hash-chained audit trail records who uploaded,
 reviewed, published, downloaded or withdrew it. Built on **Next.js 16**, **React 19**,
-**Tailwind CSS v4**, **Drizzle ORM**, **Supabase** (PostgreSQL + Auth + Storage) and **Vercel**.
+**Tailwind CSS v4**, **Drizzle ORM**, **Neon Postgres**, any **S3-compatible bucket** and **Vercel**.
 
 ---
 
@@ -16,13 +16,13 @@ reviewed, published, downloaded or withdrew it. Built on **Next.js 16**, **React
 | Framework | Next.js 16 App Router, React 19 (Turbopack) |
 | Styling | Tailwind CSS v4 (`@import "tailwindcss"`, `@theme` tokens, no config file) |
 | ORM | Drizzle ORM + `postgres` driver (no Prisma) |
-| Database | PostgreSQL (Supabase; transaction pooler on 6543 at runtime) |
-| Auth | Supabase Auth via `@supabase/ssr`; role and scope come from `public.users` |
-| Storage | Supabase Storage, private bucket, 15-minute signed URLs |
+| Database | Neon Postgres — pooled (`-pooler`) host at runtime, direct host for migrations |
+| Auth | bcrypt hash on `users.password_hash` + our own signed `ghs_session` cookie (ADR-0015); role and scope come from `public.users` |
+| Storage | any S3-compatible bucket (Neon Object Storage by default), private, 15-minute presigned URLs |
 | Edge gate | `src/proxy.ts` (Next 16's successor to `middleware.ts`) |
-| Migrations | Drizzle SQL in `drizzle/` + raw SQL in `supabase/migrations/` (see `docs/migrations.md`) |
+| Migrations | Drizzle SQL in `drizzle/`, one stream, provable with `npm run db:check-chain` (see `docs/migrations.md`) |
 | Testing | Vitest (unit), Playwright (public + optional credentialled smoke) |
-| CI | `.github/workflows/ci.yml` (typecheck, lint, unit tests, build, production audit) |
+| CI | `.github/workflows/ci.yml` (typecheck, lint, unit tests, migration chain, build, production audit) |
 
 ---
 
@@ -66,7 +66,6 @@ already issued still check out; nothing new is issued.
 docs/                          # PRD, architecture, data model, RBAC, UI/UX, conventions, QA, migrations
 docs/decisions/**              # architecture decision records
 drizzle/**                     # generated + reviewed SQL migrations (versioned)
-supabase/migrations/**         # raw SQL: RLS lock-down, grants
 scripts/                       # ops scripts (auth provisioning, audit-chain verification)
 tests/e2e/**                   # Playwright specs
 .github/workflows/ci.yml       # CI gates
@@ -95,7 +94,7 @@ src/
     file-name.ts               # MIME-correct download names
     format.ts / cpd.ts / ghs-constants.ts / labels.ts / links.ts / names.ts
     server/
-      session.ts               # Supabase identity + public.users authority
+      session.ts               # signed cookie identity + public.users authority
       rbac.ts                  # requireSession, checkCapability (DB-verified scope)
       audit.ts                 # hash-chained append + chain verifier
       certificates.ts          # frozen certificate serials (ADR-0011: no new issuance)
@@ -104,10 +103,10 @@ src/
       messaging-queries.ts     # conversations, paginated threads
       notification-queries.ts  # notices + unread counts
       public-queries.ts        # public stats + certificate verification
-      file-storage.ts          # signed URLs for the private bucket
+      file-storage.ts          # S3 presigned URLs (upload + download) for the private bucket
       logger.ts                # one-line JSON events with PII redaction
       request-context.ts       # client IP / user agent
-      supabase-server.ts       # cookie-bound Supabase client
+      auth.ts                  # bcrypt verify, lockout, reset tokens
       actions/                 # Server Actions: learning, messages, notifications, auth
 ```
 
@@ -115,24 +114,34 @@ src/
 
 ## Getting started
 
+Node 22 — the version CI and Vercel build with (`engines` in `package.json`). A newer Node runs the
+app but is untested against Next 16 here.
+
 ```bash
-npm ci
-cp .env.example .env.local     # then fill in the Supabase values
-npm run db:migrate             # drizzle/0000…0003
-psql "$DIRECT_URL" -f supabase/migrations/20260113000000_lock_public_api.sql
-npm run db:seed
-npm run dev                    # http://localhost:3000
+npm ci                          # dev dependencies included: @electric-sql/pglite powers db:check-chain
+cp .env.example .env            # then fill in the Neon values below
+npm run db:check-chain          # pre-flight: applies every migration to an in-memory Postgres
+npm run db:migrate              # against DIRECT_URL
+npm run db:seed                 # taxonomy, Upper West geography, starter content
+SEED_ADMIN_PASSWORD='…' npm run user:create-auth -- you@ghs.gov.gh
+npm run dev                     # http://localhost:3000
 ```
+
+The operator scripts load **`.env`** through `dotenv`, and Next reads `.env` as well — one file
+serves both. A value placed only in `.env.local` is invisible to `db:migrate` and `user:*`.
 
 | Variable | Source |
 |---|---|
-| `DATABASE_URL` | Supabase → Database → Pooler (port 6543) + `?pgbouncer=true` — runtime only |
-| `DIRECT_URL` | Database → **Session pooler** (5432, `sslmode=require`) — drizzle-kit only. `db.<ref>.supabase.co` is IPv6-only now and fails on IPv4 with `ENOTFOUND` |
-| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | API settings (anon key is public-safe) |
-| `SUPABASE_SERVICE_ROLE_KEY` | API settings — **server only**, used to sign storage URLs |
+| `DATABASE_URL` | Neon → **Connect**, *Connection pooling* **on** — the `…-pooler…` host. Used by the app, the seeder and every `user:*` script |
+| `DIRECT_URL` | Same screen, pooling **off** — the direct host. `drizzle-kit` only: DDL waits on an advisory lock a transaction-mode pooler never releases |
+| `SESSION_SECRET` | `openssl rand -base64 48`. Below 32 characters sign-in refuses to issue a cookie rather than sign one with a guessable key |
+| `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Any S3-compatible bucket (Neon Object Storage, Cloudflare R2, AWS S3, MinIO). Optional: without them every page works and only material uploads/downloads are unavailable |
 | `NEXT_PUBLIC_APP_URL` | The public origin (`http://localhost:3000` locally) |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` / `_PHONE` | Optional; the site says how to reach ICT when unset |
-| `SEED_ADMIN_EMAIL`, `ALLOW_PROD_SEED` | Seeder only; refuses production by default |
+| `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `ALLOW_PROD_SEED` | Seeder and ops scripts only; the seeder refuses production by default |
+
+Both connection strings need `?sslmode=require`. Neon's newer strings append
+`&channel_binding=require` — drop that parameter; the driver neither needs nor uses it.
 
 Existing databases that were created with `drizzle-kit push` need the one-time baseline
 procedure in `docs/migrations.md` before `db:migrate` will work.
@@ -163,24 +172,27 @@ without changing anything:
 npm run db:doctor
 ```
 
-`write CONNECT_TIMEOUT` deserves its own note, because the cause is almost always the host and not the password.
-Supabase's direct host, `db.<project-ref>.supabase.co`, resolves **only to IPv6**. On a network without IPv6
-(most office Wi-Fi, some ISPs) the TCP handshake never completes, and every query waits out `connect_timeout`.
-Use the pooler instead — Supabase → **Connect** → *Session pooler* — which resolves to IPv4:
+Most connection failures are one of two mistakes, and `npm run db:doctor` names which: the two Neon
+hosts swapped (`-pooler` for the app, direct for migrations), or a project that autosuspended after
+inactivity, where the first request pays a wake-up. The doctor prints the host, the port and the
+driver's errno without ever printing the password.
 
-```dotenv
-# wrong on an IPv4-only network: IPv6-only host, connect times out
-DATABASE_URL=postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres
+### Windows: `npm ci` stops with EPERM on a `.node` file
 
-# right: Supavisor pooler, IPv4, session mode on 5432 (6543 for transaction mode)
-DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-1-<region>.pooler.supabase.com:5432/postgres?sslmode=require&uselibpqcompat=true
+`npm error errno -4048 … unlink …\node_modules\.lightningcss-…\lightningcss.win32-x64-msvc.node`
+means something still holds that file open — a running `npm run dev`, an editor's file watcher, or
+OneDrive/Defender indexing the folder. `npm ci` deletes `node_modules` first, so one locked file
+aborts the whole install.
+
+```powershell
+Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+Remove-Item -Recurse -Force node_modules
+npm ci
 ```
 
-Check the DNS answer before guessing which of the two is wrong:
-
-```bash
-node -e "require('dns').lookup('db.<ref>.supabase.co',{all:true},console.log)"   # [{family:6,…}] explains it
-```
+If the removal itself is denied, reboot and retry: a held handle outlives the process list. A project
+inside a OneDrive-synced `Documents` folder hits this repeatedly — move it (for example
+`C:\src\ghs-etraining-hub`) or exclude the folder from sync.
 
 `GET /api/health` now reports schema drift directly: `{"ok":false,"checks":{"db":"up","schema":"outdated"},
 "missingTables":["material_views"],"error":{"code":"SCHEMA_OUTDATED",…}}`. It answers `503` until the
@@ -208,34 +220,34 @@ the first attempt.
 1. **Import the repository** (Vercel → Add New → Project → this repo). Framework preset is detected
    as Next.js; leave the build and install commands alone.
 2. **Add the variables** under Project → Settings → Environment Variables, for Production *and*
-   Preview. Only these six are required to build and boot:
+   Preview, then set **Settings → Functions → Region** to `fra1`. Only these are required to build
+   and boot:
 
    | Name | Notes |
    | --- | --- |
-   | `NEXT_PUBLIC_SUPABASE_URL` | inlined at build time — set before the first deploy |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | inlined at build time |
-   | `NEXT_PUBLIC_APP_URL` | the production origin, e.g. `https://tl.ghs.gov.gh` (no trailing slash) |
-   | `SUPABASE_SERVICE_ROLE_KEY` | server only; used to sign storage URLs |
-   | `DATABASE_URL` | Supabase **transaction** pooler, port 6543, `?sslmode=require&uselibpqcompat=true` |
-   | `DB_POOL_MAX` | optional; set `3` on Vercel — each warm function instance holds its own pool |
-   | `DIRECT_URL` | direct connection; needed by `drizzle-kit`, harmless at runtime |
+   | `DATABASE_URL` | Neon **pooled** host (`…-pooler…`), `?sslmode=require` |
+   | `SESSION_SECRET` | 32+ random characters; changing it signs everybody out |
+   | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | optional object storage; the endpoint is compiled into the CSP, so changing it needs a redeploy |
+   | `NEXT_PUBLIC_APP_URL` | the production origin, e.g. `https://ghstl.vercel.app` (no trailing slash) |
+   | `DB_POOL_MAX` | set `3` — each warm function instance holds its own pool |
+   | `DIRECT_URL` | optional at runtime; only `drizzle-kit` reads it |
 
-   `NEXT_PUBLIC_SUPPORT_EMAIL` / `NEXT_PUBLIC_SUPPORT_PHONE` are optional. `SEED_ADMIN_EMAIL` and
-   `ALLOW_PROD_SEED` belong to local seeding only — do not set them in Vercel.
+   There are no `SUPABASE_*` variables any more — delete any that remain. `SEED_ADMIN_EMAIL`,
+   `SEED_ADMIN_PASSWORD` and `ALLOW_PROD_SEED` belong to local seeding and must not be set on Vercel.
 3. **Deploy**, then smoke-test the deployment:
 
    ```bash
-   curl -s https://<your-domain>/api/health      # {"ok":true,...,"checks":{"db":"up"}}
+   curl -s https://<your-domain>/api/health | jq                       # checks.db, checks.schema
+   curl -s 'https://<your-domain>/api/health?deep=pages' | jq '.probes[] | {label, ms}'
    ```
 
-   A 503 with `checks.db = "down"` means `DATABASE_URL` is wrong (or the pooler host is not
-   reachable from Vercel). The site still renders; only data-backed queries fail.
-4. **Point Supabase at the deployment**: Authentication → URL configuration → Site URL and
-   `https://<your-domain>/auth/callback` in the redirect allow-list, or password-reset links break.
-5. **Create the private storage bucket** `ghs-materials` (Storage → New bucket, public off).
-6. **First administrator**: `npm run db:seed` against the production database with
-   `ALLOW_PROD_SEED=true` (seed is idempotent), or insert the directory row by hand and run
-   `npm run user:create-auth you@ghs.gov.gh`.
+   A 503 with `checks.db = "down"` means `DATABASE_URL` is wrong or the endpoint is suspended. The
+   site still renders; only data-backed queries fail.
+4. **Migrate before the first sign-in**: `npm run db:migrate` and `npm run db:seed` with
+   `DIRECT_URL`. The build itself needs no database.
+5. **Give yourself a password**: `SEED_ADMIN_PASSWORD='…' npm run user:create-auth -- you@ghs.gov.gh`.
+6. **Object storage**, if you use it: private bucket `ghs-materials`, CORS allowing `PUT` and `GET`
+   from the deployment origin with the `content-type` header.
 
 Anything `NEXT_PUBLIC_*` changed later needs a redeploy, because it is compiled into the bundle.
 
@@ -250,22 +262,21 @@ Anything `NEXT_PUBLIC_*` changed later needs a redeploy, because it is compiled 
    values ('GHS-000123', 'ama.mensah@ghs.gov.gh', 'Ama Serwaa Mensah', 'LEARNER', 'Ashanti', 'Komfo Anokye');
    ```
 
-2. Provision the Auth login (prints a temporary password once; nothing is stored):
+2. Set a password on that row (prints a one-time temporary password; nothing is stored):
 
    ```bash
    npm run user:provision -- ama.mensah@ghs.gov.gh
    npm run user:provision -- ama.mensah@ghs.gov.gh --reset   # re-issue
    ```
 
-   If Auth has no user at all, `npm run user:create-auth -- ama.mensah@ghs.gov.gh` creates it; if
-   someone is locked out before mail delivery works, `npm run user:reset-password -- <email>` sets
-   a new password (both read the password from the environment, never from the repository).
+   `npm run user:create-auth -- <email>` sets a known password from `SEED_ADMIN_PASSWORD` instead.
+   For a locked-out account, `npm run user:reset-password -- <email>` prints a one-hour, single-use
+   `/reset-password?token=…` link to hand over in person — the pilot sends no e-mail, and
+   `/forgot-password` says so.
 
-3. The staff member signs in and changes the password. Role always comes from the database, never
-   from Auth metadata.
-
-Allow `<origin>/auth/callback` in Supabase → Authentication → URL configuration so reset links
-work. Create a **private** storage bucket named `ghs-materials` for controlled documents.
+3. The staff member signs in at `/login` and can set a new password from that link. Role always comes
+   from `public.users`, never from anything the account holder can edit. There is no third-party auth
+   service: `password_hash` is a bcrypt hash on the row (ADR-0015).
 
 ---
 
