@@ -18,8 +18,6 @@ export function DatabaseUnavailable({
   target: DatabaseTarget | null;
   code?: string;
 }) {
-  const direct = target?.isSupabaseDirect ?? false;
-
   return (
     <main className="flex min-h-screen items-center justify-center bg-canvas p-4">
       <div className="w-full max-w-xl space-y-5 rounded-card border border-hairline bg-surface p-8 shadow-panel">
@@ -58,25 +56,10 @@ export function DatabaseUnavailable({
         {code === "CONNECT_TIMEOUT" && (
           <div className="space-y-2 text-sm leading-relaxed text-ink-muted">
             <p className="font-semibold text-ink">What usually causes this</p>
-            {direct ? (
-              <p>
-                <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[12px]">
-                  {target?.host}
-                </code>{" "}
-                is Supabase&apos;s direct host, which only resolves to IPv6 — on
-                a network without IPv6 the connection simply times out. Use the
-                pooler string from Supabase → Connect instead.
-              </p>
-            ) : (
-              <p>
-                The host did not accept a TCP connection in time. Either the
-                network blocks outbound 5432/6543, or the pooler region in{" "}
-                <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[12px]">
-                  DATABASE_URL
-                </code>{" "}
-                does not match the project.
-              </p>
-            )}
+            <p>
+              The host did not accept a TCP connection in time. Check that the
+              host in DATABASE_URL points at the correct project.
+            </p>
             <p>
               Run{" "}
               <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[12px]">

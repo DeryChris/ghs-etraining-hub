@@ -25,24 +25,11 @@ const globalForDb = globalThis as unknown as {
 /**
  * Connections per instance.
  *
- * Deliberately small. Supabase's transaction pooler (Supavisor, port 6543) holds
- * a fixed number of server-side connections — 15 on the smaller compute sizes —
- * and every warm Vercel instance that opens ten of them takes most of that pool
- * for itself. The symptom is nasty and misleading: one query at a time answers in
- * ~100 ms (so `/api/health` looks perfect), while a page that fans out four or
- * five queries at once waits for a slot that never frees and hits its deadline.
- *
- * Two per instance is plenty — the queries themselves take milliseconds, so
- * postgres.js queues the rest client-side instead of starving the server pool.
- */
-/**
- * Connections per instance.
- *
- * Raised from 2 to 5: the old ceiling left pages that fan out three or more
- * concurrent queries (dashboard, trainings, analytics) waiting on a third
- * slot that Supavisor would drop. Five gives each page room to run its own
- * queries two at a time (see mapLimit) without starving the pool for the
- * next tab the visitor opens.
+ * Neon is serverless Postgres with no PgBouncer and no transaction pooler
+ * connection limits. Each serverless function instance opens its own
+ * connections directly. A ceiling of 5 per instance is plenty — the queries
+ * themselves take milliseconds, so postgres.js queues the rest client-side
+ * instead of starving the pool.
  */
 const POOL_MAX_CEILING = 5;
 
@@ -70,10 +57,10 @@ function createClient(url: string) {
     // spinner. Page-level deadlines live in `lib/server/deadline.ts`; a queued
     // connection fails fast rather than waiting forever.
     connection: {
-      // Dev-friendly: Supabase free tier is often slow on cold starts and
-      // simple lookups. Give queries room to breathe so a slow round trip
-      // doesn't surface as a statement timeout to the user. Page-level
-      // deadlines in lib/server/deadline.ts (4 s) still cap the total wait.
+      // Dev-friendly: Neon auto-scales but cold starts can add latency.
+      // Give queries room to breathe so a slow round trip doesn't surface as
+      // a statement timeout to the user. Page-level deadlines in
+      // lib/server/deadline.ts (4 s) still cap the total wait.
       statement_timeout: 30_000,
       idle_in_transaction_session_timeout: 10_000,
       application_name: "ghs-training-library",

@@ -249,7 +249,7 @@ export async function GET(request: Request) {
           ? {
               host: target.host,
               port: target.port,
-              pooled: target.port === "6543",
+              pooled: false,
               // Connections this instance may open. An old DB_POOL_MAX in the
               // host's environment overrides the fix silently, so report both.
               poolMax,
@@ -257,7 +257,7 @@ export async function GET(request: Request) {
               poolMaxSource,
               // Supabase's direct host (`db.<ref>.supabase.co`) is IPv6-only;
               // Vercel functions cannot reach it at all.
-              directIpv6Host: target.isSupabaseDirect,
+              directIpv6Host: false,
             }
           : null;
       })(),

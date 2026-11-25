@@ -10,7 +10,7 @@ export interface DatabaseTarget {
   host: string;
   port: string;
   /** The Supabase direct host (`db.<ref>.supabase.co`), which is IPv6-only. */
-  isSupabaseDirect: boolean;
+  // isSupabaseDirect removed — Neon uses a standard connection string
 }
 
 export function databaseTarget(url: string | undefined): DatabaseTarget | null {
@@ -21,7 +21,6 @@ export function databaseTarget(url: string | undefined): DatabaseTarget | null {
     return {
       host: parsed.hostname,
       port: parsed.port || "5432",
-      isSupabaseDirect: /^db\.[a-z0-9]+\.supabase\.co$/i.test(parsed.hostname),
     };
   } catch {
     return null;
