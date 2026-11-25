@@ -5,11 +5,13 @@ import { ListEmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Stat } from "@/components/ui/stat";
 import { buttonClass } from "@/components/ui/button";
+import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { formatDate } from "@/lib/format";
 import { MATERIAL_TYPE_LABELS } from "@/lib/labels";
 import { getMyTraffic } from "@/lib/server/insights-queries";
 import { listCompletions } from "@/lib/server/learning-queries";
 import { requireSession } from "@/lib/server/rbac";
+import { mapLimit, withDeadline } from "@/lib/server/page-data";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +22,19 @@ const TRANSCRIPT_ROWS = 25;
 
 export default async function ActivityPage() {
   const session = await requireSession();
-  const [completions, traffic] = await Promise.all([listCompletions(session.sub), getMyTraffic(session.sub)]);
+  const loaded = await withDeadline("analytics", () =>
+    mapLimit([() => listCompletions(session.sub), () => getMyTraffic(session.sub)]),
+  );
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="Your activity did not load"
+        description="Your completion history and traffic could not be read in time. Nothing was changed."
+        requestId={loaded.requestId}
+      />
+    );
+  }
+  const [completions, traffic] = loaded.data;
 
   const recent = completions.slice(0, TRANSCRIPT_ROWS);
   const issuedCertificates = completions.filter((completion) => completion.certificateCode !== null);

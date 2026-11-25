@@ -36,17 +36,15 @@ const globalForDb = globalThis as unknown as {
  * postgres.js queues the rest client-side instead of starving the server pool.
  */
 /**
- * Two, even when the environment asks for more.
+ * Connections per instance.
  *
- * Measured against the live project: every shape that hung needed a *third*
- * connection opened during a cold start, and every shape that worked needed two
- * or fewer — or three, but on an instance that had been warm for a while. When
- * Supavisor drops that third concurrent connection attempt, postgres.js waits on
- * it without a timeout of its own, so the page sits on its skeleton while every
- * single-query probe answers in 150 ms. `DB_POOL_MAX` can lower this; it cannot
- * raise it past the number that breaks.
+ * Raised from 2 to 5: the old ceiling left pages that fan out three or more
+ * concurrent queries (dashboard, trainings, analytics) waiting on a third
+ * slot that Supavisor would drop. Five gives each page room to run its own
+ * queries two at a time (see mapLimit) without starving the pool for the
+ * next tab the visitor opens.
  */
-const POOL_MAX_CEILING = 2;
+const POOL_MAX_CEILING = 5;
 
 const configuredPoolMax = Number.parseInt(process.env.DB_POOL_MAX ?? "", 10);
 /** What the environment asked for, before the ceiling — reported by /api/health. */

@@ -4,6 +4,7 @@ import { Archive, CalendarDays, MapPin, Users } from "lucide-react";
 import { TrainingForm, type TrainingFormValues } from "@/components/trainings/training-form";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { TRAINING_STATUS_LABELS } from "@/lib/labels";
@@ -12,6 +13,7 @@ import { archiveTrainingAction } from "@/lib/server/actions/trainings";
 import { requireSession } from "@/lib/server/rbac";
 import { listGeography, listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
 import { getTraining } from "@/lib/server/training-queries";
+import { mapLimit, withDeadline } from "@/lib/server/page-data";
 
 export const dynamic = "force-dynamic";
 
@@ -36,9 +38,23 @@ export default async function TrainingDetailPage({
   const error = typeof query.error === "string" ? query.error : null;
 
   const mayManage = can(session.role, "training.manage");
-  const [fields, geography] = mayManage
-    ? await Promise.all([listProgrammeFieldOptions(), listGeography()])
-    : [[], []];
+  let fields: Awaited<ReturnType<typeof listProgrammeFieldOptions>> = [];
+  let geography: Awaited<ReturnType<typeof listGeography>> = [];
+  if (mayManage) {
+    const loaded = await withDeadline("trainings.detail", () =>
+      mapLimit([() => listProgrammeFieldOptions(), () => listGeography()]),
+    );
+    if (!loaded.ok) {
+      return (
+        <DataUnavailable
+          title="Training detail did not load"
+          description="Programme fields and geography could not be read in time. Nothing was changed."
+          requestId={loaded.requestId}
+        />
+      );
+    }
+    [fields, geography] = loaded.data;
+  }
 
   const place = [training.facilityName ?? training.venue, training.subDistrictName, training.districtName, training.regionName]
     .filter(Boolean)

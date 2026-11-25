@@ -353,69 +353,74 @@ export interface LearnerDashboard {
 }
 
 export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashboard> {
-  const [totalsRows, mandatoryRows, continueRows] = await Promise.all([
-    db
-      .select({
-        creditsX10: sql<number>`coalesce(sum(case when ${materialProgress.status} = 'COMPLETED' then ${materials.cpdCreditsX10} else 0 end), 0)::int`,
-        completedCount: sql<number>`(count(*) filter (where ${materialProgress.status} = 'COMPLETED'))::int`,
-        inProgressCount: sql<number>`(count(*) filter (where ${materialProgress.status} = 'IN_PROGRESS'))::int`,
-      })
-      .from(materialProgress)
-      .innerJoin(materials, eq(materials.id, materialProgress.materialId))
-      .where(eq(materialProgress.userId, viewer.id)),
-    db
-      .select({
-        id: materials.id,
-        title: materials.title,
-        priority: materials.priority,
-        estimatedMinutes: materials.estimatedMinutes,
-        currentVersionId: materials.currentVersionId,
-        areaName: programmeAreas.name,
-        areaCode: programmeAreas.code,
-        acknowledgedAt: materialProgress.acknowledgedAt,
-        acknowledgedVersionId: materialProgress.materialVersionId,
-      })
-      .from(materials)
-      .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-      .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-      .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, viewer.id)))
-      .where(
-        and(
-          publishedMaterial,
-          liveArea,
-          liveField,
-          fieldFor(viewer),
-          audienceFor(viewer),
-          eq(materials.requiresAcknowledgement, true),
-        ),
+  // Run the three dashboard queries sequentially instead of in parallel: each
+  // needs its own pooled connection, and running them together starved the pool
+  // for every other tab the visitor opened. The totals query is the cheapest
+  // and runs first so the page can show numbers quickly; mandatory and
+  // continue-learning follow.
+  const totalsRows = await db
+    .select({
+      creditsX10: sql<number>`coalesce(sum(case when ${materialProgress.status} = 'COMPLETED' then ${materials.cpdCreditsX10} else 0 end), 0)::int`,
+      completedCount: sql<number>`(count(*) filter (where ${materialProgress.status} = 'COMPLETED'))::int`,
+      inProgressCount: sql<number>`(count(*) filter (where ${materialProgress.status} = 'IN_PROGRESS'))::int`,
+    })
+    .from(materialProgress)
+    .innerJoin(materials, eq(materials.id, materialProgress.materialId))
+    .where(eq(materialProgress.userId, viewer.id));
+
+  const mandatoryRows = await db
+    .select({
+      id: materials.id,
+      title: materials.title,
+      priority: materials.priority,
+      estimatedMinutes: materials.estimatedMinutes,
+      currentVersionId: materials.currentVersionId,
+      areaName: programmeAreas.name,
+      areaCode: programmeAreas.code,
+      acknowledgedAt: materialProgress.acknowledgedAt,
+      acknowledgedVersionId: materialProgress.materialVersionId,
+    })
+    .from(materials)
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
+    .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, viewer.id)))
+    .where(
+      and(
+        publishedMaterial,
+        liveArea,
+        liveField,
+        fieldFor(viewer),
+        audienceFor(viewer),
+        eq(materials.requiresAcknowledgement, true),
       ),
-    db
-      .select({
-        id: materials.id,
-        title: materials.title,
-        type: materials.type,
-        watchedPercent: materialProgress.watchedPercent,
-        areaName: programmeAreas.name,
-        areaCode: programmeAreas.code,
-      })
-      .from(materialProgress)
-      .innerJoin(materials, eq(materials.id, materialProgress.materialId))
-      .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-      .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-      .where(
-        and(
-          eq(materialProgress.userId, viewer.id),
-          eq(materialProgress.status, "IN_PROGRESS"),
-          publishedMaterial,
-          liveArea,
-          liveField,
-          fieldFor(viewer),
-          audienceFor(viewer),
-        ),
-      )
-      .orderBy(desc(materialProgress.updatedAt))
-      .limit(4),
-  ]);
+    );
+
+  const continueRows = await db
+    .select({
+      id: materials.id,
+      title: materials.title,
+      type: materials.type,
+      watchedPercent: materialProgress.watchedPercent,
+      areaName: programmeAreas.name,
+      areaCode: programmeAreas.code,
+    })
+    .from(materialProgress)
+    .innerJoin(materials, eq(materials.id, materialProgress.materialId))
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
+    .where(
+      and(
+        eq(materialProgress.userId, viewer.id),
+        eq(materialProgress.status, "IN_PROGRESS"),
+        publishedMaterial,
+        liveArea,
+        liveField,
+        fieldFor(viewer),
+        audienceFor(viewer),
+      ),
+    )
+    .orderBy(desc(materialProgress.updatedAt))
+    .limit(4);
 
   const totals = totalsRows[0];
   const mandatoryOutstanding = mandatoryRows
