@@ -1,4 +1,3 @@
-import "server-only";
 import { eq } from "drizzle-orm";
 import { districts, facilities, regions, subDistricts } from "./schema";
 import type { Db } from "./client";
@@ -19,6 +18,10 @@ import {
  *
  * Everything upserts on its natural key, so re-running after GHS supplies a
  * fuller facility list adds rows instead of duplicating them.
+ *
+ * No `server-only` import on purpose: this module runs under `npm run db:seed`
+ * and `npm run db:seed:geography`, and that guard throws in a plain Node process.
+ * It belongs on modules a Client Component must never import, not on a seeder.
  */
 export async function seedGeography(
   db: Db,
