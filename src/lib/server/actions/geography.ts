@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { count, eq } from "drizzle-orm";
 import { db } from "@/db/index";
 import { districts, facilities, regions, subDistricts } from "@/db/schema";
@@ -61,6 +61,8 @@ async function manage(event: string, back: string, notice: string, work: Work): 
   if (failure) return backTo(back, { error: failure });
   revalidatePath(PATH);
   revalidatePath("/trainings");
+  revalidateTag("taxonomy", "max");
+  revalidateTag("geography", "max");
   return backTo(back, { notice });
 }
 

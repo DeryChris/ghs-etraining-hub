@@ -2,6 +2,7 @@ import "server-only";
 import { log } from "@/lib/server/logger";
 import { currentRequestId } from "@/lib/server/request-context";
 import { DeadlineError, within } from "@/lib/server/deadline";
+import { recordLoad, recordRetry } from "@/lib/server/runtime-stats";
 
 /**
  * Run a page's sections with a cap on how many are in flight at once.
@@ -65,6 +66,7 @@ export async function withDeadline<T>(
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       const data = await within(label, run(), ms);
+      recordLoad({ label, ms: Date.now() - started, outcome: "ok" });
       return { ok: true, data };
     } catch (caught) {
       error = caught;
@@ -74,10 +76,16 @@ export async function withDeadline<T>(
       // would just double the wait. A section that timed out is not retried.
       const retryable = typeof work === "function" && !(caught instanceof DeadlineError);
       if (!retryable || Date.now() - started > 2_000) break;
+      recordRetry();
       log.warn({ event: "page.data_retry", label, error: caught });
     }
   }
 
+  recordLoad({
+    label,
+    ms: Date.now() - started,
+    outcome: error instanceof DeadlineError ? "timeout" : "error",
+  });
   const requestId = (await currentRequestId().catch(() => null)) ?? "";
   log.error({
     event: "page.data_unavailable",

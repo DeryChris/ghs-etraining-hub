@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { count, eq } from "drizzle-orm";
 import { db } from "@/db/index";
 import {
@@ -161,6 +161,8 @@ export async function createProgrammeFieldAction(
   if (failure) return backTo(PATH, { error: failure });
   revalidatePath(PATH);
   revalidatePath("/trainings");
+  revalidateTag("taxonomy", "max");
+  revalidateTag("taxonomy", "max");
   return backTo(PATH, { notice: `Added “${input.name}”.` });
 }
 
@@ -216,6 +218,8 @@ export async function updateProgrammeFieldAction(
   if (failure) return backTo(PATH, { error: failure });
   revalidatePath(PATH);
   revalidatePath("/trainings");
+  revalidateTag("taxonomy", "max");
+  revalidateTag("taxonomy", "max");
   return backTo(PATH, { notice: `Saved “${parsed.data.name}”.` });
 }
 
@@ -260,6 +264,8 @@ export async function setProgrammeFieldArchivedAction(
   if (failure) return backTo(PATH, { error: failure });
   revalidatePath(PATH);
   revalidatePath("/trainings");
+  revalidateTag("taxonomy", "max");
+  revalidateTag("taxonomy", "max");
   return backTo(PATH, {
     notice: archived
       ? "Archived. It stays on past trainings but is no longer offered on a new plan."
@@ -311,6 +317,8 @@ export async function deleteProgrammeFieldAction(
   if (failure) return backTo(PATH, { error: failure });
   revalidatePath(PATH);
   revalidatePath("/trainings");
+  revalidateTag("taxonomy", "max");
+  revalidateTag("taxonomy", "max");
   return backTo(PATH, { notice: "Programme field deleted." });
 }
 
@@ -375,6 +383,8 @@ export async function createProgrammeAreaAction(
   if (failure) return backTo(PATH + anchor, { error: failure });
   revalidatePath(PATH);
   revalidatePath("/trainings");
+  revalidateTag("taxonomy", "max");
+  revalidateTag("taxonomy", "max");
   return backTo(PATH + anchor, { notice: `Added “${input.name}”.` });
 }
 
@@ -433,6 +443,8 @@ export async function updateProgrammeAreaAction(
   if (failure) return backTo(PATH + anchor, { error: failure });
   revalidatePath(PATH);
   revalidatePath("/trainings");
+  revalidateTag("taxonomy", "max");
+  revalidateTag("taxonomy", "max");
   return backTo(PATH + anchor, { notice: `Saved “${parsed.data.name}”.` });
 }
 
@@ -479,6 +491,8 @@ export async function setProgrammeAreaArchivedAction(
   if (failure) return backTo(PATH + anchor, { error: failure });
   revalidatePath(PATH);
   revalidatePath("/trainings");
+  revalidateTag("taxonomy", "max");
+  revalidateTag("taxonomy", "max");
   return backTo(PATH + anchor, {
     notice: archived
       ? "Archived. Existing trainings keep it; new plans no longer offer it."
@@ -532,6 +546,8 @@ export async function deleteProgrammeAreaAction(
   if (failure) return backTo(PATH + anchor, { error: failure });
   revalidatePath(PATH);
   revalidatePath("/trainings");
+  revalidateTag("taxonomy", "max");
+  revalidateTag("taxonomy", "max");
   return backTo(PATH + anchor, { notice: "Programme area deleted." });
 }
 

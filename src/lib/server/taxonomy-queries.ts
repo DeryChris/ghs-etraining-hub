@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import {
   areaFacilitators,
@@ -269,7 +269,7 @@ export interface GeographyRegion {
  * are included: the administration page exists to fill those in, and a learner
  * never sees this tree.
  */
-export async function listGeography(): Promise<GeographyRegion[]> {
+async function loadGeography(): Promise<GeographyRegion[]> {
   const [regionRows, districtRows, subDistrictRows, facilityRows] =
     await Promise.all([
       db.select().from(regions).orderBy(asc(regions.name)),
@@ -318,30 +318,46 @@ export interface TaxonomyTotals {
   facilities: number;
 }
 
-/** One row of counters for the two administration pages. */
-export async function getReferenceTotals(): Promise<TaxonomyTotals> {
-  const [
-    fields,
-    areas,
-    regionCount,
-    districtCount,
-    subDistrictCount,
-    facilityCount,
-  ] = await Promise.all([
-    db.select({ n: count() }).from(programmeFields),
-    db.select({ n: count() }).from(programmeAreas),
-    db.select({ n: count() }).from(regions),
-    db.select({ n: count() }).from(districts),
-    db.select({ n: count() }).from(subDistricts),
-    db.select({ n: count() }).from(facilities),
-  ]);
+export const listGeography = unstable_cache(loadGeography, ["geography-tree"], {
+  revalidate: 30,
+  tags: ["geography"],
+});
 
+/**
+ * One row of counters for the two administration pages.
+ *
+ * One statement, not six. Each count used to be its own round trip to Paris, and
+ * on a two-connection pool six of them arriving together means three waves of
+ * waiting for numbers that Postgres can produce in a single pass.
+ */
+async function loadReferenceTotals(): Promise<TaxonomyTotals> {
+  const rows = await db.execute<Record<keyof TaxonomyTotals, number>>(sql`
+    select
+      (select count(*)::int from programme_fields) as "fields",
+      (select count(*)::int from programme_areas) as "areas",
+      (select count(*)::int from regions) as "regions",
+      (select count(*)::int from districts) as "districts",
+      (select count(*)::int from sub_districts) as "subDistricts",
+      (select count(*)::int from facilities) as "facilities"
+  `);
+  const row = rows[0];
   return {
-    fields: fields[0]?.n ?? 0,
-    areas: areas[0]?.n ?? 0,
-    regions: regionCount[0]?.n ?? 0,
-    districts: districtCount[0]?.n ?? 0,
-    subDistricts: subDistrictCount[0]?.n ?? 0,
-    facilities: facilityCount[0]?.n ?? 0,
+    fields: row?.fields ?? 0,
+    areas: row?.areas ?? 0,
+    regions: row?.regions ?? 0,
+    districts: row?.districts ?? 0,
+    subDistricts: row?.subDistricts ?? 0,
+    facilities: row?.facilities ?? 0,
   };
 }
+
+/**
+ * Counters and the geography tree are reference data — edited by an
+ * administrator now and then, read by every visit to two tabs. Thirty seconds of
+ * cache (cleared by `revalidateTag` on every geography or taxonomy write) keeps
+ * them off the pool entirely for people moving between tabs.
+ */
+export const getReferenceTotals = unstable_cache(loadReferenceTotals, ["reference-totals"], {
+  revalidate: 30,
+  tags: ["geography", "taxonomy"],
+});

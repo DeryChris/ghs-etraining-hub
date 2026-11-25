@@ -6,6 +6,7 @@ import { complaints, districts, materials, programmeFields, regions, trainingSes
 import { databaseTarget } from "@/lib/db-target";
 import { within } from "@/lib/server/deadline";
 import { mapLimit } from "@/lib/server/page-data";
+import { loadStats } from "@/lib/server/runtime-stats";
 import { log } from "@/lib/server/logger";
 import { currentRequestId } from "@/lib/server/request-context";
 
@@ -260,6 +261,11 @@ export async function GET(request: Request) {
             }
           : null;
       })(),
+      // What this instance did for real visitors, not what a probe can prove.
+      // A tab that looks stuck while every probe is green shows up here as
+      // either a run of failures or as nothing at all — and those two answers
+      // point in opposite directions.
+      runtime: loadStats(),
       ...(deep ? { probes: await deepProbes(deepMode), probeMode: deepMode } : {}),
       ...(missing.length > 0 ? { missingTables: missing } : {}),
       latencyMs: Date.now() - start,
