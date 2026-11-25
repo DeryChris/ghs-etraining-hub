@@ -139,8 +139,9 @@ export default async function SettingsPage() {
             </Fact>
           </dl>
           <p className="text-xs leading-relaxed text-ink-muted">
-            Passwords are held by Supabase Auth, not by this application. To change yours, sign out and use “Forgot
-            password” on the sign-in page.
+            Your password is stored as a hash on your staff record and checked by this application — no third-party
+            sign-in service is involved. To change it, ask an administrator for a one-time reset link (see “Forgot
+            password” on the sign-in page).
           </p>
         </section>
       </div>
@@ -199,8 +200,8 @@ export default async function SettingsPage() {
             <span className="font-mono text-xs">npm run db:verify-chain</span>; browsing it in the UI is still to build.
           </Planned>
           <Planned done={false}>
-            <strong className="font-semibold text-ink">E-mail templates</strong> — sent by Supabase, configured in the
-            Supabase project, not here.
+            <strong className="font-semibold text-ink">Outgoing e-mail</strong> — the pilot sends none: reset links are
+            handed over by an administrator. A mail provider is the next step, not a setting.
           </Planned>
         </ul>
       </section>

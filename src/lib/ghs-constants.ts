@@ -104,13 +104,3 @@ export function maskStaffPin(pin: string): string {
   return pin.replace(/^GHS-(\d{2})\d{4}$/, "GHS-$1****");
 }
 
-export interface SupabaseUser {
-  id: string;
-  email: string;
-  user_metadata?: {
-    full_name?: string;
-    role?: string;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
-}

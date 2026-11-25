@@ -1,24 +1,45 @@
 # Database migrations
 
-Two complementary migration streams live in this repository:
+One migration stream lives in this repository: `drizzle/`. It owns tables, columns, enums, indexes
+and constraints generated from `src/db/schema.ts`, plus the hand-written SQL that drizzle-kit cannot
+express, and it is applied by `npm run db:migrate`.
 
-| Directory | Owns | Applied by |
-| --- | --- | --- |
-| `drizzle/` | Tables, columns, enums, indexes, constraints generated from `src/db/schema.ts` | `npm run db:migrate` |
-| `supabase/migrations/` | Raw PostgreSQL that Drizzle cannot express: RLS lock-down, grants, triggers | Supabase CLI / `psql`, **after** the Drizzle stream |
+`drizzle/` is a versioned artefact: generated SQL and `meta/` snapshots are committed and reviewed
+like code. `drizzle-kit push` remains a sandbox-only convenience for iterating on the schema, never a
+production step.
 
-`drizzle/` is a versioned artefact: generated SQL and `meta/` snapshots are committed and
-reviewed like code. `drizzle-kit push` remains a sandbox-only convenience for iterating on the
-schema, never a production step.
+The second stream that used to exist — `supabase/migrations/`, raw RLS and grants to lock down
+PostgREST — was deleted with the move to Neon (ADR‑0015). Neon exposes no auto-generated API, and the
+application connects as the table owner, for whom row-level security never applied. Nothing enforces
+row access in the database now; it is enforced in `src/lib/server/rbac.ts` and re-checked in every
+action. That is a real change in where the guarantee lives, and the reason every query goes through a
+scoped module rather than raw SQL in a page.
+
+## Proving the chain before touching a database
+
+```bash
+npm run db:check-chain
+```
+
+Applies every migration in `drizzle/meta/_journal.json` order to an in-process Postgres (PGlite) and
+fails if a file is missing, if any statement errors, or if a column in `schema.ts` (currently the
+three `password_*` columns on `users`) has no migration creating it. No server, no credentials, no
+network — so it belongs in CI, and it is the check that catches the failure mode that actually bit
+this repository: a migration file present on disk but absent from the journal, which
+`db:migrate` skips in silence.
 
 ## Fresh environment
 
 ```bash
-export DIRECT_URL="postgresql://postgres.<ref>:…@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require"
-npm run db:migrate                       # drizzle/0000_baseline.sql, 0001_…, 0002_…, 0003_…
-psql "$DIRECT_URL" -f supabase/migrations/20260113000000_lock_public_api.sql
+export DIRECT_URL="postgresql://<user>:<pw>@ep-<name>-<id>.<region>.aws.neon.tech/neondb?sslmode=require"
+npm run db:check-chain   # no server needed: prove the journal before trusting the live database
+npm run db:migrate       # drizzle/0000_baseline.sql … 0010_password_reset_tokens.sql
 npm run db:seed
 ```
+
+`DIRECT_URL` must be the **direct** Neon host, not the `-pooler` one: PgBouncer in transaction mode
+does not hold the advisory locks DDL takes. `DATABASE_URL` (the app) wants the pooled host. Swapping
+them is the most common Neon mistake, and `npm run db:doctor` calls it out by name.
 
 ## Environment that was previously created with `drizzle-kit push`
 
@@ -42,8 +63,10 @@ review the SQL → `npm run db:migrate` in each environment.
 * Never edit a migration that has been applied anywhere; add a new one.
 * Destructive changes (`DROP TABLE`, `DROP COLUMN`, `SET NOT NULL`) ship with their data
   back-fill in the same migration and are called out in the PR description.
-* `supabase/migrations/` runs last, so a new table needs its RLS lock-down statement added
-  there in the same change.
+* A migration that adds a file must add its journal entry (`drizzle/meta/_journal.json`) in the same
+  change — `db:check-chain` fails loudly if it does not.
+* There is no RLS safety net any more: a new table is readable through any query that forgets its
+  scope. Follow the module pattern in `src/lib/server/*-queries.ts` and let the tests catch the rest.
 
 The programme-areas cutover of 17 November 2026 has its own note: [cutover-2026-11-17](cutover-2026-11-17-programme-areas.md).
 

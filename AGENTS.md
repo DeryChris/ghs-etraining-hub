@@ -42,10 +42,10 @@ material, low bandwidth, and auditability**.
 | --- | --- | --- |
 | Runtime | Next.js 16 App Router, React 19, Node 22 | Vercel (serverless + edge) |
 | Styling | Tailwind CSS v4 (`@import "tailwindcss"`, no `tailwind.config.*`) | same |
-| Database | Local PostgreSQL (`127.0.0.1:5432/app_db`) | Supabase PostgreSQL |
+| Database | Local PostgreSQL (`127.0.0.1:5432/app_db`) | Neon Postgres (pooled host; `DIRECT_URL` for migrations) |
 | ORM / access | **Drizzle ORM (`drizzle-orm` + `pg`)**, `src/db/index.ts` singleton | same, pooled URL |
-| Auth | Cookie session via `src/lib/server/session.ts` (stub‑able) | Supabase Auth (`@supabase/ssr`) |
-| Files | `public/uploads/**` local disk (dev only) | Supabase Storage signed URLs |
+| Auth | Signed cookie via `src/lib/server/session.ts` (stub‑able) | same — bcrypt hash in `users`, no third‑party auth (ADR‑0015) |
+| Files | `public/uploads/**` local disk (dev only) | any S3‑compatible bucket via presigned URLs (Neon Object Storage by default) |
 
 **Hard rules**
 
@@ -53,10 +53,10 @@ material, low bandwidth, and auditability**.
    engineering decision record [ADR‑0001](docs/decisions/README.md) supersedes it. Drizzle is
    edge‑friendly, has no generated client binary, and its schema lives in TypeScript next to the
    app so typecheck fails fast. If you find `prisma/*` in the repo, delete it.
-2. **Never call Supabase SDKs directly from a component.** Wrap every provider behind an interface
-   in `src/lib/server/*` (`storage.ts`, `auth-adapter.ts`) so the sandbox runs with local
+2. **Never call a storage SDK from a component.** Wrap every provider behind an interface in
+   `src/lib/server/*` (`file-storage.ts`, `session.ts`) so the sandbox runs with local
    implementations and production swaps the adapter through one env check. Provider code must be
-   reachable from **one** file.
+   reachable from **one** file. There is no auth provider to wrap any more — identity is a row.
 3. **All data access goes through `src/lib/queries/**` or Server Actions.** A component (server or
    client) must never build SQL, never import `db`, never read `process.env.DATABASE_URL`.
 4. Anything importing `db` lives under `src/lib/server/**`, `src/app/api/**` or a Server Action, and
@@ -88,7 +88,7 @@ Breaking any of these is a build failure, even if `npm run build` passes.
    viewers (`pdf-viewer`, `lab-environment`) behind `next/dynamic` + a user gesture, always offer a
    "download for offline" path, and never autoplay video.
 7. **TypeScript strict, no escape hatches.** `any` is banned (`eslint` rule `@typescript-eslint/no-explicit-any`
-   as error), `as` casts are banned except in the two sanctioned spots in `src/lib/server/supabase.ts`.
+   as error), `as` casts are banned except in the two sanctioned spots in `src/lib/server/file-storage.ts`.
    Validate all external input with `zod` at the boundary.
 8. **Accessibility floor: WCAG 2.2 AA.** Semantic landmarks, visible focus rings (`focus-visible:ring-2
    focus-visible:ring-teal-400`), ≥ 44 px hit areas, `aria-live` for async status, no colour‑only
@@ -129,7 +129,7 @@ Northern, Oti, Savannah, Upper East, Upper West, Volta, Western, Western North),
 
 ### 4.0 What exists today vs. what you will build
 
-The learner-facing platform is live: sign-in (Supabase Auth), dashboard, catalogue →
+The learner-facing platform is live: sign-in (password + signed cookie), dashboard, catalogue →
 areas → material viewer, library search with pagination, progress (start / acknowledge /
 complete) with certificate issuance, personal CPD analytics, staff messaging, notifications,
 public certificate verification, the marketing site, and the material authoring pipeline
@@ -157,10 +157,9 @@ docs/rbac.md               # the machine-readable capability matrix + test vecto
 docs/ui-ux.md              # design tokens, components, copy tone, a11y
 docs/conventions.md        # naming, commit, PR, error-handling conventions
 docs/qa.md                 # verification gates and manual QA scripts
-docs/migrations.md         # how schema changes ship (Drizzle + Supabase streams)
+docs/migrations.md         # how schema changes ship (one Drizzle stream + db:check-chain)
 docs/decisions/**          # ADRs (identity/RLS/audit chain, CSP)
 drizzle/**                 # generated, reviewed SQL migrations (versioned)
-supabase/migrations/**     # raw SQL: RLS lock-down, grants
 scripts/**                 # ops scripts (auth provisioning, audit-chain verification)
 tests/e2e/**               # Playwright specs (public + credentialled smoke)
 src/
@@ -232,16 +231,17 @@ export const users = pgTable("users", {
 
 ## 6. Auth & RBAC implementation contract
 
-**Session** (`src/lib/server/session.ts`): identity comes from **Supabase Auth** cookies
-(`@supabase/ssr`), authority from `public.users`. `resolveAccount()` returns a discriminated
+**Session** (`src/lib/server/session.ts`): identity comes from our own signed `ghs_session` cookie
+(SHA‑256 over `SESSION_SECRET`, expiring, revocable through the `sessions` table), authority from
+`public.users`. `resolveAccount()` returns a discriminated
 state (`anonymous | unprovisioned | inactive | active`) and `getSession()` returns `Session | null`
 — it never throws, so callers `redirect("/login")`. The session carries `region`, `directorate`
 and `cadre` because content visibility depends on them. Never trust `user_metadata`: it is
 user-writable, so role and scope are read from the database.
 
-**The edge file is `src/proxy.ts`** (Next 16 renamed `middleware.ts` to `proxy.ts`). It refreshes
-the session cookie and redirects anonymous visitors on protected paths — a convenience layer.
-It runs on the edge: no DB, no Node APIs.
+**The edge file is `src/proxy.ts`** (Next 16 renamed `middleware.ts` to `proxy.ts`). It verifies the
+session cookie and redirects anonymous visitors on protected paths — a convenience layer. It reads
+no database and makes no network call.
 
 **Middleware is a tripwire, not the gate.** Real authorisation happens in the Server Action /
 Route Handler via `src/lib/server/rbac.ts`:

@@ -64,6 +64,20 @@
       "when": 1795300000000,
       "tag": "0008_users_email_index",
       "breakpoints": false
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795400000000,
+      "tag": "0009_users_password_hash",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795500000000,
+      "tag": "0010_password_reset_tokens",
+      "breakpoints": true
     }
   ]
 }

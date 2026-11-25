@@ -11,7 +11,7 @@ npm run lint
 npm test
 npm run db:check                         # migration/snapshot consistency
 npm run build                            # hermetic: no Google Fonts / CDN fetch
-npm run test:e2e:public                  # needs NEXT_PUBLIC_SUPABASE_* in .env.local
+npm run test:e2e:public                  # needs DATABASE_URL and SESSION_SECRET in .env.local
 curl -s localhost:3000/api/health        # expect {"ok":true,...}
 npm run db:migrate                       # not drizzle-kit push
 npm run db:seed                          # idempotent: run twice, counts must not change

@@ -48,6 +48,12 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Migration chain
+        # Applies the whole Drizzle journal to an in-process Postgres and fails
+        # if a file is missing, if any statement errors, or if a column in
+        # schema.ts has no migration. Needs no database and no credentials.
+        run: npm run db:check-chain
+
       - name: Production build
         run: npm run build
 

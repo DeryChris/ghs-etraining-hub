@@ -1,8 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { safeNextPath } from "@/lib/safe-redirect";
+import { authenticateUser, type AuthResult } from "@/lib/server/auth";
 import { logAudit } from "@/lib/server/audit";
-import { getSession, clearSessionCookie } from "@/lib/server/session";
+import { log } from "@/lib/server/logger";
+import { getSession, clearSessionCookie, setSessionCookie } from "@/lib/server/session";
 
 export async function signOutAction(): Promise<void> {
   const session = await getSession();
@@ -23,4 +26,73 @@ export async function signOutAction(): Promise<void> {
 
   await clearSessionCookie();
   redirect("/login");
+}
+
+/* ── Sign in ──────────────────────────────────────────────────────────────── */
+
+export interface SignInState {
+  error: string | null;
+  /** Echoed back so the form keeps what the visitor typed. */
+  email?: string;
+}
+
+/** 30 days when "Remember me" is ticked, otherwise a browser-session cookie. */
+const REMEMBER_SECONDS = 60 * 60 * 24 * 30;
+const SESSION_SECONDS = 60 * 60 * 12;
+
+/**
+ * Email and password against `public.users`, then a signed session cookie.
+ *
+ * This replaced Supabase Auth on main's "neon db migrate" branch, and the login
+ * form was still calling `supabase.auth.signInWithPassword` — which meant a
+ * successful sign-in produced a Supabase cookie that nothing on the server read.
+ * The password never leaves this process: bcrypt compares against
+ * `users.password_hash`, and identity afterwards is our own `ghs_session` cookie.
+ */
+export async function signInAction(_previous: SignInState, formData: FormData): Promise<SignInState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const remember = formData.get("remember") === "on";
+  const next = safeNextPath(String(formData.get("next") ?? ""));
+
+  if (!email || !password) {
+    return { error: "Enter your staff email and password.", email };
+  }
+
+  let attempt: AuthResult;
+  try {
+    attempt = await authenticateUser(email, password);
+  } catch (error) {
+    log.error({ event: "auth.sign_in_failed", email, error: String(error) });
+    return { error: "The server could not reach the staff directory. Try again in a moment.", email };
+  }
+
+  if (!attempt.ok) {
+    return {
+      error:
+        attempt.message === "Invalid email or password."
+          ? "The email or password is not correct. Check your details and try again."
+          : attempt.message,
+      email,
+    };
+  }
+
+  const { user } = attempt;
+  await setSessionCookie(
+    {
+      sub: user.id,
+      id: user.id,
+      role: user.role,
+      name: user.name,
+      staffId: user.staffId,
+      email: user.email,
+      region: user.region ?? null,
+      directorate: user.directorate ?? null,
+      cadre: user.cadre ?? null,
+      unitHead: user.unitHead ?? false,
+    },
+    remember ? REMEMBER_SECONDS : SESSION_SECONDS,
+  );
+
+  redirect(next);
 }

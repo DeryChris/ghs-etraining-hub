@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { poolMax, poolMaxConfigured, poolMaxSource } from "@/db/client";
-import { complaints, districts, materials, programmeFields, regions, trainingSessions, users } from "@/db/schema";
+import { complaints, districts, materials, programmeFields, regions, sessions, trainingSessions, users } from "@/db/schema";
 import { databaseTarget } from "@/lib/db-target";
 import { within } from "@/lib/server/deadline";
 import { mapLimit } from "@/lib/server/page-data";
@@ -93,7 +93,7 @@ async function probe(
  *
  * The simple probes above can all come back in 200 ms while a tab still hangs:
  * they read one table each, whereas `/trainings` fans out five reads and resolves
- * a session first. This mode times those five plus the Supabase Auth leg, so the
+ * a session first. This mode times those five plus the session lookup, so the
  * answer to "which part of the page never came back" is a URL, not a guess.
  *
  * `?deep=pages` paces those sections two at a time, exactly as the page does
@@ -128,7 +128,7 @@ async function pageProbes(mode: "mirror" | "burst" | "serial" = "mirror"): Promi
     () => probe("page: training filter options", () => getTrainingFilterOptions(), undefined, ms),
     () => probe("page: programme field options", () => listProgrammeFieldOptions(), undefined, ms),
     () => probe("page: programme catalogue", () => listFields(null), undefined, ms),
-    () => authProbe(),
+    () => sessionProbe(),
   ];
 
   if (mode === "serial") {
@@ -147,26 +147,28 @@ async function pageProbes(mode: "mirror" | "burst" | "serial" = "mirror"): Promi
 }
 
 /**
- * The leg no database probe covers. Every signed-in page calls
- * `supabase.auth.getUser()` before it reads anything, and that is a separate
- * service on a separate connection; when it stalls the page sticks and the
- * database looks innocent, exactly as it did here.
+ * The leg no table probe covers. Every signed-in page resolves a session before
+ * it reads anything, and until the Neon migration that meant a call to Supabase
+ * Auth — a separate service on a separate connection that could stall while the
+ * database looked innocent.
+ *
+ * Sessions are now a signed cookie plus one row in `sessions`, so the probe does
+ * what the page does: verify a token and read the row back. It uses a throw-away
+ * token that cannot match anything, so the answer says whether the cookie layer
+ * and the table are working, not whether anybody is signed in.
  */
-async function authProbe(): Promise<ProbeResult> {
-  const label = "auth (gotrue /auth/v1/health)";
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
-  if (!base) return { label, ms: "timeout", detail: "NEXT_PUBLIC_SUPABASE_URL is unset" };
-
+async function sessionProbe(): Promise<ProbeResult> {
+  const label = "session (cookie + sessions table)";
   const started = Date.now();
   try {
-    const response = await fetch(`${base}/auth/v1/health`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(4_000),
-      headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "" },
-    });
-    return { label, ms: Date.now() - started, detail: `http ${response.status}` };
+    const { verifySessionToken } = await import("@/lib/server/session");
+    if (verifySessionToken("probe.invalid") !== null) {
+      return { label, ms: Date.now() - started, detail: "forged token was accepted" };
+    }
+    const [row] = await db.select({ count: sql<number>`count(*)::int` }).from(sessions);
+    return { label, ms: Date.now() - started, detail: `sessions rows ${row?.count ?? 0}` };
   } catch (error) {
-    log.warn({ event: "health.auth_probe_failed", error: String(error) });
+    log.warn({ event: "health.session_probe_failed", error: String(error) });
     return { label, ms: "timeout", detail: error instanceof Error ? error.name : String(error) };
   }
 }
@@ -255,9 +257,6 @@ export async function GET(request: Request) {
               poolMax,
               poolMaxConfigured,
               poolMaxSource,
-              // Supabase's direct host (`db.<ref>.supabase.co`) is IPv6-only;
-              // Vercel functions cannot reach it at all.
-              directIpv6Host: false,
             }
           : null;
       })(),

@@ -20,10 +20,13 @@ export interface Session {
   name: string;
   staffId: string;
   email: string;
-  region?: string;
-  directorate?: string;
-  cadre?: string;
+  /** Cohort attributes. `null` means "not recorded", which is what the row holds. */
+  region: string | null;
+  directorate: string | null;
+  cadre: string | null;
   unitHead?: boolean;
+  /** Epoch milliseconds. Written by createSessionToken, checked by verifySessionToken. */
+  exp?: number;
 }
 
 export type AccountState =
@@ -42,8 +45,10 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export function createSessionToken(session: Session): string {
-  const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
+export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function createSessionToken(session: Session, ttlMs = SESSION_TTL_MS): string {
+  const payload = Buffer.from(JSON.stringify({ ...session, exp: Date.now() + ttlMs })).toString("base64url");
   const sig = createHash("sha256")
     .update(`${payload}.${process.env.SESSION_SECRET}`)
     .digest("hex");
@@ -59,7 +64,7 @@ export function verifySessionToken(token: string): Session | null {
       .digest("hex");
     if (sig !== expected) return null;
     const session: Session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    if (session.exp < Date.now()) return null;
+    if (!session.exp || session.exp < Date.now()) return null;
     return session;
   } catch {
     return null;

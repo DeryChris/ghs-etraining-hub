@@ -1,4 +1,3 @@
-import { SITE } from "@/lib/site";
 import { REQUEST_ID_COOKIE } from "@/lib/request-id";
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySessionToken } from "@/lib/server/session";
@@ -25,7 +24,8 @@ const PUBLIC_PATHS = [
   "/accessibility",
   "/login",
   "/forgot-password",
-  "/auth/callback",
+  // A one-time reset link is opened by somebody who cannot sign in yet.
+  "/reset-password",
   "/api/health",
 ];
 const STATIC_FILE = /\.(?:svg|png|jpe?g|gif|webp|ico|css|js|map|txt|woff2?)$/i;
@@ -52,7 +52,7 @@ export async function proxy(request: NextRequest) {
   const requestId = crypto.randomUUID();
   request.headers.set("x-request-id", requestId);
 
-  let response = NextResponse.next({ request });
+  const response = NextResponse.next({ request });
 
   // Check for our own session cookie
   const cookieStore = await cookies();

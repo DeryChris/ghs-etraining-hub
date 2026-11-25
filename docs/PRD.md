@@ -283,8 +283,8 @@ See §3 of `AGENTS.md` (single source of truth, mirrored nowhere else).
 | `DATABASE_URL` | server | Pooled connection string (sandbox: local Postgres) |
 | `DIRECT_URL` | server, migrations only | Direct connection for `drizzle-kit` |
 | `SESSION_SECRET` | server | 32+ bytes, rotates quarterly; signs the session cookie |
-| `SUPABASE_URL` / `SUPABASE_ANON_KEY` | server | Adapter inputs; **never** `NEXT_PUBLIC_` |
-| `SUPABASE_SERVICE_ROLE_KEY` | server only | Storage/auth admin; must never reach the browser |
+| `S3_ENDPOINT` / `S3_REGION` / `S3_BUCKET` | server | Object storage for materials; the endpoint is also compiled into the CSP |
+| `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | server only | Sign upload and download URLs; must never reach the browser |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | seed only | Seeder refuses to run in production without `ALLOW_PROD_SEED=true` |
 | `NEXT_PUBLIC_APP_URL` | client | Absolute link generation for certificates |
 

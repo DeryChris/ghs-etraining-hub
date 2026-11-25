@@ -5,12 +5,11 @@ import { and, count, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/index";
 import { users } from "@/db/schema";
-import { displayOrigin } from "@/lib/app-url";
 import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
-import { authenticateUser, createUserWithPassword, createPasswordResetToken } from "@/lib/server/auth";
+import { createPasswordResetToken } from "@/lib/server/auth";
 
 /*
  * Directory administration. Every action re-checks the capability on the server

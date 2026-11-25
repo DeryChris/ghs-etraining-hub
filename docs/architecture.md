@@ -110,7 +110,8 @@ carries the full id plus Next's digest. No stack trace is ever sent to the brows
 ## 7a. Schema migrations
 
 Two streams, applied in order: `drizzle/` (generated from `src/db/schema.ts`) then
-`supabase/migrations/` (RLS, grants). Operational detail lives in `docs/migrations.md`.
+all in one stream, because there is no second database service to lock down (ADR‑0015). Operational
+detail lives in `docs/migrations.md`.
 `drizzle-kit push` is a sandbox convenience and must never run against a real environment.
 
 ## 8. File storage layout

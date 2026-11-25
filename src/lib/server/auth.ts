@@ -5,8 +5,8 @@ import { compare, hash } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/index";
 import { users } from "@/db/schema";
+import type { Role } from "@/lib/rbac/capabilities";
 import { logAudit } from "@/lib/server/audit";
-import { log } from "@/lib/server/logger";
 
 /**
  * Password hashing with bcrypt. Cost 12 is a good balance for 2026 hardware.
@@ -31,7 +31,21 @@ export function generateToken(): string {
  * On success, updates lastLoginAt and resets failedLoginCount.
  * On failure, increments failedLoginCount and locks after 5 attempts.
  */
-export async function authenticateUser(email: string, password: string) {
+export interface AuthenticatedUser {
+  id: string;
+  role: Role;
+  name: string;
+  staffId: string;
+  email: string;
+  region: string | null;
+  directorate: string | null;
+  cadre: string | null;
+  unitHead: boolean;
+}
+
+export type AuthResult = { ok: false; message: string } | { ok: true; user: AuthenticatedUser };
+
+export async function authenticateUser(email: string, password: string): Promise<AuthResult> {
   const [user] = await db
     .select()
     .from(users)
@@ -193,11 +207,11 @@ export async function createUserWithPassword(params: {
   password: string;
   fullName: string;
   staffId: string;
-  role: string;
-  region?: string;
-  directorate?: string;
-  cadre?: string;
-  facility?: string;
+  role: Role;
+  region?: string | null;
+  directorate?: string | null;
+  cadre?: string | null;
+  facility?: string | null;
 }) {
   const passwordHash = await hashPassword(params.password);
 

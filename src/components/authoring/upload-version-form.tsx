@@ -62,7 +62,9 @@ export function UploadVersionForm({ materialId }: { materialId: string }) {
       checksum = await sha256Hex(file);
       const response = await fetch(target.uploadUrl, {
         method: "PUT",
-        headers: { "content-type": file.type || "application/octet-stream", "x-upsert": "false" },
+        // S3 rejects a PUT whose content-type differs from the one the signature
+        // covers; x-upsert was a Supabase Storage convention and is gone.
+        headers: { "content-type": file.type || "application/octet-stream" },
         body: file,
       });
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
