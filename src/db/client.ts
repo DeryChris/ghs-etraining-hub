@@ -32,11 +32,27 @@ const globalForDb = globalThis as unknown as {
  * ~100 ms (so `/api/health` looks perfect), while a page that fans out four or
  * five queries at once waits for a slot that never frees and hits its deadline.
  *
- * Three per instance is plenty — the queries themselves take milliseconds, so
+ * Two per instance is plenty — the queries themselves take milliseconds, so
  * postgres.js queues the rest client-side instead of starving the server pool.
- * Raise it only if the Supavisor pool size and the instance count allow it.
  */
-const poolMax = Number.parseInt(process.env.DB_POOL_MAX ?? "", 10) || 3;
+/**
+ * Two, even when the environment asks for more.
+ *
+ * Measured against the live project: every shape that hung needed a *third*
+ * connection opened during a cold start, and every shape that worked needed two
+ * or fewer — or three, but on an instance that had been warm for a while. When
+ * Supavisor drops that third concurrent connection attempt, postgres.js waits on
+ * it without a timeout of its own, so the page sits on its skeleton while every
+ * single-query probe answers in 150 ms. `DB_POOL_MAX` can lower this; it cannot
+ * raise it past the number that breaks.
+ */
+const POOL_MAX_CEILING = 2;
+
+const configuredPoolMax = Number.parseInt(process.env.DB_POOL_MAX ?? "", 10);
+/** What the environment asked for, before the ceiling — reported by /api/health. */
+export const poolMaxConfigured = configuredPoolMax > 0 ? configuredPoolMax : POOL_MAX_CEILING;
+export const poolMax = Math.min(poolMaxConfigured, POOL_MAX_CEILING);
+export const poolMaxSource: "env" | "default" = configuredPoolMax > 0 ? "env" : "default";
 
 function createClient(url: string) {
   return postgres(url, {
@@ -56,7 +72,12 @@ function createClient(url: string) {
     // spinner. Page-level deadlines live in `lib/server/deadline.ts`; a queued
     // connection fails fast rather than waiting forever.
     connection: {
-      statement_timeout: 15_000,
+      // Below the page deadline on purpose (lib/server/deadline.ts, 10 s): a
+      // query that runs away is cut off while the page can still render an
+      // answer, and — the part that matters — it releases its pooled connection
+      // before the page gives up, instead of holding a slot that the next
+      // request on this instance is already queued behind.
+      statement_timeout: 8_000,
       idle_in_transaction_session_timeout: 10_000,
       application_name: "ghs-training-library",
     },

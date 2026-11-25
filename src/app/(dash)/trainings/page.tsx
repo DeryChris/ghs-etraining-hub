@@ -7,7 +7,7 @@ import { Notice } from "@/components/ui/notice";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
-import { withDeadline } from "@/lib/server/page-data";
+import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { Stat } from "@/components/ui/stat";
 import { formatDate } from "@/lib/format";
 import { TRAINING_STATUSES, TRAINING_STATUS_LABELS, isTrainingStatus } from "@/lib/labels";
@@ -94,23 +94,23 @@ export default async function TrainingsPage({
     page: Math.max(1, Number.parseInt(single("page") ?? "1", 10) || 1),
   };
 
-  const loaded = await withDeadline(
-    "trainings",
-    Promise.all([
-      listTrainings({
-        q: query.q || undefined,
-        year: query.year ?? undefined,
-        programmeFieldId: query.field ?? undefined,
-        programmeAreaId: query.area ?? undefined,
-        regionId: query.region ?? undefined,
-        districtId: query.district ?? undefined,
-        status: isTrainingStatus(query.status) ? query.status : undefined,
-        page: query.page,
-      }),
-      getTrainingSummary(),
-      getTrainingFilterOptions(),
-      listProgrammeFieldOptions(),
-      listFields(session),
+  const loaded = await withDeadline("trainings", () =>
+    mapLimit([
+      () =>
+        listTrainings({
+          q: query.q || undefined,
+          year: query.year ?? undefined,
+          programmeFieldId: query.field ?? undefined,
+          programmeAreaId: query.area ?? undefined,
+          regionId: query.region ?? undefined,
+          districtId: query.district ?? undefined,
+          status: isTrainingStatus(query.status) ? query.status : undefined,
+          page: query.page,
+        }),
+      getTrainingSummary,
+      getTrainingFilterOptions,
+      listProgrammeFieldOptions,
+      () => listFields(session),
     ]),
   );
   if (!loaded.ok) {

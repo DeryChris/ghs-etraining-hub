@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { and, asc, count, desc, eq, gte, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/index";
 import {
@@ -177,7 +178,7 @@ export interface TrainingFilterOptions {
  * next year always appear, so next year's planning window is reachable before
  * anything is filed in it.
  */
-export async function getTrainingFilterOptions(): Promise<TrainingFilterOptions> {
+async function loadTrainingFilterOptions(): Promise<TrainingFilterOptions> {
   const [usedYears, regionRows, districtRows] = await Promise.all([
     db
       .selectDistinct({ year: trainingSessions.year })
@@ -199,6 +200,18 @@ export async function getTrainingFilterOptions(): Promise<TrainingFilterOptions>
     districts: districtRows,
   };
 }
+
+/**
+ * Filter options are reference data: the regions, the districts, the years
+ * anything has been filed in. They change when an administrator edits geography,
+ * not between two clicks of the same session — and they are three of the dozen
+ * queries the register fires on every visit. Thirty seconds of cache means
+ * hopping back to Trainings costs the browser nothing at all.
+ */
+export const getTrainingFilterOptions = unstable_cache(loadTrainingFilterOptions, ["training-filter-options"], {
+  revalidate: 30,
+  tags: ["taxonomy", "trainings"],
+});
 
 export interface TrainingDetail extends TrainingListRow {
   programmeFieldId: string | null;

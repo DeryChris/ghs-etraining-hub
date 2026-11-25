@@ -5,7 +5,7 @@ import { ListEmptyState } from "@/components/ui/empty-state";
 import { inputClass, labelClass } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
-import { withDeadline } from "@/lib/server/page-data";
+import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { Stat } from "@/components/ui/stat";
 import { CreateUserForm } from "@/components/users/create-user-form";
 import { UserRowActions } from "@/components/users/user-row-actions";
@@ -42,11 +42,10 @@ export default async function UsersPage({
   const status: DirectoryStatus | null = params.status === "active" || params.status === "inactive" ? params.status : null;
   const requestedPage = Number.parseInt(params.page ?? "1", 10);
 
-  const loaded = await withDeadline(
-    "users",
-    Promise.all([
-      listDirectory({ query, role, status, page: Number.isFinite(requestedPage) ? requestedPage : 1 }),
-      getDirectorySummary(),
+  const loaded = await withDeadline("users", () =>
+    mapLimit([
+      () => listDirectory({ query, role, status, page: Number.isFinite(requestedPage) ? requestedPage : 1 }),
+      getDirectorySummary,
     ]),
   );
   if (!loaded.ok) {

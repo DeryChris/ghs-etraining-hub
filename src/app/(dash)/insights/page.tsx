@@ -22,7 +22,7 @@ import {
 } from "@/lib/server/insights-queries";
 
 import { DataUnavailable } from "@/components/ui/data-unavailable";
-import { withDeadline } from "@/lib/server/page-data";
+import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { requireRole } from "@/lib/server/rbac";
 
 export const dynamic = "force-dynamic";
@@ -35,16 +35,15 @@ export default async function InsightsPage() {
   // The review queue is a sign-off duty: administrators and unit heads only.
   const reviewer = admin || session.unitHead === true;
 
-  const loaded = await withDeadline(
-    "insights",
-    Promise.all([
-      getInsights(session),
-      getTrafficSeries(session, 12),
-      getUploadSeries(session, 12),
-      getTrainingSeries(session, 12),
-      getProgrammeTraffic(session, 30),
-      getTrainingCounts(session),
-      getTypeMix(session),
+  const loaded = await withDeadline("insights", () =>
+    mapLimit([
+      () => getInsights(session),
+      () => getTrafficSeries(session, 12),
+      () => getUploadSeries(session, 12),
+      () => getTrainingSeries(session, 12),
+      () => getProgrammeTraffic(session, 30),
+      () => getTrainingCounts(session),
+      () => getTypeMix(session),
     ]),
   );
   if (!loaded.ok) {

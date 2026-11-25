@@ -131,8 +131,17 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
                 const Icon = ICONS[item.icon];
                 return (
                   <li key={item.href}>
+                    {/*
+                     * No prefetch. In the App Router a prefetched dynamic route
+                     * still renders on the server, and this menu puts a dozen of
+                     * them in the viewport at once — a dozen renders, each with a
+                     * session lookup and its own queries, competing with the tab
+                     * the visitor actually asked for. Navigation is fast enough
+                     * without it; the pool is not fast enough with it.
+                     */}
                     <Link
                       href={item.href}
+                      prefetch={false}
                       onClick={onNavigate}
                       title={item.hint}
                       aria-current={active ? "page" : undefined}

@@ -7,7 +7,7 @@ import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
-import { withDeadline } from "@/lib/server/page-data";
+import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { Stat } from "@/components/ui/stat";
 import {
   assignAreaFacilitatorAction,
@@ -48,9 +48,8 @@ export default async function ProgrammeFieldsPage({
   const error = first(query.error);
   const focusField = first(query.field);
 
-  const loaded = await withDeadline(
-    "programme-fields",
-    Promise.all([listProgrammeTaxonomy(), getReferenceTotals(), listAssignableFacilitators()]),
+  const loaded = await withDeadline("programme-fields", () =>
+    mapLimit([listProgrammeTaxonomy, getReferenceTotals, listAssignableFacilitators]),
   );
   if (!loaded.ok) {
     return (
