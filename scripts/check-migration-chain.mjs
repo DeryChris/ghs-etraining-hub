@@ -7,8 +7,23 @@
  * credentials, no network. It is the check that would have caught the
  * `0009_users_password_hash` file that was missing from `_journal.json`.
  */
-import { PGlite } from "@electric-sql/pglite";
 import { readFileSync } from "node:fs";
+
+/**
+ * PGlite is a devDependency. A checkout whose node_modules predates it fails
+ * with a bare ERR_MODULE_NOT_FOUND, which says nothing about what to do — so the
+ * import is explicit about the fix instead.
+ */
+let PGlite;
+try {
+  ({ PGlite } = await import("@electric-sql/pglite"));
+} catch {
+  console.error(
+    "✖ @electric-sql/pglite is not installed.\n" +
+      "  It is a devDependency added with this check. Run `npm install` (or `npm ci`) and try again.",
+  );
+  process.exit(1);
+}
 
 const REQUIRED_COLUMNS = ["password_hash", "password_reset_token", "password_reset_expires_at"];
 
