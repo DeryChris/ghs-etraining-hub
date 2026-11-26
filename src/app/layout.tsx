@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import type { ReactNode } from "react";
 import "./globals.css";
 import { MotionProvider } from "@/components/motion-provider";
+import { FormDrafts } from "@/components/ui/form-drafts";
 import { resolveAppUrl } from "@/lib/app-url";
 import { SITE } from "@/lib/site";
 import { themeBootScript } from "@/lib/theme";
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
       <body className="min-h-screen bg-canvas font-sans text-ink antialiased">
+        <FormDrafts />
         <MotionProvider>{children}</MotionProvider>
       </body>
     </html>

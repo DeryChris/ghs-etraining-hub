@@ -9,6 +9,8 @@ import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
+import { countWaitingFor } from "@/lib/server/review-scope";
+import { notifyAccount } from "@/lib/server/notify";
 import { canonicalStaffId, isValidStaffId, sameStaffId } from "@/lib/staff-id";
 import { staffIdMatches } from "@/lib/server/staff-id-sql";
 import { roleForStaffRole, staffRoleOf, STAFF_ROLE_VALUES } from "@/lib/rbac/capabilities";
@@ -86,6 +88,45 @@ const createInput = z
     phone: optionalText(40),
   })
   .strict();
+
+/**
+ * "There are N things waiting for you."
+ *
+ * Run after an appointment — a new unit head, a field granted, a role change —
+ * because a live queue is only useful if the person knows to look at it. Silent
+ * when nothing is waiting: an empty notification is noise.
+ */
+async function announceWaiting(userId: string, actorId: string): Promise<void> {
+  try {
+    const [target] = await db
+      .select({ role: users.role, isUnitHead: users.isUnitHead, fullName: users.fullName })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (!target) return;
+
+    const waiting = await countWaitingFor({
+      id: userId,
+      role: target.role,
+      region: null,
+      directorate: null,
+      cadre: null,
+      unitHead: target.isUnitHead,
+    });
+    const total = waiting.trainings + waiting.materials;
+    if (total === 0) return;
+
+    await notifyAccount({
+      userId,
+      title: "The review queue is yours now",
+      body: `${total} item${total === 1 ? "" : "s"} in your programme fields ${total === 1 ? "is" : "are"} already waiting for a decision — ${waiting.trainings} training${waiting.trainings === 1 ? "" : "s"} and ${waiting.materials} material${waiting.materials === 1 ? "" : "s"}.`,
+      actorId,
+      priority: "HIGH",
+    });
+  } catch (error) {
+    log.warn({ event: "user.announce_waiting_failed", userId, error: String(error) });
+  }
+}
 
 function roleChangeMessage(fullName: string, role: (typeof ROLE_VALUES)[number]): string {
   switch (role) {
@@ -255,7 +296,16 @@ export async function changeUserRoleAction(_previous: UserActionState, formData:
 
   revalidatePath("/users");
   revalidatePath("/insights");
+  revalidatePath("/review");
   log.info({ event: "user.role_changed", actor: session.sub, target: target.id, to: parsed.data.role });
+
+  /*
+   * Promotion is retroactive on purpose: the queue is read live, so somebody
+   * becoming a unit head sees everything already waiting in their fields. The
+   * only thing a live query cannot do is tell them, so this does.
+   */
+  if (next.unitHead) await announceWaiting(target.id, session.sub);
+
   return { ok: true, message: roleChangeMessage(target.fullName, parsed.data.role) };
 }
 
@@ -588,6 +638,15 @@ export async function setUserAccessAction(
   }
 
   revalidatePath("/users");
+  revalidatePath("/review");
+
+  const [after] = await db
+    .select({ role: users.role, isUnitHead: users.isUnitHead })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (after?.isUnitHead || after?.role === "SYSTEM_ADMIN") await announceWaiting(userId, session.sub);
+
   const summary = [fieldIds.length ? `${fieldIds.length} field${fieldIds.length === 1 ? "" : "s"}` : null, areaIds.length ? `${areaIds.length} area${areaIds.length === 1 ? "" : "s"}` : null]
     .filter(Boolean)
     .join(" and ");

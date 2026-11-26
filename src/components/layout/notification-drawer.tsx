@@ -37,6 +37,7 @@ const TYPE_LABEL: Record<string, string> = {
   MATERIAL_UPDATE: "Library",
   COMMENT_REPLY: "Comment",
   ASSIGNMENT_DUE: "Due",
+  REVIEW_REQUEST: "Review",
 };
 
 const TYPE_TONE: Record<string, string> = {
@@ -46,6 +47,7 @@ const TYPE_TONE: Record<string, string> = {
   COMPLAINT_UPDATE: "bg-info/12 text-info",
   DIRECT_MESSAGE: "bg-accent/20 text-ink",
   ACCOUNT: "bg-surface-2 text-ink-muted",
+  REVIEW_REQUEST: "bg-warn/15 text-warn",
 };
 
 /** "3 minutes ago", "yesterday" — anything older than a week gets a date. */

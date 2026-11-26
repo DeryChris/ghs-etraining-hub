@@ -84,6 +84,7 @@ const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   MATERIAL_UPDATE: "Protocol update",
   COMMENT_REPLY: "Discussion reply",
   ASSIGNMENT_DUE: "Assignment due",
+  REVIEW_REQUEST: "Waiting for you",
 };
 
 export function notificationTypeLabel(type: string): string {

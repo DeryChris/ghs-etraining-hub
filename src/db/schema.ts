@@ -46,6 +46,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "MATERIAL_UPDATE",
   "COMMENT_REPLY",
   "ASSIGNMENT_DUE",
+  "REVIEW_REQUEST",
 ]);
 export const notificationPriorityEnum = pgEnum("notification_priority", ["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
 

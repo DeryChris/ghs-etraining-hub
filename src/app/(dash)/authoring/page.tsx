@@ -4,6 +4,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { ListEmptyState } from "@/components/ui/empty-state";
+import { LiveRefresh } from "@/components/layout/live-refresh";
 import { PageHeader } from "@/components/ui/page-header";
 import { NewDraftForm } from "@/components/authoring/new-draft-form";
 import { materialStateBadge } from "@/components/authoring/state-badge";
@@ -37,6 +38,8 @@ export default async function AuthoringPage() {
 
   return (
     <div className="space-y-8">
+      <LiveRefresh label="authoring" />
+
       <PageHeader
         eyebrow="Authoring"
         title="My materials"

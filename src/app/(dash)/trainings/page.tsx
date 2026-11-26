@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { inputClass, labelClass } from "@/components/ui/input";
+import { LiveRefresh } from "@/components/layout/live-refresh";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
@@ -166,6 +167,8 @@ export default async function TrainingsPage({
 
   return (
     <div className="space-y-8">
+      <LiveRefresh label="trainings" />
+
       <PageHeader
         eyebrow="Training register"
         title="Trainings"

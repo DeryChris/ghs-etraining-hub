@@ -7,7 +7,7 @@ import { databaseTarget } from "@/lib/db-target";
 import { sessionSecretProblem } from "@/lib/server/session";
 import { within } from "@/lib/server/deadline";
 import { mapLimit } from "@/lib/server/page-data";
-import { migrationState } from "@/lib/server/db-diagnosis";
+import { EXPECTED_MIGRATIONS, migrationState } from "@/lib/server/db-diagnosis";
 import { loadStats } from "@/lib/server/runtime-stats";
 import { log } from "@/lib/server/logger";
 import { currentRequestId } from "@/lib/server/request-context";
@@ -41,6 +41,8 @@ const REQUIRED_TABLES = [
   "sub_districts",
   "facilities",
   "training_sessions",
+  "training_comments",
+  "file_blobs",
   "material_views",
   "materials",
   "users",
@@ -216,7 +218,16 @@ export async function GET(request: Request) {
   let dbStatus: "up" | "down" = "down";
   let schemaStatus: "current" | "outdated" | "unknown" = "unknown";
   let missing: string[] = [];
-  let migrations = { state: "unknown" as "current" | "behind" | "ahead" | "unknown", applied: 0, expected: 0 };
+  let migrations: Awaited<ReturnType<typeof migrationState>> = {
+    state: "unknown",
+    applied: 0,
+    // The build knows how many it ships even when the database cannot be asked.
+    expected: EXPECTED_MIGRATIONS,
+    pending: [],
+    lastAppliedAt: null,
+    blockedByTimestamp: false,
+    remedy: null,
+  };
 
   try {
     await db.select().from(users).limit(1);
@@ -302,7 +313,13 @@ export async function GET(request: Request) {
                   : migrations.state === "behind"
                     ? {
                         code: "SCHEMA_BEHIND",
-                        message: `The database has run ${migrations.applied} of ${migrations.expected} migrations. Run npm run db:migrate, then restart the app.`,
+                        message:
+                          `The database has run ${migrations.applied} of ${migrations.expected} migrations. ` +
+                          (migrations.pending[0] ? `Next: ${migrations.pending[0].tag}. ` : "") +
+                          (migrations.blockedByTimestamp
+                            ? "drizzle-kit is skipping that file because its journal stamp is not newer than the last applied migration. "
+                            : "") +
+                          (migrations.remedy ?? ""),
                       }
                     : {
                         code: "SCHEMA_OUTDATED",

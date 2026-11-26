@@ -11,7 +11,8 @@ import type { Action, Role, Scope } from "@/lib/rbac/capabilities";
 import { areaIdForMaterial } from "@/lib/server/authoring-queries";
 import { compactAudience } from "@/lib/notification-audience";
 import { logAudit } from "@/lib/server/audit";
-import { notifyMaterialPublished } from "@/lib/server/notify";
+import { notifyMaterialPublished, notifyReviewRequest } from "@/lib/server/notify";
+import { unitHeadsForField } from "@/lib/server/review-scope";
 import {
   createMaterialUploadTarget,
   inspectMaterialObject,
@@ -360,6 +361,29 @@ export async function submitForReviewAction(
   });
 
   revalidateAuthoring(parsed.data.materialId);
+
+  /*
+   * Tell the people who now have to decide. The field comes from the material's
+   * area, and the recipients are whoever holds that field at this moment — the
+   * queue itself is read live, so this is only the notification.
+   */
+  const [material] = await db
+    .select({ title: materials.title, fieldId: programmeAreas.fieldId })
+    .from(materials)
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .where(eq(materials.id, parsed.data.materialId))
+    .limit(1);
+  if (material) {
+    await notifyReviewRequest({
+      reviewerIds: await unitHeadsForField(material.fieldId),
+      title: "A material needs your decision",
+      body: `“${material.title}” was sent for review`,
+      linkUrl: "/review",
+      actorId: session.sub,
+      actorName: session.name,
+    });
+  }
+
   return { ok: true, message: "Sent for review. A colleague who did not upload it must approve it." };
 }
 

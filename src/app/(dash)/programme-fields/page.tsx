@@ -315,6 +315,7 @@ export default async function ProgrammeFieldsPage({
                               <ActionDialog label="Edit" title="Edit this area" size="sm">
                                 <form
                                   action={updateProgrammeAreaAction}
+                                  data-draft={`area-${area.id}`}
                                   className="grid gap-3"
                                 >
                                   <input
@@ -418,6 +419,7 @@ export default async function ProgrammeFieldsPage({
                                   )}
                                   <form
                                     action={assignAreaFacilitatorAction}
+                                    data-draft={`area-people-${area.id}`}
                                     className="flex flex-col gap-2 sm:flex-row sm:items-end"
                                   >
                                     <input

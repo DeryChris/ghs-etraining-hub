@@ -1,9 +1,18 @@
 import "server-only";
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { programmeFields, materialVersions, materials, reviewAssignments, programmeAreas, users } from "@/db/schema";
+import {
+  programmeFields,
+  materialVersions,
+  materials,
+  reviewAssignments,
+  programmeAreas,
+  trainingSessions,
+  users,
+} from "@/db/schema";
 import type { MaterialState, ReviewDecision } from "@/lib/material-workflow";
 import type { MaterialType, PriorityLevel } from "@/lib/labels";
+import { reviewsInScope, reviewScopeFor } from "@/lib/server/review-scope";
 import { scopeFor } from "@/lib/server/scope";
 import type { Viewer } from "@/lib/viewer";
 
@@ -245,15 +254,95 @@ export interface ReviewQueueRow {
  * How many versions are waiting for a decision — the sidebar badge. It uses the
  * same predicate as the queue itself, so the number always matches the page.
  */
+/**
+ * What is waiting for this person: material versions in review, plus the
+ * trainings in the register that are waiting for a decision.
+ *
+ * The badge on the Review tab counts both, because both are the same job — a
+ * unit head opening the tab expects one queue, not a materials list that quietly
+ * omits half the work. Scope is read live (see review-scope.ts), so an
+ * appointment that happens today picks up everything filed before it.
+ */
 export async function countReviewQueue(viewer: Viewer): Promise<number> {
-  const [row] = await db
-    .select({ n: count() })
-    .from(materialVersions)
-    .innerJoin(materials, eq(materials.id, materialVersions.materialId))
-    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(and(eq(materialVersions.state, "IN_REVIEW"), scopeFor(viewer)));
-  return row?.n ?? 0;
+  const scope = await reviewScopeFor(viewer);
+  if (!scope.all && scope.empty) return 0;
+
+  const [versions, trainings] = await Promise.all([
+    db
+      .select({ n: count() })
+      .from(materialVersions)
+      .innerJoin(materials, eq(materials.id, materialVersions.materialId))
+      .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+      .where(
+        and(
+          eq(materialVersions.state, "IN_REVIEW"),
+          reviewsInScope(scope, { field: programmeAreas.fieldId, area: materials.programmeAreaId }),
+        ),
+      ),
+    db
+      .select({ n: count() })
+      .from(trainingSessions)
+      .where(
+        and(
+          eq(trainingSessions.reviewState, "PENDING"),
+          eq(trainingSessions.isArchived, false),
+          reviewsInScope(scope, {
+            field: trainingSessions.programmeFieldId,
+            area: trainingSessions.programmeAreaId,
+          }),
+        ),
+      ),
+  ]);
+  return (versions[0]?.n ?? 0) + (trainings[0]?.n ?? 0);
+}
+
+export interface PendingTrainingRow {
+  id: string;
+  title: string;
+  fieldName: string | null;
+  areaName: string | null;
+  organisedOn: string;
+  authorName: string;
+  submittedAt: Date;
+}
+
+/**
+ * Trainings waiting for this person's decision.
+ *
+ * No `reviewer_id`, no assignment table, no date window: the rule is "waiting,
+ * and in a field or area I hold". A training filed two years before the unit
+ * head was appointed appears here on their first visit, which is the behaviour
+ * the register used to lose.
+ */
+export async function listPendingTrainings(viewer: Viewer): Promise<PendingTrainingRow[]> {
+  const scope = await reviewScopeFor(viewer);
+  if (!scope.all && scope.empty) return [];
+
+  return db
+    .select({
+      id: trainingSessions.id,
+      title: trainingSessions.title,
+      fieldName: programmeFields.name,
+      areaName: programmeAreas.name,
+      organisedOn: trainingSessions.organisedOn,
+      authorName: users.fullName,
+      submittedAt: trainingSessions.updatedAt,
+    })
+    .from(trainingSessions)
+    .leftJoin(programmeFields, eq(programmeFields.id, trainingSessions.programmeFieldId))
+    .leftJoin(programmeAreas, eq(programmeAreas.id, trainingSessions.programmeAreaId))
+    .innerJoin(users, eq(users.id, trainingSessions.createdById))
+    .where(
+      and(
+        eq(trainingSessions.reviewState, "PENDING"),
+        eq(trainingSessions.isArchived, false),
+        reviewsInScope(scope, {
+          field: trainingSessions.programmeFieldId,
+          area: trainingSessions.programmeAreaId,
+        }),
+      ),
+    )
+    .orderBy(asc(trainingSessions.updatedAt));
 }
 
 export async function listReviewQueue(viewer: Viewer): Promise<ReviewQueueRow[]> {
@@ -287,6 +376,14 @@ export async function listReviewQueue(viewer: Viewer): Promise<ReviewQueueRow[]>
     .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .innerJoin(users, eq(users.id, materialVersions.uploadedById))
     .leftJoin(approvalTotals, eq(approvalTotals.materialVersionId, materialVersions.id))
-    .where(and(eq(materialVersions.state, "IN_REVIEW"), scopeFor(viewer)))
+    .where(
+      and(
+        eq(materialVersions.state, "IN_REVIEW"),
+        reviewsInScope(await reviewScopeFor(viewer), {
+          field: programmeAreas.fieldId,
+          area: materials.programmeAreaId,
+        }),
+      ),
+    )
     .orderBy(asc(materialVersions.createdAt));
 }

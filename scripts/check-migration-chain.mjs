@@ -31,6 +31,29 @@ const db = new PGlite();
 const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8"));
 let failed = 0;
 
+/*
+ * The stamps have to be strictly increasing.
+ *
+ * `drizzle-kit migrate` runs a file only when its journal `when` is newer than
+ * the newest row in drizzle.__drizzle_migrations. Four entries here once shared
+ * one stamp, so on a real database 0017 was skipped in silence: migrate said
+ * "done", the schema stayed a migration behind, and the health check could only
+ * say "17 of 18". Applying the SQL directly (as this script does) cannot see
+ * that, which is exactly why it went unnoticed — so the ordering is asserted
+ * here as well.
+ */
+let previousWhen = 0;
+for (const entry of journal.entries) {
+  if (!(entry.when > previousWhen)) {
+    console.error(
+      `✖ ${entry.tag} has journal stamp ${entry.when}, not newer than the previous ${previousWhen}. ` +
+        "drizzle-kit would skip it on a real database.",
+    );
+    failed += 1;
+  }
+  previousWhen = entry.when;
+}
+
 for (const entry of journal.entries) {
   let sql;
   try {

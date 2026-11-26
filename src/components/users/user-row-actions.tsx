@@ -125,7 +125,7 @@ function ResetPasswordDialog({ userId, fullName }: { userId: string; fullName: s
     >
       <div className="space-y-5">
         {!state.credentials ? (
-          <form action={formAction} className="space-y-3">
+          <form action={formAction} data-draft={`reset-password-${userId}`} className="space-y-3">
             <input type="hidden" name="userId" value={userId} />
             <p className="text-sm leading-relaxed text-ink-muted">
               Generates a random password and clears any lockout. You read it once, here, and hand it over — nothing is
@@ -178,7 +178,7 @@ function ResetPasswordDialog({ userId, fullName }: { userId: string; fullName: s
 
         <details className="rounded-control border border-hairline bg-surface-2 px-4 py-3">
           <summary className="cursor-pointer text-sm font-semibold text-ink">Or issue a one-time link instead</summary>
-          <form action={resetAction} className="mt-3 space-y-2">
+          <form action={resetAction} data-draft={`reset-link-${userId}`} className="mt-3 space-y-2">
             <input type="hidden" name="userId" value={userId} />
             <p className="text-xs leading-relaxed text-ink-muted">
               A link lets them choose their own password. It works once and expires in an hour.
@@ -222,7 +222,7 @@ function AccessDialog({
         </Button>
       )}
     >
-      <form action={formAction} className="space-y-4">
+      <form action={formAction} data-draft={`access-${userId}`} className="space-y-4">
         <input type="hidden" name="userId" value={userId} />
 
         <div className="space-y-2">
@@ -336,7 +336,7 @@ function DetailsDialog({
       )}
     >
       <div className="space-y-6">
-        <form action={detailsAction} className="space-y-3">
+        <form action={detailsAction} data-draft={`details-${userId}`} className="space-y-3">
           <input type="hidden" name="userId" value={userId} />
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
@@ -384,7 +384,7 @@ function DetailsDialog({
           <Result state={details} />
         </form>
 
-        <form action={roleAction} className="space-y-2 border-t border-hairline pt-5">
+        <form action={roleAction} data-draft={`role-${userId}`} className="space-y-2 border-t border-hairline pt-5">
           <input type="hidden" name="userId" value={userId} />
           <label htmlFor={`role-${userId}`} className={labelClass}>
             Role

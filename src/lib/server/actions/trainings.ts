@@ -25,7 +25,8 @@ import {
 } from "@/lib/server/file-storage";
 import { mayReviewField } from "@/lib/server/rbac";
 import { getSession } from "@/lib/server/session";
-import { notifyTrainingPublished, notifyTrainingReturned } from "@/lib/server/notify";
+import { notifyReviewRequest, notifyTrainingPublished, notifyTrainingReturned } from "@/lib/server/notify";
+import { unitHeadsForField } from "@/lib/server/review-scope";
 import { field } from "@/lib/schemas/authoring";
 import { trainingInput, trainingUpdateInput } from "@/lib/schemas/training";
 import { durationLabel, planYearOf } from "@/lib/training-dates";
@@ -175,6 +176,7 @@ function readForm(formData: FormData) {
 
 function revalidateTrainings(id?: string) {
   revalidatePath("/trainings");
+  revalidatePath("/review");
   revalidatePath("/insights");
   revalidatePath("/sessions");
   if (id) revalidatePath(`/trainings/${id}`);
@@ -258,6 +260,26 @@ export async function createTrainingAction(
   }
 
   revalidateTrainings(createdId ?? undefined);
+
+  /*
+   * A training waiting for a decision is one somebody has to be told about. The
+   * recipients are resolved from the assignment that exists at this instant, not
+   * from a reviewer list captured here: if a unit head is appointed tomorrow,
+   * tomorrow's queue query picks the row up anyway (see review-scope.ts) — this
+   * notice is only the tap on the shoulder for the people already in post.
+   */
+  if (reviewState === "PENDING" && createdId) {
+    const heads = await unitHeadsForField(resolved.refs.programmeFieldId ?? null);
+    await notifyReviewRequest({
+      reviewerIds: heads,
+      title: "A training needs your decision",
+      body: `“${parsed.data.title}” is waiting in the review queue`,
+      linkUrl: `/trainings/${createdId}`,
+      actorId: session.sub,
+      actorName: session.name,
+    });
+  }
+
   const message =
     reviewState === "PENDING"
       ? `“${parsed.data.title}” was saved and sent to the unit head for review.`
@@ -337,6 +359,18 @@ export async function updateTrainingAction(
   }
 
   revalidateTrainings(parsed.data.trainingId);
+
+  if (resubmit) {
+    const heads = await unitHeadsForField(resolved.refs.programmeFieldId ?? null);
+    await notifyReviewRequest({
+      reviewerIds: heads,
+      title: "A training was resubmitted",
+      body: `“${parsed.data.title}” is back in the review queue`,
+      linkUrl: `/trainings/${parsed.data.trainingId}`,
+      actorId: session.sub,
+      actorName: session.name,
+    });
+  }
   redirect(
     `/trainings/${parsed.data.trainingId}?notice=${encodeURIComponent(
       resubmit ? "Changes saved and sent back for review." : "Changes saved.",

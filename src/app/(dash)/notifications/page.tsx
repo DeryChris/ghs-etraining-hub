@@ -1,6 +1,7 @@
 import { Bell } from "lucide-react";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { ListEmptyState } from "@/components/ui/empty-state";
+import { LiveRefresh } from "@/components/layout/live-refresh";
 import { PageHeader } from "@/components/ui/page-header";
 import { PriorityChip } from "@/components/ui/priority-chip";
 import { formatDateTime } from "@/lib/format";
@@ -18,6 +19,8 @@ export default async function NotificationsPage() {
 
   return (
     <div className="space-y-8">
+      <LiveRefresh label="notifications" seconds={30} />
+
       <PageHeader
         eyebrow="Official notices"
         title="Notifications"

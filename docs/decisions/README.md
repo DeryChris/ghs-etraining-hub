@@ -227,3 +227,15 @@ The Library tab and the catalogue were two doors to the same material. There is 
 called **Library**, its route is `/catalogue`, and search happens on it. `/library` redirects. See
 `0017-one-library-door.md`, which also carries ADR‑0018 (unit head as a role choice) and ADR‑0019
 (employee numbers are digits).
+
+---
+
+## ADR‑0020 — Queues are derived, not assigned; forms keep what was typed
+
+**Status:** accepted · **Date:** 2026‑11
+
+Review access is computed from the assignments that exist when the queue is read,
+so a unit head appointed today inherits everything already waiting in their
+fields; arrivals and appointments notify; queue pages refresh themselves; and
+every form keeps its values across a failed submission or a reload. See
+`0020-live-queues-and-kept-drafts.md`.

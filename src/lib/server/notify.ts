@@ -28,7 +28,8 @@ export type NoticeType =
   | "MATERIAL_PUBLISHED"
   | "DIRECT_MESSAGE"
   | "COMPLAINT_UPDATE"
-  | "ACCOUNT";
+  | "ACCOUNT"
+  | "REVIEW_REQUEST";
 
 interface NoticeInput {
   title: string;
@@ -175,6 +176,33 @@ export async function notifyComplaintUpdate(input: {
     linkUrl: `/help/status?ref=${encodeURIComponent(input.reference)}`,
     actorId: input.actorId,
     userIds: [input.userId],
+    priority: "HIGH",
+  });
+}
+
+/**
+ * Something arrived that somebody has to decide.
+ *
+ * Sent to whoever holds the field *now*, which is what makes an appointment
+ * retroactive in the other direction too: the queue is read live, and this is the
+ * tap on the shoulder that says it changed.
+ */
+export async function notifyReviewRequest(input: {
+  reviewerIds: string[];
+  title: string;
+  body: string;
+  linkUrl: string;
+  actorId: string;
+  actorName: string;
+}): Promise<void> {
+  if (input.reviewerIds.length === 0) return;
+  await deliver({
+    title: input.title,
+    body: `${input.body} — filed by ${input.actorName}.`,
+    type: "REVIEW_REQUEST",
+    linkUrl: input.linkUrl,
+    actorId: input.actorId,
+    userIds: input.reviewerIds,
     priority: "HIGH",
   });
 }

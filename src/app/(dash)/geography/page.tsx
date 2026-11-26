@@ -346,7 +346,7 @@ export default async function GeographyPage({
                       </div>
 
                       <ActionDialog label="Edit" title="Edit" size="sm">
-                        <form action={updateDistrictAction} className="grid gap-3">
+                        <form action={updateDistrictAction} data-draft={`district-${row.id}`} className="grid gap-3">
                           <input type="hidden" name="id" value={row.id} />
                           <input type="hidden" name="regionId" value={region.id} />
                           <div>
@@ -586,6 +586,7 @@ export default async function GeographyPage({
                         <ActionDialog label="Edit" title="Edit" size="sm">
                           <form
                             action={updateFacilityAction}
+                            data-draft={`facility-${facility.id}`}
                             className="grid gap-3"
                           >
                             <input type="hidden" name="id" value={facility.id} />

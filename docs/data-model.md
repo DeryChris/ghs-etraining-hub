@@ -166,6 +166,13 @@ re‑run, refuses to run in production unless `ALLOW_PROD_SEED=true`.
 
 * Schema change → edit `src/db/schema.ts` → `npx drizzle-kit generate` → commit SQL → apply with
   `npx drizzle-kit migrate` in staging/production. `drizzle-kit push` is a **local-only** tool.
+* **Journal stamps must be strictly increasing.** `migrate` applies a file only when its `when` is
+  newer than the newest row in `drizzle.__drizzle_migrations`; equal stamps are skipped in silence
+  (this is how `0017_library_without_marks` went unapplied while `db:migrate` printed success).
+  `src/lib/migrations.ts` mirrors the journal, `src/lib/migrations.test.ts` fails if the two
+  disagree or the stamps stop increasing, and `npm run db:check-chain` asserts the ordering too.
+* `npm run db:repair` applies the files the journal still has pending and records them — the escape
+  hatch for a database that was skipped once. `db:migrate` remains the normal path.
 * Any migration that drops or rewrites a column with PII must be paired with a retention note in
   the PR and, where data leaves the system, a DPO sign-off comment.
 * Every migration is reversible in principle: additive first, destructive in a later release after
