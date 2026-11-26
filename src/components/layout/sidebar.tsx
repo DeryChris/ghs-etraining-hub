@@ -154,7 +154,7 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
         aria-label="Primary"
         className={cn(
           "nav-scroll relative z-10 flex-1 space-y-6 overflow-y-auto py-6",
-          collapsed ? "px-0" : "px-3",
+          collapsed ? "nav-scroll-rail px-0" : "px-3",
         )}
       >
         {groups.map((group) => (
@@ -208,7 +208,9 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
                       <Icon
                         className={cn(
                           "relative h-[18px] w-[18px] shrink-0 transition-transform duration-fast",
-                          !active && "group-hover:translate-x-0.5",
+                          /* The nudge belongs to the expanded list; in the rail it
+                             would shift an otherwise centred icon by 2px. */
+                          !active && !collapsed && "group-hover:translate-x-0.5",
                         )}
                         aria-hidden
                       />

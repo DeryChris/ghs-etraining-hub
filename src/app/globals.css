@@ -290,6 +290,13 @@
   overscroll-behavior: contain;
 }
 
+/* Collapsed rail: `stable` reserves the 10px gutter on the right only, which left
+   every centred icon 5px off to the left of the 76px bar — visible as "pushed to
+   the side". Reserving it on both edges keeps the icon row symmetric. */
+.nav-scroll-rail {
+  scrollbar-gutter: stable both-edges;
+}
+
 .nav-scroll::-webkit-scrollbar {
   width: 10px;
 }
