@@ -4,6 +4,7 @@ import { db } from "@/db/index";
 import { poolMax, poolMaxConfigured, poolMaxSource } from "@/db/client";
 import { complaints, districts, materials, programmeFields, regions, sessions, trainingSessions, users } from "@/db/schema";
 import { databaseTarget } from "@/lib/db-target";
+import { sessionSecretProblem } from "@/lib/server/session";
 import { within } from "@/lib/server/deadline";
 import { mapLimit } from "@/lib/server/page-data";
 import { loadStats } from "@/lib/server/runtime-stats";
@@ -231,7 +232,12 @@ export async function GET(request: Request) {
     log.error({ event: "health.db_unavailable", requestId, error: cause });
   }
 
-  const ok = dbStatus === "up" && schemaStatus !== "outdated";
+  // A deployment with no session key cannot sign anybody in, and the failure
+  // surfaced only after a correct password — the least diagnosable moment.
+  // Naming it here costs one string comparison and saves that hunt.
+  const sessionProblem = sessionSecretProblem();
+
+  const ok = dbStatus === "up" && schemaStatus !== "outdated" && sessionProblem === null;
 
   return NextResponse.json(
     {
@@ -241,7 +247,12 @@ export async function GET(request: Request) {
       // from "still the previous deploy".
       build: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev",
       uptime: process.uptime(),
-      checks: { db: dbStatus, schema: schemaStatus },
+      checks: {
+        db: dbStatus,
+        schema: schemaStatus,
+        session: sessionProblem === null ? "configured" : "missing",
+        ...(sessionProblem === null ? {} : { sessionHint: sessionProblem }),
+      },
       // Host and port only — never the password. This is the single most useful
       // fact when a deployment is slow: 5432 (direct) instead of 6543 (pooler)
       // makes every cold start wait on a fresh Postgres connection.

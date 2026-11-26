@@ -53,14 +53,28 @@ export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  * can reproduce, so every cookie would be forgeable by anyone who read this file.
  * Better to fail loudly on the first sign-in than to hand out admin sessions.
  */
-function signingSecret(): string {
+const SHIPPED_PLACEHOLDERS = ["replace-with-32-char-min-secret", "change-me", "changeme", "secret"];
+
+export function sessionSecretProblem(): string | null {
   const secret = process.env.SESSION_SECRET;
-  if (!secret || secret.length < 32) {
+  if (!secret) return "SESSION_SECRET is not set";
+  if (SHIPPED_PLACEHOLDERS.includes(secret.trim().toLowerCase())) {
+    return "SESSION_SECRET is still the example value from .env.example";
+  }
+  if (secret.length < 32) return `SESSION_SECRET is ${secret.length} characters; 32 is the minimum`;
+  return null;
+}
+
+function signingSecret(): string {
+  const problem = sessionSecretProblem();
+  if (problem) {
     throw new Error(
-      "SESSION_SECRET is missing or shorter than 32 characters. Generate one with `openssl rand -base64 48` and set it in .env / Vercel (see .env.example).",
+      `${problem}. Generate one and put it in .env (and in Vercel): ` +
+        "`openssl rand -base64 48`, or on Windows " +
+        "`node -e \"console.log(require('crypto').randomBytes(48).toString('base64'))\"`.",
     );
   }
-  return secret;
+  return process.env.SESSION_SECRET as string;
 }
 
 export function createSessionToken(session: Session, ttlMs = SESSION_TTL_MS): string {
@@ -189,13 +203,20 @@ export async function setSessionCookie(session: Session, maxAgeSeconds: number) 
     path: "/",
   });
 
+  // Separate from the signing failure above: a reachable-but-wrong database is a
+  // different problem from a missing key, and blaming the key sends people to
+  // the wrong place.
   const tokenHash = hashToken(token);
   const exp = new Date(Date.now() + maxAgeSeconds * 1000);
-  await db.insert(sessions).values({
-    userId: session.sub,
-    tokenHash,
-    expiresAt: exp,
-  });
+  try {
+    await db.insert(sessions).values({
+      userId: session.sub,
+      tokenHash,
+      expiresAt: exp,
+    });
+  } catch (cause) {
+    throw new Error(`session-row-not-recorded: ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
 }
 
 /** Clear the session cookie + revoke the DB row. */
