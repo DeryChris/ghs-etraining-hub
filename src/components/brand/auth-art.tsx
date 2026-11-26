@@ -16,12 +16,12 @@ export function AuthArt({ className = "" }: { className?: string }) {
     >
       <defs>
         <linearGradient id="auth-sky" x1="0" y1="0" x2="0.6" y2="1">
-          <stop offset="0%" stopColor="#3ecf8e" />
-          <stop offset="52%" stopColor="#1e9e6a" />
-          <stop offset="100%" stopColor="#0b6b47" />
+          <stop offset="0%" stopColor="#0a7d4b" />
+          <stop offset="52%" stopColor="#006b3f" />
+          <stop offset="100%" stopColor="#003d24" />
         </linearGradient>
         <radialGradient id="auth-glow" cx="0.24" cy="0.14" r="0.72">
-          <stop offset="0%" stopColor="#b9f6d8" stopOpacity="0.55" />
+          <stop offset="0%" stopColor="#eaffee" stopOpacity="0.20" />
           <stop offset="100%" stopColor="#b9f6d8" stopOpacity="0" />
         </radialGradient>
         <linearGradient id="auth-wave" x1="0" y1="0" x2="1" y2="0">
@@ -72,7 +72,7 @@ export function AuthArt({ className = "" }: { className?: string }) {
       </g>
 
       {/* Soft light at the base so the panel does not end in a hard edge. */}
-      <rect y="820" width="640" height="80" fill="#0b6b47" fillOpacity="0.55" />
+      <rect y="800" width="640" height="100" fill="#00301c" fillOpacity="0.55" />
     </svg>
   );
 }

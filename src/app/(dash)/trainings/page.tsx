@@ -9,12 +9,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { NewTrainingDialog } from "@/components/trainings/new-training-dialog";
-import { FieldTileIcon } from "@/components/ui/field-tile-icon";
+import { ProgrammeCard } from "@/components/trainings/programme-card";
 import { Stat } from "@/components/ui/stat";
 import { formatDate } from "@/lib/format";
 import { TRAINING_STATUSES, TRAINING_STATUS_LABELS, isTrainingStatus } from "@/lib/labels";
 import { can } from "@/lib/rbac/capabilities";
-import { fieldHref } from "@/lib/links";
 import { listFields } from "@/lib/server/learning-queries";
 import { requireSession } from "@/lib/server/rbac";
 import { listGeography, listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
@@ -186,68 +185,6 @@ export default async function TrainingsPage({
       />
 
       <Notice notice={notice} error={error} />
-
-      {/* The programme catalogue, on the same screen as the register it files into. */}
-      <section id="catalogue" aria-labelledby="catalogue-heading" className="space-y-4 scroll-mt-24">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 id="catalogue-heading" className="text-lg font-bold text-ink">
-              Programme catalogue
-            </h2>
-            <p className="text-sm text-ink-muted">
-              Every programme field GHS trains in, with the areas inside it. Pick one to see its materials and the
-              trainings recorded against it.
-            </p>
-          </div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-            {catalogue.length} {catalogue.length === 1 ? "programme field" : "programme fields"}
-          </span>
-        </div>
-
-        {catalogue.length === 0 ? (
-          <ListEmptyState
-            title="The programme taxonomy is empty"
-            description="An administrator maintains the fields and areas at Programme fields. They appear here as soon as they are published."
-          />
-        ) : (
-          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {catalogue.map((field) => (
-              <li key={field.id}>
-                <div className="group flex h-full flex-col rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40">
-                  <div className="flex items-start justify-between gap-3">
-                    <FieldTileIcon code={field.code} size={52} className="transition-transform duration-200 group-hover:-translate-y-0.5" />
-                    <span className="font-mono text-xs font-semibold tracking-wide text-ink-muted">{field.code}</span>
-                  </div>
-                  <h3 className="mt-3 text-base font-semibold leading-snug text-ink">
-                    {/* Filters the register in place — the catalogue is part of
-                        this screen, not a page you leave to reach. */}
-                    <Link
-                      href={`/trainings?field=${field.id}#register`}
-                      className="transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                    >
-                      {field.name}
-                    </Link>
-                  </h3>
-                  {field.description && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-muted">{field.description}</p>}
-                  <p className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-4 text-xs font-semibold text-ink-muted">
-                    <span>
-                      {field.areaCount} {field.areaCount === 1 ? "programme area" : "programme areas"} · {field.materialCount}{" "}
-                      {field.materialCount === 1 ? "material" : "materials"}
-                    </span>
-                    <Link
-                      href={fieldHref(field.code)}
-                      className="text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                    >
-                      Areas &amp; materials
-                    </Link>
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
 
       <section
         id="register"
@@ -423,6 +360,39 @@ export default async function TrainingsPage({
           </p>
         </div>
       </form>
+
+      {/* The programme catalogue, on the same screen as the register it files into. */}
+      <section id="catalogue" aria-labelledby="catalogue-heading" className="space-y-4 scroll-mt-24">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="catalogue-heading" className="text-lg font-bold text-ink">
+              Programme catalogue
+            </h2>
+            <p className="text-sm text-ink-muted">
+              Every programme field GHS trains in, with the areas inside it. Pick one to see its materials and the
+              trainings recorded against it.
+            </p>
+          </div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            {catalogue.length} {catalogue.length === 1 ? "programme field" : "programme fields"}
+          </span>
+        </div>
+
+        {catalogue.length === 0 ? (
+          <ListEmptyState
+            title="The programme taxonomy is empty"
+            description="An administrator maintains the fields and areas at Programme fields. They appear here as soon as they are published."
+          />
+        ) : (
+          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {catalogue.map((field) => (
+              <li key={field.id}>
+                <ProgrammeCard field={field} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {list.items.length === 0 ? (
         <ListEmptyState

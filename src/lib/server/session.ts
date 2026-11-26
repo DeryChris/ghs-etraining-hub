@@ -25,6 +25,8 @@ export interface Session {
   directorate: string | null;
   cadre: string | null;
   unitHead?: boolean;
+  /** Set while the account still carries the password ICT issued. */
+  mustChange?: boolean;
   /** Epoch milliseconds. Written by createSessionToken, checked by verifySessionToken. */
   exp?: number;
 }
@@ -118,11 +120,12 @@ export async function createDbSession(userId: string, ip?: string, userAgent?: s
     role: user.role,
     name: user.fullName,
     staffId: user.ghsStaffId,
-    email: user.email,
+    email: user.email ?? "",
     region: user.region,
     directorate: user.directorate,
     cadre: user.cadre,
     unitHead: user.isUnitHead,
+    mustChange: user.mustChangePassword,
   };
 
   const token = createSessionToken(session);
@@ -167,7 +170,7 @@ export const resolveAccount = cache(async (): Promise<AccountState> => {
   const [user] = await db.select().from(users).where(eq(users.id, sessionRow.userId)).limit(1);
 
   if (!user) return { state: "anonymous" };
-  if (!user.isActive) return { state: "inactive", email: user.email };
+  if (!user.isActive) return { state: "inactive", email: user.email ?? "" };
 
   return {
     state: "active",
@@ -177,11 +180,12 @@ export const resolveAccount = cache(async (): Promise<AccountState> => {
       role: user.role,
       name: user.fullName,
       staffId: user.ghsStaffId,
-      email: user.email,
+      email: user.email ?? "",
       region: user.region,
       directorate: user.directorate,
       cadre: user.cadre,
       unitHead: user.isUnitHead,
+      mustChange: user.mustChangePassword,
     },
   };
 });

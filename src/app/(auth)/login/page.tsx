@@ -24,7 +24,9 @@ export default async function LoginPage({
       <div className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Staff sign in</p>
         <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">Welcome back</h1>
-        <p className="text-sm leading-relaxed text-ink-muted">Sign in with your GHS staff email and password.</p>
+        <p className="text-sm leading-relaxed text-ink-muted">
+          Sign in with your Staff ID and the password you were given. Your first sign-in asks you to choose your own.
+        </p>
       </div>
 
       <div className="surface-card p-7 sm:p-8">
@@ -51,7 +53,8 @@ export default async function LoginPage({
       </Link>
 
       <p className="text-center text-xs leading-relaxed text-ink-muted">
-        Need access? Ask your facility administrator to add you to the staff directory.
+        No account yet? Every member of staff on the Upper West payroll has one. If yours is missing, lodge a complaint
+        and ICT will add you.
       </p>
     </>
   );

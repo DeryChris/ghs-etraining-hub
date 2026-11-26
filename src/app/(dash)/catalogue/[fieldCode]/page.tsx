@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { FieldTileIcon } from "@/components/ui/field-tile-icon";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { areaHref } from "@/lib/links";
 import { getFieldByCode, listAreasInField } from "@/lib/server/learning-queries";
@@ -34,7 +35,12 @@ export default async function FieldPage({ params }: { params: Promise<{ fieldCod
         </ol>
       </nav>
 
-      <PageHeader eyebrow={field.code} title={field.name} description={field.description ?? undefined} />
+      <PageHeader
+        eyebrow={field.code}
+        title={field.name}
+        description={field.description ?? undefined}
+        icon={<FieldTileIcon code={field.code} size={54} />}
+      />
 
       <section aria-labelledby="areas-heading" className="space-y-4">
         <h2 id="areas-heading" className="text-lg font-bold text-ink">

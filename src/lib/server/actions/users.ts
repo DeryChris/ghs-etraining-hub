@@ -306,6 +306,9 @@ export async function sendPasswordResetAction(_previous: UserActionState, formDa
   if (!target) return { ok: false, message: "That person is no longer in the directory." };
   if (!target.isActive) return { ok: false, message: "Reactivate the account before sending a reset link." };
 
+  if (!target.email) {
+    return { ok: false, message: "That account has no e-mail on file. Reset the password instead — it hands over a new one directly." };
+  }
   const result = await createPasswordResetToken(target.email);
 
   await logAudit({
@@ -472,7 +475,7 @@ export async function resetUserPasswordAction(
   return {
     ok: true,
     message: `New password for ${target.fullName}. Copy it now — it is not shown again.`,
-    credentials: { email: target.email, fullName: target.fullName, password },
+    credentials: { email: target.email ?? "", fullName: target.fullName, password },
   };
 }
 
@@ -482,7 +485,8 @@ const detailsInput = z
   .object({
     userId: z.string().uuid(),
     fullName: z.string().trim().min(3, "Enter the full name.").max(120),
-    email: z.string().trim().toLowerCase().email("Enter a valid e-mail address."),
+    // Optional: staff without a work address sign in with their employee number.
+    email: z.union([z.string().trim().toLowerCase().email("Enter a valid e-mail address."), z.literal("")]),
     phone: z.string().trim().max(32).optional().or(z.literal("")),
     cadre: z.string().trim().max(80).optional().or(z.literal("")),
     facility: z.string().trim().max(120).optional().or(z.literal("")),
@@ -524,7 +528,7 @@ export async function updateUserDetailsAction(
         .update(users)
         .set({
           fullName: parsed.data.fullName,
-          email: parsed.data.email,
+          email: parsed.data.email || null,
           phone: parsed.data.phone || null,
           cadre: parsed.data.cadre || null,
           facility: parsed.data.facility || null,
@@ -538,7 +542,7 @@ export async function updateUserDetailsAction(
           action: "USER_DETAILS_UPDATED",
           entity: "user",
           entityId: target.id,
-          metadata: { from: target.email, to: parsed.data.email },
+          metadata: { from: target.email, to: parsed.data.email || null },
         },
         tx,
       );

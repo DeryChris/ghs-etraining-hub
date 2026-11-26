@@ -35,27 +35,55 @@ export default async function InsightsPage() {
   // The review queue is a sign-off duty: administrators and unit heads only.
   const reviewer = admin || session.unitHead === true;
 
-  const loaded = await withDeadline("insights", () =>
-    mapLimit([
-      () => getInsights(session),
-      () => getTrafficSeries(session, 12),
-      () => getUploadSeries(session, 12),
-      () => getTrainingSeries(session, 12),
-      () => getProgrammeTraffic(session, 30),
-      () => getTrainingCounts(session),
-      () => getTypeMix(session),
-    ]),
+  /*
+   * Two classes of figure, loaded differently.
+   *
+   * The headline numbers are the page: without them there is nothing to show, so
+   * they get the deadline and the retry card. The five charts underneath are
+   * supporting detail — a slow chart under a cold Neon connection must not blank
+   * a page whose totals did arrive, so each one falls back to an empty series and
+   * the page says so quietly instead of failing.
+   */
+  const essential = await withDeadline("insights", () =>
+    mapLimit([() => getInsights(session), () => getTrainingCounts(session)]),
   );
-  if (!loaded.ok) {
+  if (!essential.ok) {
     return (
       <DataUnavailable
         title="Insights did not load"
         description="The traffic and catalogue figures could not be read in time. The numbers on this page are recomputed per request, so nothing is stale or lost."
-        requestId={loaded.requestId}
+        requestId={essential.requestId}
       />
     );
   }
-  const [insights, traffic, uploads, sessions, programmeTraffic, trainingCounts, typeMix] = loaded.data;
+  const [insights, trainingCounts] = essential.data;
+
+  const optional = await withDeadline(
+    "insights.series",
+    () =>
+      mapLimit(
+        [
+          () => getTrafficSeries(session, 12),
+          () => getUploadSeries(session, 12),
+          () => getTrainingSeries(session, 12),
+          () => getProgrammeTraffic(session, 30),
+          () => getTypeMix(session),
+        ],
+        4,
+      ),
+    8_000,
+  );
+
+  // Empty shapes rather than nulls: every chart below already knows how to draw
+  // "nothing yet", and the page keeps its layout while the figures arrive.
+  const traffic = optional.ok ? optional.data[0] : { buckets: [], views: [], downloads: [], totals: { views: 0, downloads: 0 } };
+  const uploads = optional.ok ? optional.data[1] : { buckets: [], series: [], total: 0 };
+  const sessions = optional.ok ? optional.data[2] : { buckets: [], counts: [], byProgramme: [], total: 0 };
+  const programmeTraffic = optional.ok ? optional.data[3] : [];
+  const typeMix = optional.ok
+    ? optional.data[4]
+    : (["DOCUMENT", "VIDEO", "LAB", "ASSESSMENT_LINK"] as const).map((type) => ({ type, count: 0 }));
+  const partial = !optional.ok;
 
   const hasTraffic = traffic.totals.views + traffic.totals.downloads > 0;
   const hasUploads = uploads.total > 0;
@@ -64,6 +92,13 @@ export default async function InsightsPage() {
 
   return (
     <div className="space-y-8">
+      {partial && (
+        <p className="rounded-control border border-warn/40 bg-warn/10 px-4 py-3 text-sm leading-relaxed text-ink">
+          The headline figures loaded, but the charts below did not answer in time. Refresh in a moment to fill them in
+          — nothing has been lost.
+        </p>
+      )}
+
       <PageHeader
         eyebrow="Insights"
         title={admin ? "Service insights" : "Programme insights"}

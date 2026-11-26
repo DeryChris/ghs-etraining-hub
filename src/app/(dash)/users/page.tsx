@@ -243,7 +243,7 @@ export default async function UsersPage({
                       <UserRowActions
                         userId={row.id}
                         fullName={row.fullName}
-                        email={row.email}
+                        email={row.email ?? ""}
                         role={row.role}
                         region={row.region}
                         cadre={row.cadre}

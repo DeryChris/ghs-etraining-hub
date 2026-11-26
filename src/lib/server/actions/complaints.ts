@@ -332,7 +332,7 @@ export async function resetAccessAction(_previous: ComplaintState, formData: For
     action: "ACCESS_RESET",
     entity: "user",
     entityId: person.id,
-    metadata: { complaintId, emailChanged: email.data !== person.email.toLowerCase() },
+    metadata: { complaintId, emailChanged: email.data !== (person.email ?? "").toLowerCase() },
   });
 
   return {

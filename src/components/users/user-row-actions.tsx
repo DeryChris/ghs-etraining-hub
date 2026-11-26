@@ -65,7 +65,7 @@ export function UserRowActions({
 }: {
   userId: string;
   fullName: string;
-  email: string;
+  email: string | null;
   role: Role;
   region: string | null;
   cadre: string | null;
@@ -94,7 +94,7 @@ export function UserRowActions({
       <DetailsDialog
         userId={userId}
         fullName={fullName}
-        email={email}
+        email={email ?? ""}
         role={role}
         region={region}
         cadre={cadre}
@@ -315,7 +315,7 @@ function DetailsDialog({
 }: {
   userId: string;
   fullName: string;
-  email: string;
+  email: string | null;
   role: Role;
   region: string | null;
   cadre: string | null;
@@ -348,9 +348,16 @@ function DetailsDialog({
             </div>
             <div className="sm:col-span-2">
               <label htmlFor={`email-${userId}`} className={labelClass}>
-                E-mail
+                Work e-mail <span className="font-normal text-ink-muted">(optional)</span>
               </label>
-              <input id={`email-${userId}`} name="email" type="email" defaultValue={email} required className={inputClass} />
+              <input
+                id={`email-${userId}`}
+                name="email"
+                type="email"
+                defaultValue={email ?? ""}
+                placeholder="name@ghs.gov.gh"
+                className={inputClass}
+              />
             </div>
             <div>
               <label htmlFor={`region-${userId}`} className={labelClass}>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
+import { FieldTileIcon } from "@/components/ui/field-tile-icon";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
@@ -159,7 +160,9 @@ export default async function ProgrammeFieldsPage({
                 }`}
               >
                 <header className="flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <FieldTileIcon code={field.code} size={38} className="mt-0.5" />
+                    <div className="min-w-0">
                     <p className="font-mono text-[11px] font-semibold tracking-wide text-ink-muted">
                       {field.code}
                     </p>
@@ -179,6 +182,7 @@ export default async function ProgrammeFieldsPage({
                       {field.areaCount === 1 ? "" : "s"} · {field.trainingCount}{" "}
                       training{field.trainingCount === 1 ? "" : "s"} filed here
                     </p>
+                    </div>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
                     <form action={setProgrammeFieldArchivedAction}>

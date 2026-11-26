@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { resetPassword, verifyPasswordResetToken } from "@/lib/server/auth";
+import { changeOwnPassword, resetPassword, verifyPasswordResetToken } from "@/lib/server/auth";
 import { log } from "@/lib/server/logger";
+import { getSession, setSessionCookie } from "@/lib/server/session";
 
 export interface PasswordResetState {
   error: string | null;
@@ -45,4 +46,48 @@ export async function completePasswordResetAction(
 /** Kept for pages that want a plain "go to sign-in" after the form succeeds. */
 export async function backToSignIn(): Promise<void> {
   redirect("/login");
+}
+
+/* ── First sign-in / Settings: change your own password ───────────────────── */
+
+export interface ChangePasswordState {
+  error: string | null;
+  done?: boolean;
+}
+
+/**
+ * The one screen a fresh account can reach.
+ *
+ * Every staff member starts on a password ICT chose for them, so the first
+ * sign-in has to become theirs before the workspace opens. The current password
+ * is required here too: a borrowed, still-unlocked browser must not be enough to
+ * take an account over.
+ */
+export async function changePasswordAction(
+  _previous: ChangePasswordState,
+  formData: FormData,
+): Promise<ChangePasswordState> {
+  const session = await getSession();
+  if (!session) return { error: "Your session ended. Sign in again." };
+
+  const current = String(formData.get("current") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (!current) return { error: "Enter the password you signed in with." };
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return { error: `Use at least ${MIN_PASSWORD_LENGTH} characters for your new password.` };
+  }
+  if (password !== confirm) return { error: "The two new passwords do not match. Check both and try again." };
+  if (password === current) return { error: "Choose a password different from the one you were given." };
+
+  const result = await changeOwnPassword(session.sub, current, password);
+  if (!result.ok) return { error: result.message ?? "The password was not changed. Try again." };
+
+  log.info({ event: "auth.password_changed", userId: session.sub });
+
+  // The claim in the session cookie says "must change"; a fresh cookie is the
+  // cleanest way to clear it and let the proxy stop redirecting.
+  await setSessionCookie({ ...session, mustChange: false }, 60 * 60 * 12);
+  return { error: null, done: true };
 }

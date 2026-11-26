@@ -21,7 +21,8 @@ export interface DirectoryRow {
   id: string;
   staffId: string;
   fullName: string;
-  email: string;
+  /** Null for the staff whose payroll record carries no work address. */
+  email: string | null;
   role: Role;
   region: string | null;
   directorate: string | null;

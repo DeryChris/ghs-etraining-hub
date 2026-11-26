@@ -27,8 +27,15 @@ export const notificationPriorityEnum = pgEnum("notification_priority", ["LOW", 
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /**
+   * The employee number off the payroll: `112755`. It is the thing every member
+   * of staff knows by heart, so it is what they sign in with — the e-mail is
+   * optional because more than a third of the Upper West sheet has none.
+   */
   ghsStaffId: varchar("ghs_staff_id", { length: 16 }).notNull().unique(),
-  email: text("email").notNull().unique().$default(() => ""),
+  email: text("email").unique(),
+  /** True until somebody changes the password ICT handed them. */
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
   passwordHash: text("password_hash"),
   passwordResetToken: text("password_reset_token"),
   passwordResetExpiresAt: timestamp("password_reset_expires_at", { withTimezone: true }),
@@ -38,7 +45,10 @@ export const users = pgTable("users", {
   cadre: text("cadre"),
   directorate: text("directorate"),
   region: text("region"),
+  district: text("district"),
+  subDistrict: text("sub_district"),
   facility: text("facility"),
+  gender: text("gender"),
   isActive: boolean("is_active").notNull().default(true),
   /**
    * A unit head is a facilitator who also signs off the material filed under
@@ -58,6 +68,7 @@ export const users = pgTable("users", {
 }, (t) => [
   index("users_region_role_idx").on(t.region, t.role),
   index("users_directorate_idx").on(t.directorate),
+  index("users_district_idx").on(t.district),
   index("users_facility_idx").on(t.facility),
   index("users_email_lower_idx").on(sql`lower(${t.email})`),
 ]);

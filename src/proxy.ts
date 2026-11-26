@@ -68,6 +68,14 @@ export async function proxy(request: NextRequest) {
     return withRequestId(NextResponse.redirect(url), requestId);
   }
 
+  // A password ICT issued opens exactly one door: choosing your own.
+  if (session?.mustChange && pathname !== "/change-password" && pathname !== "/api/health") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/change-password";
+    url.search = "";
+    return withRequestId(NextResponse.redirect(url), requestId);
+  }
+
   if (session && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";

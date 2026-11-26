@@ -255,6 +255,35 @@ Anything `NEXT_PUBLIC_*` changed later needs a redeploy, because it is compiled 
 
 ## Staff logins
 
+Staff sign in with their **employee number** (`112755`) and the password ICT gave them. The e-mail is
+optional — most of the Upper West payroll has none — and the first sign-in can only choose a new
+password (`users.must_change_password`, checked by `proxy.ts`).
+
+### Importing the staffing sheet
+
+The GHS staffing export (employee no., name, cadre, facility, district, sub-district) is imported with
+one command. The sheet is **never committed** — it is passed by path and only counts are printed:
+
+```bash
+npm run staff:import -- --file "/path/to/Staff Data.csv" --dry-run   # summary only, writes nothing
+npm run staff:import -- --file "/path/to/Staff Data.csv"             # geography, then accounts
+```
+
+* Geography is matched by name and created when missing: region → district → sub-district → facility.
+* Every account is created as `LEARNER` with `must_change_password = true`, so nothing in the
+  spreadsheet can hand out review authority by accident. Roles and programme access are assigned
+  afterwards in `/users` (Facilitators / Unit heads / Admins, then the access overlay).
+* First password: `<employee number>@123` — deliberately easy to say out loud and replaced on first
+  sign-in. It is hashed with bcrypt before it is stored and is never printed or logged.
+* Re-running is safe: names, cadre, facility and geography are refreshed; an existing password, role,
+  unit-head duty and programme grants are left alone. `--reset-passwords` reissues the default password
+  for everyone in the sheet, which is what you want after a bulk hand-over and not otherwise.
+
+Personal data from the sheet lives only in the database: `.gitignore` covers `Staff Data.csv`, and the
+import writes one audit row for the batch rather than a row per person.
+
+### One account at a time
+
 1. Insert the directory row (the source of truth for identity and role):
 
    ```sql

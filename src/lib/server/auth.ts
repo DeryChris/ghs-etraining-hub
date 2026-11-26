@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash } from "crypto";
 import { compare, hash } from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { users } from "@/db/schema";
 import type { Role } from "@/lib/rbac/capabilities";
@@ -27,7 +27,7 @@ export function generateToken(): string {
 }
 
 /**
- * Authenticate a user by email + password. Returns the user row or null.
+ * Authenticate a user by employee number (or e-mail) + password.
  * On success, updates lastLoginAt and resets failedLoginCount.
  * On failure, increments failedLoginCount and locks after 5 attempts.
  */
@@ -37,6 +37,8 @@ export interface AuthenticatedUser {
   name: string;
   staffId: string;
   email: string;
+  /** True when the password is still the one ICT issued. */
+  mustChangePassword: boolean;
   region: string | null;
   directorate: string | null;
   cadre: string | null;
@@ -45,11 +47,20 @@ export interface AuthenticatedUser {
 
 export type AuthResult = { ok: false; message: string } | { ok: true; user: AuthenticatedUser };
 
-export async function authenticateUser(email: string, password: string): Promise<AuthResult> {
+export async function authenticateUser(identifier: string, password: string): Promise<AuthResult> {
+  // People type the employee number off their payslip; a handful of early
+  // accounts were made with an e-mail, so both are accepted. An "@" is the only
+  // reliable way to tell the two apart — GHS employee numbers never contain one.
+  const typed = identifier.trim();
+  const byEmail = typed.includes("@");
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.email, email.toLowerCase()))
+    .where(
+      byEmail
+        ? eq(sql`lower(${users.email})`, typed.toLowerCase())
+        : eq(sql`lower(${users.ghsStaffId})`, typed.toLowerCase()),
+    )
     .limit(1);
 
   if (!user) {
@@ -105,7 +116,8 @@ export async function authenticateUser(email: string, password: string): Promise
       role: user.role,
       name: user.fullName,
       staffId: user.ghsStaffId,
-      email: user.email,
+      email: user.email ?? "",
+      mustChangePassword: user.mustChangePassword,
       region: user.region,
       directorate: user.directorate,
       cadre: user.cadre,
@@ -122,7 +134,7 @@ export async function createPasswordResetToken(email: string): Promise<{ ok: boo
   const [user] = await db
     .select({ id: users.id, email: users.email, isActive: users.isActive })
     .from(users)
-    .where(eq(users.email, email.toLowerCase()))
+    .where(eq(sql`lower(${users.email})`, email.toLowerCase()))
     .limit(1);
 
   if (!user || !user.isActive) {
@@ -240,4 +252,48 @@ export async function createUserWithPassword(params: {
   });
 
   return user;
+}
+
+/**
+ * Change the password of somebody who is already signed in.
+ *
+ * Different from `resetPassword`: no token is involved, the current password is
+ * required, and the account stops being "must change" afterwards. This is the
+ * path the first-login screen uses, and the one anybody uses later from Settings.
+ */
+export async function changeOwnPassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ ok: boolean; message?: string }> {
+  const [user] = await db
+    .select({ id: users.id, passwordHash: users.passwordHash, role: users.role, fullName: users.fullName, ghsStaffId: users.ghsStaffId })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!user) return { ok: false, message: "That account no longer exists." };
+  if (!user.passwordHash) return { ok: false, message: "No password is set on this account. Ask ICT to reset it." };
+
+  if (!(await verifyPassword(currentPassword, user.passwordHash))) {
+    return { ok: false, message: "Your current password is not correct." };
+  }
+
+  if (await verifyPassword(newPassword, user.passwordHash)) {
+    return { ok: false, message: "Choose a password you have not used before." };
+  }
+
+  await db
+    .update(users)
+    .set({ passwordHash: await hashPassword(newPassword), mustChangePassword: false, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+
+  await logAudit({
+    actor: { sub: user.id, role: user.role, name: user.fullName, staffId: user.ghsStaffId },
+    action: "PASSWORD_CHANGED",
+    entity: "user",
+    entityId: user.id,
+  });
+
+  return { ok: true, message: "Password changed." };
 }

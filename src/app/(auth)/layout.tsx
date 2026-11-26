@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Check, LifeBuoy, MessageSquareWarning } from "lucide-react";
+import { Check, LifeBuoy } from "lucide-react";
 import { AuthArt } from "@/components/brand/auth-art";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { SITE } from "@/lib/site";
@@ -15,16 +15,28 @@ import { SITE } from "@/lib/site";
  */
 
 const STEPS: { title: string; body: string }[] = [
-  { title: "Register once", body: "Create your account with your official GHS details — the same name that appears in the staff directory." },
-  { title: "Note the email you used", body: "That address, not your Staff ID, is what you sign in with. It is also where notices about your account go." },
-  { title: "Sign in with it", body: "Use the same email and the password you chose. The Show button lets you check what you typed." },
-  { title: "Stuck? Lodge a complaint", body: "The Complaint Hub is for access problems too — a forgotten password or wrong details is handled there, in writing." },
+  {
+    title: "Sign in with your Staff ID",
+    body: "Your employee number, the one on your payslip — 112755, for example. It is already in the staff directory, so there is nothing to register.",
+  },
+  {
+    title: "Use the password you were given",
+    body: "ICT issues a first password for every account and hands it to you directly. It is yours alone; nobody at GHS will ask you for it.",
+  },
+  {
+    title: "Choose your own straight away",
+    body: "The first sign-in asks for a new password and nothing else opens until you have set one. After that, only you know it.",
+  },
+  {
+    title: "Your record follows you",
+    body: "Trainings you attend, certificates you earn and material you finish stay attached to your employee number — wherever you are posted next.",
+  },
 ];
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.02fr_1fr]">
-      <aside className="relative hidden overflow-hidden bg-[#1e9e6a] lg:flex lg:flex-col lg:justify-between">
+      <aside className="nav-surface relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between">
         <AuthArt />
         <div className="flag-stripe absolute inset-x-0 top-0 z-10 h-1.5" aria-hidden />
 
@@ -78,12 +90,11 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             </ul>
           </div>
 
-          <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-white/75">
-            <span>Internal platform. Access is monitored and recorded.</span>
-            <Link href="/help" className="inline-flex items-center gap-1.5 font-semibold text-white/80 underline-offset-4 hover:text-white hover:underline">
+          <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-[var(--nav-muted)]">
+            <span className="inline-flex items-center gap-1.5">
               <LifeBuoy className="h-3.5 w-3.5" aria-hidden />
-              Complaint Hub
-            </Link>
+              Internal platform. Access is monitored and recorded.
+            </span>
           </div>
         </div>
       </aside>
@@ -116,13 +127,6 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
                 </li>
               ))}
             </ol>
-            <Link
-              href="/help/report"
-              className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary underline-offset-4 hover:underline"
-            >
-              <MessageSquareWarning className="h-4 w-4" aria-hidden />
-              Lodge a complaint
-            </Link>
           </details>
 
           <p className="text-center text-xs text-ink-muted">

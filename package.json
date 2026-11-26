@@ -29,7 +29,8 @@
     "user:create-auth": "node --conditions=react-server --import tsx scripts/create-admin-auth.ts",
     "user:reset-password": "node --conditions=react-server --import tsx scripts/reset-admin-password.ts",
     "db:doctor": "node --conditions=react-server --import tsx scripts/db-doctor.ts",
-    "db:check-chain": "node scripts/check-migration-chain.mjs"
+    "db:check-chain": "node scripts/check-migration-chain.mjs",
+    "staff:import": "node --conditions=react-server --import tsx scripts/import-staff.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1177.0",

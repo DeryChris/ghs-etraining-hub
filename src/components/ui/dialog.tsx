@@ -39,6 +39,28 @@ export function Dialog({
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
+  // `showModal()` blocks clicks on the page behind, but not wheel or touch
+  // scrolling in every browser — the list underneath would still slide while
+  // somebody scrolls a long form. Lock the document while the panel is open and
+  // leave the page where it was when it closes.
+  useEffect(() => {
+    if (!open) return;
+    const { body, documentElement } = document;
+    const previousBody = body.style.overflow;
+    const previousHtml = documentElement.style.overflow;
+    const previousPad = body.style.paddingRight;
+    // Compensate for the vanishing scrollbar so the layout does not jump.
+    const gutter = window.innerWidth - documentElement.clientWidth;
+    body.style.overflow = "hidden";
+    documentElement.style.overflow = "hidden";
+    if (gutter > 0) body.style.paddingRight = `${gutter}px`;
+    return () => {
+      body.style.overflow = previousBody;
+      documentElement.style.overflow = previousHtml;
+      body.style.paddingRight = previousPad;
+    };
+  }, [open]);
+
   const width = size === "sm" ? "max-w-md" : size === "lg" ? "max-w-3xl" : "max-w-xl";
 
   return (
@@ -54,10 +76,10 @@ export function Dialog({
           // A click on the backdrop lands on the dialog element itself.
           if (event.target === ref.current) setOpen(false);
         }}
-        className={`w-[calc(100vw-1.5rem)] ${width} rounded-card border border-hairline bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/40 backdrop:backdrop-blur-[2px]`}
+        className={`m-auto w-[calc(100vw-1.5rem)] ${width} max-h-[calc(100dvh-2rem)] rounded-card border border-hairline bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/45 backdrop:backdrop-blur-[3px]`}
       >
         {open && (
-          <div className="max-h-[85vh] overflow-y-auto p-6 sm:p-7">
+          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain p-6 sm:p-7">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <h2 id={titleId} className="text-lg font-bold text-ink">

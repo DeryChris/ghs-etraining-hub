@@ -14,6 +14,8 @@ import {
   Megaphone,
   MessageSquare,
   MessageSquareWarning,
+  PanelLeftClose,
+  PanelLeftOpen,
   PenLine,
   Settings,
   TrendingUp,
@@ -61,6 +63,9 @@ export interface SidebarCounts {
 interface SidebarProps {
   user: ShellUser;
   counts: SidebarCounts;
+  /** Desktop rail: icons only, labels hidden. Ignored in the mobile drawer. */
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
   onNavigate?: () => void;
   onClose?: () => void;
 }
@@ -74,7 +79,7 @@ interface SidebarProps {
  * with near-black ink — 12:1 contrast — and the decorative weave and star are
  * `aria-hidden` at under 10% so the text keeps 7:1.
  */
-export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
+export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onNavigate, onClose }: SidebarProps) {
   const pathname = usePathname();
   const indicatorId = `${useId()}-sidebar-indicator`;
   const groups = navFor(user.role, { unitHead: user.unitHead });
@@ -84,7 +89,7 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
       <SidebarWeave className="text-white" />
       <SidebarStar className="-bottom-10 -right-10 h-56 w-56 text-[var(--nav-active)]" />
 
-      <div className="relative z-10 flex h-16 items-center justify-between px-5">
+      <div className={cn("relative z-10 flex h-16 items-center gap-2", collapsed ? "justify-center px-2" : "justify-between px-5")}>
         <Link
           href="/dashboard"
           onClick={onNavigate}
@@ -92,13 +97,27 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
           aria-label={`${SITE.name} dashboard`}
         >
           <BrandMark size={34} />
-          <span className="flex min-w-0 flex-col leading-none">
-            <span className="text-[15px] font-extrabold tracking-tight text-[var(--nav-ink)]">{SITE.code}</span>
-            <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--nav-muted)]">
-              {SITE.tagline}
+          {!collapsed && (
+            <span className="flex min-w-0 flex-col leading-none">
+              <span className="text-[15px] font-extrabold tracking-tight text-[var(--nav-ink)]">{SITE.code}</span>
+              <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--nav-muted)]">
+                {SITE.tagline}
+              </span>
             </span>
-          </span>
+          )}
         </Link>
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label={collapsed ? "Expand the menu" : "Collapse the menu"}
+            aria-expanded={!collapsed}
+            title={collapsed ? "Expand the menu" : "Collapse the menu"}
+            className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-control text-[var(--nav-muted)] transition-colors hover:bg-[var(--nav-wash)] hover:text-[var(--nav-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)] md:inline-flex"
+          >
+            {collapsed ? <PanelLeftOpen className="h-4 w-4" aria-hidden /> : <PanelLeftClose className="h-4 w-4" aria-hidden />}
+          </button>
+        )}
         {onClose && (
           <button
             type="button"
@@ -120,7 +139,10 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
           <div key={group.id} className="space-y-1">
             <p
               id={`nav-section-${group.id}`}
-              className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--nav-active)]"
+              className={cn(
+                "px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--nav-active)]",
+                collapsed && "sr-only",
+              )}
             >
               {group.label}
             </p>
@@ -146,7 +168,8 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
                       title={item.hint}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group relative flex min-h-11 items-center gap-3 rounded-control px-3 text-sm font-semibold transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)]",
+                        "group relative flex min-h-11 items-center gap-3 rounded-control text-sm font-semibold transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)]",
+                        collapsed ? "justify-center px-0" : "px-3",
                         active
                           ? "text-[var(--nav-active-ink)]"
                           : "text-[var(--nav-muted)] hover:bg-white/10 hover:text-[var(--nav-ink)]",
@@ -167,7 +190,7 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
                         )}
                         aria-hidden
                       />
-                      <span className="relative flex-1">{item.label}</span>
+                      <span className={cn("relative flex-1", collapsed && "sr-only")}>{item.label}</span>
                       <NavLinkPending />
                       {count > 0 && (
                         <span
@@ -191,10 +214,10 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="nav-divider relative z-10 border-t p-4">
-        <div className="nav-wash flex items-center gap-3 rounded-control p-3">
+      <div className={cn("nav-divider relative z-10 border-t", collapsed ? "p-2" : "p-4")}>
+        <div className={cn("nav-wash flex items-center rounded-control", collapsed ? "justify-center p-2" : "gap-3 p-3")}>
           <BrandMark size={32} />
-          <div className="min-w-0">
+          <div className={cn("min-w-0", collapsed && "sr-only")}>
             <p className="truncate text-sm font-semibold text-[var(--nav-ink)]">{user.name}</p>
             <p className="truncate text-xs text-[var(--nav-muted)]">
               {user.unitHead && user.role === "FACILITATOR" ? "Unit head" : ROLE_LABELS[user.role]} · {user.staffId}

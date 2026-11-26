@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, EyeOff, Loader2, LogIn, Mail, Lock } from "lucide-react";
+import { BadgeCheck, Eye, EyeOff, Loader2, LogIn, Lock } from "lucide-react";
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/input";
@@ -46,25 +46,26 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
       )}
 
       <div>
-        <label htmlFor="email" className={labelClass}>
-          Email
+        <label htmlFor="identifier" className={labelClass}>
+          Staff ID
         </label>
         <div className="relative">
-          <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" aria-hidden />
+          <BadgeCheck className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" aria-hidden />
           <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
+            id="identifier"
+            name="identifier"
+            type="text"
+            inputMode="numeric"
+            autoComplete="username"
             required
-            defaultValue={state.email ?? ""}
-            placeholder="name@ghs.gov.gh"
-            aria-describedby="email-hint"
+            defaultValue={state.identifier ?? ""}
+            placeholder="112755"
+            aria-describedby="identifier-hint"
             className={`${inputClass} h-12 pl-10`}
           />
         </div>
-        <p id="email-hint" className="mt-1.5 text-xs text-ink-muted">
-          The address you registered with — not your Staff ID.
+        <p id="identifier-hint" className="mt-1.5 text-xs text-ink-muted">
+          The employee number on your payslip. A work e-mail works here too.
         </p>
       </div>
 
