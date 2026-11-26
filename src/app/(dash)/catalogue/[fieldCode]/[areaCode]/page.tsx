@@ -88,7 +88,9 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
             {trainings.map((training) => (
               <li key={training.id}>
                 <Link
-                  href={`/trainings/${training.id}`}
+                  /* `from=library` opens the training as a reading page: no uploads,
+                     no editing, exactly what a learner sees. The register keeps the levers. */
+                  href={`/trainings/${training.id}?from=library`}
                   className="group flex h-full flex-col gap-3 rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   <div className="flex items-start justify-between gap-3">

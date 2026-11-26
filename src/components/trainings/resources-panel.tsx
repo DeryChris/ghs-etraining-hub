@@ -4,7 +4,8 @@ import { useActionState, useState } from "react";
 import { FileText, Loader2, Paperclip, Trash2, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { hintClass, inputClass, labelClass } from "@/components/ui/input";
+import { FileDrop } from "@/components/ui/file-drop";
+import { inputClass, labelClass } from "@/components/ui/input";
 import { MIME_ALLOWLIST } from "@/lib/ghs-constants";
 import { formatBytes, formatDate } from "@/lib/format";
 import {
@@ -211,22 +212,19 @@ function UploadForm({
         />
       </div>
 
-      <div>
-        <label htmlFor="resource-file" className={labelClass}>
-          File
-        </label>
-        <input
-          id="resource-file"
-          type="file"
-          accept={ACCEPT}
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          className="block w-full text-sm text-ink file:mr-3 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary"
-        />
-        <p className={hintClass}>
-          The deck, the attendance sheet, the report, the recording: PDF, Word, PowerPoint, Excel, video, audio,
-          image or CSV, up to {formatBytes(ceiling.bytes)} per file here. {ceiling.detail}
-        </p>
-      </div>
+      <FileDrop
+        id="resource-file"
+        name="file"
+        label="File"
+        accept={ACCEPT}
+        onFile={setFile}
+        hint={
+          <>
+            The deck, the attendance sheet, the report, the recording: PDF, Word, PowerPoint, Excel, video, audio,
+            image or CSV, up to {formatBytes(ceiling.bytes)} per file here. {ceiling.detail}
+          </>
+        }
+      />
 
       {(error || (state.message && !state.ok)) && (
         <p role="alert" className="text-sm text-danger">

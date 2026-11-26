@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, FolderOpen } from "lucide-react";
+import { ArrowUpRight, FolderOpen } from "lucide-react";
 import { AreaTileIcon, FieldTileIcon, fieldTint } from "@/components/ui/field-tile-icon";
 
 /**
@@ -26,12 +26,16 @@ interface TileChromeProps {
   icon: React.ReactNode;
   /** The line under the title: counts, progress, a prompt to open it. */
   meta: React.ReactNode;
-  /** Extra links under the meta line, used by the register's field cards. */
-  actions?: React.ReactNode;
+  /**
+   * The affordance under the meta line. Decorative: the whole card is already a
+   * link, so this is drawn like a link and is not one — two links to the same
+   * place would be two tab stops for one destination.
+   */
+  cta: React.ReactNode;
   className?: string;
 }
 
-function Tile({ code, name, description, href, icon, meta, actions, className = "" }: TileChromeProps) {
+function Tile({ code, name, description, href, icon, meta, cta, className = "" }: TileChromeProps) {
   const tint = fieldTint(code);
 
   return (
@@ -44,18 +48,23 @@ function Tile({ code, name, description, href, icon, meta, actions, className = 
     >
       {/*
        * The whole card is the link, not just the words in it. A tile that only
-       * responds where the title happens to be is a target the size of a sentence;
-       * people aim at the card. This overlay sits under the content and over the
-       * background, and anything else that must stay clickable — the action link
-       * under the counts — is lifted above it with `relative z-10`.
+       * responds where the title happens to be is a target the size of a
+       * sentence; people aim at the card.
+       *
+       * The overlay sits *above* the content (z-10), which is the only way to be
+       * sure: painted underneath, every static paragraph and heading in the card
+       * swallows the click and only the padding around them worked — which is
+       * exactly what "only some of the tile is active" looks like. Nothing inside
+       * a tile is interactive, so there is nothing to lift above it; the "Open"
+       * affordance below is marked aria-hidden and pointer-events-none.
        */}
       <Link
         href={href}
         aria-label={`Open ${name}`}
-        className="absolute inset-0 z-0 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="absolute inset-0 z-10 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       />
 
-      <div className="relative flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <span className="transition-transform duration-200 group-hover:-translate-y-0.5">{icon}</span>
         <span
           className="rounded-full px-2.5 py-1 font-mono text-[11px] font-bold tracking-wide"
@@ -65,7 +74,7 @@ function Tile({ code, name, description, href, icon, meta, actions, className = 
         </span>
       </div>
 
-      <h3 className="relative mt-3 text-base font-semibold leading-snug text-ink transition-colors group-hover:text-primary">
+      <h3 className="mt-3 text-base font-semibold leading-snug text-ink transition-colors group-hover:text-primary">
         {name}
       </h3>
 
@@ -73,15 +82,9 @@ function Tile({ code, name, description, href, icon, meta, actions, className = 
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pt-4">
         <span className="text-xs font-semibold text-ink-muted">{meta}</span>
-        {actions ?? (
-          <Link
-            href={href}
-            className="relative z-10 inline-flex items-center gap-1 text-xs font-bold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            Open
-            <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
-          </Link>
-        )}
+        <span aria-hidden className="pointer-events-none inline-flex items-center gap-1 text-xs font-bold text-primary">
+          {cta}
+        </span>
       </div>
     </div>
   );
@@ -119,14 +122,11 @@ export function ProgrammeFieldTile({
           ) : null}
         </>
       }
-      actions={
-        <Link
-          href={href}
-          className="inline-flex items-center gap-1 text-xs font-bold text-primary underline-offset-4 hover:underline"
-        >
+      cta={
+        <>
           {href.startsWith("/trainings") ? "Filter register" : href.startsWith("/programmes") ? "Open programmes" : "Open field"}
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-        </Link>
+        </>
       }
     />
   );
@@ -150,14 +150,11 @@ export function ProgrammeAreaTile({
       href={href}
       icon={<AreaTileIcon code={area.code} name={area.name} size={44} />}
       meta={meta}
-      actions={
-        <Link
-          href={href}
-          className="relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold text-ink-muted hover:text-ink"
-        >
+      cta={
+        <>
           <FolderOpen className="h-3.5 w-3.5" aria-hidden />
           Open materials
-        </Link>
+        </>
       }
     />
   );

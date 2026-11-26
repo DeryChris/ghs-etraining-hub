@@ -392,25 +392,23 @@ export default async function TrainingsPage({
                 key={training.id}
                 className="group relative rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40 focus-within:border-primary/60"
               >
+                {/*
+                 * One link per row, laid over the whole card and *above* the text:
+                 * a row where only the title responded was a target the size of a
+                 * sentence. The title keeps its own emphasis but is not a link.
+                 */}
+                <Link
+                  href={`/trainings/${training.id}`}
+                  aria-label={`Open ${training.title}`}
+                  className="absolute inset-0 z-10 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                />
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 space-y-1.5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
                       {training.fieldName ?? "Programme field not recorded"}
                       {training.areaName ? ` · ${training.areaName}` : ""}
                     </p>
-                    <h2 className="text-base font-bold text-ink">
-                      {/*
-                       * The whole row is the target, not just the title: the card is
-                       * the affordance people see, and reaching for a 12-character
-                       * word on a phone is a miss.
-                       */}
-                      <Link
-                        href={`/trainings/${training.id}`}
-                        className="group-hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary after:absolute after:inset-0 after:rounded-card"
-                      >
-                        {training.title}
-                      </Link>
-                    </h2>
+                    <h2 className="text-base font-bold text-ink transition-colors group-hover:text-primary">{training.title}</h2>
                     {training.targetGroup && <p className="text-sm text-ink-muted">For {training.targetGroup}</p>}
                     <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
                       <span className="inline-flex items-center gap-1.5">

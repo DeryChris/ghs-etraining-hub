@@ -239,3 +239,14 @@ so a unit head appointed today inherits everything already waiting in their
 fields; arrivals and appointments notify; queue pages refresh themselves; and
 every form keeps its values across a failed submission or a reload. See
 `0020-live-queues-and-kept-drafts.md`.
+
+---
+
+## ADR‑0021 — The library is a reading surface
+
+**Status:** accepted · **Date:** 2026‑11
+
+A training opened from the library opens read-only — no uploads, no editing, the
+same page a learner sees; the register keeps the management surfaces. Tiles are
+one link over the whole card, painted above the content. See
+`0021-library-is-a-reading-surface.md`.

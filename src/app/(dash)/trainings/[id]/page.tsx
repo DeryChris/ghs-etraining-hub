@@ -64,7 +64,18 @@ export default async function TrainingDetailPage({
   const notice = typeof query.notice === "string" ? query.notice : null;
   const error = typeof query.error === "string" ? query.error : null;
 
-  const mayManage = can(session.role, "training.manage");
+  /*
+   * Where the reader came from decides what this page is.
+   *
+   * Opened from the library, a training is something to read: the write-up, the
+   * files, the discussion. Editing the register, uploading versions and archiving
+   * belong to the register, and showing those controls here turned a reading page
+   * into an admin page the moment an administrator clicked a library card — which
+   * is not what a library is for. Same page, same record, one fewer set of levers:
+   * the register (/trainings) keeps every one of them.
+   */
+  const fromLibrary = query.from === "library" || query.from === "catalogue";
+  const mayManage = can(session.role, "training.manage") && !fromLibrary;
   // Only a unit head holding this field, or an administrator, sees the decision
   // buttons — but everybody who can open the row sees its review state.
   const canReview = await mayReviewField(session, training.programmeFieldId);
@@ -176,9 +187,15 @@ export default async function TrainingDetailPage({
           title={training.title}
           description={training.targetGroup ? `For ${training.targetGroup}.` : undefined}
           actions={
-            <Link href="/trainings" className={buttonClass({ variant: "ghost" })}>
-              Back to trainings
-            </Link>
+            fromLibrary ? (
+              <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
+                Back to the library
+              </Link>
+            ) : (
+              <Link href="/trainings" className={buttonClass({ variant: "ghost" })}>
+                Back to trainings
+              </Link>
+            )
           }
         />
 
@@ -244,6 +261,8 @@ export default async function TrainingDetailPage({
         </div>
       </section>
 
+      {/* The decision panel is a management surface: hidden when reading from the library. */}
+      {!fromLibrary && (
       <ReviewPanel
         trainingId={training.id}
         title={training.title}
@@ -252,12 +271,17 @@ export default async function TrainingDetailPage({
         reviewedByName={training.reviewedByName}
         canReview={canReview}
       />
+      )}
 
       <TrainingResources
         trainingId={training.id}
         resources={training.resources}
         ceiling={storageCeiling()}
-        canEdit={mayManage && (session.role === "SYSTEM_ADMIN" || training.createdById === session.sub || canReview)}
+        canEdit={
+          !fromLibrary &&
+          mayManage &&
+          (session.role === "SYSTEM_ADMIN" || training.createdById === session.sub || canReview)
+        }
       />
 
       <Discussion

@@ -10,27 +10,19 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { createUserAction, type UserActionState } from "@/lib/server/actions/users";
 import { STAFF_ROLE_HINTS, STAFF_ROLE_LABELS } from "@/lib/labels";
 import { STAFF_ROLE_VALUES } from "@/lib/rbac/capabilities";
+import { GHS_REGIONS, isLiveRegion } from "@/lib/ghs-constants";
 
 const INITIAL: UserActionState = { ok: false, message: null };
 
-const REGIONS = [
-  "Ahafo",
-  "Ashanti",
-  "Bono",
-  "Bono East",
-  "Central",
-  "Eastern",
-  "Greater Accra",
-  "North East",
-  "Northern",
-  "Oti",
-  "Savannah",
-  "Upper East",
-  "Upper West",
-  "Volta",
-  "Western",
-  "Western North",
-];
+/**
+ * Only the regions that are actually live are offered.
+ *
+ * The library runs in one region for now; listing fifteen more in a dropdown
+ * invites people to file a person, a training or a facility against a region the
+ * service does not cover yet. `LIVE_REGION.codes` is the single switch — add a
+ * code there when a region goes live and it appears in every form that uses this.
+ */
+const REGIONS: readonly string[] = GHS_REGIONS.filter((name) => isLiveRegion(null, name));
 
 /**
  * Adding a person to the directory.
@@ -127,6 +119,9 @@ export function CreateUserForm() {
                     </option>
                   ))}
                 </select>
+                <p className={hintClass}>
+                  Only the regions where the library is live are listed. The rest appear as the rollout reaches them.
+                </p>
               </div>
               <div>
                 <label htmlFor="new-directorate" className={labelClass}>

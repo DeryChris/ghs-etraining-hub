@@ -3,6 +3,7 @@
 import { useActionState, useRef } from "react";
 import { ImagePlus, Maximize2, Trash2, UploadCloud } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
+import { FileDrop } from "@/components/ui/file-drop";
 import { hintClass } from "@/components/ui/input";
 import {
   removeTrainingImageAction,
@@ -64,18 +65,15 @@ export function TrainingCover({
 
       {canEdit && (
         <div className="flex flex-wrap items-center gap-3 rounded-card border border-hairline bg-surface p-4 shadow-panel">
-          <form ref={formRef} action={formAction} className="flex flex-wrap items-center gap-2">
+          <form ref={formRef} action={formAction} className="w-full max-w-md space-y-3">
             <input type="hidden" name="trainingId" value={trainingId} />
-            <label htmlFor="training-cover" className="sr-only">
-              Cover picture
-            </label>
-            <input
+            <FileDrop
               id="training-cover"
               name="image"
-              type="file"
+              label="Cover picture"
               accept="image/png,image/jpeg,image/webp,image/gif"
               disabled={pending}
-              className="block max-w-full text-sm text-ink file:mr-3 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary"
+              hint="PNG, JPEG, WebP or GIF, under 4 MB. Dropped straight onto the dashed box."
             />
             <button type="submit" disabled={pending} aria-busy={pending} className={buttonClass({ variant: "secondary", size: "sm" })}>
               <UploadCloud className="h-4 w-4" aria-hidden />
@@ -94,7 +92,7 @@ export function TrainingCover({
           )}
 
           <p className={state.message ? `text-sm ${state.ok ? "text-primary" : "text-danger"}` : hintClass} role="status" aria-live="polite">
-            {state.message ?? "PNG, JPEG, WebP or GIF, under 4 MB."}
+            {state.message ?? "The picture appears at the top of this page for everyone who can read the training."}
           </p>
         </div>
       )}

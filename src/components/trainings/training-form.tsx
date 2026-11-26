@@ -12,6 +12,7 @@ import {
 } from "@/lib/server/actions/trainings";
 import type { GeographyRegion, ProgrammeFieldOption } from "@/lib/server/taxonomy-queries";
 import { durationLabel } from "@/lib/training-dates";
+import { isLiveRegion } from "@/lib/ghs-constants";
 
 const INITIAL: TrainingActionState = { ok: false, message: null };
 
@@ -92,6 +93,16 @@ export function TrainingForm({
   const [durationTouched, setDurationTouched] = useState(start.durationText.length > 0);
   const [durationText, setDurationText] = useState(start.durationText);
   const [year, setYear] = useState(start.year);
+
+  /*
+   * The pilot runs in one region, so that is the only one a person can pick here.
+   * A training already filed elsewhere keeps its own region in the list, otherwise
+   * opening it to fix a date would silently move it to the first live region.
+   */
+  const regionChoices = useMemo(
+    () => geography.filter((row) => isLiveRegion(row.code, row.name) || row.id === start.regionId),
+    [geography, start.regionId],
+  );
 
   const areas = useMemo(() => fields.find((field) => field.id === fieldId)?.areas ?? [], [fieldId, fields]);
   const region = useMemo(() => geography.find((row) => row.id === regionId), [geography, regionId]);
@@ -286,12 +297,17 @@ export function TrainingForm({
           className={inputClass}
         >
           <option value="">— Select region —</option>
-          {geography.map((row) => (
+          {regionChoices.map((row) => (
             <option key={row.id} value={row.id}>
               {row.name}
             </option>
           ))}
         </select>
+        <p className={hintClass}>
+          {regionChoices.length <= 1
+            ? "The library is live in Upper West only; the other regions are added as the rollout reaches them."
+            : "Only regions where the library is live are listed."}
+        </p>
       </div>
 
       <div>
@@ -322,6 +338,11 @@ export function TrainingForm({
             </option>
           ))}
         </select>
+        <p className={hintClass}>
+          {regionChoices.length <= 1
+            ? "The library is live in Upper West only; the other regions are added as the rollout reaches them."
+            : "Only regions where the library is live are listed."}
+        </p>
       </div>
 
       <div>
@@ -349,6 +370,11 @@ export function TrainingForm({
             </option>
           ))}
         </select>
+        <p className={hintClass}>
+          {regionChoices.length <= 1
+            ? "The library is live in Upper West only; the other regions are added as the rollout reaches them."
+            : "Only regions where the library is live are listed."}
+        </p>
       </div>
 
       <div>

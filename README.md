@@ -304,6 +304,17 @@ import writes one audit row for the batch rather than a row per person.
    `/reset-password?token=…` link to hand over in person — the pilot sends no e-mail, and
    `/forgot-password` says so.
 
+   To set a password you choose, by e-mail or by employee number (this also clears a lockout):
+
+   ```bash
+   npm run user:password -- --email ama.mensah@ghs.gov.gh --password='a long phrase'
+   npm run user:password -- --id GHS-000042 --password='a long phrase'
+   npm run user:password -- 42 'a long phrase'          # positional, same as --id
+   ```
+
+   Add `--must-change` to make them pick a new one at next sign-in, or `--dry-run` to see which
+   account the identifier resolves to without touching it. The password is never echoed or logged.
+
 3. The staff member signs in at `/login` and can set a new password from that link. Role always comes
    from `public.users`, never from anything the account holder can edit. There is no third-party auth
    service: `password_hash` is a bcrypt hash on the row (ADR-0015).

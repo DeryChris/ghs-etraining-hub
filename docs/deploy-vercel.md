@@ -203,7 +203,14 @@ SEED_ADMIN_PASSWORD='…' npm run user:create-auth -- you@ghs.gov.gh   # set a k
 npm run user:provision -- someone@ghs.gov.gh                        # print a one-time temp password
 npm run user:provision -- someone@ghs.gov.gh --reset                # replace it
 npm run user:reset-password -- locked.out@ghs.gov.gh                # print a one-time reset link
+npm run user:password -- --email someone@ghs.gov.gh --password='…'  # set a password you choose
+npm run user:password -- --id GHS-000042 --password='…'             # …by employee number
 ```
+
+`user:password` resolves the account by e-mail, employee number (`GHS-000042`, `000042` or `42`) or
+UUID, hashes with the same bcrypt cost the application uses, clears the failed-attempt counters and
+the lockout, and never prints the secret. `--must-change` forces a change at next sign-in; `--dry-run`
+shows which account matched without changing anything.
 
 `user:reset-password` writes only a SHA-256 hash of the token, with a one-hour expiry, and prints a
 `/reset-password?token=…` URL. Hand it over in person or over WhatsApp: the pilot sends no e-mail,

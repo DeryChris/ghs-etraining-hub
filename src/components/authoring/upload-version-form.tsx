@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UploadCloud } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
-import { hintClass, inputClass, labelClass } from "@/components/ui/input";
+import { FileDrop } from "@/components/ui/file-drop";
+import { inputClass, labelClass } from "@/components/ui/input";
 import { MAX_UPLOAD_BYTES, MIME_ALLOWLIST } from "@/lib/ghs-constants";
 import { formatBytes } from "@/lib/format";
 import { finaliseUploadAction, requestUploadAction } from "@/lib/server/actions/authoring";
@@ -107,26 +108,22 @@ export function UploadVersionForm({
 
   return (
     <form ref={formRef} onSubmit={submit} className="space-y-4">
-      <div>
-        <label htmlFor="upload-file" className={labelClass}>
-          File
-        </label>
-        <input
-          id="upload-file"
-          name="file"
-          type="file"
-          accept={ACCEPT}
-          required
-          disabled={busy}
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          className={`${inputClass} file:mr-3 file:rounded-control file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink`}
-        />
-        <p className={hintClass}>
-          PDF, Word, PowerPoint, Excel, video, audio, image, Markdown or CSV. Up to {formatBytes(largest)} per file on
-          this deployment: {ceiling.detail} It opens in the library for the reader — no app needed — and the original
-          stays downloadable.
-        </p>
-      </div>
+      <FileDrop
+        id="upload-file"
+        name="file"
+        label="File"
+        accept={ACCEPT}
+        required
+        disabled={busy}
+        onFile={setFile}
+        hint={
+          <>
+            PDF, Word, PowerPoint, Excel, video, audio, image, Markdown or CSV. Up to {formatBytes(largest)} per file on
+            this deployment: {ceiling.detail} It opens in the library for the reader — no app needed — and the original
+            stays downloadable.
+          </>
+        }
+      />
 
       <div>
         <label htmlFor="upload-note" className={labelClass}>
