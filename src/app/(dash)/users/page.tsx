@@ -10,7 +10,8 @@ import { Stat } from "@/components/ui/stat";
 import { CreateUserForm } from "@/components/users/create-user-form";
 import { UserRowActions } from "@/components/users/user-row-actions";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { ROLE_LABELS } from "@/lib/labels";
+import { STAFF_ROLE_LABELS } from "@/lib/labels";
+import { isStaffRole, staffRoleOf, STAFF_ROLE_VALUES } from "@/lib/rbac/capabilities";
 import {
   DIRECTORY_PAGE_SIZE,
   getDirectorySummary,
@@ -21,7 +22,6 @@ import {
 } from "@/lib/server/directory-queries";
 import { listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
 import { requireRole } from "@/lib/server/rbac";
-import { isRole } from "@/lib/rbac/capabilities";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +60,8 @@ export default async function UsersPage({
   const params = await searchParams;
 
   const query = (params.q ?? "").trim().slice(0, 120);
-  const role = isRole(params.role) ? params.role : null;
+  // A role choice, not a stored role: Unit head is a facilitator carrying the duty.
+  const role = isStaffRole(params.role) ? params.role : null;
   const status: DirectoryStatus | null = params.status === "active" || params.status === "inactive" ? params.status : null;
   const group: DirectoryGroup | null =
     params.group === "facilitators" || params.group === "unit-heads" || params.group === "admins" ? params.group : null;
@@ -96,7 +97,7 @@ export default async function UsersPage({
       <PageHeader
         eyebrow="Administration"
         title="Users"
-        description="Who may sign in and what they may do. Every change here is capability-checked on the server and written to the audit trail."
+        description="Who may sign in and what they may do. The role is chosen from four: learner, facilitator, unit head and system administrator. Every change here is capability-checked on the server and written to the audit trail."
         actions={
           <Link href="/insights" className={buttonClass({ variant: "ghost" })}>
             Service insights
@@ -132,10 +133,14 @@ export default async function UsersPage({
         })}
       </nav>
 
-      <section aria-label="Directory totals" className="grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-5">
+      <section
+        aria-label="Directory totals"
+        className="grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
+      >
         <Stat value={summary.total} label="People in the directory" />
         <Stat value={summary.learners} label="Active learners" />
         <Stat value={summary.facilitators} label="Active facilitators" />
+        <Stat value={summary.unitHeads} label="Active unit heads" />
         <Stat value={summary.admins} label="Active administrators" />
         <Stat value={summary.neverSignedIn} label="Never signed in" />
       </section>
@@ -157,9 +162,11 @@ export default async function UsersPage({
           </label>
           <select id="user-role" name="role" defaultValue={role ?? ""} className={inputClass}>
             <option value="">All roles</option>
-            <option value="LEARNER">Learner</option>
-            <option value="FACILITATOR">Facilitator</option>
-            <option value="SYSTEM_ADMIN">System administrator</option>
+            {STAFF_ROLE_VALUES.map((value) => (
+              <option key={value} value={value}>
+                {STAFF_ROLE_LABELS[value]}
+              </option>
+            ))}
           </select>
         </div>
         <div>
@@ -227,7 +234,7 @@ export default async function UsersPage({
                       <p className="mt-1 text-xs text-ink-muted">{row.staffId}</p>
                     </td>
                     <td className="px-4 py-4">
-                      <p className="text-ink">{ROLE_LABELS[row.role]}</p>
+                      <p className="text-ink">{STAFF_ROLE_LABELS[staffRoleOf({ role: row.role, unitHead: row.isUnitHead })]}</p>
                       <p className="text-xs text-ink-muted">
                         {[row.directorate, row.facility, row.region].filter(Boolean).join(" · ") || "No posting recorded"}
                       </p>

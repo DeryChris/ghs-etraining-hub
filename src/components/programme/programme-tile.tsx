@@ -42,7 +42,20 @@ function Tile({ code, name, description, href, icon, meta, actions, className = 
         backgroundImage: `linear-gradient(158deg, ${tint.light}1f 0%, rgba(255,255,255,0) 56%), linear-gradient(0deg, ${tint.light}0a 0%, rgba(255,255,255,0) 40%)`,
       }}
     >
-      <div className="flex items-start justify-between gap-3">
+      {/*
+       * The whole card is the link, not just the words in it. A tile that only
+       * responds where the title happens to be is a target the size of a sentence;
+       * people aim at the card. This overlay sits under the content and over the
+       * background, and anything else that must stay clickable — the action link
+       * under the counts — is lifted above it with `relative z-10`.
+       */}
+      <Link
+        href={href}
+        aria-label={`Open ${name}`}
+        className="absolute inset-0 z-0 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      />
+
+      <div className="relative flex items-start justify-between gap-3">
         <span className="transition-transform duration-200 group-hover:-translate-y-0.5">{icon}</span>
         <span
           className="rounded-full px-2.5 py-1 font-mono text-[11px] font-bold tracking-wide"
@@ -52,13 +65,8 @@ function Tile({ code, name, description, href, icon, meta, actions, className = 
         </span>
       </div>
 
-      <h3 className="mt-3 text-base font-semibold leading-snug text-ink">
-        <Link
-          href={href}
-          className="transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          {name}
-        </Link>
+      <h3 className="relative mt-3 text-base font-semibold leading-snug text-ink transition-colors group-hover:text-primary">
+        {name}
       </h3>
 
       {description && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-muted">{description}</p>}
@@ -68,7 +76,7 @@ function Tile({ code, name, description, href, icon, meta, actions, className = 
         {actions ?? (
           <Link
             href={href}
-            className="inline-flex items-center gap-1 text-xs font-bold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="relative z-10 inline-flex items-center gap-1 text-xs font-bold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             Open
             <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
@@ -143,7 +151,10 @@ export function ProgrammeAreaTile({
       icon={<AreaTileIcon code={area.code} name={area.name} size={44} />}
       meta={meta}
       actions={
-        <Link href={href} className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-muted hover:text-ink">
+        <Link
+          href={href}
+          className="relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold text-ink-muted hover:text-ink"
+        >
           <FolderOpen className="h-3.5 w-3.5" aria-hidden />
           Open materials
         </Link>

@@ -46,7 +46,7 @@ export default async function ActivityPage() {
         title="My activity"
         description="What you have opened and downloaded. The library keeps this so you can find your way back to the material from a training you attended — it is a record of use, not a score."
         actions={
-          <Link href="/library" className={buttonClass({ variant: "secondary" })}>
+          <Link href="/catalogue" className={buttonClass({ variant: "secondary" })}>
             Browse the library
           </Link>
         }
@@ -75,7 +75,7 @@ export default async function ActivityPage() {
             title="Nothing opened yet"
             description="Open a material from the library and it will appear here, so you can pick it up again."
             actionText="Browse the library"
-            actionHref="/library"
+            actionHref="/catalogue"
           />
         ) : (
           <div className="overflow-x-auto rounded-card border border-hairline bg-surface shadow-panel">

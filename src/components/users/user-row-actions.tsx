@@ -7,13 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { ROLE_LABELS } from "@/lib/labels";
-import type { Role } from "@/lib/rbac/capabilities";
+import { STAFF_ROLE_HINTS, STAFF_ROLE_LABELS } from "@/lib/labels";
+import { staffRoleOf, STAFF_ROLE_VALUES, type Role } from "@/lib/rbac/capabilities";
 import {
   changeUserRoleAction,
   resetUserPasswordAction,
   sendPasswordResetAction,
-  setUnitHeadAction,
   setUserAccessAction,
   setUserActiveAction,
   updateUserDetailsAction,
@@ -23,8 +22,6 @@ import {
 
 const INITIAL: UserActionState = { ok: false, message: null };
 const INITIAL_CREDENTIALS: CredentialState = { ok: false, message: null };
-
-const ROLES: Role[] = ["LEARNER", "FACILITATOR", "SYSTEM_ADMIN"];
 
 export interface FieldOption {
   id: string;
@@ -96,12 +93,11 @@ export function UserRowActions({
         fullName={fullName}
         email={email ?? ""}
         role={role}
+        isUnitHead={isUnitHead}
         region={region}
         cadre={cadre}
         facility={facility}
       />
-
-      {role === "FACILITATOR" && <UnitHeadToggle userId={userId} isUnitHead={isUnitHead} fullName={fullName} />}
 
       <ActiveToggle userId={userId} isActive={isActive} fullName={fullName} />
     </div>
@@ -309,6 +305,7 @@ function DetailsDialog({
   fullName,
   email,
   role,
+  isUnitHead,
   region,
   cadre,
   facility,
@@ -317,10 +314,12 @@ function DetailsDialog({
   fullName: string;
   email: string | null;
   role: Role;
+  isUnitHead: boolean;
   region: string | null;
   cadre: string | null;
   facility: string | null;
 }) {
+  const currentRole = staffRoleOf({ role, unitHead: isUnitHead });
   const [details, detailsAction, pendingDetails] = useActionState<UserActionState, FormData>(updateUserDetailsAction, INITIAL);
   const [roleState, roleAction] = useActionState(changeUserRoleAction, INITIAL);
 
@@ -391,10 +390,10 @@ function DetailsDialog({
             Role
           </label>
           <div className="flex gap-2">
-            <select id={`role-${userId}`} name="role" defaultValue={role} className={inputClass}>
-              {ROLES.map((value) => (
+            <select id={`role-${userId}`} name="role" defaultValue={currentRole} className={inputClass}>
+              {STAFF_ROLE_VALUES.map((value) => (
                 <option key={value} value={value}>
-                  {ROLE_LABELS[value]}
+                  {STAFF_ROLE_LABELS[value]}
                 </option>
               ))}
             </select>
@@ -402,6 +401,7 @@ function DetailsDialog({
               Save role
             </SubmitButton>
           </div>
+          <p className="text-xs text-ink-muted">{STAFF_ROLE_HINTS[currentRole]}</p>
           <p className="text-xs text-ink-muted">
             Changing a facilitator to a learner removes their programme access; the audit trail keeps the history.
           </p>
@@ -412,28 +412,7 @@ function DetailsDialog({
   );
 }
 
-/* ── Unit head, active ─────────────────────────────────────────────────────── */
-
-function UnitHeadToggle({ userId, isUnitHead, fullName }: { userId: string; isUnitHead: boolean; fullName: string }) {
-  const [state, action] = useActionState(setUnitHeadAction, INITIAL);
-  return (
-    <form action={action} className="inline-flex flex-col">
-      <input type="hidden" name="userId" value={userId} />
-      <SubmitButton
-        variant={isUnitHead ? "secondary" : "ghost"}
-        size="sm"
-        pendingLabel={isUnitHead ? "Removing…" : "Granting…"}
-      >
-        {isUnitHead ? "Unit head ✓" : "Make unit head"}
-      </SubmitButton>
-      {state.message && (
-        <span role="status" className={`mt-1 text-xs ${state.ok ? "text-primary" : "text-danger"}`} title={`${fullName}`}>
-          {state.ok ? "Saved" : state.message}
-        </span>
-      )}
-    </form>
-  );
-}
+/* ── Active ────────────────────────────────────────────────────────────────── */
 
 function ActiveToggle({ userId, isActive, fullName }: { userId: string; isActive: boolean; fullName: string }) {
   const [state, action] = useActionState(setUserActiveAction, INITIAL);

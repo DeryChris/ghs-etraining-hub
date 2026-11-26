@@ -80,7 +80,7 @@ export function DatabaseUnavailable({
             Try again
           </Link>
           <Link
-            href="/library"
+            href="/catalogue"
             className={buttonClass({
               variant: "secondary",
               className: "h-11 px-5",

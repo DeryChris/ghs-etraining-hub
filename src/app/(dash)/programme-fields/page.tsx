@@ -1,10 +1,11 @@
-import { ChevronRight, Layers, Plus } from "lucide-react";
+import { Layers } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { FieldTileIcon } from "@/components/ui/field-tile-icon";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
@@ -90,14 +91,17 @@ export default async function ProgrammeFieldsPage({
         />
       </section>
 
-      <details className="rounded-card border border-hairline bg-surface shadow-panel">
-        <summary className="flex min-h-12 cursor-pointer items-center gap-2 px-5 text-sm font-semibold text-ink">
-          <Plus className="h-4 w-4 text-primary" aria-hidden />
-          Add a programme field
-        </summary>
+      <ActionDialog
+        label="Add a programme field"
+        title="Add a programme field"
+        description="A field is the top level of the training vocabulary and becomes a tile on the library page, so the name should read the way the service says it."
+        variant="primary"
+        buttonSize="md"
+        className="w-full sm:w-auto"
+      >
         <form
           action={createProgrammeFieldAction}
-          className="grid gap-3 border-t border-hairline p-5 md:grid-cols-[1fr_180px_1fr_auto] md:items-end"
+          className="grid gap-3 md:grid-cols-2"
         >
           <div>
             <label htmlFor="new-field-name" className={labelClass}>
@@ -139,7 +143,7 @@ export default async function ProgrammeFieldsPage({
             Add field
           </button>
         </form>
-      </details>
+      </ActionDialog>
 
       {fields.length === 0 ? (
         <ListEmptyState
@@ -217,14 +221,15 @@ export default async function ProgrammeFieldsPage({
                   </div>
                 </header>
 
-                <details className="border-t border-hairline px-5 py-3">
-                  <summary className="flex min-h-9 cursor-pointer items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                    <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-                    Edit this field
-                  </summary>
+                <ActionDialog
+                  label="Edit field"
+                  title="Edit this field"
+                  description="The code is fixed: it appears in exports and is the seeder's natural key."
+                  size="sm"
+                >
                   <form
                     action={updateProgrammeFieldAction}
-                    className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end"
+                    className="grid gap-3"
                   >
                     <input type="hidden" name="id" value={field.id} />
                     <div>
@@ -271,7 +276,7 @@ export default async function ProgrammeFieldsPage({
                     stable and cannot be edited: it appears in exports and in
                     the seeder&apos;s natural key.
                   </p>
-                </details>
+                </ActionDialog>
 
                 <div className="border-t border-hairline p-5">
                   <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
@@ -307,13 +312,10 @@ export default async function ProgrammeFieldsPage({
                               </p>
                             </div>
                             <div className="flex shrink-0 flex-wrap items-center gap-2">
-                              <details>
-                                <summary className="inline-flex min-h-9 cursor-pointer items-center rounded-control border border-hairline px-3 text-xs font-semibold text-ink">
-                                  Edit
-                                </summary>
+                              <ActionDialog label="Edit" title="Edit this area" size="sm">
                                 <form
                                   action={updateProgrammeAreaAction}
-                                  className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+                                  className="grid gap-3"
                                 >
                                   <input
                                     type="hidden"
@@ -367,12 +369,14 @@ export default async function ProgrammeFieldsPage({
                                     Save area
                                   </button>
                                 </form>
-                              </details>
-                              <details>
-                                <summary className="inline-flex min-h-9 cursor-pointer items-center rounded-control border border-hairline px-3 text-xs font-semibold text-ink">
-                                  People ({area.facilitators.length})
-                                </summary>
-                                <div className="mt-2 w-full min-w-56 space-y-2">
+                              </ActionDialog>
+                              <ActionDialog
+                                label={`People (${area.facilitators.length})`}
+                                title={`Who works in ${area.name}`}
+                                description="Assigned people can author material and run trainings in this area only."
+                                size="sm"
+                              >
+                                <div className="space-y-2">
                                   {area.facilitators.length > 0 && (
                                     <ul className="space-y-1">
                                       {area.facilitators.map((person) => (
@@ -467,7 +471,7 @@ export default async function ProgrammeFieldsPage({
                                     trainings in this area only.
                                   </p>
                                 </div>
-                              </details>
+                              </ActionDialog>
                               <form action={setProgrammeAreaArchivedAction}>
                                 <input
                                   type="hidden"
@@ -522,14 +526,16 @@ export default async function ProgrammeFieldsPage({
                     </ul>
                   )}
 
-                  <details className="mt-3">
-                    <summary className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-control border border-dashed border-hairline px-3 text-xs font-semibold text-ink-muted">
-                      <Plus className="h-3.5 w-3.5" aria-hidden />
-                      Add an area to {field.name}
-                    </summary>
+                  <ActionDialog
+                      label="Add an area"
+                      title={`Add an area to ${field.name}`}
+                      description="Areas are what a training is filed under inside the field."
+                      variant="ghost"
+                      className="border border-dashed border-hairline text-ink-muted"
+                    >
                     <form
                       action={createProgrammeAreaAction}
-                      className="mt-3 grid gap-3 md:grid-cols-[1fr_160px_1fr_auto] md:items-end"
+                      className="grid gap-3"
                     >
                       <input type="hidden" name="fieldId" value={field.id} />
                       <div>
@@ -584,7 +590,7 @@ export default async function ProgrammeFieldsPage({
                         Add area
                       </button>
                     </form>
-                  </details>
+                  </ActionDialog>
                 </div>
               </article>
             </li>

@@ -14,18 +14,20 @@
  * queue, while a facilitator sees their materials and notices there too.
  *
  * "Trainings" is the register: a flat, filterable list of events (ADR-0013).
- * "Catalogue" is the way in by subject — programme field, then programme area,
- * then the trainings and material filed under it (ADR-0014). They were briefly
- * one screen, which left the register sharing space with the taxonomy; they are
- * two doors again because people arrive with one of two questions — "what ran
- * this year?" or "what exists for malaria?".
+ * "Library" is the way in by subject — programme field, then programme area, then
+ * the trainings and material filed under it (ADR-0014). They were briefly one
+ * screen, which left the register sharing space with the taxonomy; they are two
+ * doors again because people arrive with one of two questions — "what ran this
+ * year?" or "what exists for malaria?".
+ *
+ * There is no separate "Catalogue" item and no separate "Library" item: the
+ * catalogue route is the library, and searching it is what the header box does.
  */
 import type { Role } from "@/lib/rbac/capabilities";
 
 /** Icon names are resolved to components by the sidebar, keeping this module pure. */
 export type NavIcon =
   | "dashboard"
-  | "catalogue"
   | "training"
   | "geography"
   | "taxonomy"
@@ -82,10 +84,10 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       { href: "/dashboard", label: "Dashboard", icon: "dashboard", roles: EVERYONE },
       {
         href: "/catalogue",
-        label: "Catalogue",
-        icon: "catalogue",
+        label: "Library",
+        icon: "library",
         roles: EVERYONE,
-        hint: "Programme fields and areas, with the trainings held for each",
+        hint: "Programme fields and areas, with the trainings and material filed under each",
       },
       {
         href: "/trainings",
@@ -94,7 +96,6 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         roles: EVERYONE,
         hint: "Every training GHS has planned or run, by programme field and area",
       },
-      { href: "/library", label: "Library", icon: "library", roles: EVERYONE },
       {
         href: "/assessments",
         label: "Pre/Post Test",

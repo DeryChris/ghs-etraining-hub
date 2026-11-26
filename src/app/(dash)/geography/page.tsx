@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Building2, MapPin, Plus } from "lucide-react";
+import { Building2, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { Stat } from "@/components/ui/stat";
@@ -99,12 +100,13 @@ export default async function GeographyPage({
             </h2>
             <p className="text-sm text-ink-muted">Choose a region to work on its districts and facilities.</p>
           </div>
-          <details className="rounded-card border border-hairline bg-surface px-4 py-2 shadow-panel">
-            <summary className="flex min-h-9 cursor-pointer items-center gap-1.5 text-xs font-semibold text-ink">
-              <Plus className="h-3.5 w-3.5 text-primary" aria-hidden />
-              Add a region
-            </summary>
-            <form action={createRegionAction} className="mt-3 flex flex-wrap items-end gap-2">
+          <ActionDialog
+              label="Add a region"
+              title="Add a region"
+              description="Regions sit above districts in the posting data every person and training carries."
+              variant="primary"
+            >
+            <form action={createRegionAction} className="flex flex-wrap items-end gap-2">
               <div>
                 <label htmlFor="new-region-name" className={labelClass}>
                   Name <span className="text-danger">*</span>
@@ -127,7 +129,7 @@ export default async function GeographyPage({
                 Add region
               </button>
             </form>
-          </details>
+          </ActionDialog>
         </div>
 
         <ul className="flex flex-wrap gap-2">
@@ -219,11 +221,8 @@ export default async function GeographyPage({
             </form>
           </div>
 
-          <details className="border-t border-hairline pt-3">
-            <summary className="flex min-h-9 cursor-pointer items-center text-xs font-semibold uppercase tracking-wider text-ink-muted">
-              Edit region name and code
-            </summary>
-            <form action={updateRegionAction} className="mt-3 flex flex-wrap items-end gap-2">
+          <ActionDialog label="Edit" title="Edit region name and code" size="sm">
+            <form action={updateRegionAction} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="id" value={region.id} />
               <div>
                 <label htmlFor="region-name" className={labelClass}>
@@ -255,7 +254,7 @@ export default async function GeographyPage({
                 Save region
               </button>
             </form>
-          </details>
+          </ActionDialog>
 
           <div className="border-t border-hairline pt-4">
             <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
@@ -263,12 +262,13 @@ export default async function GeographyPage({
               Districts
             </h3>
 
-            <details className="mt-2">
-              <summary className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-control border border-dashed border-hairline px-3 text-xs font-semibold text-ink-muted">
-                <Plus className="h-3.5 w-3.5" aria-hidden />
-                Add a district
-              </summary>
-              <form action={createDistrictAction} className="mt-3 grid gap-3 md:grid-cols-[1fr_170px_1fr_auto] md:items-end">
+            <ActionDialog
+                  label="Add a district"
+                  title={`Add a district to ${region.name}`}
+                  variant="ghost"
+                  className="border border-dashed border-hairline text-ink-muted"
+                >
+              <form action={createDistrictAction} className="grid gap-3">
                 <input type="hidden" name="regionId" value={region.id} />
                 <div>
                   <label htmlFor="new-district-name" className={labelClass}>
@@ -298,7 +298,7 @@ export default async function GeographyPage({
                   Add district
                 </button>
               </form>
-            </details>
+            </ActionDialog>
 
             {region.districts.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">
@@ -345,9 +345,8 @@ export default async function GeographyPage({
                         </div>
                       </div>
 
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-xs font-semibold text-ink-muted">Edit</summary>
-                        <form action={updateDistrictAction} className="mt-2 grid gap-2 sm:grid-cols-[1fr_150px_1fr_auto] sm:items-end">
+                      <ActionDialog label="Edit" title="Edit" size="sm">
+                        <form action={updateDistrictAction} className="grid gap-3">
                           <input type="hidden" name="id" value={row.id} />
                           <input type="hidden" name="regionId" value={region.id} />
                           <div>
@@ -397,7 +396,7 @@ export default async function GeographyPage({
                             Save
                           </button>
                         </form>
-                      </details>
+                      </ActionDialog>
                     </li>
                   );
                 })}
@@ -416,12 +415,13 @@ export default async function GeographyPage({
 
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Sub-districts</h4>
-                <details className="mt-2">
-                  <summary className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-control border border-dashed border-hairline px-3 text-xs font-semibold text-ink-muted">
-                    <Plus className="h-3.5 w-3.5" aria-hidden />
-                    Add a sub-district
-                  </summary>
-                  <form action={createSubDistrictAction} className="mt-3 flex flex-wrap items-end gap-2">
+                <ActionDialog
+                    label="Add a sub-district"
+                    title={`Add a sub-district to ${district.name}`}
+                    variant="ghost"
+                    className="border border-dashed border-hairline text-ink-muted"
+                  >
+                  <form action={createSubDistrictAction} className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="districtId" value={district.id} />
                     <input type="hidden" name="regionId" value={region.id} />
                     <div>
@@ -441,7 +441,7 @@ export default async function GeographyPage({
                       Add sub-district
                     </button>
                   </form>
-                </details>
+                </ActionDialog>
 
                 {district.subDistricts.length === 0 ? (
                   <p className="mt-2 text-sm text-ink-muted">None recorded. They are optional on a training.</p>
@@ -473,14 +473,15 @@ export default async function GeographyPage({
 
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Facilities</h4>
-                <details className="mt-2">
-                  <summary className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-control border border-dashed border-hairline px-3 text-xs font-semibold text-ink-muted">
-                    <Plus className="h-3.5 w-3.5" aria-hidden />
-                    Add a facility
-                  </summary>
+                <ActionDialog
+                    label="Add a facility"
+                    title={`Add a facility to ${district.name}`}
+                    variant="ghost"
+                    className="border border-dashed border-hairline text-ink-muted"
+                  >
                   <form
                     action={createFacilityAction}
-                    className="mt-3 grid gap-3 md:grid-cols-[1fr_180px_150px_170px_auto] md:items-end"
+                    className="grid gap-3"
                   >
                     <input type="hidden" name="districtId" value={district.id} />
                     <input type="hidden" name="regionId" value={region.id} />
@@ -538,7 +539,7 @@ export default async function GeographyPage({
                       Add facility
                     </button>
                   </form>
-                </details>
+                </ActionDialog>
 
                 {district.facilities.length === 0 ? (
                   <p className="mt-2 text-sm text-ink-muted">
@@ -582,11 +583,10 @@ export default async function GeographyPage({
                           </div>
                         </div>
 
-                        <details className="mt-2">
-                          <summary className="cursor-pointer text-xs font-semibold text-ink-muted">Edit</summary>
+                        <ActionDialog label="Edit" title="Edit" size="sm">
                           <form
                             action={updateFacilityAction}
-                            className="mt-2 grid gap-2 sm:grid-cols-[1fr_160px_140px_160px_auto] sm:items-end"
+                            className="grid gap-3"
                           >
                             <input type="hidden" name="id" value={facility.id} />
                             <input type="hidden" name="districtId" value={district.id} />
@@ -662,7 +662,7 @@ export default async function GeographyPage({
                               Save
                             </button>
                           </form>
-                        </details>
+                        </ActionDialog>
                       </li>
                     ))}
                   </ul>

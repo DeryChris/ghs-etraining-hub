@@ -216,3 +216,14 @@ honours DNT) plus downloads from the existing audit trail, drawn as server‑ren
 and served through signed links, so the app works on a bare Neon + Vercel deployment. The ceiling is the
 platform's request body limit (~4.5 MB), not Postgres. Configure a bucket and the same interface returns
 to direct browser-to-bucket uploads with the 250 MB family limits.
+
+---
+
+## ADR‑0017 — One library door
+
+**Status:** accepted · **Date:** 2026‑11
+
+The Library tab and the catalogue were two doors to the same material. There is now one: the tab is
+called **Library**, its route is `/catalogue`, and search happens on it. `/library` redirects. See
+`0017-one-library-door.md`, which also carries ADR‑0018 (unit head as a role choice) and ADR‑0019
+(employee numbers are digits).

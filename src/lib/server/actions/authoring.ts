@@ -66,7 +66,7 @@ export interface AuthoringActionState {
 const GENERIC_FAILURE = "We could not save that. Refresh the page and try again.";
 
 function revalidateAuthoring(materialId?: string): void {
-  revalidatePath("/library");
+  revalidatePath("/catalogue");
   revalidatePath("/review");
   if (materialId) revalidatePath(`/authoring/${materialId}`);
 }

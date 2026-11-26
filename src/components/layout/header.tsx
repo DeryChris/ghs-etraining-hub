@@ -13,7 +13,8 @@ import type { ShellUser } from "@/components/layout/types";
 import { NotificationBell, type DrawerNotice } from "@/components/layout/notification-drawer";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { inputClass } from "@/components/ui/input";
-import { ROLE_LABELS } from "@/lib/labels";
+import { STAFF_ROLE_LABELS } from "@/lib/labels";
+import { staffRoleOf } from "@/lib/rbac/capabilities";
 import { SignOutButton } from "@/components/layout/sign-out-button";
 import { signOutAction } from "@/lib/server/actions/auth";
 
@@ -52,7 +53,7 @@ export function Header({
         </button>
 
         <form
-          action="/library"
+          action="/catalogue"
           method="get"
           role="search"
           className="relative hidden w-full max-w-lg md:block"
@@ -141,7 +142,7 @@ function AccountMenu({ user }: { user: ShellUser }) {
             {user.name}
           </span>
           <span className="mt-0.5 block truncate text-[10px] font-medium uppercase leading-tight tracking-[0.07em] text-ink-muted">
-            {ROLE_LABELS[user.role]}
+            {STAFF_ROLE_LABELS[staffRoleOf({ role: user.role, unitHead: user.unitHead })]}
           </span>
         </span>
         <span
@@ -169,7 +170,7 @@ function AccountMenu({ user }: { user: ShellUser }) {
               {user.staffId}
             </span>
             <span className="mt-1 inline-flex rounded-[var(--radius-pill)] bg-primary/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-              {ROLE_LABELS[user.role]}
+              {STAFF_ROLE_LABELS[staffRoleOf({ role: user.role, unitHead: user.unitHead })]}
             </span>
           </span>
         </div>

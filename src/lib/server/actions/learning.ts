@@ -128,7 +128,7 @@ export async function acknowledgeMaterialAction(
   if (result.ok) {
     log.info({ event: "material.acknowledged", userId: session.sub, role: session.role, materialId, versionId });
     revalidatePath("/dashboard");
-    revalidatePath("/library");
+    revalidatePath("/catalogue");
     revalidatePath("/analytics");
     revalidatePath(`/materials/${materialId}`);
   }

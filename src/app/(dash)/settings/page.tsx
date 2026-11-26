@@ -9,7 +9,8 @@ import { db } from "@/db/index";
 import { auditLogs } from "@/db/schema";
 import { displayOrigin } from "@/lib/app-url";
 import { formatDateTime } from "@/lib/format";
-import { ROLE_LABELS } from "@/lib/labels";
+import { STAFF_ROLE_LABELS } from "@/lib/labels";
+import { staffRoleOf } from "@/lib/rbac/capabilities";
 import { getDirectorySummary } from "@/lib/server/directory-queries";
 import { requireRole } from "@/lib/server/rbac";
 import { SITE } from "@/lib/site";
@@ -123,7 +124,7 @@ export default async function SettingsPage() {
               <span className="font-mono text-xs">{session.email}</span>
             </Fact>
             <Fact term="Role">
-              <Badge variant="outline">{ROLE_LABELS[session.role]}</Badge>
+              <Badge variant="outline">{STAFF_ROLE_LABELS[staffRoleOf({ role: session.role, unitHead: session.unitHead })]}</Badge>
             </Fact>
             <Fact term="People in the directory">{summary.total}</Fact>
             <Fact term="Active administrators">

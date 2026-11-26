@@ -40,7 +40,6 @@ describe("navFor", () => {
       "/dashboard",
       "/catalogue",
       "/trainings",
-      "/library",
       "/assessments",
       "/messages",
       "/notifications",
@@ -63,21 +62,22 @@ describe("navFor", () => {
     expect(admin[3]?.items.map((item) => item.href)).toEqual(["/review"]);
   });
 
-  it("gives every role both doors: the register and the catalogue by subject", () => {
+  it("gives every role both doors: the register and the library by subject", () => {
     for (const role of ROLES) {
       expect(hrefs(role)).toContain("/trainings");
-      // The catalogue is its own destination again: field → area → trainings.
-      // One screen held both and neither was readable (the register shared space
-      // with the taxonomy it files into).
+      // One library, filed by programme: field → area → trainings and material.
+      // The old flat material list is not a second destination any more; its
+      // route redirects into this one.
       expect(hrefs(role)).toContain("/catalogue");
+      expect(hrefs(role)).not.toContain("/library");
       // Directorates and spaces are gone: there is one taxonomy (ADR-0014).
       expect(hrefs(role)).not.toContain("/directorates");
       expect(hrefs(role)).not.toContain("/sessions");
     }
-    const trainings = navFor("FACILITATOR")
-      .flatMap((section) => section.items)
-      .find((item) => item.href === "/trainings");
-    expect(trainings?.label).toBe("Trainings");
+    const items = navFor("FACILITATOR").flatMap((section) => section.items);
+    expect(items.find((item) => item.href === "/trainings")?.label).toBe("Trainings");
+    // The tab is called the library, and it is the catalogue route.
+    expect(items.find((item) => item.href === "/catalogue")?.label).toBe("Library");
   });
 
   it("gives every role notifications, including facilitators", () => {
@@ -120,7 +120,7 @@ describe("navFor", () => {
 
 describe("isActiveHref", () => {
   it("does not light up the dashboard from every other page", () => {
-    expect(isActiveHref("/library", "/dashboard")).toBe(false);
+    expect(isActiveHref("/catalogue", "/dashboard")).toBe(false);
     expect(isActiveHref("/dashboard", "/dashboard")).toBe(true);
   });
 
@@ -130,7 +130,7 @@ describe("isActiveHref", () => {
   });
 
   it("does not match on a shared prefix", () => {
-    expect(isActiveHref("/library-of-things", "/library")).toBe(false);
+    expect(isActiveHref("/catalogue-of-things", "/catalogue")).toBe(false);
   });
 });
 

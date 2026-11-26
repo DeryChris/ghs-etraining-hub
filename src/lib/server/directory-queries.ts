@@ -2,7 +2,7 @@ import "server-only";
 import { and, count, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/index";
 import { areaFacilitators, fieldFacilitators, users } from "@/db/schema";
-import type { Role } from "@/lib/rbac/capabilities";
+import type { Role, StaffRole } from "@/lib/rbac/capabilities";
 import { escapeLike } from "@/lib/server/query-utils";
 
 /*
@@ -38,7 +38,8 @@ export type DirectoryGroup = "facilitators" | "unit-heads" | "admins";
 
 export interface DirectoryFilters {
   query: string;
-  role: Role | null;
+  /** A role choice, so `UNIT_HEAD` means "facilitators carrying the duty". */
+  role: StaffRole | null;
   status: DirectoryStatus | null;
   /** The three management lenses the Users tab is split into. */
   group?: DirectoryGroup | null;
@@ -52,6 +53,18 @@ export interface DirectoryPage {
   pageSize: number;
 }
 
+/**
+ * The four choices are exclusive: choosing Facilitator shows the facilitators
+ * who do not sign off, and Unit head shows the ones who do. Anything else makes
+ * the counts on the page lie.
+ */
+function roleFilter(role: StaffRole | null): SQL | undefined {
+  if (!role) return undefined;
+  if (role === "UNIT_HEAD") return and(eq(users.role, "FACILITATOR"), eq(users.isUnitHead, true));
+  if (role === "FACILITATOR") return and(eq(users.role, "FACILITATOR"), eq(users.isUnitHead, false));
+  return eq(users.role, role);
+}
+
 function filters(input: DirectoryFilters): SQL | undefined {
   const term = input.query.trim();
   const pattern = `%${escapeLike(term)}%`;
@@ -59,12 +72,12 @@ function filters(input: DirectoryFilters): SQL | undefined {
     term
       ? or(ilike(users.fullName, pattern), ilike(users.email, pattern), ilike(users.ghsStaffId, pattern))
       : undefined,
-    input.role ? eq(users.role, input.role) : undefined,
+    roleFilter(input.role),
     input.status ? eq(users.isActive, input.status === "active") : undefined,
     input.group === "admins"
       ? eq(users.role, "SYSTEM_ADMIN")
       : input.group === "facilitators"
-        ? eq(users.role, "FACILITATOR")
+        ? and(eq(users.role, "FACILITATOR"), eq(users.isUnitHead, false))
         : input.group === "unit-heads"
           ? and(eq(users.role, "FACILITATOR"), eq(users.isUnitHead, true))
           : undefined,
@@ -108,7 +121,10 @@ export interface DirectorySummary {
   total: number;
   active: number;
   learners: number;
+  /** Facilitators who do not sign off the review queue. */
   facilitators: number;
+  /** Facilitators who do. Stored as a duty, offered as a role. */
+  unitHeads: number;
   admins: number;
   neverSignedIn: number;
   activeAdmins: number;
@@ -120,7 +136,8 @@ export async function getDirectorySummary(): Promise<DirectorySummary> {
       total: count(),
       active: sql<number>`count(*) filter (where ${users.isActive})::int`,
       learners: sql<number>`count(*) filter (where ${users.role} = 'LEARNER' and ${users.isActive})::int`,
-      facilitators: sql<number>`count(*) filter (where ${users.role} = 'FACILITATOR' and ${users.isActive})::int`,
+      facilitators: sql<number>`count(*) filter (where ${users.role} = 'FACILITATOR' and not ${users.isUnitHead} and ${users.isActive})::int`,
+      unitHeads: sql<number>`count(*) filter (where ${users.role} = 'FACILITATOR' and ${users.isUnitHead} and ${users.isActive})::int`,
       admins: sql<number>`count(*) filter (where ${users.role} = 'SYSTEM_ADMIN' and ${users.isActive})::int`,
       neverSignedIn: sql<number>`count(*) filter (where ${users.lastLoginAt} is null and ${users.isActive})::int`,
       activeAdmins: sql<number>`count(*) filter (where ${users.role} = 'SYSTEM_ADMIN' and ${users.isActive})::int`,
@@ -133,6 +150,7 @@ export async function getDirectorySummary(): Promise<DirectorySummary> {
       active: 0,
       learners: 0,
       facilitators: 0,
+      unitHeads: 0,
       admins: 0,
       neverSignedIn: 0,
       activeAdmins: 0,

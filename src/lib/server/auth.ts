@@ -4,6 +4,8 @@ import { createHash } from "crypto";
 import { compare, hash } from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db/index";
+import { isNumericStaffId } from "@/lib/staff-id";
+import { staffIdMatches } from "@/lib/server/staff-id-sql";
 import { users } from "@/db/schema";
 import type { Role } from "@/lib/rbac/capabilities";
 import { logAudit } from "@/lib/server/audit";
@@ -53,13 +55,17 @@ export async function authenticateUser(identifier: string, password: string): Pr
   // reliable way to tell the two apart — GHS employee numbers never contain one.
   const typed = identifier.trim();
   const byEmail = typed.includes("@");
+  // Employee numbers are matched on their digits, so `123`, `000123` and the
+  // legacy `GHS-000123` all reach the same account.
   const [user] = await db
     .select()
     .from(users)
     .where(
       byEmail
         ? eq(sql`lower(${users.email})`, typed.toLowerCase())
-        : eq(sql`lower(${users.ghsStaffId})`, typed.toLowerCase()),
+        : isNumericStaffId(typed)
+          ? staffIdMatches(typed)
+          : eq(sql`lower(${users.ghsStaffId})`, typed.toLowerCase()),
     )
     .limit(1);
 

@@ -6,7 +6,6 @@ import {
   Bell,
   CalendarCheck2,
   FolderOpen,
-  Library,
   FolderTree,
   ClipboardCheck,
   ClipboardList,
@@ -31,14 +30,14 @@ import { BrandMark } from "@/components/brand/brand-mark";
 import { NavLinkPending } from "@/components/layout/nav-link-pending";
 import { SidebarFlagLine, SidebarSeal, SidebarTrace } from "@/components/layout/sidebar-art";
 import type { ShellUser } from "@/components/layout/types";
-import { ROLE_LABELS } from "@/lib/labels";
+import { STAFF_ROLE_LABELS } from "@/lib/labels";
+import { staffRoleOf } from "@/lib/rbac/capabilities";
 import { isActiveHref, navFor, type NavCount, type NavIcon } from "@/lib/nav";
 import { SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<NavIcon, LucideIcon> = {
   dashboard: LayoutGrid,
-  catalogue: Library,
   training: CalendarCheck2,
   library: FolderOpen,
   assessment: ClipboardList,
@@ -271,7 +270,7 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
           <div className={cn("min-w-0", collapsed && "sr-only")}>
             <p className="truncate text-sm font-semibold text-[var(--nav-ink)]">{user.name}</p>
             <p className="truncate text-xs text-[var(--nav-muted)]">
-              {user.unitHead && user.role === "FACILITATOR" ? "Unit head" : ROLE_LABELS[user.role]} · {user.staffId}
+              {STAFF_ROLE_LABELS[staffRoleOf({ role: user.role, unitHead: user.unitHead })]} · {user.staffId}
             </p>
           </div>
         </div>

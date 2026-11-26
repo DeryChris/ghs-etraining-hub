@@ -2,7 +2,7 @@
  * Display vocabulary and closed sets shared by server and client code.
  * Pure module: no database or server-only imports.
  */
-import type { Role } from "@/lib/rbac/capabilities";
+import type { Role, StaffRole } from "@/lib/rbac/capabilities";
 
 export const MATERIAL_TYPES = ["DOCUMENT", "VIDEO", "LAB", "ASSESSMENT_LINK"] as const;
 export type MaterialType = (typeof MATERIAL_TYPES)[number];
@@ -43,6 +43,20 @@ export const ROLE_LABELS: Record<Role, string> = {
   SYSTEM_ADMIN: "System administrator",
   FACILITATOR: "Facilitator",
   LEARNER: "Learner",
+};
+
+/** Includes the unit head, which is chosen like a role but stored as a duty. */
+export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
+  ...ROLE_LABELS,
+  UNIT_HEAD: "Unit head",
+};
+
+/** One line under each choice in a role field, in the same order. */
+export const STAFF_ROLE_HINTS: Record<StaffRole, string> = {
+  LEARNER: "Reads and downloads the material written for their audience.",
+  FACILITATOR: "Files material and trains, inside the programme areas they are given.",
+  UNIT_HEAD: "A facilitator who also signs off the review queue for their fields.",
+  SYSTEM_ADMIN: "Runs the directory, the taxonomy and every programme area.",
 };
 
 export const MATERIAL_TYPE_LABELS: Record<MaterialType, string> = {

@@ -21,10 +21,11 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { safeAppLink } from "@/lib/links";
 import {
   MATERIAL_TYPE_LABELS,
-  ROLE_LABELS,
+  STAFF_ROLE_LABELS,
   notificationTypeLabel,
 } from "@/lib/labels";
 import { firstNameOf } from "@/lib/names";
+import { staffRoleOf } from "@/lib/rbac/capabilities";
 import {
   getInsights,
   getProgrammeTraffic,
@@ -105,7 +106,7 @@ function DashboardRetry({ hint }: { hint?: "drift" | "database" | "timeout" }) {
             Try again
           </Link>
           <Link
-            href="/library"
+            href="/catalogue"
             className={buttonClass({
               variant: "secondary",
               className: "h-11 px-5",
@@ -187,7 +188,7 @@ export default async function DashboardPage({
         <div className="grid items-center gap-10 lg:grid-cols-[1fr_auto]">
           <div className="space-y-6">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-              {ROLE_LABELS[session.role]} · {formatDate(now)}
+              {STAFF_ROLE_LABELS[staffRoleOf({ role: session.role, unitHead: session.unitHead })]} · {formatDate(now)}
             </p>
             <h1
               id="dash-title"
@@ -213,7 +214,7 @@ export default async function DashboardPage({
                 </Link>
               ) : null}
               <Link
-                href="/library"
+                href="/catalogue"
                 className={buttonClass({
                   variant: "secondary",
                   className: "h-12 rounded-[var(--radius-pill)] px-6",
@@ -397,7 +398,7 @@ export default async function DashboardPage({
                 title="Nothing opened yet"
                 description="Everything published for your programmes is in the library. What you open shows up here."
                 actionText="Browse the library"
-                actionHref="/library"
+                actionHref="/catalogue"
               />
             ) : (
               <ul className="surface-card divide-y divide-hairline overflow-hidden">

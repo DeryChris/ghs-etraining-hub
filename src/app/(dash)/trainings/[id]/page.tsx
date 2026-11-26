@@ -37,7 +37,27 @@ export default async function TrainingDetailPage({
   const { id } = await params;
   if (!UUID.test(id)) notFound();
 
-  const training = await getTraining(id);
+  /*
+   * Read through the deadline wrapper rather than straight from the query, so a
+   * database that is a migration behind says so. This page reads the newest
+   * columns in the schema (the cover key, the comment table), which makes it the
+   * first page to break when the deployed build and the database drift apart —
+   * and a thrown query used to land on the generic "Something went wrong" card,
+   * which tells nobody which side is stale. `withDeadline` classifies the error,
+   * and the card below names the migration.
+   */
+  const loaded = await withDeadline("trainings.detail", () => getTraining(id));
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="This training did not open"
+        description="The record could not be read. Nothing was changed."
+        requestId={loaded.requestId}
+        hint={loaded.hint}
+      />
+    );
+  }
+  const training = loaded.data;
   if (!training) notFound();
 
   const query = await searchParams;
@@ -52,7 +72,18 @@ export default async function TrainingDetailPage({
   // head. Anyone else who types the URL gets the same answer as a bad id.
   if (training.reviewState !== "PUBLISHED" && training.createdById !== session.sub && !canReview) notFound();
 
-  const comments = await listTrainingComments(training.id);
+  const loadedComments = await withDeadline("trainings.comments", () => listTrainingComments(training.id));
+  if (!loadedComments.ok) {
+    return (
+      <DataUnavailable
+        title="This training's discussion did not open"
+        description="The training itself loaded, but its comments could not be read. Nothing was changed."
+        requestId={loadedComments.requestId}
+        hint={loadedComments.hint}
+      />
+    );
+  }
+  const comments = loadedComments.data;
 
   /*
    * The picture and every attachment get a short-lived link here rather than in

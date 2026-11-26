@@ -18,11 +18,18 @@ indexes so an agent does not have to reverse‑engineer them. Naming/style rules
 ## 2. Tables
 
 ### users
-`ghsStaffId` (unique, `^GHS-\d{6}$`), `email` (unique, lowercase), `fullName`, `phone` (E.164),
+`ghsStaffId` (unique — the employee number as the payroll list prints it, plain digits such as
+`2681763`; the older `GHS-000123` spelling is still read, and both resolve to the same person via
+`src/lib/staff-id.ts`), `email` (unique, lowercase), `fullName`, `phone` (E.164),
 `role`, `cadre` (nurse / midwife / medical officer / pharmacy / laboratory / records / administration), `directorate`, `region`,
 `facility`, `isActive`, `deactivatedAt`, `mfaEnabled`, `lastLoginAt`, `failedLoginCount`,
 `lockedUntil`, `createdAt`, `updatedAt`.
 Indexes: `users_region_role_idx (region, role)`, `users_directorate_idx`, `users_facility_idx`.
+`isUnitHead` is a duty carried by a facilitator, not a fourth role: it grants the review queue for
+their fields and nothing else, which is why it does not disturb their area assignments. The Users
+screen offers it as a fourth choice in the role field (`UNIT_HEAD`) and writes `role = FACILITATOR,
+is_unit_head = true`; see `roleForStaffRole` in `src/lib/rbac/capabilities.ts`.
+
 Soft‑delete only. Deactivation preserves history and anonymises the display name in discussions.
 
 ### sessions

@@ -49,7 +49,7 @@ export default async function AuthoringPage() {
             Review queue
           </Link>
         )}
-        <Link href="/library" className={buttonClass({ variant: "ghost" })}>
+        <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
           Browse published library
         </Link>
       </div>

@@ -30,11 +30,27 @@ export interface LoadFailure {
  * slow. Telling somebody to "try again" when a redeploy is the fix wastes their
  * afternoon.
  */
+/**
+ * The Postgres code, wherever the driver put it.
+ *
+ * Drizzle wraps a failed query in its own `Error` ("Failed query: select …") and
+ * hangs the driver's error underneath as `cause`, so reading `error.code` alone
+ * finds nothing and a missing column is reported as a generic failure. That was
+ * how a schema one migration behind reached the browser as "Something went
+ * wrong". Walk the chain instead.
+ */
+function codeOf(error: unknown): string | undefined {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current && typeof current === "object"; depth += 1) {
+    const candidate = (current as { code?: unknown }).code;
+    if (typeof candidate === "string" && candidate.length > 0) return candidate;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return undefined;
+}
+
 export function classifyLoadFailure(error: unknown): LoadFailure {
-  const code =
-    typeof error === "object" && error !== null && "code" in error
-      ? String((error as { code?: unknown }).code)
-      : undefined;
+  const code = codeOf(error);
   const name = error instanceof Error ? error.name : "";
 
   if (code && MISSING_OBJECT_CODES.has(code)) {

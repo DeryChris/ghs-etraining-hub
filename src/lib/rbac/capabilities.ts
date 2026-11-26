@@ -1,5 +1,34 @@
 export type Role = "SYSTEM_ADMIN" | "FACILITATOR" | "LEARNER";
 
+/**
+ * What an administrator picks in a role field.
+ *
+ * Unit head is offered beside the three stored roles because that is how the
+ * service talks about the post: a facilitator who also signs off the material
+ * filed under their fields. In the database it stays a facilitator carrying the
+ * `is_unit_head` duty — handing it its own enum value would mean re-checking
+ * every area assignment, training and material query for a fourth role, and the
+ * only extra permission it grants is deciding on the review queue.
+ */
+export type StaffRole = Role | "UNIT_HEAD";
+
+/** Ordered by how much authority the choice carries. */
+export const STAFF_ROLE_VALUES = ["LEARNER", "FACILITATOR", "UNIT_HEAD", "SYSTEM_ADMIN"] as const;
+
+export function isStaffRole(value: string | null | undefined): value is StaffRole {
+  return STAFF_ROLE_VALUES.includes(value as StaffRole);
+}
+
+/** The row a StaffRole writes: the stored role, plus the unit-head duty. */
+export function roleForStaffRole(staffRole: StaffRole): { role: Role; unitHead: boolean } {
+  return staffRole === "UNIT_HEAD" ? { role: "FACILITATOR", unitHead: true } : { role: staffRole, unitHead: false };
+}
+
+/** The choice a stored row corresponds to — the inverse of roleForStaffRole. */
+export function staffRoleOf(user: { role: Role; unitHead?: boolean | null }): StaffRole {
+  return user.role === "FACILITATOR" && user.unitHead === true ? "UNIT_HEAD" : user.role;
+}
+
 export type Action =
   | "user.create"
   | "user.bulk_import"

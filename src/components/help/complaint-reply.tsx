@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Loader2, Send } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { inputClass } from "@/components/ui/input";
 import { staffReplyAction, type ComplaintState } from "@/lib/server/actions/complaints";
 
@@ -17,11 +18,17 @@ export function ComplaintReplyForm({ staffId, reference }: { staffId: string; re
   const [state, action, pending] = useActionState(staffReplyAction, INITIAL);
 
   return (
-    <details className="mt-4 rounded-control border border-hairline bg-surface/70 p-4">
-      <summary className="cursor-pointer text-sm font-semibold text-ink">
-        {state.ok ? "Message sent — write again" : "Reply to this complaint"}
-      </summary>
-      <form action={action} className="mt-3 space-y-3">
+    <Dialog
+      size="sm"
+      title="Reply to this complaint"
+      description={`Reference ${reference}. Sending a reply reopens the complaint, so it comes back to the helpdesk queue.`}
+      trigger={({ open }) => (
+        <button type="button" onClick={open} className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}>
+          {state.ok ? "Message sent — write again" : "Reply to this complaint"}
+        </button>
+      )}
+    >
+      <form action={action} className="space-y-3">
         <input type="hidden" name="staffId" value={staffId} />
         <input type="hidden" name="reference" value={reference} />
         <label htmlFor={`reply-${reference}`} className="sr-only">
@@ -49,6 +56,6 @@ export function ComplaintReplyForm({ staffId, reference }: { staffId: string; re
           </p>
         )}
       </form>
-    </details>
+    </Dialog>
   );
 }

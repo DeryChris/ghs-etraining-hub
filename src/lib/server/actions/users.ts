@@ -9,6 +9,9 @@ import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
+import { canonicalStaffId, isValidStaffId, sameStaffId } from "@/lib/staff-id";
+import { staffIdMatches } from "@/lib/server/staff-id-sql";
+import { roleForStaffRole, staffRoleOf, STAFF_ROLE_VALUES } from "@/lib/rbac/capabilities";
 import { createPasswordResetToken, hashPassword } from "@/lib/server/auth";
 import { randomBytes } from "node:crypto";
 
@@ -49,7 +52,7 @@ const REGIONS = [
   "Western North",
 ] as const;
 
-const ROLE_VALUES = ["SYSTEM_ADMIN", "FACILITATOR", "LEARNER"] as const;
+const ROLE_VALUES = STAFF_ROLE_VALUES;
 
 const optionalText = (max: number) =>
   z
@@ -61,11 +64,18 @@ const optionalText = (max: number) =>
 
 const createInput = z
   .object({
+    /*
+     * The payroll list prints employee numbers as plain digits (2681763), so the
+     * field takes them that way. A prefixed GHS-000123 is still accepted and
+     * reduced to its digits, because directories built before this change hold
+     * the prefixed spelling and people copy whatever is on the paper in front of
+     * them.
+     */
     staffId: z
       .string()
       .trim()
-      .toUpperCase()
-      .regex(/^GHS-[0-9]{3,12}$/, "Use the staff ID as printed on the directory, e.g. GHS-000123."),
+      .refine(isValidStaffId, "Use the employee number as printed on the payroll list, e.g. 2681763.")
+      .transform(canonicalStaffId),
     fullName: z.string().trim().min(3, "Enter the full name as it appears on the staff record.").max(120),
     email: z.string().trim().toLowerCase().email("Enter a work e-mail address.").max(200),
     role: z.enum(ROLE_VALUES),
@@ -76,6 +86,17 @@ const createInput = z
     phone: optionalText(40),
   })
   .strict();
+
+function roleChangeMessage(fullName: string, role: (typeof ROLE_VALUES)[number]): string {
+  switch (role) {
+    case "SYSTEM_ADMIN":
+      return `${fullName} is now a system administrator.`;
+    case "UNIT_HEAD":
+      return `${fullName} is now a unit head: the review queue is on their dashboard.`;
+    default:
+      return `${fullName} is now a ${role.toLowerCase()}.`;
+  }
+}
 
 const roleInput = z.object({ userId: z.string().uuid(), role: z.enum(ROLE_VALUES) }).strict();
 const targetInput = z.object({ userId: z.string().uuid() }).strict();
@@ -118,18 +139,21 @@ export async function createUserAction(_previous: UserActionState, formData: For
   if (!guard.ok) return { ok: false, message: guard.message };
   const { session } = guard;
   const input = parsed.data;
+  const duty = roleForStaffRole(input.role);
 
   const [existing] = await db
     .select({ id: users.id, email: users.email, staffId: users.ghsStaffId })
     .from(users)
-    .where(sql`lower(${users.email}) = ${input.email} or ${users.ghsStaffId} = ${input.staffId}`)
+    .where(
+      sql`lower(${users.email}) = ${input.email} or ${staffIdMatches(input.staffId)}`,
+    )
     .limit(1);
   if (existing) {
     return {
       ok: false,
       message:
-        existing.staffId === input.staffId
-          ? `Staff ID ${input.staffId} is already in the directory.`
+        existing.staffId && sameStaffId(existing.staffId, input.staffId)
+          ? `Employee number ${input.staffId} is already in the directory.`
           : `${input.email} is already in the directory.`,
     };
   }
@@ -142,7 +166,8 @@ export async function createUserAction(_previous: UserActionState, formData: For
           ghsStaffId: input.staffId,
           email: input.email,
           fullName: input.fullName,
-          role: input.role,
+          role: duty.role,
+          isUnitHead: duty.unitHead,
           region: input.region ?? null,
           directorate: input.directorate,
           cadre: input.cadre,
@@ -158,7 +183,7 @@ export async function createUserAction(_previous: UserActionState, formData: For
           action: "USER_CREATED",
           entity: "user",
           entityId: row.id,
-          metadata: { staffId: input.staffId, role: input.role, region: input.region ?? null },
+          metadata: { staffId: input.staffId, role: duty.role, unitHead: duty.unitHead, region: input.region ?? null },
         },
         tx,
       );
@@ -171,7 +196,7 @@ export async function createUserAction(_previous: UserActionState, formData: For
   // No Supabase Auth — the person is in the directory but cannot sign in
   // until an administrator sends them a password reset link.
   revalidatePath("/users");
-  log.info({ event: "user.created", actor: session.sub, role: input.role });
+  log.info({ event: "user.created", actor: session.sub, role: duty.role, unitHead: duty.unitHead });
 
   return {
     ok: true,
@@ -192,12 +217,15 @@ export async function changeUserRoleAction(_previous: UserActionState, formData:
   }
 
   const [target] = await db
-    .select({ id: users.id, fullName: users.fullName, role: users.role })
+    .select({ id: users.id, fullName: users.fullName, role: users.role, isUnitHead: users.isUnitHead })
     .from(users)
     .where(eq(users.id, parsed.data.userId))
     .limit(1);
   if (!target) return { ok: false, message: "That person is no longer in the directory." };
-  if (target.role === parsed.data.role) return { ok: false, message: `${target.fullName} already has that role.` };
+
+  const current = staffRoleOf({ role: target.role, unitHead: target.isUnitHead });
+  if (current === parsed.data.role) return { ok: false, message: `${target.fullName} already has that role.` };
+  const next = roleForStaffRole(parsed.data.role);
 
   if (target.role === "SYSTEM_ADMIN" && (await activeAdminCount(target.id)) === 0) {
     return { ok: false, message: "This is the last active administrator. Give someone else the role first." };
@@ -205,14 +233,17 @@ export async function changeUserRoleAction(_previous: UserActionState, formData:
 
   try {
     await db.transaction(async (tx) => {
-      await tx.update(users).set({ role: parsed.data.role, updatedAt: new Date() }).where(eq(users.id, target.id));
+      await tx
+        .update(users)
+        .set({ role: next.role, isUnitHead: next.unitHead, updatedAt: new Date() })
+        .where(eq(users.id, target.id));
       await logAudit(
         {
           actor: auditActor(session),
           action: "USER_ROLE_CHANGED",
           entity: "user",
           entityId: target.id,
-          metadata: { from: target.role, to: parsed.data.role },
+          metadata: { from: current, to: parsed.data.role, role: next.role, unitHead: next.unitHead },
         },
         tx,
       );
@@ -225,7 +256,7 @@ export async function changeUserRoleAction(_previous: UserActionState, formData:
   revalidatePath("/users");
   revalidatePath("/insights");
   log.info({ event: "user.role_changed", actor: session.sub, target: target.id, to: parsed.data.role });
-  return { ok: true, message: `${target.fullName} is now ${parsed.data.role === "SYSTEM_ADMIN" ? "a system administrator" : parsed.data.role.toLowerCase()}.` };
+  return { ok: true, message: roleChangeMessage(target.fullName, parsed.data.role) };
 }
 
 export async function setUserActiveAction(_previous: UserActionState, formData: FormData): Promise<UserActionState> {
@@ -329,68 +360,6 @@ export async function sendPasswordResetAction(_previous: UserActionState, formDa
   return {
     ok: true,
     message: `Reset token for ${target.email}: ${result.token}. Share this securely with the user.`,
-  };
-}
-
-/* ── Unit heads ─────────────────────────────────────────────────────────────── */
-
-const unitHeadInput = z.object({ userId: z.string().uuid() }).strict();
-
-/**
- * Marks a facilitator as a unit head, or takes the duty away again.
- *
- * A unit head is a facilitator who signs off the material filed under their
- * programme fields — the review queue, for the areas they are assigned to. The
- * role itself does not change, so their area assignments and materials keep
- * working whichever way this is set.
- */
-export async function setUnitHeadAction(_previous: UserActionState, formData: FormData): Promise<UserActionState> {
-  const parsed = unitHeadInput.safeParse({ userId: field(formData, "userId") });
-  if (!parsed.success) return { ok: false, message: "That person could not be identified. Reload the page." };
-
-  const guard = await checkCapability("user.assign_role");
-  if (!guard.ok) return { ok: false, message: guard.message };
-  const { session } = guard;
-
-  const [target] = await db
-    .select({ id: users.id, fullName: users.fullName, role: users.role, isUnitHead: users.isUnitHead })
-    .from(users)
-    .where(eq(users.id, parsed.data.userId))
-    .limit(1);
-  if (!target) return { ok: false, message: "That person is no longer in the directory." };
-  if (target.role !== "FACILITATOR") {
-    return {
-      ok: false,
-      message: `${target.fullName} is a ${target.role.toLowerCase().replace("_", " ")}. Only a facilitator can be a unit head.`,
-    };
-  }
-
-  const next = !target.isUnitHead;
-  try {
-    await db.transaction(async (tx) => {
-      await tx.update(users).set({ isUnitHead: next, updatedAt: new Date() }).where(eq(users.id, target.id));
-      await logAudit(
-        {
-          actor: auditActor(session),
-          action: next ? "USER_UNIT_HEAD_GRANTED" : "USER_UNIT_HEAD_REMOVED",
-          entity: "user",
-          entityId: target.id,
-          metadata: { fullName: target.fullName },
-        },
-        tx,
-      );
-    });
-  } catch (error) {
-    log.error({ event: "user.unit_head_failed", err: String(error) });
-    return { ok: false, message: "That was not saved. Try again." };
-  }
-
-  revalidatePath("/users");
-  return {
-    ok: true,
-    message: next
-      ? `${target.fullName} is now a unit head: the review queue is on their dashboard.`
-      : `${target.fullName} is no longer a unit head.`,
   };
 }
 
