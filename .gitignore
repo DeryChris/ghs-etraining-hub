@@ -71,3 +71,6 @@ scripts/create-programme-tables.ts
 Staff Data.csv
 staff-data*.csv
 /data/staff*/
+
+# Commands
+commands.md
