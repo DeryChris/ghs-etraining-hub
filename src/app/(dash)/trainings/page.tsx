@@ -388,7 +388,10 @@ export default async function TrainingsPage({
                 : formatDate(training.startsOn);
 
             return (
-              <li key={training.id} className="rounded-card border border-hairline bg-surface p-5 shadow-panel">
+              <li
+                key={training.id}
+                className="group relative rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40 focus-within:border-primary/60"
+              >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 space-y-1.5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
@@ -396,7 +399,15 @@ export default async function TrainingsPage({
                       {training.areaName ? ` · ${training.areaName}` : ""}
                     </p>
                     <h2 className="text-base font-bold text-ink">
-                      <Link href={`/trainings/${training.id}`} className="hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                      {/*
+                       * The whole row is the target, not just the title: the card is
+                       * the affordance people see, and reaching for a 12-character
+                       * word on a phone is a miss.
+                       */}
+                      <Link
+                        href={`/trainings/${training.id}`}
+                        className="group-hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary after:absolute after:inset-0 after:rounded-card"
+                      >
                         {training.title}
                       </Link>
                     </h2>
