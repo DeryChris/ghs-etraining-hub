@@ -59,7 +59,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
             autoComplete="username"
             required
             defaultValue={state.identifier ?? ""}
-            placeholder="112755"
+            placeholder="Your employee number"
             aria-describedby="identifier-hint"
             className={`${inputClass} h-12 pl-10`}
           />

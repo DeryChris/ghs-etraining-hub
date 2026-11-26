@@ -28,7 +28,7 @@ export const notificationPriorityEnum = pgEnum("notification_priority", ["LOW", 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   /**
-   * The employee number off the payroll: `112755`. It is the thing every member
+   * The employee number off the payroll — six digits, printed on the payslip. It is what every member
    * of staff knows by heart, so it is what they sign in with — the e-mail is
    * optional because more than a third of the Upper West sheet has none.
    */

@@ -255,7 +255,8 @@ Anything `NEXT_PUBLIC_*` changed later needs a redeploy, because it is compiled 
 
 ## Staff logins
 
-Staff sign in with their **employee number** (`112755`) and the password ICT gave them. The e-mail is
+Staff sign in with their **employee number** — the one printed on the payslip — and the password ICT gave
+them. The e-mail is
 optional — most of the Upper West payroll has none — and the first sign-in can only choose a new
 password (`users.must_change_password`, checked by `proxy.ts`).
 

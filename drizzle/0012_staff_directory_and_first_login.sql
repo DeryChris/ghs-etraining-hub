@@ -23,5 +23,5 @@ ALTER TABLE "users"
 
 CREATE INDEX IF NOT EXISTS "users_district_idx" ON "users" ("district");
 
--- Case-insensitive employee-number lookup: people type "112755", never a prefix.
+-- Case-insensitive employee-number lookup: people type the number as printed, never a prefix.
 CREATE INDEX IF NOT EXISTS "users_staff_id_lower_idx" ON "users" (lower("ghs_staff_id"));

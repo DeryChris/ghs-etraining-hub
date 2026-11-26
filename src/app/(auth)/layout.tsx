@@ -17,7 +17,7 @@ import { SITE } from "@/lib/site";
 const STEPS: { title: string; body: string }[] = [
   {
     title: "Sign in with your Staff ID",
-    body: "Your employee number, the one on your payslip — 112755, for example. It is already in the staff directory, so there is nothing to register.",
+    body: "Your employee number, the one printed on your payslip. It is already in the staff directory, so there is nothing to register.",
   },
   {
     title: "Use the password you were given",
