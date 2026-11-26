@@ -274,7 +274,7 @@ npm run staff:import -- --file "/path/to/Staff Data.csv"             # geography
 * Every account is created as `LEARNER` with `must_change_password = true`, so nothing in the
   spreadsheet can hand out review authority by accident. Roles and programme access are assigned
   afterwards in `/users` (Facilitators / Unit heads / Admins, then the access overlay).
-* First password: `<employee number>@123` — deliberately easy to say out loud and replaced on first
+* First password: `<employee no.>@123` — deliberately easy to say out loud and replaced on first
   sign-in. It is hashed with bcrypt before it is stored and is never printed or logged.
 * Re-running is safe: names, cadre, facility and geography are refreshed; an existing password, role,
   unit-head duty and programme grants are left alone. `--reset-passwords` reissues the default password
