@@ -33,7 +33,7 @@ export default function TermsPage() {
         {
           heading: "What the library records",
           paragraphs: [
-            "The library records which material you opened, downloaded and marked as finished, against the version you saw. It does not award points, levels or certificates: it is an information service. Certificates issued before the CPD award was retired remain valid and checkable on the verification page, and they are not deleted. Records made in error can be corrected by an administrator, and the correction is recorded.",
+            "The library records which material you opened, downloaded and marked as finished, against the version you saw. It does not award points, levels or certificates: it is an information service, and that record exists for programme statistics rather than for any qualification. Records made in error can be corrected by an administrator, and the correction is recorded.",
           ],
         },
         {

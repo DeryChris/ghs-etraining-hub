@@ -10,9 +10,9 @@ import type { AuthoringArea } from "@/lib/server/authoring-queries";
 const INITIAL: NoticeActionState = { ok: false, message: null };
 
 const TYPES = [
-  { value: "SPACE_ANNOUNCEMENT", label: "Announcement" },
   { value: "MATERIAL_UPDATE", label: "Protocol update" },
-  { value: "SYSTEM_MAINTENANCE", label: "System maintenance" },
+  { value: "SYSTEM_MAINTENANCE", label: "Service notice" },
+  { value: "TRAINING_PUBLISHED", label: "Training announcement" },
 ];
 
 const PRIORITIES = [
@@ -96,7 +96,7 @@ export function BroadcastForm({ areas, canAddressEveryone }: { areas: AuthoringA
           <label htmlFor="notice-type" className={labelClass}>
             Type
           </label>
-          <select id="notice-type" name="type" className={inputClass} defaultValue="SPACE_ANNOUNCEMENT">
+          <select id="notice-type" name="type" className={inputClass} defaultValue="MATERIAL_UPDATE">
             {TYPES.map((type) => (
               <option key={type.value} value={type.value}>
                 {type.label}

@@ -13,8 +13,10 @@ export const FACILITY_TYPES = [
   "DISTRICT_HOSPITAL",
   "POLYCLINIC",
   "HEALTH_CENTRE",
+  "CHPS_COMPOUND",
   "CLINIC",
   "DIRECTORATE",
+  "SERVICE_UNIT",
   "OTHER",
 ] as const;
 export type FacilityType = (typeof FACILITY_TYPES)[number];
@@ -25,8 +27,10 @@ export const FACILITY_TYPE_LABELS: Record<FacilityType, string> = {
   DISTRICT_HOSPITAL: "District hospital",
   POLYCLINIC: "Polyclinic",
   HEALTH_CENTRE: "Health centre",
+  CHPS_COMPOUND: "CHPS compound",
   CLINIC: "Clinic",
   DIRECTORATE: "Directorate",
+  SERVICE_UNIT: "Regional service unit",
   OTHER: "Other",
 };
 
@@ -64,14 +68,16 @@ export const PROGRESS_LABELS: Record<ProgressStatus, string> = {
 };
 
 const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
+  TRAINING_PUBLISHED: "New training",
+  TRAINING_RETURNED: "Training review",
+  MATERIAL_PUBLISHED: "New material",
+  DIRECT_MESSAGE: "Message",
+  COMPLAINT_UPDATE: "Complaint update",
+  ACCOUNT: "Account",
   SYSTEM_MAINTENANCE: "System maintenance",
   MATERIAL_UPDATE: "Protocol update",
-  SPACE_ANNOUNCEMENT: "Announcement",
   COMMENT_REPLY: "Discussion reply",
-  DIRECT_MESSAGE: "Message",
   ASSIGNMENT_DUE: "Assignment due",
-  CERTIFICATE_ISSUED: "Certificate issued",
-  RECERTIFICATION_DUE: "Recertification due",
 };
 
 export function notificationTypeLabel(type: string): string {

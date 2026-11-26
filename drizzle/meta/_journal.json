@@ -92,6 +92,27 @@
       "when": 1795700000000,
       "tag": "0012_staff_directory_and_first_login",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795800000000,
+      "tag": "0013_retire_the_award",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1795900000000,
+      "tag": "0014_notification_types_for_this_service",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1795900000000,
+      "tag": "0015_facility_types_from_the_establishment_list",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { programmeFields, certificates, materialProgress, materialVersions, materials, programmeAreas, users } from "@/db/schema";
+import { programmeFields, materialProgress, materialVersions, materials, programmeAreas, users } from "@/db/schema";
 import { PRIORITY_RANK, type MaterialType, type PriorityLevel, type ProgressStatus } from "@/lib/labels";
 import { log } from "@/lib/server/logger";
 import { audienceFor, fieldFor, liveField, liveArea, publishedMaterial } from "@/lib/server/visibility";
@@ -448,6 +448,13 @@ export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashbo
 
 /* ── Personal analytics & transcript ───────────────────────────────────── */
 
+/**
+ * One line of a person's reading history.
+ *
+ * This is telemetry with a name on it: what was opened, what was finished, when.
+ * It is not an award, a credit or a qualification — nothing here is issued, and
+ * the analytics pages read the same rows as activity counts.
+ */
 export interface CompletionRecord {
   materialId: string;
   title: string;
@@ -455,8 +462,6 @@ export interface CompletionRecord {
   creditsX10: number;
   completedAt: Date | null;
   areaName: string;
-  /** Null when the material earned no CPD points, so nothing was issued. */
-  certificateCode: string | null;
 }
 
 /*
@@ -472,70 +477,11 @@ export async function listCompletions(userId: string, limit = 500): Promise<Comp
       creditsX10: materials.cpdCreditsX10,
       completedAt: materialProgress.completedAt,
       areaName: programmeAreas.name,
-      // The certificate for the version that was actually completed, if one was issued.
-      certificateCode: certificates.code,
     })
     .from(materialProgress)
     .innerJoin(materials, eq(materials.id, materialProgress.materialId))
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .leftJoin(
-      certificates,
-      and(
-        eq(certificates.userId, materialProgress.userId),
-        eq(certificates.materialVersionId, materialProgress.materialVersionId),
-      ),
-    )
     .where(and(eq(materialProgress.userId, userId), eq(materialProgress.status, "COMPLETED")))
     .orderBy(desc(materialProgress.completedAt))
     .limit(limit);
-}
-
-/* ── Printable award ────────────────────────────────────────────────────── */
-
-export interface CertificateAward {
-  id: string;
-  code: string;
-  userId: string;
-  holderName: string;
-  staffId: string;
-  title: string;
-  areaName: string;
-  fieldName: string;
-  creditsX10: number;
-  issuedAt: Date;
-  expiresAt: Date | null;
-  /** Decided here so the page stays a pure render. */
-  expired: boolean;
-}
-
-/**
- * Loads a certificate for the printable award. The caller decides who may print
- * it: the holder, or staff supporting them. The public `/verify` page keeps using
- * the masked name — printing a full name needs a session.
- */
-export async function getCertificateAward(code: string): Promise<CertificateAward | null> {
-  const [row] = await db
-    .select({
-      id: certificates.id,
-      code: certificates.code,
-      userId: certificates.userId,
-      holderName: users.fullName,
-      staffId: users.ghsStaffId,
-      title: materials.title,
-      areaName: programmeAreas.name,
-      fieldName: programmeFields.name,
-      creditsX10: certificates.cpdCreditsX10,
-      issuedAt: certificates.issuedAt,
-      expiresAt: certificates.expiresAt,
-    })
-    .from(certificates)
-    .innerJoin(users, eq(users.id, certificates.userId))
-    .innerJoin(materials, eq(materials.id, certificates.materialId))
-    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(eq(certificates.code, code))
-    .limit(1);
-
-  if (!row) return null;
-  return { ...row, expired: row.expiresAt !== null && row.expiresAt.getTime() < Date.now() };
 }

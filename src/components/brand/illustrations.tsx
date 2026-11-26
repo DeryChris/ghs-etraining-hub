@@ -53,7 +53,7 @@ export function RegionMap({ className }: { className?: string }) {
 
 /* ── Empty-state art ───────────────────────────────────────────────────────── */
 
-export type EmptyArtVariant = "folder" | "inbox" | "certificate" | "search" | "bell";
+export type EmptyArtVariant = "folder" | "inbox" | "pulse" | "search" | "bell";
 
 export function EmptyArt({ variant = "folder", className }: { variant?: EmptyArtVariant; className?: string }) {
   const common = { viewBox: "0 0 160 120", className, "aria-hidden": true as const, focusable: false as const };
@@ -67,13 +67,15 @@ export function EmptyArt({ variant = "folder", className }: { variant?: EmptyArt
           <path d="M122 30h8M126 26v8" stroke="var(--primary-ink)" strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
-    case "certificate":
+    case "pulse":
+      // A monitor with a heartbeat: the health service's own shorthand for
+      // "nothing recorded yet", instead of a document with a tick on it.
       return (
         <svg {...common}>
-          <rect x="30" y="26" width="100" height="70" rx="8" fill="var(--surface)" stroke="var(--hairline)" strokeWidth="2" />
-          <path d="M46 46h68M46 58h50M46 70h36" stroke="var(--hairline)" strokeWidth="3" strokeLinecap="round" />
-          <circle cx="116" cy="84" r="14" fill="var(--accent)" />
-          <path d="M110 84l4 4 8-9" fill="none" stroke="var(--accent-ink)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <rect x="24" y="30" width="112" height="66" rx="12" fill="var(--surface-2)" stroke="var(--hairline)" strokeWidth="2" />
+          <rect x="36" y="42" width="88" height="42" rx="6" fill="var(--surface)" stroke="var(--hairline)" strokeWidth="1.5" />
+          <path d="M42 64h18l7-13 10 26 8-16 6 8h31" fill="none" stroke="var(--primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="124" cy="34" r="7" fill="var(--accent)" />
         </svg>
       );
     case "search":
@@ -103,26 +105,27 @@ export function EmptyArt({ variant = "folder", className }: { variant?: EmptyArt
   }
 }
 
-/* ── Certificate seal (verification result) ────────────────────────────────── */
+/* ── Health mark ─────────────────────────────────────────────────────────────
+ * The service's own mark, for decorative slots that used to carry a certificate
+ * seal. A heartbeat inside a ring, drawn from the same palette as the rest so it
+ * reads as a quiet emblem rather than a badge.
+ */
 
-export function CertificateSeal({ className }: { className?: string }) {
-  const ticks = Array.from({ length: 24 }, (_, i) => {
-    const angle = (i / 24) * Math.PI * 2;
-    const x1 = 60 + Math.cos(angle) * 49;
-    const y1 = 60 + Math.sin(angle) * 49;
-    const x2 = 60 + Math.cos(angle) * 54;
-    const y2 = 60 + Math.sin(angle) * 54;
-    return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" />;
-  });
+export function HealthMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 120 120" className={className} aria-hidden focusable={false}>
-      {ticks}
-      <circle cx="60" cy="60" r="40" fill="var(--primary)" />
-      <circle cx="60" cy="60" r="34" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeDasharray="3 4" />
+      <circle cx="60" cy="60" r="52" fill="var(--primary)" fillOpacity="0.1" />
+      <circle cx="60" cy="60" r="52" fill="none" stroke="var(--primary)" strokeWidth="2" strokeOpacity="0.45" />
+      <circle cx="60" cy="60" r="42" fill="var(--surface)" />
       <path
-        d="M60 40l4.7 9.5 10.5 1.5-7.6 7.4 1.8 10.4L60 63.8l-9.4 4.9 1.8-10.4-7.6-7.4 10.5-1.5z"
-        fill="var(--accent)"
+        d="M32 62h12l7-16 10 32 8-22 6 12h13"
+        fill="none"
+        stroke="var(--primary)"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
+      <path d="M60 30v-8M60 98v-8M30 60h-8M98 60h-8" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeOpacity="0.55" />
     </svg>
   );
 }

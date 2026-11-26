@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/db/index";
 import { directMessages, users } from "@/db/schema";
 import { logAudit } from "@/lib/server/audit";
+import { notifyDirectMessage } from "@/lib/server/notify";
 import { log } from "@/lib/server/logger";
 import { consumeRateLimit, rateLimitKey, retryAfterText } from "@/lib/server/rate-limit";
 import { checkCapability } from "@/lib/server/rbac";
@@ -75,6 +76,13 @@ export async function sendMessageAction(
       },
       tx,
     );
+  });
+
+  await notifyDirectMessage({
+    recipientId,
+    senderName: session.name,
+    messageId: recipientId,
+    actorId: session.sub,
   });
 
   log.info({ event: "message.sent", userId: session.sub, role: session.role, recipientId });

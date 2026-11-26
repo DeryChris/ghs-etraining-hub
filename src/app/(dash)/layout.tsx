@@ -4,7 +4,7 @@ import { DatabaseUnavailable } from "@/components/layout/database-unavailable";
 import { AppShell } from "@/components/layout/app-shell";
 import { countReviewQueue } from "@/lib/server/authoring-queries";
 import { countUnreadMessages } from "@/lib/server/messaging-queries";
-import { countUnreadNotifications } from "@/lib/server/notification-queries";
+import { countUnreadNotifications, listNotifications } from "@/lib/server/notification-queries";
 import { connectionErrorCode, databaseTarget } from "@/lib/db-target";
 import { within, withinOr } from "@/lib/server/deadline";
 import { log } from "@/lib/server/logger";
@@ -56,7 +56,7 @@ export default async function DashboardLayout({
    * stalls, so each has a deadline and falls back to no badge rather than
    * holding the whole navigation and page behind it.
    */
-  const [unreadMessages, unreadNotifications, reviewCount] = await Promise.all([
+  const [unreadMessages, unreadNotifications, reviewCount, drawerNotices] = await Promise.all([
     withinOr(
       "shell.unread_messages",
       countUnreadMessages(session.sub),
@@ -72,6 +72,9 @@ export default async function DashboardLayout({
     staff
       ? withinOr("shell.review_queue", countReviewQueue(session), 0, 5_000)
       : Promise.resolve(0),
+    // The drawer shows the newest few and links to the tab for the rest; if it
+    // cannot be read the bell still opens, with an honest empty state.
+    withinOr("shell.drawer_notices", listNotifications(session, 6), [], 5_000),
   ]);
 
   return (
@@ -87,6 +90,16 @@ export default async function DashboardLayout({
         notifications: unreadNotifications,
         reviews: reviewCount,
       }}
+      notifications={drawerNotices.map((notice) => ({
+        id: notice.id,
+        title: notice.title,
+        body: notice.body,
+        type: notice.type,
+        priority: notice.priority,
+        linkUrl: notice.linkUrl,
+        publishedAt: notice.publishedAt.toISOString(),
+        isRead: notice.isRead,
+      }))}
     >
       {children}
     </AppShell>

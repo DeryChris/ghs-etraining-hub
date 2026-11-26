@@ -39,7 +39,7 @@ export default async function ResetPasswordPage({
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-warn/12 text-warn">
             <KeyRound className="h-6 w-6" aria-hidden />
           </span>
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">We cannot check this link</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-ink">We cannot check this link</h1>
           <p className="text-sm leading-relaxed text-ink-muted">
             The server could not reach the staff directory just now, so your link was neither accepted nor used. Try
             again in a minute — the link itself is still valid for an hour from when it was issued.
@@ -65,7 +65,7 @@ export default async function ResetPasswordPage({
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-warn/12 text-warn">
             <KeyRound className="h-6 w-6" aria-hidden />
           </span>
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">This link has expired</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-ink">This link has expired</h1>
           <p className="text-sm leading-relaxed text-ink-muted">
             Reset links work once and expire after an hour. Ask your administrator for a fresh one — nothing about your
             account has changed.
@@ -90,7 +90,7 @@ export default async function ResetPasswordPage({
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/12 text-primary">
           <KeyRound className="h-6 w-6" aria-hidden />
         </span>
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">Choose a new password</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-ink">Choose a new password</h1>
         <p className="text-sm leading-relaxed text-ink-muted">
           Use at least 10 characters. A short phrase you can remember works well.
         </p>

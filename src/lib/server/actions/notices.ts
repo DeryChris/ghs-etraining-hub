@@ -13,11 +13,10 @@ import { logAudit } from "@/lib/server/audit";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
 
-const NOTICE_TYPES = [
-  "SYSTEM_MAINTENANCE",
-  "MATERIAL_UPDATE",
-  "SPACE_ANNOUNCEMENT",
-] as const;
+// What a person can choose when writing a notice. The first three are the events
+// this service produces; "material update" and "system maintenance" are the
+// manual ones an administrator sends when something changes by hand.
+const NOTICE_TYPES = ["TRAINING_PUBLISHED", "MATERIAL_UPDATE", "SYSTEM_MAINTENANCE"] as const;
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 
 export interface NoticeActionState {
@@ -54,7 +53,7 @@ export async function broadcastNoticeAction(
     areaId: field(formData, "areaId") || undefined,
     title: field(formData, "title"),
     body: field(formData, "body"),
-    type: field(formData, "type") ?? "SPACE_ANNOUNCEMENT",
+    type: field(formData, "type") ?? "SYSTEM_MAINTENANCE",
     priority: field(formData, "priority") ?? "MEDIUM",
     expiresInDays: expiresRaw ? Number.parseInt(expiresRaw, 10) : undefined,
   });

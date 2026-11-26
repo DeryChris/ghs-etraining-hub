@@ -9,6 +9,7 @@ import {
   districts,
   facilities,
   programmeAreas,
+  programmeFields,
   subDistricts,
   trainingResources,
   trainingSessions,
@@ -16,6 +17,7 @@ import {
 import { checkUpload } from "@/lib/material-workflow";
 import { createMaterialUploadTarget, inspectMaterialObject, removeMaterialObject } from "@/lib/server/file-storage";
 import { mayReviewField } from "@/lib/server/rbac";
+import { notifyTrainingPublished, notifyTrainingReturned } from "@/lib/server/notify";
 import { field } from "@/lib/schemas/authoring";
 import { trainingInput, trainingUpdateInput } from "@/lib/schemas/training";
 import { durationLabel, planYearOf } from "@/lib/training-dates";
@@ -409,8 +411,11 @@ export async function reviewTrainingAction(
       title: trainingSessions.title,
       fieldId: trainingSessions.programmeFieldId,
       reviewState: trainingSessions.reviewState,
+      createdById: trainingSessions.createdById,
+      fieldName: programmeFields.name,
     })
     .from(trainingSessions)
+    .leftJoin(programmeFields, eq(programmeFields.id, trainingSessions.programmeFieldId))
     .where(and(eq(trainingSessions.id, trainingId), eq(trainingSessions.isArchived, false)))
     .limit(1);
   if (!training) return { ok: false, message: "That training no longer exists." };
@@ -446,12 +451,32 @@ export async function reviewTrainingAction(
   }
 
   revalidateTrainings(trainingId);
+
+  // Telling people is part of the decision, not an afterthought: a published
+  // training is only useful if the people it is for hear about it.
+  if (decision === "approve") {
+    await notifyTrainingPublished({
+      trainingId,
+      title: training.title,
+      fieldName: training.fieldName ?? null,
+      actorId: session.sub,
+    });
+  } else {
+    await notifyTrainingReturned({
+      trainingId,
+      title: training.title,
+      authorId: training.createdById,
+      note: note ?? "Check the details and resubmit.",
+      actorId: session.sub,
+    });
+  }
+
   return {
     ok: true,
     message:
       decision === "approve"
-        ? `“${training.title}” is live.`
-        : `“${training.title}” was sent back to the facilitator.`,
+        ? `“${training.title}” is live, and the people it is for have been notified.`
+        : `“${training.title}” was sent back to the facilitator, who has been notified.`,
   };
 }
 

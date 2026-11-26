@@ -9,7 +9,7 @@ import { cookies } from "next/headers";
  * layouts, pages and actions against public.users.
  */
 
-// Public surface: the marketing site, the sign-in pages, certificate verification and the health probe.
+// Public surface: the marketing site, the sign-in pages and the health probe.
 // Everything else (the signed-in workspace) requires a session.
 const PUBLIC_PATHS = [
   "/",
@@ -18,7 +18,6 @@ const PUBLIC_PATHS = [
   "/contact",
   // The Complaint Hub must work for somebody who cannot sign in at all.
   "/help",
-  "/verify",
   "/privacy",
   "/terms",
   "/accessibility",

@@ -27,7 +27,7 @@ export default async function ChangePasswordPage() {
           <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
           First sign-in
         </span>
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+        <h1 className="text-2xl font-extrabold tracking-tight text-ink">
           {session.name.split(" ")[0]}, set your own password
         </h1>
         <p className="text-sm leading-relaxed text-ink-muted">
@@ -36,11 +36,11 @@ export default async function ChangePasswordPage() {
         </p>
       </div>
 
-      <div className="surface-card p-7 sm:p-8">
+      <div>
         <ChangePasswordForm firstTime />
       </div>
 
-      <details className="rounded-card border border-hairline bg-surface/70 p-4">
+      <details className="rounded-card border border-hairline bg-surface-2/70 p-4">
         <summary className="cursor-pointer text-sm font-bold text-ink">What makes a good password here?</summary>
         <ul className="mt-3 space-y-2 text-[13px] leading-relaxed text-ink-muted">
           <li>Three unrelated words are stronger than a word with a number stuck on the end.</li>

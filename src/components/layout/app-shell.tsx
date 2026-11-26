@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Header } from "@/components/layout/header";
 import { PageTransition } from "@/components/layout/page-transition";
+import type { DrawerNotice } from "@/components/layout/notification-drawer";
 import { Sidebar, type SidebarCounts } from "@/components/layout/sidebar";
 import type { ShellUser } from "@/components/layout/types";
 import { SITE } from "@/lib/site";
@@ -11,10 +12,13 @@ import { SITE } from "@/lib/site";
 export function AppShell({
   user,
   counts,
+  notifications,
   children,
 }: {
   user: ShellUser;
   counts: SidebarCounts;
+  /** The newest few notices, for the drawer under the bell. */
+  notifications: DrawerNotice[];
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
@@ -111,7 +115,12 @@ export function AppShell({
       </motion.aside>
 
       <div className={`transition-[padding] duration-200 ${railWidth}`}>
-        <Header user={user} unreadNotifications={counts.notifications} onOpenNav={() => setNavOpen(true)} />
+        <Header
+          user={user}
+          unreadNotifications={counts.notifications}
+          notifications={notifications}
+          onOpenNav={() => setNavOpen(true)}
+        />
         <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1200px] px-4 py-6 focus:outline-none md:px-8 md:py-10">
           <PageTransition>{children}</PageTransition>
         </main>

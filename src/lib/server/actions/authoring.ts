@@ -9,7 +9,9 @@ import { checkUpload, canTransition, materialStorageKey, nextVersionNumber, publ
 import type { MaterialState, ReviewDecision } from "@/lib/material-workflow";
 import type { Action, Role, Scope } from "@/lib/rbac/capabilities";
 import { areaIdForMaterial } from "@/lib/server/authoring-queries";
+import { compactAudience } from "@/lib/notification-audience";
 import { logAudit } from "@/lib/server/audit";
+import { notifyMaterialPublished } from "@/lib/server/notify";
 import { createMaterialUploadTarget, inspectMaterialObject, removeMaterialObject } from "@/lib/server/file-storage";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
@@ -66,11 +68,23 @@ type LoadedVersion =
       material: typeof materials.$inferSelect;
       version: typeof materialVersions.$inferSelect;
       areaCode: string;
+      areaName: string;
+      areaRegion: string | null;
+      areaDirectorate: string | null;
+      areaCadre: string | null;
     };
 
 async function loadVersion(materialId: string, versionId: string): Promise<LoadedVersion> {
   const [row] = await db
-    .select({ material: materials, version: materialVersions, areaCode: programmeAreas.code })
+    .select({
+      material: materials,
+      version: materialVersions,
+      areaCode: programmeAreas.code,
+      areaName: programmeAreas.name,
+      areaRegion: programmeAreas.audienceRegion,
+      areaDirectorate: programmeAreas.audienceDirectorate,
+      areaCadre: programmeAreas.audienceCadre,
+    })
     .from(materialVersions)
     .innerJoin(materials, eq(materials.id, materialVersions.materialId))
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
@@ -493,6 +507,22 @@ export async function publishVersionAction(
 
   revalidateAuthoring(parsed.data.materialId);
   revalidatePath(`/programmeAreas/${loaded.areaCode}`);
+
+  // Only the cohort the material was targeted at hears about it. `materials`
+  // carries its own audience columns, so a district-specific protocol does not
+  // ring a bell in every region.
+  await notifyMaterialPublished({
+    materialId: parsed.data.materialId,
+    title: loaded.material.title,
+    areaName: loaded.areaName,
+    actorId: session.sub,
+    audienceFilter: compactAudience({
+      region: loaded.areaRegion,
+      directorate: loaded.areaDirectorate,
+      cadre: loaded.areaCadre,
+    }),
+  });
+
   return { ok: true, message: "Published. Learners in the audience can see it now." };
 }
 

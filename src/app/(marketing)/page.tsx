@@ -9,7 +9,6 @@ import {
   FolderKanban,
   History,
   FlaskConical,
-  GraduationCap,
   HeartPulse,
   Pill,
   Search,
@@ -18,7 +17,7 @@ import {
   Stethoscope,
   type LucideIcon,
 } from "lucide-react";
-import { CertificateSeal, EmptyArt, RegionMap } from "@/components/brand/illustrations";
+import { EmptyArt, HealthMark, RegionMap } from "@/components/brand/illustrations";
 import { CtaArt, HeroArt, MapArt } from "@/components/marketing/landing-art";
 import { CountUp } from "@/components/marketing/count-up";
 import { Faq } from "@/components/marketing/faq";
@@ -102,7 +101,7 @@ const CADRES: { icon: LucideIcon; title: string; body: string }[] = [
   { icon: Stethoscope, title: "Medical officers", body: "Clinical guidelines and case definitions, with the version that was current at the time." },
   { icon: Pill, title: "Pharmacists", body: "Medicines safety, dispensing standards and the national formulary as taught." },
   { icon: FlaskConical, title: "Laboratory staff", body: "Specimen handling, quality control and result reporting, by programme." },
-  { icon: GraduationCap, title: "Facilitators and managers", body: "Upload, version, review and archive the material for the programmes you run." },
+  { icon: Stethoscope, title: "Facilitators and managers", body: "Upload, version, review and archive the material for the programmes you run." },
 ];
 
 const FAQ = [
@@ -133,7 +132,7 @@ const FAQ = [
   {
     question: "Is my learning record official?",
     answer:
-      "The library records which material you opened, downloaded and marked as finished, always against the version you saw. Certificates issued before the CPD award was retired remain checkable on the verification page."
+      "The library records which material you opened, downloaded and marked as finished, always against the version you saw. Nothing is scored and nothing is awarded: the record exists so programme teams can see what is being read and what is being missed."
   },
   {
     question: "I forgot my password. What now?",
@@ -245,7 +244,7 @@ export default async function LandingPage() {
                 {/* Product cards: illustrative, decorative, and never the only source of information. */}
                 <div aria-hidden className="glass drift absolute -left-4 top-10 hidden w-56 rounded-card border border-hairline p-4 shadow-lift sm:block">
                   <div className="flex items-center gap-3">
-                    <CertificateSeal className="h-11 w-11 shrink-0" />
+                    <HealthMark className="h-11 w-11 shrink-0" />
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Version history</p>
                       <p className="text-sm font-bold text-ink">Every revision kept</p>

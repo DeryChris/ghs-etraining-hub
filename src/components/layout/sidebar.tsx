@@ -4,11 +4,11 @@ import { motion } from "framer-motion";
 import {
   BarChart3,
   Bell,
-  BookOpen,
+  CalendarCheck2,
+  FolderOpen,
   FolderTree,
   ClipboardCheck,
   ClipboardList,
-  GraduationCap,
   LayoutGrid,
   MapPinned,
   Megaphone,
@@ -37,8 +37,8 @@ import { cn } from "@/lib/utils";
 
 const ICONS: Record<NavIcon, LucideIcon> = {
   dashboard: LayoutGrid,
-  training: GraduationCap,
-  library: BookOpen,
+  training: CalendarCheck2,
+  library: FolderOpen,
   assessment: ClipboardList,
   messages: MessageSquare,
   notifications: Bell,
@@ -90,32 +90,48 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
       <SidebarStar className="-bottom-10 -right-10 h-56 w-56 text-[var(--nav-active)]" />
 
       <div className={cn("relative z-10 flex h-16 items-center gap-2", collapsed ? "justify-center px-2" : "justify-between px-5")}>
-        <Link
-          href="/dashboard"
-          onClick={onNavigate}
-          className="flex items-center gap-2.5 rounded-control focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--nav-active)]"
-          aria-label={`${SITE.name} dashboard`}
-        >
-          <BrandMark size={34} />
-          {!collapsed && (
+        {/*
+         * Collapsed, the toggle stands where the crest was: the rail has room for
+         * one thing at the top, and the way back to the full menu is worth more to
+         * somebody who has just narrowed it than a mark they already recognise.
+         */}
+        {collapsed && onToggleCollapse ? (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label="Expand the menu"
+            aria-expanded={false}
+            title="Expand the menu"
+            className="hidden h-10 w-10 items-center justify-center rounded-control bg-[var(--nav-wash)] text-[var(--nav-ink)] transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)] md:inline-flex"
+          >
+            <PanelLeftOpen className="h-5 w-5" aria-hidden />
+          </button>
+        ) : (
+          <Link
+            href="/dashboard"
+            onClick={onNavigate}
+            className="flex items-center gap-2.5 rounded-control focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--nav-active)]"
+            aria-label={`${SITE.name} dashboard`}
+          >
+            <BrandMark size={34} />
             <span className="flex min-w-0 flex-col leading-none">
               <span className="text-[15px] font-extrabold tracking-tight text-[var(--nav-ink)]">{SITE.code}</span>
               <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--nav-muted)]">
                 {SITE.tagline}
               </span>
             </span>
-          )}
-        </Link>
-        {onToggleCollapse && (
+          </Link>
+        )}
+        {!collapsed && onToggleCollapse && (
           <button
             type="button"
             onClick={onToggleCollapse}
-            aria-label={collapsed ? "Expand the menu" : "Collapse the menu"}
-            aria-expanded={!collapsed}
-            title={collapsed ? "Expand the menu" : "Collapse the menu"}
+            aria-label="Collapse the menu"
+            aria-expanded
+            title="Collapse the menu"
             className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-control text-[var(--nav-muted)] transition-colors hover:bg-[var(--nav-wash)] hover:text-[var(--nav-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)] md:inline-flex"
           >
-            {collapsed ? <PanelLeftOpen className="h-4 w-4" aria-hidden /> : <PanelLeftClose className="h-4 w-4" aria-hidden />}
+            <PanelLeftClose className="h-4 w-4" aria-hidden />
           </button>
         )}
         {onClose && (
@@ -192,19 +208,32 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
                       />
                       <span className={cn("relative flex-1", collapsed && "sr-only")}>{item.label}</span>
                       <NavLinkPending />
-                      {count > 0 && (
-                        <span
-                          className={cn(
-                            "relative rounded-[var(--radius-pill)] px-2 py-0.5 text-[11px] font-bold",
-                            active
-                              ? "bg-black/10 text-[var(--nav-active-ink)]"
-                              : "bg-[var(--nav-active)] text-[var(--nav-active-ink)]",
-                          )}
-                          aria-label={`${count} ${item.count === "reviews" ? "waiting for review" : "unread"}`}
-                        >
-                          {count > 99 ? "99+" : count}
-                        </span>
-                      )}
+                      {count > 0 &&
+                        (collapsed ? (
+                          // In the rail there is no room for a number: the dot says
+                          // "something is waiting here", the label below says how much.
+                          <>
+                            <span
+                              aria-hidden
+                              className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[var(--nav-active)]"
+                            />
+                            <span className="sr-only">
+                              {count} {item.count === "reviews" ? "waiting for review" : "unread"}
+                            </span>
+                          </>
+                        ) : (
+                          <span
+                            className={cn(
+                              "relative rounded-[var(--radius-pill)] px-2 py-0.5 text-[11px] font-bold",
+                              active
+                                ? "bg-black/10 text-[var(--nav-active-ink)]"
+                                : "bg-[var(--nav-active)] text-[var(--nav-active-ink)]",
+                            )}
+                            aria-label={`${count} ${item.count === "reviews" ? "waiting for review" : "unread"}`}
+                          >
+                            {count > 99 ? "99+" : count}
+                          </span>
+                        ))}
                     </Link>
                   </li>
                 );

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, Download, Eye } from "lucide-react";
+import { ClipboardCheck } from "lucide-react";
 import { KindLabel } from "@/components/ui/kind-label";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -37,7 +37,6 @@ export default async function ActivityPage() {
   const [completions, traffic] = loaded.data;
 
   const recent = completions.slice(0, TRANSCRIPT_ROWS);
-  const issuedCertificates = completions.filter((completion) => completion.certificateCode !== null);
 
   return (
     <div className="space-y-8">
@@ -61,7 +60,7 @@ export default async function ActivityPage() {
       <section aria-labelledby="transcript-heading" className="space-y-4">
         <div>
           <h2 id="transcript-heading" className="flex items-center gap-2 text-lg font-bold text-ink">
-            <BookOpen className="h-5 w-5 text-primary" aria-hidden />
+            <ClipboardCheck className="h-5 w-5 text-primary" aria-hidden />
             What you have finished
           </h2>
           <p className="text-sm text-ink-muted">
@@ -118,39 +117,6 @@ export default async function ActivityPage() {
         )}
       </section>
 
-      <section aria-labelledby="certificates-heading" className="space-y-3 rounded-card border border-hairline bg-surface-2 p-5">
-        <h2 id="certificates-heading" className="flex items-center gap-2 text-base font-bold text-ink">
-          <Eye className="h-4 w-4 text-primary" aria-hidden />
-          Certificates already issued
-        </h2>
-        <p className="text-sm leading-relaxed text-ink-muted">
-          The library no longer awards certificates — material is here to be read, not to be scored. Any certificate
-          issued before that change remains valid and can still be checked on the{" "}
-          <Link href="/verify" className="font-semibold text-primary underline-offset-4 hover:underline">
-            verification page
-          </Link>
-          .
-        </p>
-        {issuedCertificates.length > 0 && (
-          <ul className="space-y-1 text-sm">
-            {issuedCertificates.slice(0, 5).map((completion) => (
-              <li key={completion.certificateCode}>
-                <Link
-                  href={`/certificates/${completion.certificateCode}`}
-                  className="font-mono text-xs text-primary underline-offset-4 hover:underline"
-                >
-                  {completion.certificateCode}
-                </Link>
-                <span className="ml-2 text-ink-muted">{completion.title}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <p className="flex items-center gap-2 text-xs text-ink-muted">
-          <Download className="h-3.5 w-3.5" aria-hidden />
-          Downloads are recorded for controlled material, so the record shows what left the platform.
-        </p>
-      </section>
     </div>
   );
 }

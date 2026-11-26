@@ -22,7 +22,24 @@ export const materialPriorityEnum = pgEnum("material_priority", ["LOW", "MEDIUM"
 export const scanStatusEnum = pgEnum("scan_status", ["PENDING", "CLEAN", "INFECTED"]);
 export const progressStatusEnum = pgEnum("progress_status", ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]);
 export const enrollmentSourceEnum = pgEnum("enrollment_source", ["SELF", "ASSIGNED"]);
-export const notificationTypeEnum = pgEnum("notification_type", ["SYSTEM_MAINTENANCE", "MATERIAL_UPDATE", "SPACE_ANNOUNCEMENT", "COMMENT_REPLY", "DIRECT_MESSAGE", "ASSIGNMENT_DUE", "CERTIFICATE_ISSUED", "RECERTIFICATION_DUE"]);
+/**
+ * What a notice is about. The first six are the events this service actually
+ * produces; the inherited prototype values after them are kept because Postgres
+ * enum values cannot be dropped without rebuilding the type, and nothing writes
+ * them any more.
+ */
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "TRAINING_PUBLISHED",
+  "TRAINING_RETURNED",
+  "MATERIAL_PUBLISHED",
+  "DIRECT_MESSAGE",
+  "COMPLAINT_UPDATE",
+  "ACCOUNT",
+  "SYSTEM_MAINTENANCE",
+  "MATERIAL_UPDATE",
+  "COMMENT_REPLY",
+  "ASSIGNMENT_DUE",
+]);
 export const notificationPriorityEnum = pgEnum("notification_priority", ["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
 
 export const users = pgTable("users", {
@@ -189,25 +206,6 @@ export const assessmentAttempts = pgTable("assessment_attempts", {
   overrideReason: text("override_reason"),
 });
 
-export const certificates = pgTable("certificates", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  code: varchar("code", { length: 50 }).notNull().unique(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  materialId: uuid("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
-  materialVersionId: uuid("material_version_id").notNull().references(() => materialVersions.id),
-  cpdCreditsX10: integer("cpd_credits_x10").notNull(),
-  issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }),
-  verificationCount: integer("verification_count").notNull().default(0),
-  lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
-}, (t) => [
-  index("certificates_user_idx").on(t.userId),
-  index("certificates_material_idx").on(t.materialId),
-  // One certificate per learner, material and published version: re-completing a
-  // superseded version must not mint a second serial.
-  unique("certificates_user_material_version_key").on(t.userId, t.materialId, t.materialVersionId),
-]);
-
 export const comments = pgTable("comments", {
   id: uuid("id").primaryKey().defaultRandom(),
   materialId: uuid("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
@@ -348,8 +346,12 @@ export const facilityTypeEnum = pgEnum("facility_type", [
   "DISTRICT_HOSPITAL",
   "POLYCLINIC",
   "HEALTH_CENTRE",
+  /** A CHPS compound: where most of the region's staff actually work. */
+  "CHPS_COMPOUND",
   "CLINIC",
   "DIRECTORATE",
+  /** Regional stores, workshop, port health, RCH — units that are not clinical sites. */
+  "SERVICE_UNIT",
   "OTHER",
 ]);
 export const facilityOwnershipEnum = pgEnum("facility_ownership", ["GHS", "CHAG", "PRIVATE", "OTHER"]);

@@ -1,78 +1,90 @@
 /**
- * The sign-in panel's artwork.
+ * The sign-in backdrop.
  *
- * Replaces the old grid-of-boxes: a soft topographic field with a pulse line
- * running through it, drawn in one SVG so it scales with the panel and costs no
- * request. Decorative only — hidden from assistive technology, and set behind
- * the text at low contrast so the copy stays the thing you read.
+ * One full-bleed SVG, drawn from the health service's own vocabulary rather than
+ * from geometry: a heartbeat trace running across the page, a soft cross-field,
+ * a pill, a droplet and a stethoscope bell, all at low contrast behind glass. It
+ * costs no request, scales with the viewport, and — because it is a single
+ * decorative layer — never competes with the card it sits behind.
+ *
+ * `preserveAspectRatio="xMidYMid slice"` means the composition fills any screen:
+ * the trace stays a trace, cropped rather than squashed.
  */
 export function AuthArt({ className = "" }: { className?: string }) {
   return (
     <svg
       aria-hidden
-      viewBox="0 0 640 900"
+      viewBox="0 0 1440 900"
       preserveAspectRatio="xMidYMid slice"
       className={`pointer-events-none absolute inset-0 h-full w-full ${className}`}
     >
       <defs>
-        <linearGradient id="auth-sky" x1="0" y1="0" x2="0.6" y2="1">
-          <stop offset="0%" stopColor="#0a7d4b" />
-          <stop offset="52%" stopColor="#006b3f" />
-          <stop offset="100%" stopColor="#003d24" />
+        <linearGradient id="auth-bg" x1="0" y1="0" x2="0.7" y2="1">
+          <stop offset="0%" stopColor="#0a8f57" />
+          <stop offset="45%" stopColor="#006b3f" />
+          <stop offset="100%" stopColor="#00301c" />
         </linearGradient>
-        <radialGradient id="auth-glow" cx="0.24" cy="0.14" r="0.72">
-          <stop offset="0%" stopColor="#eaffee" stopOpacity="0.20" />
-          <stop offset="100%" stopColor="#b9f6d8" stopOpacity="0" />
+        <radialGradient id="auth-halo" cx="0.5" cy="0.42" r="0.62">
+          <stop offset="0%" stopColor="#eafff2" stopOpacity="0.26" />
+          <stop offset="100%" stopColor="#eafff2" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id="auth-wave" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#f6d36b" stopOpacity="0" />
-          <stop offset="35%" stopColor="#f6d36b" stopOpacity="0.9" />
+        <linearGradient id="auth-trace" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#ffe9a8" stopOpacity="0" />
+          <stop offset="22%" stopColor="#ffe9a8" stopOpacity="0.85" />
+          <stop offset="70%" stopColor="#fcd116" stopOpacity="0.55" />
           <stop offset="100%" stopColor="#ffe9a8" stopOpacity="0" />
         </linearGradient>
       </defs>
 
-      <rect width="640" height="900" fill="url(#auth-sky)" />
-      <rect width="640" height="900" fill="url(#auth-glow)" />
+      <rect width="1440" height="900" fill="url(#auth-bg)" />
+      <rect width="1440" height="900" fill="url(#auth-halo)" />
 
-      {/* Contour bands: the shape reads as terrain, not as a layout grid. */}
-      <g fill="none" stroke="#ffffff" strokeOpacity="0.14" strokeWidth="1.4">
-        <path d="M-40 690 C 120 610, 210 760, 360 690 S 600 560, 700 620" />
-        <path d="M-40 730 C 130 650, 220 800, 370 730 S 610 600, 700 660" />
-        <path d="M-40 770 C 140 690, 230 840, 380 770 S 620 640, 700 700" />
-        <path d="M-40 810 C 150 730, 240 880, 390 810 S 630 680, 700 740" />
-        <path d="M-40 240 C 110 180, 200 300, 340 240 S 590 120, 700 180" strokeOpacity="0.1" />
-        <path d="M-40 190 C 120 130, 210 250, 350 190 S 600 70, 700 130" strokeOpacity="0.08" />
+      {/* The heartbeat: two traces, the lower one fainter, so it reads as depth. */}
+      <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <path
+          d="M-40 470 H210 l40 -86 l36 172 l44 -128 l34 64 l26 -22 H560 l42 -60 l38 60 H880 l44 -96 l40 96 H1180 l34 -44 l30 44 H1500"
+          stroke="url(#auth-trace)"
+          strokeWidth="3.5"
+          strokeOpacity="0.9"
+        />
+        <path
+          d="M-40 560 H150 l30 -52 l30 104 l32 -78 l26 40 H430 l30 -30 l28 30 H700 l34 -58 l32 58 H1010 l30 -40 l28 40 H1500"
+          stroke="#ffffff"
+          strokeWidth="2"
+          strokeOpacity="0.14"
+        />
       </g>
 
-      {/* Concentric rings behind the brand mark. */}
-      <g fill="none" stroke="#ffffff" strokeOpacity="0.16" strokeWidth="1.2">
-        <circle cx="96" cy="120" r="64" />
-        <circle cx="96" cy="120" r="104" />
-        <circle cx="96" cy="120" r="150" />
+      {/* A field of soft crosses, the one symbol every health worker reads instantly. */}
+      <g stroke="#ffffff" strokeOpacity="0.09" strokeWidth="10" strokeLinecap="round">
+        {Array.from({ length: 26 }, (_, index) => {
+          const x = 70 + ((index * 61) % 1310);
+          const y = 90 + ((index * 137) % 720);
+          return (
+            <g key={index} transform={`translate(${x} ${y}) rotate(${(index % 5) * 8}) scale(${0.55 + (index % 3) * 0.22})`}>
+              <line x1="-16" y1="0" x2="16" y2="0" />
+              <line x1="0" y1="-16" x2="0" y2="16" />
+            </g>
+          );
+        })}
       </g>
 
-      {/* A pulse line: the one motif that says "health" without a cliché icon. */}
-      <path
-        d="M-20 470 H 150 l 26 -54 l 30 116 l 28 -84 l 24 40 H 420 l 26 -34 l 26 34 H 680"
-        fill="none"
-        stroke="url(#auth-wave)"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      {/* Scattered dots, irregular on purpose. */}
-      <g fill="#ffffff" fillOpacity="0.22">
-        {[
-          [470, 210], [520, 258], [596, 190], [430, 300], [560, 340], [500, 150],
-          [180, 560], [230, 610], [140, 640], [300, 590], [70, 520], [360, 640],
-        ].map(([cx, cy]) => (
-          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="3.2" />
-        ))}
+      {/* A pill and a droplet, drawn as objects rather than icons. */}
+      <g opacity="0.13" transform="translate(1160 150) rotate(-24)">
+        <rect x="0" y="0" width="132" height="56" rx="28" fill="#ffffff" />
+        <path d="M66 0h38a28 28 0 010 56H66z" fill="#fcd116" />
+      </g>
+      <g opacity="0.16" transform="translate(190 690)">
+        <path d="M0 -46c26 30 44 52 44 70a44 44 0 11-88 0c0-18 18-40 44-70z" fill="#ffffff" />
+      </g>
+      <g opacity="0.12" transform="translate(1210 660)">
+        <circle cx="0" cy="0" r="58" fill="none" stroke="#ffffff" strokeWidth="9" />
+        <path d="M42 42l48 48" stroke="#ffffff" strokeWidth="14" strokeLinecap="round" />
+        <circle cx="0" cy="0" r="34" fill="none" stroke="#fcd116" strokeWidth="4" strokeDasharray="5 9" />
       </g>
 
-      {/* Soft light at the base so the panel does not end in a hard edge. */}
-      <rect y="800" width="640" height="100" fill="#00301c" fillOpacity="0.55" />
+      {/* Vignette: keeps the corners quiet so the card is the brightest thing. */}
+      <rect width="1440" height="900" fill="#00160d" fillOpacity="0.24" />
     </svg>
   );
 }

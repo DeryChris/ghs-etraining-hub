@@ -101,6 +101,21 @@ export function TrainingForm({
     [district],
   );
 
+  // A district can hold fifty units now that the whole establishment list is in
+  // the database, most of them CHPS compounds. Once a sub-district is chosen its
+  // own units come first and the rest of the district follows, so the list is
+  // short at the top and still complete.
+  const facilityGroups = useMemo(() => {
+    if (!subDistrictId) return [{ key: "district", label: null as string | null, items: facilities }];
+    const chosen = facilities.filter((facility) => facility.subDistrictId === subDistrictId);
+    const rest = facilities.filter((facility) => facility.subDistrictId !== subDistrictId);
+    const name = district?.subDistricts.find((row) => row.id === subDistrictId)?.name ?? "This sub-district";
+    const groups: { key: string; label: string | null; items: typeof facilities }[] = [];
+    if (chosen.length) groups.push({ key: "chosen", label: `In ${name}`, items: chosen });
+    if (rest.length) groups.push({ key: "rest", label: `Elsewhere in ${district?.name ?? "the district"}`, items: rest });
+    return groups.length ? groups : [{ key: "district", label: null, items: facilities }];
+  }, [facilities, subDistrictId, district]);
+
   const suggestedDuration = durationLabel(startsOn, endsOn);
 
   return (
@@ -350,11 +365,23 @@ export function TrainingForm({
           <option value="">
             {!districtId ? "— optional —" : facilities.length === 0 ? "— none recorded —" : "— optional —"}
           </option>
-          {facilities.map((facility) => (
-            <option key={facility.id} value={facility.id}>
-              {facility.name}
-            </option>
-          ))}
+          {facilityGroups.map((group) =>
+            group.label === null ? (
+              group.items.map((facility) => (
+                <option key={facility.id} value={facility.id}>
+                  {facility.name}
+                </option>
+              ))
+            ) : (
+              <optgroup key={group.key} label={group.label}>
+                {group.items.map((facility) => (
+                  <option key={facility.id} value={facility.id}>
+                    {facility.name}
+                  </option>
+                ))}
+              </optgroup>
+            ),
+          )}
         </select>
       </div>
 

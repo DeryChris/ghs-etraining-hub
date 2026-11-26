@@ -59,13 +59,13 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
             autoComplete="username"
             required
             defaultValue={state.identifier ?? ""}
-            placeholder="Your employee number"
+            placeholder="e.g. your staff number"
             aria-describedby="identifier-hint"
             className={`${inputClass} h-12 pl-10`}
           />
         </div>
-        <p id="identifier-hint" className="mt-1.5 text-xs text-ink-muted">
-          The employee number on your payslip. A work e-mail works here too.
+        <p id="identifier-hint" className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">
+          The number on your GHS staff card. Your work e-mail address also works.
         </p>
       </div>
 

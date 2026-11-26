@@ -1,13 +1,13 @@
 import Link from "next/link";
 import {
+  Activity,
   ArrowRight,
   BadgeCheck,
-  BookOpen,
   Bell,
+  CalendarCheck2,
   ClipboardCheck,
   Download,
   Eye,
-  GraduationCap,
   Layers,
 } from "lucide-react";
 import { AreaChart } from "@/components/charts/area-chart";
@@ -235,7 +235,7 @@ export default async function DashboardPage({
               color="var(--chart-1)"
             />
             <KpiCard
-              icon={GraduationCap}
+              icon={CalendarCheck2}
               label="Trainings · 90 days"
               value={sessionRecord.last90Days}
               hint={`${sessionRecord.total} on the register`}
@@ -337,7 +337,7 @@ export default async function DashboardPage({
       ) : (
         <KpiGrid>
           <KpiCard
-            icon={BookOpen}
+            icon={Activity}
             label="In progress"
             value={dashboard.inProgressCount}
             hint="Materials you have started"

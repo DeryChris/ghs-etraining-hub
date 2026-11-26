@@ -39,8 +39,6 @@ export type Action =
   | "analytics.export"
   | "audit_log.read"
   | "maintenance_banner.manage"
-  | "certificate.verify"
-  | "certificate.revoke";
 
 export type Scope = {
   areaId?: string;
@@ -93,8 +91,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "analytics.export": true,
     "audit_log.read": true,
     "maintenance_banner.manage": true,
-    "certificate.verify": true,
-    "certificate.revoke": true,
   },
   FACILITATOR: {
     "user.create": false,
@@ -135,8 +131,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "analytics.export": true,
     "audit_log.read": false,
     "maintenance_banner.manage": false,
-    "certificate.verify": true,
-    "certificate.revoke": false,
   },
   LEARNER: {
     "user.create": false,
@@ -177,17 +171,18 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "analytics.export": false,
     "audit_log.read": false,
     "maintenance_banner.manage": false,
-    "certificate.verify": true,
-    "certificate.revoke": false,
   },
 };
 
 /**
- * Actions that need no session at all. `certificate.verify` is served by a public
- * page, so it is allowed for anonymous visitors by definition — keeping it in the
- * matrix (for every role) documents that, and this set keeps `can(null, …)` honest.
+ * Actions that need no session at all.
+ *
+ * Empty on purpose: certificate verification was the only public action, and it
+ * is gone with the awarding model. The set stays because `can(null, …)` and the
+ * matrix are written against it — anything added here becomes anonymous-accessible
+ * by definition, so it should stay empty unless there is a real reason.
  */
-export const PUBLIC_ACTIONS: ReadonlySet<Action> = new Set<Action>(["certificate.verify"]);
+export const PUBLIC_ACTIONS: ReadonlySet<Action> = new Set<Action>([]);
 
 /**
  * Self-service and messaging actions a facilitator may perform outside their
@@ -205,7 +200,6 @@ export const FACILITATOR_GLOBAL_ACTIONS: readonly Action[] = [
   "message.send",
   "notification.view",
   "analytics.view_personal",
-  "certificate.verify",
 ];
 
 export function isGlobalForFacilitators(action: Action): boolean {

@@ -7,6 +7,7 @@ import { db } from "@/db/index";
 import { complaintMessages, complaints, directMessages, users } from "@/db/schema";
 import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
+import { notifyComplaintUpdate } from "@/lib/server/notify";
 import { complaintsForStaffId } from "@/lib/server/complaint-queries";
 import { log } from "@/lib/server/logger";
 import { hashPassword } from "@/lib/server/auth";
@@ -248,6 +249,12 @@ export async function respondToComplaintAction(
         senderId: session.sub,
         recipientId: target.userId,
         body: `About your complaint ${target.reference} (${target.subject}):\n\n${response}`,
+      });
+      await notifyComplaintUpdate({
+        userId: target.userId,
+        complaintId,
+        reference: target.reference,
+        actorId: session.sub,
       });
     }
 

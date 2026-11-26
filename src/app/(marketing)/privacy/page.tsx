@@ -43,14 +43,14 @@ export default function PrivacyPage() {
         {
           heading: "How long we keep it",
           paragraphs: [
-            "Audit records are kept for seven years. Learning records, and the certificates issued before the CPD award was retired, follow the GHS records retention schedule, which is being confirmed.",
+            "Audit records are kept for seven years. Reading and activity records follow the GHS records retention schedule, which is being confirmed.",
           ],
         },
         {
           heading: "Who can see it",
           paragraphs: [
             "You can see your own records. Facilitators see learning progress within their directorate. System administrators see directory records, and every administrative action is written to the tamper-evident audit trail.",
-            "Certificate verification shows only the holder's first name and last initial, the award, and the dates.",
+            "Activity records are used in aggregate for programme reporting. Nothing in them is published, and no individual's reading history is shared outside the service.",
           ],
         },
         {

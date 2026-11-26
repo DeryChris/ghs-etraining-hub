@@ -15,14 +15,14 @@ export default function ForgotPasswordPage() {
     <>
       <div className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Account</p>
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">Forgotten your password?</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-ink">Forgotten your password?</h1>
         <p className="text-sm leading-relaxed text-ink-muted">
           An administrator resets passwords for this pilot. There is no automated e-mail yet, so a person issues the
           link and hands it to you.
         </p>
       </div>
 
-      <div className="surface-card space-y-5 p-7 sm:p-8">
+      <div className="space-y-5">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
             <Mail className="h-4 w-4" aria-hidden />
