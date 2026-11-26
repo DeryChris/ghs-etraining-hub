@@ -11,12 +11,20 @@ import {
   programmeAreas,
   programmeFields,
   subDistricts,
+  trainingComments,
   trainingResources,
   trainingSessions,
 } from "@/db/schema";
 import { checkUpload } from "@/lib/material-workflow";
-import { createMaterialUploadTarget, inspectMaterialObject, removeMaterialObject } from "@/lib/server/file-storage";
+import {
+  createMaterialUploadTarget,
+  inspectMaterialObject,
+  putMaterialObject,
+  removeMaterialObject,
+  storageCeiling,
+} from "@/lib/server/file-storage";
 import { mayReviewField } from "@/lib/server/rbac";
+import { getSession } from "@/lib/server/session";
 import { notifyTrainingPublished, notifyTrainingReturned } from "@/lib/server/notify";
 import { field } from "@/lib/schemas/authoring";
 import { trainingInput, trainingUpdateInput } from "@/lib/schemas/training";
@@ -506,17 +514,20 @@ export async function requestTrainingResourceAction(input: {
   const check = checkUpload(input.mimeType, input.sizeBytes);
   if (!check.ok) return { ok: false, message: check.message };
 
+  const ceiling = storageCeiling();
+  if (input.sizeBytes > ceiling.bytes) return { ok: false, message: ceiling.detail };
+
   const resourceId = randomUUID();
   const storageKey = `trainings/${input.trainingId}/${resourceId}.${check.extension}`;
   const target = await createMaterialUploadTarget(storageKey);
   if (!target.ok) {
     log.error({ event: "training.resource_target_failed", storageKey, reason: target.reason });
-    // An unconfigured bucket is not a transient fault: name the settings, not a
-    // retry that will fail the same way.
+    // Uploads do not fail for want of a bucket any more — the file goes into the
+    // database instead. This is either a server secret problem or a genuine fault.
     return {
       ok: false,
-      message: /not configured|S3_ENDPOINT|S3_ACCESS_KEY_ID|S3_SECRET_ACCESS_KEY/i.test(target.reason)
-        ? "File storage has not been set up for this deployment yet. The ICT administrator needs to add the S3 settings before a deck or report can be attached."
+      message: /SESSION_SECRET/i.test(target.reason)
+        ? "Uploads are disabled until the server secret is set. The ICT administrator needs to check SESSION_SECRET."
         : "Storage is not available right now. Try again in a moment.",
     };
   }
@@ -618,4 +629,195 @@ async function loadReviewableTraining(
   if (await mayReviewField(session, training.fieldId)) return { ok: true, sessionId: session.sub };
 
   return { ok: false, message: "That training is not yours to change." };
+}
+
+/* -------------------------------------------------------------------------- */
+/* 5. The page under the training: cover picture and discussion                */
+/* -------------------------------------------------------------------------- */
+
+const COMMENT_MAX = 2000;
+
+export interface CommentActionState {
+  ok: boolean;
+  message: string | null;
+}
+
+/**
+ * Who may read a training's page.
+ *
+ * A published training is readable by everyone signed in; an unpublished one is a
+ * draft between its author and the unit head, exactly as on the detail page. Both
+ * the composer and the picture upload apply the same rule, so neither can be used
+ * to reach a row the reader may not see.
+ */
+async function loadReadableTraining(trainingId: string): Promise<{ ok: true; userId: string } | { ok: false; message: string }> {
+  // Reading a training does not need any capability — it needs an account. The
+  // conversation is open to every signed-in member of staff, which is the point.
+  const session = await getSession();
+  if (!session) return { ok: false, message: "Sign in again to take part in this training." };
+
+  const [row] = await db
+    .select({ reviewState: trainingSessions.reviewState, createdById: trainingSessions.createdById, fieldId: trainingSessions.programmeFieldId })
+    .from(trainingSessions)
+    .where(eq(trainingSessions.id, trainingId))
+    .limit(1);
+  if (!row) return { ok: false, message: "That training no longer exists." };
+
+  if (row.reviewState !== "PUBLISHED" && row.createdById !== session.sub) {
+    const mayReview = await mayReviewField(session, row.fieldId);
+    if (!mayReview) return { ok: false, message: "That training is still in review." };
+  }
+  return { ok: true, userId: session.sub };
+}
+
+/** Post one message under a training. */
+export async function addTrainingCommentAction(
+  _previous: CommentActionState,
+  formData: FormData,
+): Promise<CommentActionState> {
+  const trainingId = field(formData, "trainingId");
+  const body = field(formData, "body")?.trim() ?? "";
+  if (!trainingId) return { ok: false, message: "That training could not be found." };
+
+  const readable = await loadReadableTraining(trainingId);
+  if (!readable.ok) return { ok: false, message: readable.message };
+
+  if (body.length === 0) return { ok: false, message: "Write a message first." };
+  if (body.length > COMMENT_MAX) {
+    return { ok: false, message: `That is ${body.length} characters. Keep a message under ${COMMENT_MAX}.` };
+  }
+
+  try {
+    await db.insert(trainingComments).values({ trainingId, authorId: readable.userId, body });
+  } catch (error) {
+    log.error({ event: "training.comment_failed", trainingId, err: String(error) });
+    return { ok: false, message: "The message was not saved. Try again." };
+  }
+
+  revalidatePath(`/trainings/${trainingId}`);
+  return { ok: true, message: "Posted." };
+}
+
+/** Withdraw a message. The author may always remove their own; an administrator may remove any. */
+export async function deleteTrainingCommentAction(formData: FormData): Promise<void> {
+  const trainingId = field(formData, "trainingId");
+  const commentId = field(formData, "commentId");
+  if (!trainingId || !commentId) redirect("/trainings?error=That+message+could+not+be+found");
+
+  const guard = await checkCapability("training.manage");
+  if (!guard.ok) redirect(`/trainings/${trainingId}?error=${encodeURIComponent(guard.message)}`);
+  const { session } = guard;
+
+  const [comment] = await db
+    .select({ authorId: trainingComments.authorId })
+    .from(trainingComments)
+    .where(and(eq(trainingComments.id, commentId), eq(trainingComments.trainingId, trainingId)))
+    .limit(1);
+  if (!comment) redirect(`/trainings/${trainingId}?error=That+message+no+longer+exists`);
+
+  if (comment.authorId !== session.sub && session.role !== "SYSTEM_ADMIN") {
+    redirect(`/trainings/${trainingId}?error=Only+the+author+or+an+administrator+can+remove+that+message`);
+  }
+
+  try {
+    await db.delete(trainingComments).where(eq(trainingComments.id, commentId));
+  } catch (error) {
+    log.error({ event: "training.comment_delete_failed", commentId, err: String(error) });
+    redirect(`/trainings/${trainingId}?error=The+message+was+not+removed`);
+  }
+  revalidatePath(`/trainings/${trainingId}`);
+}
+
+/** The cover picture is an image, full stop — this is not a second file shelf. */
+const COVER_MAX_BYTES = 4 * 1024 * 1024;
+const COVER_TYPES: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+/**
+ * Upload the picture at the top of a training page.
+ *
+ * Facultative, one image, and it goes through this server rather than a presigned
+ * slot: at a few megabytes there is nothing to gain from a direct upload, and a
+ * plain form means the page works with no JavaScript. The old picture is removed
+ * after the row points at the new one, so a failure never leaves the page with no
+ * image at all.
+ */
+export async function uploadTrainingImageAction(
+  _previous: CommentActionState,
+  formData: FormData,
+): Promise<CommentActionState> {
+  const trainingId = field(formData, "trainingId");
+  if (!trainingId) return { ok: false, message: "That training could not be found." };
+
+  const training = await loadReviewableTraining(trainingId);
+  if (!training.ok) return { ok: false, message: training.message };
+
+  const file = formData.get("image");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, message: "Choose a picture first." };
+  }
+  const extension = COVER_TYPES[file.type];
+  if (!extension) return { ok: false, message: "A cover picture must be a PNG, JPEG, WebP or GIF image." };
+  if (file.size > COVER_MAX_BYTES) {
+    return { ok: false, message: "A cover picture has to be under 4 MB." };
+  }
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const storageKey = `trainings/${trainingId}/cover-${randomUUID()}.${extension}`;
+  const written = await putMaterialObject(storageKey, bytes, file.type);
+  if (!written.ok) {
+    log.error({ event: "training.image_write_failed", trainingId, reason: written.reason });
+    return { ok: false, message: "The picture could not be stored. Try again in a moment." };
+  }
+
+  const [previous] = await db
+    .select({ imageStorageKey: trainingSessions.imageStorageKey })
+    .from(trainingSessions)
+    .where(eq(trainingSessions.id, trainingId))
+    .limit(1);
+
+  try {
+    await db.update(trainingSessions).set({ imageStorageKey: storageKey, updatedAt: new Date() }).where(eq(trainingSessions.id, trainingId));
+  } catch (error) {
+    log.error({ event: "training.image_record_failed", trainingId, err: String(error) });
+    await removeMaterialObject(storageKey);
+    return { ok: false, message: "The picture was uploaded but not saved. Try again." };
+  }
+
+  if (previous?.imageStorageKey && previous.imageStorageKey !== storageKey) {
+    const removed = await removeMaterialObject(previous.imageStorageKey);
+    if (!removed.ok) log.warn({ event: "training.image_orphaned", storageKey: previous.imageStorageKey });
+  }
+
+  revalidatePath(`/trainings/${trainingId}`);
+  revalidatePath("/trainings");
+  return { ok: true, message: "The cover picture has been updated." };
+}
+
+/** Take the picture away and put the placeholder back. */
+export async function removeTrainingImageAction(formData: FormData): Promise<void> {
+  const trainingId = field(formData, "trainingId");
+  if (!trainingId) redirect("/trainings?error=That+training+could+not+be+found");
+
+  const training = await loadReviewableTraining(trainingId);
+  if (!training.ok) redirect(`/trainings/${trainingId}?error=${encodeURIComponent(training.message)}`);
+
+  const [row] = await db
+    .select({ imageStorageKey: trainingSessions.imageStorageKey })
+    .from(trainingSessions)
+    .where(eq(trainingSessions.id, trainingId))
+    .limit(1);
+
+  await db.update(trainingSessions).set({ imageStorageKey: null, updatedAt: new Date() }).where(eq(trainingSessions.id, trainingId));
+  if (row?.imageStorageKey) {
+    const removed = await removeMaterialObject(row.imageStorageKey);
+    if (!removed.ok) log.warn({ event: "training.image_orphaned", storageKey: row.imageStorageKey });
+  }
+
+  revalidatePath(`/trainings/${trainingId}`);
+  revalidatePath("/trainings");
 }

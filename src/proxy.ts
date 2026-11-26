@@ -26,6 +26,14 @@ const PUBLIC_PATHS = [
   // A one-time reset link is opened by somebody who cannot sign in yet.
   "/reset-password",
   "/api/health",
+  /*
+   * Signed file links carry their own authority. The paths below are reachable
+   * without a cookie on purpose: the token names one object, one purpose and an
+   * expiry, and is signed with the session secret. They are minted only after the
+   * session and role checks, so a visitor without a link gets a 403, not a file.
+   */
+  "/api/storage/upload",
+  "/api/storage/file",
 ];
 const STATIC_FILE = /\.(?:svg|png|jpe?g|gif|webp|ico|css|js|map|txt|woff2?)$/i;
 

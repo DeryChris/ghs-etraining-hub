@@ -290,11 +290,17 @@
   overscroll-behavior: contain;
 }
 
-/* Collapsed rail: `stable` reserves the 10px gutter on the right only, which left
-   every centred icon 5px off to the left of the 76px bar — visible as "pushed to
-   the side". Reserving it on both edges keeps the icon row symmetric. */
+/* Collapsed rail: no scrollbar at all. A reserved gutter — on either edge — is
+   layout the icons cannot see, and it kept pulling them off centre. The rail still
+   scrolls; it just does it without a bar, which is what a 76px column wants. */
 .nav-scroll-rail {
-  scrollbar-gutter: stable both-edges;
+  scrollbar-width: none;
+}
+
+.nav-scroll-rail::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .nav-scroll::-webkit-scrollbar {

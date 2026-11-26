@@ -135,12 +135,35 @@ The older binary formats (`.doc`, `.ppt`, `.xls`) are deliberately **not**
 accepted: nothing in a browser can read them, and accepting a file the viewer
 cannot open is a promise broken at the moment of upload.
 
+### Two backends, one interface
+
+`src/lib/server/file-storage.ts` decides where bytes go, and nothing outside it
+knows which was chosen:
+
+| Backend | When | Upload path | Ceiling |
+| --- | --- | --- | --- |
+| S3-compatible bucket | `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` set | Browser PUTs to a presigned URL | The family limits above |
+| The database | otherwise | Browser PUTs to `/api/storage/upload/<token>`, bytes stored in `file_blobs` | ~4.5 MB (the platform's request body limit; `STORAGE_DB_MAX_MB`, default 4) |
+
+The database backend exists because the reference deployment is Neon plus
+Vercel: Neon is a database with no file service, and leaving uploads broken until
+somebody buys a bucket is not a deployment state. It is not a media server — the
+bytes pass through the function, so the request limit is the real ceiling, and a
+database filling with video is slow for everybody. Configure a bucket and the
+interface returns to direct uploads with the full 250 MB.
+
+Both paths hand the browser a short-lived link, so reads never depend on the
+cookie being forwarded: with a bucket that link is presigned; without one it is a
+signed token (`src/lib/server/file-token.ts`, HMAC over key, purpose and expiry)
+that `/api/storage/file/<token>` exchanges for the bytes.
+
 ### Storage layout
 
 ```
 private bucket (S3-compatible: Neon Object Storage, R2, AWS S3, MinIO)
   materials/<materialId>/<uuid>.<ext>   # immutable; version number assigned at finalise
-  resources/<trainingId>/<uuid>.<ext>   # training attachments
+  trainings/<trainingId>/<uuid>.<ext>   # training attachments
+  trainings/<trainingId>/cover-<uuid>.* # the optional picture at the top of a training
 ```
 
 Keys are never derived from user input. The browser PUTs to a presigned URL and

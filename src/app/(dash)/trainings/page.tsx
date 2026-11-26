@@ -9,12 +9,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { NewTrainingDialog } from "@/components/trainings/new-training-dialog";
-import { ProgrammeCard } from "@/components/trainings/programme-card";
 import { Stat } from "@/components/ui/stat";
 import { formatDate } from "@/lib/format";
 import { TRAINING_STATUSES, TRAINING_STATUS_LABELS, isTrainingStatus } from "@/lib/labels";
 import { can } from "@/lib/rbac/capabilities";
-import { listFields } from "@/lib/server/learning-queries";
 import { requireSession } from "@/lib/server/rbac";
 import { listGeography, listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
 import {
@@ -138,19 +136,18 @@ export default async function TrainingsPage({
       getTrainingFilterOptions,
       listProgrammeFieldOptions,
       listGeography,
-      () => listFields(session),
     ]),
   );
   if (!loaded.ok) {
     return (
       <DataUnavailable
         title="The training register did not load"
-        description="The register and the programme catalogue could not be read in time. Nothing was changed."
+        description="The register and its filters could not be read in time. Nothing was changed."
         requestId={loaded.requestId}
       />
     );
   }
-  const [list, summary, options, fields, geography, catalogue] = loaded.data;
+  const [list, summary, options, fields, geography] = loaded.data;
 
   const filtered =
     query.q.length > 0 ||
@@ -172,15 +169,16 @@ export default async function TrainingsPage({
       <PageHeader
         eyebrow="Training register"
         title="Trainings"
-        description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme field and the area inside it, so coverage can be counted by programme rather than by memory."
+        description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme field and the area inside it, so coverage can be counted by programme rather than by memory. To browse by subject instead of by year, open the catalogue."
         actions={
-          mayManage ? (
-            <NewTrainingDialog
-              fields={fields}
-              geography={geography}
-              label="Create new training"
-            />
-          ) : undefined
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
+              Browse the catalogue
+            </Link>
+            {mayManage ? (
+              <NewTrainingDialog fields={fields} geography={geography} label="Create new training" />
+            ) : null}
+          </div>
         }
       />
 
@@ -360,39 +358,6 @@ export default async function TrainingsPage({
           </p>
         </div>
       </form>
-
-      {/* The programme catalogue, on the same screen as the register it files into. */}
-      <section id="catalogue" aria-labelledby="catalogue-heading" className="space-y-4 scroll-mt-24">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 id="catalogue-heading" className="text-lg font-bold text-ink">
-              Programme catalogue
-            </h2>
-            <p className="text-sm text-ink-muted">
-              Every programme field GHS trains in, with the areas inside it. Pick one to see its materials and the
-              trainings recorded against it.
-            </p>
-          </div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-            {catalogue.length} {catalogue.length === 1 ? "programme field" : "programme fields"}
-          </span>
-        </div>
-
-        {catalogue.length === 0 ? (
-          <ListEmptyState
-            title="The programme taxonomy is empty"
-            description="An administrator maintains the fields and areas at Programme fields. They appear here as soon as they are published."
-          />
-        ) : (
-          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {catalogue.map((field) => (
-              <li key={field.id}>
-                <ProgrammeCard field={field} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
 
       {list.items.length === 0 ? (
         <ListEmptyState

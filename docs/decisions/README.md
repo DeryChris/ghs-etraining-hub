@@ -206,3 +206,13 @@ sub‑district → facility (Upper West seeded, CHPS excluded, programme taxonom
 upload). Traffic is open‑counts (`material_views`, one row per person per day, fire‑and‑forget beacon that
 honours DNT) plus downloads from the existing audit trail, drawn as server‑rendered SVG charts on `/insights`.
 
+---
+
+## ADR‑0016 — Files do not wait for a bucket
+
+**Status:** accepted · **Date:** 2026‑11‑17 · **Detail:** [`0016-files-without-a-bucket.md`](./0016-files-without-a-bucket.md)
+
+**Decision.** When no S3-compatible bucket is configured, uploads are stored in Postgres (`file_blobs`)
+and served through signed links, so the app works on a bare Neon + Vercel deployment. The ceiling is the
+platform's request body limit (~4.5 MB), not Postgres. Configure a bucket and the same interface returns
+to direct browser-to-bucket uploads with the 250 MB family limits.

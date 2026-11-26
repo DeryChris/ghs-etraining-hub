@@ -1,14 +1,14 @@
 import Link from "next/link";
 import {
-  Activity,
   ArrowRight,
-  BadgeCheck,
   Bell,
   CalendarCheck2,
   ClipboardCheck,
   Download,
   Eye,
+  History,
   Layers,
+  PenLine,
 } from "lucide-react";
 import { AreaChart } from "@/components/charts/area-chart";
 import { ChartCard, EmptyChart, chartColor } from "@/components/charts/chart-card";
@@ -17,7 +17,6 @@ import { KpiCard, KpiGrid } from "@/components/charts/kpi-card";
 import { RankBars } from "@/components/charts/rank-bars";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { safeAppLink } from "@/lib/links";
 import {
@@ -167,7 +166,7 @@ export default async function DashboardPage({
     ]);
 
   const noticeText = notice ? NOTICES[notice] : undefined;
-  const nextUp = dashboard.continueLearning[0] ?? null;
+  const nextUp = dashboard.recentlyOpened[0] ?? null;
 
   return (
     <div className="space-y-10">
@@ -197,9 +196,9 @@ export default async function DashboardPage({
               {greetingFor(now)}, {firstNameOf(session.name)}.
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
-              {dashboard.inProgressCount > 0
-                ? `${dashboard.inProgressCount} ${dashboard.inProgressCount === 1 ? "material is" : "materials are"} open where you left off, and ${dashboard.completedCount} ${dashboard.completedCount === 1 ? "is" : "are"} on your record.`
-                : `${dashboard.completedCount} ${dashboard.completedCount === 1 ? "material is" : "materials are"} on your record. Open the library to start the next one.`}
+              {dashboard.mandatoryOutstanding.length > 0
+                ? `${dashboard.mandatoryOutstanding.length} ${dashboard.mandatoryOutstanding.length === 1 ? "protocol is" : "protocols are"} still waiting for your signature. Everything else is in the library whenever you need it.`
+                : "Everything GHS has published for your programmes is in the library, filed under the field and area it belongs to."}
             </p>
             <div className="flex flex-wrap items-center gap-3">
               {nextUp ? (
@@ -209,7 +208,7 @@ export default async function DashboardPage({
                     className: "h-12 rounded-[var(--radius-pill)] px-6",
                   })}
                 >
-                  Continue learning
+                  Pick up where you left off
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               ) : null}
@@ -352,17 +351,21 @@ export default async function DashboardPage({
       ) : (
         <KpiGrid>
           <KpiCard
-            icon={Activity}
-            label="In progress"
-            value={dashboard.inProgressCount}
-            hint="Materials you have started"
+            icon={PenLine}
+            label="Protocols to sign"
+            value={dashboard.mandatoryOutstanding.length}
+            hint={
+              dashboard.mandatoryTotal > 0
+                ? `of ${dashboard.mandatoryTotal} that ask for a signature`
+                : "Nothing published asks for one"
+            }
             color="var(--chart-4)"
           />
           <KpiCard
-            icon={BadgeCheck}
-            label="Completed"
-            value={dashboard.completedCount}
-            hint="Recorded on your record"
+            icon={History}
+            label="Opened recently"
+            value={dashboard.recentlyOpened.length}
+            hint="Pick one up again below"
             color="var(--chart-1)"
           />
           <KpiCard
@@ -384,21 +387,21 @@ export default async function DashboardPage({
 
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="space-y-10 lg:col-span-2">
-          <section aria-labelledby="continue-heading" className="space-y-4">
-            <h2 id="continue-heading" className="text-lg font-bold text-ink">
-              Continue where you left off
+          <section aria-labelledby="recent-heading" className="space-y-4">
+            <h2 id="recent-heading" className="text-lg font-bold text-ink">
+              Recently opened
             </h2>
-            {dashboard.continueLearning.length === 0 ? (
+            {dashboard.recentlyOpened.length === 0 ? (
               <ListEmptyState
                 art="search"
-                title="Nothing in progress"
-                description="Open the library to start a material. Your progress is saved as you go."
+                title="Nothing opened yet"
+                description="Everything published for your programmes is in the library. What you open shows up here."
                 actionText="Browse the library"
                 actionHref="/library"
               />
             ) : (
               <ul className="surface-card divide-y divide-hairline overflow-hidden">
-                {dashboard.continueLearning.map((item) => (
+                {dashboard.recentlyOpened.map((item) => (
                   <li key={item.id}>
                     <Link
                       href={`/materials/${item.id}`}
@@ -410,15 +413,15 @@ export default async function DashboardPage({
                       <p className="mt-1 font-semibold text-ink">
                         {item.title}
                       </p>
-                      <div className="mt-3">
-                        <ProgressBar
-                          value={item.watchedPercent}
-                          label={`Progress on ${item.title}`}
-                        />
-                      </div>
+                      <p className="mt-1 text-xs text-ink-muted">Last opened {formatDateTime(item.lastViewedAt)}</p>
                     </Link>
                   </li>
                 ))}
+                <li className="p-4">
+                  <Link href="/analytics" className="text-sm font-semibold text-primary hover:underline">
+                    See all of your activity
+                  </Link>
+                </li>
               </ul>
             )}
           </section>

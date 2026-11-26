@@ -83,8 +83,16 @@ export function ProgrammeFieldTile({
   field,
   href,
 }: {
-  field: { id: string; code: string; name: string; description?: string | null; areaCount: number; materialCount: number };
-  /** Where the tile goes: the register (signed in) or the public list. */
+  field: {
+    id: string;
+    code: string;
+    name: string;
+    description?: string | null;
+    areaCount: number;
+    materialCount: number;
+    trainingCount?: number;
+  };
+  /** Where the tile goes: the catalogue (signed in) or the public list. */
   href: string;
 }) {
   return (
@@ -94,17 +102,23 @@ export function ProgrammeFieldTile({
       description={field.description}
       href={href}
       icon={<FieldTileIcon code={field.code} size={46} />}
-      meta={`${field.areaCount} ${field.areaCount === 1 ? "programme area" : "programme areas"} · ${field.materialCount} ${field.materialCount === 1 ? "material" : "materials"}`}
-      actions={
+      meta={
         <>
-          <Link
-            href={href}
-            className="inline-flex items-center gap-1 text-xs font-bold text-primary underline-offset-4 hover:underline"
-          >
-            {href.startsWith("/trainings") ? "Filter register" : "Open programmes"}
-            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-          </Link>
+          {field.areaCount} {field.areaCount === 1 ? "programme area" : "programme areas"} ·{" "}
+          {field.materialCount} {field.materialCount === 1 ? "material" : "materials"}
+          {typeof field.trainingCount === "number" ? (
+            <> · {field.trainingCount} {field.trainingCount === 1 ? "training" : "trainings"}</>
+          ) : null}
         </>
+      }
+      actions={
+        <Link
+          href={href}
+          className="inline-flex items-center gap-1 text-xs font-bold text-primary underline-offset-4 hover:underline"
+        >
+          {href.startsWith("/trainings") ? "Filter register" : href.startsWith("/programmes") ? "Open programmes" : "Open field"}
+          <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+        </Link>
       }
     />
   );
@@ -117,7 +131,7 @@ export function ProgrammeAreaTile({
 }: {
   area: { id: string; code: string; name: string; description?: string | null };
   href: string;
-  /** Whatever the page knows about this area: counts, or a completion bar. */
+  /** Whatever the page knows about this area: how many trainings and materials. */
   meta: React.ReactNode;
 }) {
   return (

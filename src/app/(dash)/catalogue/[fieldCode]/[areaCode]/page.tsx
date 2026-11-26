@@ -1,14 +1,25 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CalendarDays, MapPin, Users } from "lucide-react";
 import { MaterialCard } from "@/components/materials/material-card";
+import { Badge } from "@/components/ui/badge";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { ProgressBar } from "@/components/ui/progress-bar";
-import { MATERIAL_TYPES, MATERIAL_TYPE_LABELS } from "@/lib/labels";
+import { TRAINING_STATUS_LABELS } from "@/lib/labels";
 import { fieldHref } from "@/lib/links";
+import { formatDate } from "@/lib/format";
+import { MATERIAL_TYPES, MATERIAL_TYPE_LABELS } from "@/lib/labels";
 import { getAreaByCode, listMaterialsInArea } from "@/lib/server/learning-queries";
+import { listTrainingsInArea } from "@/lib/server/training-queries";
 import { requireSession } from "@/lib/server/rbac";
 
+/**
+ * One programme area: the trainings held for it, then the material filed under it.
+ *
+ * The trainings come first because that is what people come here for — the event
+ * they attended, its resources and its discussion. The material below is the
+ * standing library for the area, which does not expire with the event.
+ */
 export default async function AreaPage({ params }: { params: Promise<{ fieldCode: string; areaCode: string }> }) {
   const session = await requireSession();
   const { areaCode } = await params;
@@ -19,9 +30,11 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
   if (!found) notFound();
   const { area, field } = found;
 
-  const materials = await listMaterialsInArea(area.id, session);
-  const completed = materials.filter((m) => m.status === "COMPLETED").length;
-  const percent = materials.length > 0 ? (completed / materials.length) * 100 : 0;
+  const [trainings, materials] = await Promise.all([
+    listTrainingsInArea(area.id),
+    listMaterialsInArea(area.id, session),
+  ]);
+
   const groups = MATERIAL_TYPES.map((type) => ({ type, items: materials.filter((m) => m.type === type) })).filter(
     (group) => group.items.length > 0,
   );
@@ -50,34 +63,98 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
 
       <PageHeader eyebrow={`${field.name} · ${area.code}`} title={area.name} description={area.description ?? undefined} />
 
-      <section aria-label="Area progress" className="rounded-card border border-hairline bg-surface p-5 shadow-panel">
-        <p className="mb-3 text-sm font-semibold text-ink">
-          {completed} of {materials.length} {materials.length === 1 ? "material" : "materials"} completed
-        </p>
-        <ProgressBar value={percent} label={`Completion in ${area.name}`} />
+      <section aria-labelledby="trainings-heading" className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="trainings-heading" className="text-lg font-bold text-ink">
+              Trainings in this area
+            </h2>
+            <p className="text-sm text-ink-muted">
+              Every published training filed here, newest first. Open one for its write-up, resources and discussion.
+            </p>
+          </div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            {trainings.length} {trainings.length === 1 ? "training" : "trainings"}
+          </span>
+        </div>
+
+        {trainings.length === 0 ? (
+          <ListEmptyState
+            title="No trainings filed under this area yet"
+            description="A facilitator or an administrator records a training against this area and it appears here — with its slides, attendance sheet and report."
+          />
+        ) : (
+          <ul className="grid gap-4 md:grid-cols-2">
+            {trainings.map((training) => (
+              <li key={training.id}>
+                <Link
+                  href={`/trainings/${training.id}`}
+                  className="group flex h-full flex-col gap-3 rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{training.year}</span>
+                    <Badge variant={training.status === "CANCELLED" ? "danger" : training.status === "PLANNED" ? "success" : "default"}>
+                      {TRAINING_STATUS_LABELS[training.status]}
+                    </Badge>
+                  </div>
+                  <h3 className="text-base font-semibold leading-snug text-ink group-hover:text-primary">{training.title}</h3>
+                  <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+                    <span className="inline-flex items-center gap-1">
+                      <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+                      {formatDate(training.startsOn)}
+                    </span>
+                    {(training.facilityName ?? training.venue ?? training.regionName) && (
+                      <span className="inline-flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5" aria-hidden />
+                        {training.facilityName ?? training.venue ?? training.regionName}
+                      </span>
+                    )}
+                    {training.attendeeCount !== null && (
+                      <span className="inline-flex items-center gap-1">
+                        <Users className="h-3.5 w-3.5" aria-hidden />
+                        {training.attendeeCount.toLocaleString("en-GB")} trained
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
-      {materials.length === 0 ? (
-        <ListEmptyState
-          title="No published materials in this area yet"
-          description="Facilitators publish SOPs, videos and labs here once they have been reviewed."
-        />
-      ) : (
-        groups.map((group) => (
-          <section key={group.type} aria-labelledby={`group-${group.type}`} className="space-y-4">
-            <h2 id={`group-${group.type}`} className="text-lg font-bold text-ink">
-              {MATERIAL_TYPE_LABELS[group.type]}s
-            </h2>
-            <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {group.items.map((material) => (
-                <li key={material.id}>
-                  <MaterialCard material={material} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))
-      )}
+      <section aria-labelledby="materials-heading" className="space-y-4">
+        <div>
+          <h2 id="materials-heading" className="text-lg font-bold text-ink">
+            Material for this area
+          </h2>
+          <p className="text-sm text-ink-muted">
+            The standing library: protocols, videos and labs that apply to the area between trainings.
+          </p>
+        </div>
+
+        {materials.length === 0 ? (
+          <ListEmptyState
+            title="No published materials in this area yet"
+            description="Facilitators publish SOPs, videos and labs here once they have been reviewed."
+          />
+        ) : (
+          groups.map((group) => (
+            <section key={group.type} aria-labelledby={`group-${group.type}`} className="space-y-4">
+              <h3 id={`group-${group.type}`} className="text-base font-bold text-ink">
+                {MATERIAL_TYPE_LABELS[group.type]}s
+              </h3>
+              <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {group.items.map((material) => (
+                  <li key={material.id}>
+                    <MaterialCard material={material} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))
+        )}
+      </section>
     </div>
   );
 }

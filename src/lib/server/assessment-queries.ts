@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/index";
 import { assessmentAttempts, assessments, programmeFields, materialProgress, materials, programmeAreas } from "@/db/schema";
-import type { MaterialType, ProgressStatus } from "@/lib/labels";
+import type { MaterialType } from "@/lib/labels";
 import { audienceFor, fieldFor, liveField, liveArea, publishedMaterial } from "@/lib/server/visibility";
 import type { Viewer } from "@/lib/viewer";
 
@@ -34,7 +34,8 @@ export interface AssessmentCard {
   bestScore: number | null;
   passed: boolean;
   lastAttemptAt: Date | null;
-  progress: ProgressStatus;
+  /** Signed for the current version, where an acknowledgement is required. */
+  acknowledgedAt: Date | null;
 }
 
 interface AttemptSummary {
@@ -59,7 +60,7 @@ export async function listTestsAndLabs(viewer: Viewer): Promise<AssessmentCard[]
       maxAttempts: assessments.maxAttempts,
       timeLimitMinutes: assessments.timeLimitMinutes,
       isPublished: assessments.isPublished,
-      progress: materialProgress.status,
+      acknowledgedAt: materialProgress.acknowledgedAt,
     })
     .from(materials)
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
@@ -111,7 +112,7 @@ export async function listTestsAndLabs(viewer: Viewer): Promise<AssessmentCard[]
     summary.set(attempt.assessmentId, current);
   }
 
-  return rows.map(({ isPublished, progress, ...row }) => {
+  return rows.map(({ isPublished, ...row }) => {
     // A draft assessment is invisible here: an unpublished question bank would
     // otherwise read as a test the learner is expected to sit.
     const configured = row.assessmentId !== null && isPublished === true;
@@ -126,7 +127,6 @@ export async function listTestsAndLabs(viewer: Viewer): Promise<AssessmentCard[]
       bestScore: attempt?.bestScore ?? null,
       passed: attempt?.passed ?? false,
       lastAttemptAt: attempt?.lastAttemptAt ?? null,
-      progress: progress ?? "NOT_STARTED",
     } satisfies AssessmentCard;
   });
 }

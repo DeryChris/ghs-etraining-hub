@@ -75,6 +75,18 @@ async function issueFile(request: NextRequest, id: string, origin: string) {
     download,
   });
 
+  /*
+   * The database backend returns a path on this origin rather than a URL in a
+   * bucket. `NextResponse.redirect` needs an absolute URL, so a relative one is
+   * sent as a plain Location header with the same status.
+   */
+  if (signed.url.startsWith("/")) {
+    return new NextResponse(null, {
+      status: 302,
+      headers: { Location: signed.url, "Cache-Control": "no-store" },
+    });
+  }
+
   return NextResponse.redirect(signed.url, {
     status: 302,
     headers: { "Cache-Control": "no-store" },

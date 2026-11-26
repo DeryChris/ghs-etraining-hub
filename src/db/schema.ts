@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  customType,
   pgTable,
   uuid,
   varchar,
@@ -17,10 +18,16 @@ import {
 
 export const userRoleEnum = pgEnum("user_role", ["SYSTEM_ADMIN", "FACILITATOR", "LEARNER"]);
 export const materialStateEnum = pgEnum("material_state", ["DRAFT", "IN_REVIEW", "PUBLISHED", "SUPERSEDED", "ARCHIVED"]);
+/** Postgres `bytea`, for deployments that keep files in the database. */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
+
 export const materialTypeEnum = pgEnum("material_type", ["DOCUMENT", "VIDEO", "LAB", "ASSESSMENT_LINK"]);
 export const materialPriorityEnum = pgEnum("material_priority", ["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
 export const scanStatusEnum = pgEnum("scan_status", ["PENDING", "CLEAN", "INFECTED"]);
-export const progressStatusEnum = pgEnum("progress_status", ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]);
 export const enrollmentSourceEnum = pgEnum("enrollment_source", ["SELF", "ASSIGNED"]);
 /**
  * What a notice is about. The first six are the events this service actually
@@ -143,6 +150,26 @@ export const materialVersions = pgTable("material_versions", {
   unique("material_versions_material_version_key").on(t.materialId, t.version),
 ]);
 
+/**
+ * Files kept in the database, for a deployment with no object storage.
+ *
+ * The deployment target is Neon plus Vercel, and Neon is a database: it has no
+ * file service. Rather than leave uploads broken until somebody buys a bucket,
+ * the same storage interface falls back to this table — bytes, MIME type and the
+ * key the rest of the system already uses. The ceiling is Vercel's request body
+ * limit (about 4.5 MB), not Postgres: a single `bytea` value may be far larger.
+ * Configure S3_ENDPOINT/S3_BUCKET and the interface switches back to direct
+ * browser-to-bucket uploads, which is where decks and videos belong.
+ */
+export const fileBlobs = pgTable("file_blobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  storageKey: text("storage_key").notNull().unique(),
+  mimeType: text("mime_type"),
+  sizeBytes: integer("size_bytes").notNull(),
+  bytes: bytea("bytes").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const enrollments = pgTable("enrollments", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -154,19 +181,26 @@ export const enrollments = pgTable("enrollments", {
   lastRemindedAt: timestamp("last_reminded_at", { withTimezone: true }),
 }, (t) => [unique().on(t.userId, t.programmeAreaId), index("enrollments_area_idx").on(t.programmeAreaId)]);
 
+/**
+ * Who has signed for which protocol, and against which version.
+ *
+ * This table used to carry a learning path — not started, in progress, completed,
+ * watched percent. That is gone: this is a library, not a course, and "0 of 0
+ * materials completed" told nobody anything. What remains is the only fact worth
+ * keeping: a person acknowledged a version of a protocol, and when. A newer
+ * version means the acknowledgement is stale, not that they have to "redo" a
+ * course.
+ */
 export const materialProgress = pgTable("material_progress", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   materialId: uuid("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
   materialVersionId: uuid("material_version_id").notNull().references(() => materialVersions.id),
-  status: progressStatusEnum("status").notNull().default("NOT_STARTED"),
-  watchedPercent: integer("watched_percent").notNull().default(0),
   acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   unique().on(t.userId, t.materialId),
-  index("material_progress_user_status_idx").on(t.userId, t.status, t.updatedAt),
+  index("material_progress_user_idx").on(t.userId, t.updatedAt),
 ]);
 
 export const assessments = pgTable("assessments", {
@@ -464,6 +498,8 @@ export const trainingSessions = pgTable("training_sessions", {
   facilitatorId: uuid("facilitator_id").references(() => users.id, { onDelete: "set null" }),
   attendeeCount: integer("attendee_count"),
   notes: text("notes"),
+  /** Optional picture the facilitator uploads for the training page. */
+  imageStorageKey: text("image_storage_key"),
   /** Facilitator-created rows start PENDING; an administrator's row is live. */
   reviewState: trainingReviewStateEnum("review_state").notNull().default("PUBLISHED"),
   reviewedById: uuid("reviewed_by_id").references(() => users.id, { onDelete: "set null" }),
@@ -495,6 +531,22 @@ export const trainingResources = pgTable("training_resources", {
   uploadedById: uuid("uploaded_by_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("training_resources_training_idx").on(t.trainingId, t.createdAt)]);
+
+/**
+ * The conversation under a training.
+ *
+ * Staff who attended — or who are thinking about the next cohort — ask questions
+ * here, in the open, rather than in a WhatsApp group that nobody else can read.
+ * Flat on purpose: a training page holds a few dozen messages, and a thread tree
+ * would cost more to read on a phone than it is worth.
+ */
+export const trainingComments = pgTable("training_comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  trainingId: uuid("training_id").notNull().references(() => trainingSessions.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("training_comments_training_idx").on(t.trainingId, t.createdAt)]);
 
 /**
  * "May work anywhere in this programme field."

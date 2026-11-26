@@ -12,7 +12,12 @@ import { areaIdForMaterial } from "@/lib/server/authoring-queries";
 import { compactAudience } from "@/lib/notification-audience";
 import { logAudit } from "@/lib/server/audit";
 import { notifyMaterialPublished } from "@/lib/server/notify";
-import { createMaterialUploadTarget, inspectMaterialObject, removeMaterialObject } from "@/lib/server/file-storage";
+import {
+  createMaterialUploadTarget,
+  inspectMaterialObject,
+  removeMaterialObject,
+  storageCeiling,
+} from "@/lib/server/file-storage";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
 import { getSession } from "@/lib/server/session";
@@ -39,9 +44,14 @@ import {
  * uploading cannot fix it. Say who can, instead of "try again" — the retry will
  * fail identically until the S3 variables exist.
  */
+/**
+ * Uploads no longer fail for want of a bucket: with no S3 settings the file is
+ * stored in the database instead (`file-storage.ts`). What can still fail is the
+ * platform's request body limit, and the message has to say which limit it is.
+ */
 function storageMessage(reason: string | undefined, fallback: string): string {
-  if (reason && /not configured|S3_ENDPOINT|S3_ACCESS_KEY_ID|S3_SECRET_ACCESS_KEY/i.test(reason)) {
-    return "File storage has not been set up for this deployment yet. The ICT administrator needs to add the S3 settings (S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY) before files can be uploaded.";
+  if (reason && /SESSION_SECRET/i.test(reason)) {
+    return "Uploads are disabled until the server secret is set. The ICT administrator needs to check SESSION_SECRET.";
   }
   return fallback;
 }
@@ -197,6 +207,9 @@ export async function requestUploadAction(input: {
 
   const check = checkUpload(parsed.data.mimeType, parsed.data.sizeBytes);
   if (!check.ok) return { ok: false, message: check.message };
+
+  const ceiling = storageCeiling();
+  if (parsed.data.sizeBytes > ceiling.bytes) return { ok: false, message: ceiling.detail };
 
   const versionId = randomUUID();
   const storageKey = materialStorageKey(parsed.data.materialId, check.extension, versionId);

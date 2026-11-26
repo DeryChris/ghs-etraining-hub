@@ -38,6 +38,7 @@ describe("navFor", () => {
   it("keeps a learner to the shared destinations only", () => {
     expect(hrefs("LEARNER")).toEqual([
       "/dashboard",
+      "/catalogue",
       "/trainings",
       "/library",
       "/assessments",
@@ -62,11 +63,13 @@ describe("navFor", () => {
     expect(admin[3]?.items.map((item) => item.href)).toEqual(["/review"]);
   });
 
-  it("files everything under Trainings: there is no separate catalogue tab any more", () => {
+  it("gives every role both doors: the register and the catalogue by subject", () => {
     for (const role of ROLES) {
       expect(hrefs(role)).toContain("/trainings");
-      // The catalogue lives at the top of the register; the old route redirects.
-      expect(hrefs(role)).not.toContain("/catalogue");
+      // The catalogue is its own destination again: field → area → trainings.
+      // One screen held both and neither was readable (the register shared space
+      // with the taxonomy it files into).
+      expect(hrefs(role)).toContain("/catalogue");
       // Directorates and spaces are gone: there is one taxonomy (ADR-0014).
       expect(hrefs(role)).not.toContain("/directorates");
       expect(hrefs(role)).not.toContain("/sessions");

@@ -34,10 +34,13 @@ export function TrainingResources({
   trainingId,
   resources,
   canEdit,
+  ceiling,
 }: {
   trainingId: string;
   resources: ResourceRow[];
   canEdit: boolean;
+  /** What this deployment can actually accept, so the hint is not a guess. */
+  ceiling: { bytes: number; detail: string };
 }) {
   return (
     <section
@@ -53,7 +56,7 @@ export function TrainingResources({
           <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-ink-muted">
             {resources.length === 0
               ? "Nothing attached yet. Slides, attendance sheets and reports can be added now or at any time."
-              : `${resources.length} file${resources.length === 1 ? "" : "s"} attached to this training.`}
+              : `${resources.length} file${resources.length === 1 ? "" : "s"} attached. They are shown at the top of this page as download chips; this panel is where files are added and withdrawn.`}
           </p>
         </div>
 
@@ -69,7 +72,7 @@ export function TrainingResources({
               </Button>
             )}
           >
-            {({ close }) => <UploadForm trainingId={trainingId} onDone={close} />}
+            {({ close }) => <UploadForm trainingId={trainingId} onDone={close} ceiling={ceiling} />}
           </Dialog>
         )}
       </div>
@@ -113,7 +116,15 @@ export function TrainingResources({
   );
 }
 
-function UploadForm({ trainingId, onDone }: { trainingId: string; onDone: () => void }) {
+function UploadForm({
+  trainingId,
+  onDone,
+  ceiling,
+}: {
+  trainingId: string;
+  onDone: () => void;
+  ceiling: { bytes: number; detail: string };
+}) {
   const [state, formAction, pending] = useActionState<TrainingActionState, FormData>(
     finaliseTrainingResourceAction,
     { ok: true, message: null },
@@ -127,6 +138,10 @@ function UploadForm({ trainingId, onDone }: { trainingId: string; onDone: () => 
     event.preventDefault();
     if (!file) {
       setError("Choose a file first.");
+      return;
+    }
+    if (file.size > ceiling.bytes) {
+      setError(ceiling.detail);
       return;
     }
 
@@ -209,7 +224,7 @@ function UploadForm({ trainingId, onDone }: { trainingId: string; onDone: () => 
         />
         <p className={hintClass}>
           The deck, the attendance sheet, the report, the recording: PDF, Word, PowerPoint, Excel, video, audio,
-          image or CSV. Up to 250 MB for video, 25 MB for a document.
+          image or CSV, up to {formatBytes(ceiling.bytes)} per file here. {ceiling.detail}
         </p>
       </div>
 

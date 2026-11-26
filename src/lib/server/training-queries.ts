@@ -13,6 +13,7 @@ import {
   trainingSessions,
   users,
 } from "@/db/schema";
+import { trainingComments } from "@/db/schema";
 import type { TrainingStatus } from "@/lib/labels";
 import { yearRange } from "@/lib/training-dates";
 
@@ -240,6 +241,8 @@ export interface TrainingResourceRow {
   sizeBytes: number | null;
   uploadedByName: string | null;
   createdAt: Date;
+  /** Where the bytes are. The page turns this into a short-lived link. */
+  storageKey: string;
 }
 
 export interface TrainingDetail extends TrainingListRow {
@@ -254,6 +257,8 @@ export interface TrainingDetail extends TrainingListRow {
   subDistrictId: string | null;
   facilityId: string | null;
   notes: string | null;
+  /** Optional cover picture: the storage key, or null. */
+  imageStorageKey: string | null;
   createdById: string;
   createdAt: Date;
   updatedAt: Date;
@@ -286,6 +291,7 @@ export async function getTraining(id: string): Promise<TrainingDetail | null> {
       venue: trainingSessions.venue,
       attendeeCount: trainingSessions.attendeeCount,
       notes: trainingSessions.notes,
+      imageStorageKey: trainingSessions.imageStorageKey,
       createdById: trainingSessions.createdById,
       createdByName: users.fullName,
       createdAt: trainingSessions.createdAt,
@@ -326,6 +332,7 @@ export async function getTraining(id: string): Promise<TrainingDetail | null> {
         sizeBytes: trainingResources.sizeBytes,
         uploadedByName: users.fullName,
         createdAt: trainingResources.createdAt,
+        storageKey: trainingResources.storageKey,
       })
       .from(trainingResources)
       .leftJoin(users, eq(users.id, trainingResources.uploadedById))
@@ -341,6 +348,87 @@ export async function getTraining(id: string): Promise<TrainingDetail | null> {
     reviewedByName: reviewer[0]?.name ?? null,
     resources,
   };
+}
+
+export interface TrainingCommentRow {
+  id: string;
+  body: string;
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  createdAt: Date;
+}
+
+/**
+ * The conversation under one training, oldest first — a page reads like a
+ * conversation, so the newest message is at the bottom where the reply box is.
+ */
+export async function listTrainingComments(trainingId: string, limit = 200): Promise<TrainingCommentRow[]> {
+  return db
+    .select({
+      id: trainingComments.id,
+      body: trainingComments.body,
+      authorId: trainingComments.authorId,
+      authorName: users.fullName,
+      authorRole: users.role,
+      createdAt: trainingComments.createdAt,
+    })
+    .from(trainingComments)
+    .innerJoin(users, eq(users.id, trainingComments.authorId))
+    .where(eq(trainingComments.trainingId, trainingId))
+    .orderBy(asc(trainingComments.createdAt))
+    .limit(limit);
+}
+
+/**
+ * Every published training filed under one programme area, newest first.
+ *
+ * This is what the catalogue's area page shows: the trainings held for that area,
+ * so a member of staff can find the one they attended and the material that went
+ * with it. Unreviewed rows are excluded — a facilitator's draft is not the
+ * catalogue.
+ */
+export interface AreaTrainingRow {
+  id: string;
+  title: string;
+  year: number;
+  status: TrainingStatus;
+  startsOn: string;
+  endsOn: string | null;
+  venue: string | null;
+  facilityName: string | null;
+  regionName: string | null;
+  attendeeCount: number | null;
+  targetGroup: string | null;
+}
+
+export async function listTrainingsInArea(programmeAreaId: string, limit = 50): Promise<AreaTrainingRow[]> {
+  return db
+    .select({
+      id: trainingSessions.id,
+      title: trainingSessions.title,
+      year: trainingSessions.year,
+      status: trainingSessions.status,
+      startsOn: trainingSessions.organisedOn,
+      endsOn: trainingSessions.endsOn,
+      venue: trainingSessions.venue,
+      facilityName: facilities.name,
+      regionName: regions.name,
+      attendeeCount: trainingSessions.attendeeCount,
+      targetGroup: trainingSessions.targetGroup,
+    })
+    .from(trainingSessions)
+    .leftJoin(regions, eq(regions.id, trainingSessions.regionId))
+    .leftJoin(facilities, eq(facilities.id, trainingSessions.facilityId))
+    .where(
+      and(
+        eq(trainingSessions.programmeAreaId, programmeAreaId),
+        eq(trainingSessions.reviewState, "PUBLISHED"),
+        eq(trainingSessions.isArchived, false),
+      ),
+    )
+    .orderBy(desc(trainingSessions.organisedOn))
+    .limit(limit);
 }
 
 /**

@@ -455,15 +455,15 @@ export function TrainingForm({
 
       <div className="md:col-span-2">
         <label htmlFor="training-notes" className={labelClass}>
-          Notes
+          About this training
         </label>
         <textarea
           id="training-notes"
           name="notes"
-          rows={3}
+          rows={5}
           maxLength={1000}
           defaultValue={start.notes}
-          placeholder="Objectives, funding source, anything the register should carry"
+          placeholder="What it covered, who facilitated it, what people should take away. This is the paragraph under the heading on the training page."
           className={inputClass}
         />
       </div>

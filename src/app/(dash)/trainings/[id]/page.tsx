@@ -4,17 +4,22 @@ import { Archive, CalendarDays, MapPin, Users } from "lucide-react";
 import { TrainingForm, type TrainingFormValues } from "@/components/trainings/training-form";
 import { ReviewPanel } from "@/components/trainings/review-panel";
 import { TrainingResources } from "@/components/trainings/resources-panel";
+import { TrainingCover } from "@/components/trainings/training-cover";
+import { ResourceChips } from "@/components/trainings/resource-chips";
+import { Discussion } from "@/components/trainings/discussion";
+import { createMaterialSignedUrl, storageCeiling } from "@/lib/server/file-storage";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { downloadFileName } from "@/lib/file-name";
 import { TRAINING_STATUS_LABELS } from "@/lib/labels";
 import { can } from "@/lib/rbac/capabilities";
 import { archiveTrainingAction } from "@/lib/server/actions/trainings";
 import { mayReviewField, requireSession } from "@/lib/server/rbac";
 import { listGeography, listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
-import { getTraining } from "@/lib/server/training-queries";
+import { getTraining, listTrainingComments } from "@/lib/server/training-queries";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +51,35 @@ export default async function TrainingDetailPage({
   // A row still in review is a private draft between its author and the unit
   // head. Anyone else who types the URL gets the same answer as a bad id.
   if (training.reviewState !== "PUBLISHED" && training.createdById !== session.sub && !canReview) notFound();
+
+  const comments = await listTrainingComments(training.id);
+
+  /*
+   * The picture and every attachment get a short-lived link here rather than in
+   * the browser. With a bucket configured that link is presigned; without one it
+   * points at this application, which streams the bytes from the database. Either
+   * way the session and role checks have already happened by the time a URL exists.
+   */
+  const cover = training.imageStorageKey
+    ? await createMaterialSignedUrl(training.imageStorageKey)
+    : null;
+  const coverSrc = cover?.ok ? cover.url : null;
+
+  const chips = await Promise.all(
+    training.resources.map(async (resource) => {
+      const signed = await createMaterialSignedUrl(
+        resource.storageKey,
+        downloadFileName(resource.title, resource.mimeType),
+      );
+      return {
+        id: resource.id,
+        title: resource.title,
+        mimeType: resource.mimeType,
+        sizeBytes: resource.sizeBytes,
+        href: signed.ok ? signed.url : null,
+      };
+    }),
+  );
   let fields: Awaited<ReturnType<typeof listProgrammeFieldOptions>> = [];
   let geography: Awaited<ReturnType<typeof listGeography>> = [];
   if (mayManage) {
@@ -94,16 +128,39 @@ export default async function TrainingDetailPage({
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        eyebrow={training.fieldName ? `${training.fieldName}${training.areaName ? ` · ${training.areaName}` : ""}` : "Training register"}
+      <TrainingCover
+        trainingId={training.id}
         title={training.title}
-        description={training.targetGroup ? `For ${training.targetGroup}.` : undefined}
-        actions={
-          <Link href="/trainings" className={buttonClass({ variant: "ghost" })}>
-            Back to trainings
-          </Link>
-        }
+        imageSrc={coverSrc}
+        canEdit={mayManage && (session.role === "SYSTEM_ADMIN" || training.createdById === session.sub || canReview)}
       />
+
+      <div className="space-y-4">
+        <PageHeader
+          eyebrow={
+            training.fieldName
+              ? `${training.fieldName}${training.areaName ? ` · ${training.areaName}` : ""}`
+              : "Training register"
+          }
+          title={training.title}
+          description={training.targetGroup ? `For ${training.targetGroup}.` : undefined}
+          actions={
+            <Link href="/trainings" className={buttonClass({ variant: "ghost" })}>
+              Back to trainings
+            </Link>
+          }
+        />
+
+        {training.notes ? (
+          <p className="max-w-[75ch] whitespace-pre-line text-base leading-relaxed text-ink-muted">{training.notes}</p>
+        ) : (
+          <p className="max-w-[75ch] text-base leading-relaxed text-ink-muted">
+            What this training covered, who ran it, and the material that went with it.
+          </p>
+        )}
+
+        <ResourceChips resources={chips} />
+      </div>
 
       {(notice || error) && (
         <p
@@ -168,17 +225,21 @@ export default async function TrainingDetailPage({
       <TrainingResources
         trainingId={training.id}
         resources={training.resources}
+        ceiling={storageCeiling()}
         canEdit={mayManage && (session.role === "SYSTEM_ADMIN" || training.createdById === session.sub || canReview)}
       />
 
-      {training.notes && (
-        <section aria-labelledby="training-notes-heading" className="rounded-card border border-hairline bg-surface p-6 shadow-panel">
-          <h2 id="training-notes-heading" className="text-sm font-bold text-ink">
-            Notes
-          </h2>
-          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-muted">{training.notes}</p>
-        </section>
-      )}
+      <Discussion
+        trainingId={training.id}
+        comments={comments.map((comment) => ({
+          id: comment.id,
+          body: comment.body,
+          authorName: comment.authorName,
+          authorRole: comment.authorRole,
+          createdAtLabel: formatDateTime(comment.createdAt),
+          canDelete: comment.authorId === session.sub || session.role === "SYSTEM_ADMIN",
+        }))}
+      />
 
       {mayManage ? (
         <>

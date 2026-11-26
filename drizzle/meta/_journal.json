@@ -120,6 +120,13 @@
       "when": 1795900000000,
       "tag": "0016_drop_award_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795900000000,
+      "tag": "0017_library_without_marks",
+      "breakpoints": true
     }
   ]
 }

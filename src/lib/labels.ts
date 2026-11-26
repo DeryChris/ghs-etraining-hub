@@ -39,8 +39,6 @@ export type PriorityLevel = (typeof PRIORITY_LEVELS)[number];
 
 export const PRIORITY_RANK: Record<PriorityLevel, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
 
-export type ProgressStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
-
 export const ROLE_LABELS: Record<Role, string> = {
   SYSTEM_ADMIN: "System administrator",
   FACILITATOR: "Facilitator",
@@ -59,12 +57,6 @@ export const PRIORITY_LABELS: Record<PriorityLevel, string> = {
   MEDIUM: "Medium",
   HIGH: "High",
   CRITICAL: "Critical",
-};
-
-export const PROGRESS_LABELS: Record<ProgressStatus, string> = {
-  NOT_STARTED: "Not started",
-  IN_PROGRESS: "In progress",
-  COMPLETED: "Completed",
 };
 
 const NOTIFICATION_TYPE_LABELS: Record<string, string> = {

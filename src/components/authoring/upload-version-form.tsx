@@ -24,19 +24,30 @@ const ACCEPT = MIME_ALLOWLIST.join(",");
  * passes through this application's server, so a 250 MB video is no different
  * from a 1 MB memo.
  */
-export function UploadVersionForm({ materialId }: { materialId: string }) {
+export function UploadVersionForm({
+  materialId,
+  ceiling,
+}: {
+  materialId: string;
+  /** What this deployment can accept: a bucket takes 250 MB, a database-backed one far less. */
+  ceiling: { bytes: number; detail: string };
+}) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "uploading" | "saving">("idle");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const largest = Math.max(...Object.values(MAX_UPLOAD_BYTES));
+  const largest = Math.min(Math.max(...Object.values(MAX_UPLOAD_BYTES)), ceiling.bytes);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) {
       setMessage({ ok: false, text: "Choose a file first." });
+      return;
+    }
+    if (file.size > ceiling.bytes) {
+      setMessage({ ok: false, text: ceiling.detail });
       return;
     }
 
@@ -111,9 +122,9 @@ export function UploadVersionForm({ materialId }: { materialId: string }) {
           className={`${inputClass} file:mr-3 file:rounded-control file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink`}
         />
         <p className={hintClass}>
-          PDF, Word, PowerPoint, Excel, video, audio, image, Markdown or CSV. Up to {formatBytes(largest)} for video,
-          25 MB for a document. It opens in the library for the learner — no app needed — and the original stays
-          downloadable.
+          PDF, Word, PowerPoint, Excel, video, audio, image, Markdown or CSV. Up to {formatBytes(largest)} per file on
+          this deployment: {ceiling.detail} It opens in the library for the reader — no app needed — and the original
+          stays downloadable.
         </p>
       </div>
 

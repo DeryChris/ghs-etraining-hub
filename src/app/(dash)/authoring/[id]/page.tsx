@@ -10,6 +10,7 @@ import {
 } from "@/components/authoring/version-actions";
 import { materialStateBadge } from "@/components/authoring/state-badge";
 import { UploadVersionForm } from "@/components/authoring/upload-version-form";
+import { storageCeiling } from "@/lib/server/file-storage";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import { isUuid } from "@/lib/ids";
 import { MATERIAL_TYPE_LABELS, PRIORITY_LABELS } from "@/lib/labels";
@@ -77,7 +78,7 @@ export default async function AuthoringMaterialPage({ params }: { params: Promis
             A new version starts as a draft. It becomes visible to learners only after a colleague approves it and someone
             publishes it.
           </p>
-          <UploadVersionForm materialId={material.id} />
+          <UploadVersionForm materialId={material.id} ceiling={storageCeiling()} />
         </section>
       )}
 

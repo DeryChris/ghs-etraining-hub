@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MaterialProgressPanel } from "@/components/materials/material-progress-panel";
+import { AcknowledgementPanel } from "@/components/materials/acknowledgement-panel";
 import { MaterialViewer } from "@/components/materials/material-viewer";
 import { areaHref, fieldHref } from "@/lib/links";
 import { ViewBeacon } from "@/components/materials/view-beacon";
@@ -13,7 +13,7 @@ import { readMaterialObject } from "@/lib/server/file-storage";
 import { log } from "@/lib/server/logger";
 import { readOfficePreview, type OfficePreview } from "@/lib/server/office-preview";
 import { isUuid } from "@/lib/ids";
-import { MATERIAL_TYPE_LABELS, type ProgressStatus } from "@/lib/labels";
+import { MATERIAL_TYPE_LABELS } from "@/lib/labels";
 import { getMaterialDetail } from "@/lib/server/learning-queries";
 import { requireSession } from "@/lib/server/rbac";
 
@@ -39,8 +39,9 @@ export default async function MaterialPage({
   if (!detail) notFound();
 
   const { material, area, field, authorName, version, progress } = detail;
-  const status: ProgressStatus = progress?.status ?? "NOT_STARTED";
-  const acknowledged = progress?.acknowledgedAt != null && progress.materialVersionId === material.currentVersionId;
+  const signedVersion = progress?.materialVersionId ?? null;
+  const acknowledged = progress?.acknowledgedAt != null && signedVersion === material.currentVersionId;
+  const versionChanged = progress?.acknowledgedAt != null && signedVersion !== null && !acknowledged;
   const hasFile = Boolean(version?.storageKey);
   const noticeText = notice ? NOTICES[notice] : undefined;
 
@@ -175,21 +176,22 @@ export default async function MaterialPage({
                 Assessment
               </h2>
               <p className="text-sm leading-relaxed text-ink-muted">
-                Your facilitator will sit this assessment with you. Mark the material complete once you have passed.
+                Your facilitator will sit this assessment with you. The result is recorded on the training, not here.
               </p>
             </section>
           )}
         </div>
 
         <aside className="space-y-4 lg:col-span-1">
-          <MaterialProgressPanel
-            materialId={material.id}
-            status={status}
-            requiresAcknowledgement={material.requiresAcknowledgement}
-            acknowledged={acknowledged}
-          />
+          {material.requiresAcknowledgement && (
+            <AcknowledgementPanel
+              materialId={material.id}
+              acknowledged={acknowledged}
+              versionChanged={versionChanged}
+            />
+          )}
           <p className="text-xs leading-relaxed text-ink-muted">
-            Your read-state and progress are recorded against your staff record, so you can pick up where you left off and see what you have finished.
+            Opens and downloads are counted against your staff record for programme statistics. Nothing is graded, and nothing is awarded.
           </p>
         </aside>
       </div>

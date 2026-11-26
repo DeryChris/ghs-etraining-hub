@@ -60,8 +60,6 @@ function TestRow({ item }: { item: AssessmentCard }) {
 }
 
 function LabRow({ item }: { item: AssessmentCard }) {
-  const label =
-    item.progress === "COMPLETED" ? "Completed" : item.progress === "IN_PROGRESS" ? "In progress" : "Not started";
   return (
     <li>
       <Link
@@ -80,8 +78,8 @@ function LabRow({ item }: { item: AssessmentCard }) {
             Hands-on practical{item.estimatedMinutes ? ` · about ${formatMinutes(item.estimatedMinutes)}` : ""}
           </p>
         </div>
-        <Badge variant={item.progress === "COMPLETED" ? "success" : item.progress === "IN_PROGRESS" ? "warn" : "outline"}>
-          {label}
+        <Badge variant={item.acknowledgedAt ? "success" : "outline"}>
+          {item.acknowledgedAt ? "Acknowledged" : "Open"}
         </Badge>
       </Link>
     </li>

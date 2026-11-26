@@ -6,6 +6,7 @@ import {
   Bell,
   CalendarCheck2,
   FolderOpen,
+  Library,
   FolderTree,
   ClipboardCheck,
   ClipboardList,
@@ -37,6 +38,7 @@ import { cn } from "@/lib/utils";
 
 const ICONS: Record<NavIcon, LucideIcon> = {
   dashboard: LayoutGrid,
+  catalogue: Library,
   training: CalendarCheck2,
   library: FolderOpen,
   assessment: ClipboardList,
@@ -190,8 +192,15 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
                       title={item.hint}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group relative flex min-h-11 items-center gap-3 rounded-control text-sm font-semibold transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)]",
-                        collapsed ? "mx-auto w-11 justify-center gap-0 px-0" : "px-3",
+                        /* The rail centres with `place-items-center` on a fixed
+                           44px box rather than with flex alignment: a grid centres
+                           its single in-flow child on both axes, so nothing else in
+                           the link — a badge, a spinner, a screen-reader label — can
+                           drag the glyph off centre. */
+                        "group relative rounded-control text-sm font-semibold transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)]",
+                        collapsed
+                          ? "mx-auto grid h-11 w-11 place-items-center"
+                          : "flex min-h-11 items-center gap-3 px-3",
                         active
                           ? "text-[var(--nav-active-ink)]"
                           : "text-[var(--nav-muted)] hover:bg-white/10 hover:text-[var(--nav-ink)]",
@@ -254,8 +263,8 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
       <div className={cn("nav-divider relative z-10 border-t", collapsed ? "p-2" : "p-4")}>
         <div
           className={cn(
-            "nav-wash flex items-center rounded-control",
-            collapsed ? "mx-auto w-11 justify-center p-2" : "gap-3 p-3",
+            "nav-wash rounded-control",
+            collapsed ? "mx-auto grid h-11 w-11 place-items-center" : "flex items-center gap-3 p-3",
           )}
         >
           <BrandMark size={32} />

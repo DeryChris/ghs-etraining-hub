@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           heading: "What we collect",
           paragraphs: [
             "Directory details: your staff ID, name, work email, role, directorate, region and facility.",
-            "Training records: material you open or download, acknowledgements and completions, against the version you saw. Views are counted once per person per day. Downloads are recorded because controlled material leaves the platform this way.",
+            "Training records: material you open or download, and the acknowledgements you sign, against the version you saw. Views are counted once per person per day. Downloads are recorded because controlled material leaves the platform this way. Nothing here is a grade, a credit or a certificate.",
             "Communication: messages you send and notices addressed to you.",
             "Security records: sign-in and sign-out events, the network address and browser used, and audit entries for privileged actions.",
             `The ${SITE.name} does not hold patient information. Do not send it through messages or support requests.`,

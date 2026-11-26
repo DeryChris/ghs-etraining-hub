@@ -21,7 +21,7 @@ import { log } from "@/lib/server/logger";
  * Bump EXPECTED_MIGRATIONS in the same commit as any new migration, or the check
  * will call a healthy database behind.
  */
-export const EXPECTED_MIGRATIONS = 17;
+export const EXPECTED_MIGRATIONS = 18;
 
 export type MigrationState = "current" | "behind" | "ahead" | "unknown";
 

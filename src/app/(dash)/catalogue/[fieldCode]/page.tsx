@@ -53,35 +53,20 @@ export default async function FieldPage({ params }: { params: Promise<{ fieldCod
           />
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">
-            {areas.map((area) => {
-              const percent = area.materialCount > 0 ? (area.completedCount / area.materialCount) * 100 : 0;
-              return (
-                <li key={area.id} className="h-full">
-                  <ProgrammeAreaTile
-                    area={area}
-                    href={areaHref(field.code, area.code)}
-                    meta={
-                      <>
-                        <span className="block">
-                          {area.completedCount} of {area.materialCount}{" "}
-                          {area.materialCount === 1 ? "material" : "materials"} completed
-                        </span>
-                        <span className="mt-2 block h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
-                          <span
-                            className="block h-full rounded-full bg-primary transition-[width] duration-500"
-                            style={{ width: `${percent}%` }}
-                            aria-hidden
-                          />
-                        </span>
-                        <span className="sr-only">
-                          Completion in {area.name}: {Math.round(percent)} per cent
-                        </span>
-                      </>
-                    }
-                  />
-                </li>
-              );
-            })}
+            {areas.map((area) => (
+              <li key={area.id} className="h-full">
+                <ProgrammeAreaTile
+                  area={area}
+                  href={areaHref(field.code, area.code)}
+                  meta={
+                    <>
+                      {area.trainingCount} {area.trainingCount === 1 ? "training" : "trainings"} ·{" "}
+                      {area.materialCount} {area.materialCount === 1 ? "material" : "materials"}
+                    </>
+                  }
+                />
+              </li>
+            ))}
           </ul>
         )}
       </section>

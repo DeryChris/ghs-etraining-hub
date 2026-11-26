@@ -59,11 +59,31 @@ Immutable once `PUBLISHED`. Superseding inserts a new row and marks the old one,
 `userId`, `programmeAreaId`, `source` (`SELF | ASSIGNED`), `assignedById`, `dueAt`, `completedAt`,
 `lastRemindedAt`, unique on (`userId`, `programmeAreaId`).
 
-### material_progress
-`userId`, `materialId`, `materialVersionId`, `status` (`NOT_STARTED | IN_PROGRESS | COMPLETED`),
-`watchedPercent`, `acknowledgedAt`, `completedAt`, `updatedAt`, unique on (`userId`, `materialId`).
-`materialVersionId` proves *which version* the staff member was trained on — required for audit
-evidence (PRD §9.4).
+### material_progress (acknowledgements)
+`userId`, `materialId`, `materialVersionId`, `acknowledgedAt`, `updatedAt`, unique on
+(`userId`, `materialId`). `materialVersionId` proves *which version* the staff member read and signed
+for — required for audit evidence (PRD §9.4).
+
+The learning path that used to live here — `status`, `watchedPercent`, `completedAt` — was dropped in
+`drizzle/0017_library_without_marks.sql`. A library does not have a completion state: "0 of 0
+materials completed" was arithmetic about a course nobody had enrolled in. What remains is the one
+fact a directorate can be asked about, and it is not a grade.
+
+### file_blobs
+`storageKey`, `mimeType`, `sizeBytes`, `bytes` (`bytea`), `createdAt`, unique on `storageKey`.
+
+The fallback file store, used when no S3-compatible bucket is configured (`src/lib/server/blob-store.ts`).
+Neon is a database and has no file service, so uploads would otherwise be broken on the reference
+deployment. Bytes pass through the app, which caps a file at the platform's request-body limit
+(~4.5 MB on Vercel; `STORAGE_DB_MAX_MB`, default 4). With `S3_ENDPOINT`/`S3_BUCKET` set, the same
+storage interface switches to direct browser-to-bucket uploads and the table stays empty.
+
+### training_comments
+`trainingId`, `authorId`, `body`, `createdAt`, index on (`trainingId`, `createdAt`).
+
+The discussion under a training page. Flat and chronological; the author or an administrator may
+remove a message. `training_sessions.image_storage_key` holds the optional cover picture, written
+through the same storage interface.
 
 ### assessments, assessment_items, assessment_attempts
 `assessments`: `materialId`, `passMarkPercent`, `questionCount`, `maxAttempts`, `cooldownHours`,
