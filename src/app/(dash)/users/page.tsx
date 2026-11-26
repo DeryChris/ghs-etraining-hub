@@ -11,7 +11,15 @@ import { CreateUserForm } from "@/components/users/create-user-form";
 import { UserRowActions } from "@/components/users/user-row-actions";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { ROLE_LABELS } from "@/lib/labels";
-import { DIRECTORY_PAGE_SIZE, getDirectorySummary, listDirectory, type DirectoryStatus } from "@/lib/server/directory-queries";
+import {
+  DIRECTORY_PAGE_SIZE,
+  getDirectorySummary,
+  listAccessGrants,
+  listDirectory,
+  type DirectoryGroup,
+  type DirectoryStatus,
+} from "@/lib/server/directory-queries";
+import { listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
 import { requireRole } from "@/lib/server/rbac";
 import { isRole } from "@/lib/rbac/capabilities";
 
@@ -19,20 +27,34 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Users" };
 
-function pageHref(params: { q: string; role: string | null; status: string | null; page: number }): string {
+function pageHref(params: {
+  q: string;
+  role: string | null;
+  status: string | null;
+  group: string | null;
+  page: number;
+}): string {
   const search = new URLSearchParams();
   if (params.q) search.set("q", params.q);
   if (params.role) search.set("role", params.role);
   if (params.status) search.set("status", params.status);
+  if (params.group) search.set("group", params.group);
   if (params.page > 1) search.set("page", String(params.page));
   const suffix = search.toString();
   return suffix ? `/users?${suffix}` : "/users";
 }
 
+const GROUPS: { key: DirectoryGroup | null; label: string }[] = [
+  { key: null, label: "Everyone" },
+  { key: "facilitators", label: "Facilitators" },
+  { key: "unit-heads", label: "Unit heads" },
+  { key: "admins", label: "Admins" },
+];
+
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; role?: string; status?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; role?: string; status?: string; group?: string; page?: string }>;
 }) {
   const session = await requireRole(["SYSTEM_ADMIN"]);
   const params = await searchParams;
@@ -40,12 +62,15 @@ export default async function UsersPage({
   const query = (params.q ?? "").trim().slice(0, 120);
   const role = isRole(params.role) ? params.role : null;
   const status: DirectoryStatus | null = params.status === "active" || params.status === "inactive" ? params.status : null;
+  const group: DirectoryGroup | null =
+    params.group === "facilitators" || params.group === "unit-heads" || params.group === "admins" ? params.group : null;
   const requestedPage = Number.parseInt(params.page ?? "1", 10);
 
   const loaded = await withDeadline("users", () =>
     mapLimit([
-      () => listDirectory({ query, role, status, page: Number.isFinite(requestedPage) ? requestedPage : 1 }),
+      () => listDirectory({ query, role, status, group, page: Number.isFinite(requestedPage) ? requestedPage : 1 }),
       getDirectorySummary,
+      () => listProgrammeFieldOptions(),
     ]),
   );
   if (!loaded.ok) {
@@ -57,9 +82,12 @@ export default async function UsersPage({
       />
     );
   }
-  const [directory, summary] = loaded.data;
+  const [directory, summary, fieldOptions] = loaded.data;
+  // What each visible person already holds, so the access overlay opens on their
+  // current grants instead of an empty form that would wipe them on save.
+  const grants = await listAccessGrants(directory.items.map((row) => row.id));
 
-  const filtered = query.length > 0 || role !== null || status !== null;
+  const filtered = query.length > 0 || role !== null || status !== null || group !== null;
   const firstOnPage = directory.total === 0 ? 0 : (directory.page - 1) * DIRECTORY_PAGE_SIZE + 1;
   const lastOnPage = (directory.page - 1) * DIRECTORY_PAGE_SIZE + directory.items.length;
 
@@ -76,6 +104,34 @@ export default async function UsersPage({
         }
       />
 
+      <nav aria-label="Manage by group" className="flex flex-wrap items-center gap-2">
+        {GROUPS.map((entry) => {
+          const active = group === entry.key;
+          const href = (() => {
+            const search = new URLSearchParams();
+            if (entry.key) search.set("group", entry.key);
+            if (query) search.set("q", query);
+            if (status) search.set("status", status);
+            const suffix = search.toString();
+            return suffix ? `/users?${suffix}` : "/users";
+          })();
+          return (
+            <Link
+              key={entry.key ?? "everyone"}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors ${
+                active
+                  ? "border-primary bg-primary text-primary-ink"
+                  : "border-hairline bg-surface text-ink-muted hover:border-primary/40 hover:text-ink"
+              }`}
+            >
+              {entry.label}
+            </Link>
+          );
+        })}
+      </nav>
+
       <section aria-label="Directory totals" className="grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-5">
         <Stat value={summary.total} label="People in the directory" />
         <Stat value={summary.learners} label="Active learners" />
@@ -87,6 +143,8 @@ export default async function UsersPage({
       <CreateUserForm />
 
       <form action="/users" method="get" role="search" className="grid gap-3 rounded-card border border-hairline bg-surface p-4 md:grid-cols-[1fr_200px_180px_auto] md:items-end">
+        {/* Searching inside a group keeps you inside it. */}
+        {group && <input type="hidden" name="group" value={group} />}
         <div>
           <label htmlFor="user-q" className={labelClass}>
             Search
@@ -185,10 +243,16 @@ export default async function UsersPage({
                       <UserRowActions
                         userId={row.id}
                         fullName={row.fullName}
+                        email={row.email}
                         role={row.role}
+                        region={row.region}
+                        cadre={row.cadre}
+                        facility={row.facility}
                         isActive={row.isActive}
                         isUnitHead={row.isUnitHead}
                         isSelf={isSelf}
+                        fields={fieldOptions}
+                        grants={grants.get(row.id) ?? { fieldIds: [], areaIds: [] }}
                       />
                     </td>
                   </tr>
@@ -207,7 +271,7 @@ export default async function UsersPage({
         <div className="flex gap-2">
           {directory.page > 1 && (
             <Link
-              href={pageHref({ q: query, role, status, page: directory.page - 1 })}
+              href={pageHref({ q: query, role, status, group, page: directory.page - 1 })}
               className={buttonClass({ variant: "ghost", size: "sm" })}
             >
               Previous
@@ -215,7 +279,7 @@ export default async function UsersPage({
           )}
           {directory.page < directory.pageCount && (
             <Link
-              href={pageHref({ q: query, role, status, page: directory.page + 1 })}
+              href={pageHref({ q: query, role, status, group, page: directory.page + 1 })}
               className={buttonClass({ variant: "ghost", size: "sm" })}
             >
               Next

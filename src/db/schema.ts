@@ -427,6 +427,12 @@ export const areaFacilitators = pgTable("area_facilitators", {
 
 export const trainingStatusEnum = pgEnum("training_status", ["PLANNED", "COMPLETED", "CANCELLED"]);
 
+/**
+ * Whether the rest of GHS may see this training yet. Separate from
+ * `training_status`, which answers whether the event happened.
+ */
+export const trainingReviewStateEnum = pgEnum("training_review_state", ["PENDING", "PUBLISHED", "REJECTED"]);
+
 export const trainingSessions = pgTable("training_sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
@@ -447,6 +453,12 @@ export const trainingSessions = pgTable("training_sessions", {
   facilitatorId: uuid("facilitator_id").references(() => users.id, { onDelete: "set null" }),
   attendeeCount: integer("attendee_count"),
   notes: text("notes"),
+  /** Facilitator-created rows start PENDING; an administrator's row is live. */
+  reviewState: trainingReviewStateEnum("review_state").notNull().default("PUBLISHED"),
+  reviewedById: uuid("reviewed_by_id").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  /** Why it was rejected — shown to the facilitator who submitted it. */
+  reviewNote: text("review_note"),
   isArchived: boolean("is_archived").notNull().default(false),
   createdById: uuid("created_by_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -455,6 +467,39 @@ export const trainingSessions = pgTable("training_sessions", {
   index("training_sessions_organised_idx").on(t.organisedOn),
   index("training_sessions_year_idx").on(t.year, t.organisedOn),
   index("training_sessions_area_idx").on(t.programmeAreaId),
+]);
+
+/**
+ * Files attached to one training: the slide deck, the attendance sheet, the
+ * report. Not `materials` — those are versioned teaching objects filed under an
+ * area; these belong to a single event and are deleted with it.
+ */
+export const trainingResources = pgTable("training_resources", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  trainingId: uuid("training_id").notNull().references(() => trainingSessions.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  storageKey: text("storage_key").notNull().unique(),
+  mimeType: text("mime_type"),
+  sizeBytes: integer("size_bytes"),
+  uploadedById: uuid("uploaded_by_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("training_resources_training_idx").on(t.trainingId, t.createdAt)]);
+
+/**
+ * "May work anywhere in this programme field."
+ *
+ * `area_facilitators` grants one area at a time; this grants the field, so a
+ * facilitator appointed to Malaria keeps working as areas are added. Unit heads
+ * are appointed this way.
+ */
+export const fieldFacilitators = pgTable("field_facilitators", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fieldId: uuid("field_id").notNull().references(() => programmeFields.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("field_facilitators_unique_idx").on(t.fieldId, t.userId),
+  index("field_facilitators_user_idx").on(t.userId),
 ]);
 
 /* ── Views ──────────────────────────────────────────────────────────────────

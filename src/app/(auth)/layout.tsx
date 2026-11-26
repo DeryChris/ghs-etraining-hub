@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Check, LifeBuoy, MessageSquareWarning } from "lucide-react";
+import { AuthArt } from "@/components/brand/auth-art";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { SITE } from "@/lib/site";
 
@@ -23,27 +24,9 @@ const STEPS: { title: string; body: string }[] = [
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.02fr_1fr]">
-      <aside className="relative hidden overflow-hidden bg-[#05291b] lg:flex lg:flex-col lg:justify-between">
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[0.55]"
-          style={{
-            background:
-              "radial-gradient(120% 80% at 12% 0%, #0d6b45 0%, rgba(5,41,27,0) 58%), radial-gradient(90% 70% at 100% 100%, #0a4a31 0%, rgba(5,41,27,0) 62%)",
-          }}
-        />
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
-            backgroundSize: "44px 44px",
-            maskImage: "linear-gradient(to bottom, black, transparent 75%)",
-            WebkitMaskImage: "linear-gradient(to bottom, black, transparent 75%)",
-          }}
-        />
-        <div className="flag-stripe absolute inset-x-0 top-0 h-1.5" aria-hidden />
+      <aside className="relative hidden overflow-hidden bg-[#1e9e6a] lg:flex lg:flex-col lg:justify-between">
+        <AuthArt />
+        <div className="flag-stripe absolute inset-x-0 top-0 z-10 h-1.5" aria-hidden />
 
         <div className="relative flex h-full flex-col gap-10 p-12 text-white xl:p-16">
           <Link
@@ -59,7 +42,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
           <div className="max-w-lg space-y-6">
             <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-accent">Getting started</p>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#ffe9a8]">Getting started</p>
               <h2 className="text-2xl font-extrabold leading-tight xl:text-3xl">New here? Four steps and you are in.</h2>
             </div>
 
@@ -77,8 +60,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               ))}
             </ol>
 
-            <div className="rounded-card border border-accent/60 bg-accent/[0.07] p-4">
-              <p className="text-sm font-bold text-accent">Used an older portal before?</p>
+            <div className="rounded-card border border-white/25 bg-white/10 p-4 backdrop-blur-[2px]">
+              <p className="text-sm font-bold text-[#ffe9a8]">Used an older portal before?</p>
               <p className="mt-1 text-[13px] leading-relaxed text-white/75">
                 Your record may already exist. Try signing in with the email you used then; if it does not work, do
                 not create a second account — lodge a complaint and your access will be reset for you.
@@ -95,7 +78,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             </ul>
           </div>
 
-          <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-white/55">
+          <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-white/75">
             <span>Internal platform. Access is monitored and recorded.</span>
             <Link href="/help" className="inline-flex items-center gap-1.5 font-semibold text-white/80 underline-offset-4 hover:text-white hover:underline">
               <LifeBuoy className="h-3.5 w-3.5" aria-hidden />

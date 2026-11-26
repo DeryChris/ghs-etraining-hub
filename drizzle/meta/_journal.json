@@ -78,6 +78,13 @@
       "when": 1795500000000,
       "tag": "0010_password_reset_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795600000000,
+      "tag": "0011_training_review_and_resources",
+      "breakpoints": true
     }
   ]
 }

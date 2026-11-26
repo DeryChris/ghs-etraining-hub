@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Archive, CalendarDays, MapPin, Users } from "lucide-react";
 import { TrainingForm, type TrainingFormValues } from "@/components/trainings/training-form";
+import { ReviewPanel } from "@/components/trainings/review-panel";
+import { TrainingResources } from "@/components/trainings/resources-panel";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
@@ -10,7 +12,7 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { TRAINING_STATUS_LABELS } from "@/lib/labels";
 import { can } from "@/lib/rbac/capabilities";
 import { archiveTrainingAction } from "@/lib/server/actions/trainings";
-import { requireSession } from "@/lib/server/rbac";
+import { mayReviewField, requireSession } from "@/lib/server/rbac";
 import { listGeography, listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
 import { getTraining } from "@/lib/server/training-queries";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
@@ -38,6 +40,12 @@ export default async function TrainingDetailPage({
   const error = typeof query.error === "string" ? query.error : null;
 
   const mayManage = can(session.role, "training.manage");
+  // Only a unit head holding this field, or an administrator, sees the decision
+  // buttons — but everybody who can open the row sees its review state.
+  const canReview = await mayReviewField(session, training.programmeFieldId);
+  // A row still in review is a private draft between its author and the unit
+  // head. Anyone else who types the URL gets the same answer as a bad id.
+  if (training.reviewState !== "PUBLISHED" && training.createdById !== session.sub && !canReview) notFound();
   let fields: Awaited<ReturnType<typeof listProgrammeFieldOptions>> = [];
   let geography: Awaited<ReturnType<typeof listGeography>> = [];
   if (mayManage) {
@@ -147,6 +155,21 @@ export default async function TrainingDetailPage({
           </p>
         </div>
       </section>
+
+      <ReviewPanel
+        trainingId={training.id}
+        title={training.title}
+        reviewState={training.reviewState}
+        reviewNote={training.reviewNote}
+        reviewedByName={training.reviewedByName}
+        canReview={canReview}
+      />
+
+      <TrainingResources
+        trainingId={training.id}
+        resources={training.resources}
+        canEdit={mayManage && (session.role === "SYSTEM_ADMIN" || training.createdById === session.sub || canReview)}
+      />
 
       {training.notes && (
         <section aria-labelledby="training-notes-heading" className="rounded-card border border-hairline bg-surface p-6 shadow-panel">

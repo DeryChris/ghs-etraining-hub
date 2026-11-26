@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, Plus, Users } from "lucide-react";
+import { CalendarDays, MapPin, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
@@ -8,6 +8,8 @@ import { inputClass, labelClass } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
+import { NewTrainingDialog } from "@/components/trainings/new-training-dialog";
+import { FieldTileIcon } from "@/components/ui/field-tile-icon";
 import { Stat } from "@/components/ui/stat";
 import { formatDate } from "@/lib/format";
 import { TRAINING_STATUSES, TRAINING_STATUS_LABELS, isTrainingStatus } from "@/lib/labels";
@@ -15,7 +17,7 @@ import { can } from "@/lib/rbac/capabilities";
 import { fieldHref } from "@/lib/links";
 import { listFields } from "@/lib/server/learning-queries";
 import { requireSession } from "@/lib/server/rbac";
-import { listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
+import { listGeography, listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
 import {
   TRAININGS_PAGE_SIZE,
   getTrainingFilterOptions,
@@ -47,6 +49,7 @@ interface Query {
   region: string | null;
   district: string | null;
   status: string | null;
+  review: string | null;
   page: number;
 }
 
@@ -59,10 +62,27 @@ function pageHref(params: Query, page: number): string {
   if (params.region) search.set("region", params.region);
   if (params.district) search.set("district", params.district);
   if (params.status) search.set("status", params.status);
+  if (params.review) search.set("review", params.review);
   if (page > 1) search.set("page", String(page));
   const suffix = search.toString();
   return suffix ? `/trainings?${suffix}` : "/trainings";
 }
+
+const REVIEW_STATES = ["PENDING", "PUBLISHED", "REJECTED"];
+
+/** Chips above the register: the review queue is one click, not a filter hunt. */
+const REVIEW_CHIPS = [
+  { key: "", label: "Everything" },
+  { key: "PENDING", label: "Pending review" },
+  { key: "PUBLISHED", label: "Live" },
+  { key: "REJECTED", label: "Sent back" },
+] as const;
+
+const REVIEW_BADGE = {
+  PENDING: { label: "Pending review", variant: "outline" },
+  PUBLISHED: { label: "Live", variant: "success" },
+  REJECTED: { label: "Sent back", variant: "danger" },
+} as const;
 
 const STATUS_BADGE = {
   PLANNED: "success",
@@ -91,9 +111,15 @@ export default async function TrainingsPage({
     region: uuidOrNull(single("region")),
     district: uuidOrNull(single("district")),
     status: isTrainingStatus(single("status")) ? (single("status") as string) : null,
+    review: REVIEW_STATES.includes(single("review") ?? "") ? (single("review") as string) : null,
     page: Math.max(1, Number.parseInt(single("page") ?? "1", 10) || 1),
   };
 
+  // Administrators and the unit head for a field see the whole queue; everybody
+  // else sees published rows plus whatever they wrote themselves.
+  // A unit head needs the queue to work it; the per-row guard below still stops
+  // them acting outside the fields they hold.
+  const canSeeUnpublished = session.role === "SYSTEM_ADMIN" || session.unitHead === true;
   const loaded = await withDeadline("trainings", () =>
     mapLimit([
       () =>
@@ -105,11 +131,14 @@ export default async function TrainingsPage({
           regionId: query.region ?? undefined,
           districtId: query.district ?? undefined,
           status: isTrainingStatus(query.status) ? query.status : undefined,
+          review: (query.review as "PENDING" | "PUBLISHED" | "REJECTED" | null) ?? undefined,
+          viewer: { userId: session.sub, seeAll: canSeeUnpublished },
           page: query.page,
         }),
       getTrainingSummary,
       getTrainingFilterOptions,
       listProgrammeFieldOptions,
+      listGeography,
       () => listFields(session),
     ]),
   );
@@ -122,7 +151,7 @@ export default async function TrainingsPage({
       />
     );
   }
-  const [list, summary, options, fields, catalogue] = loaded.data;
+  const [list, summary, options, fields, geography, catalogue] = loaded.data;
 
   const filtered =
     query.q.length > 0 ||
@@ -147,10 +176,11 @@ export default async function TrainingsPage({
         description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme field and the area inside it, so coverage can be counted by programme rather than by memory."
         actions={
           mayManage ? (
-            <Link href="/trainings/new" className={buttonClass({ className: "h-12 rounded-[var(--radius-pill)] px-6" })}>
-              <Plus className="h-4 w-4" aria-hidden />
-              Create new training
-            </Link>
+            <NewTrainingDialog
+              fields={fields}
+              geography={geography}
+              label="Create new training"
+            />
           ) : undefined
         }
       />
@@ -183,18 +213,35 @@ export default async function TrainingsPage({
           <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {catalogue.map((field) => (
               <li key={field.id}>
-                <Link
-                  href={fieldHref(field.code)}
-                  className="group flex h-full flex-col rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                >
-                  <span className="font-mono text-xs font-semibold tracking-wide text-ink-muted">{field.code}</span>
-                  <h3 className="mt-2 text-base font-semibold leading-snug text-ink group-hover:text-primary">{field.name}</h3>
+                <div className="group flex h-full flex-col rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40">
+                  <div className="flex items-start justify-between gap-3">
+                    <FieldTileIcon code={field.code} size={52} className="transition-transform duration-200 group-hover:-translate-y-0.5" />
+                    <span className="font-mono text-xs font-semibold tracking-wide text-ink-muted">{field.code}</span>
+                  </div>
+                  <h3 className="mt-3 text-base font-semibold leading-snug text-ink">
+                    {/* Filters the register in place — the catalogue is part of
+                        this screen, not a page you leave to reach. */}
+                    <Link
+                      href={`/trainings?field=${field.id}#register`}
+                      className="transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      {field.name}
+                    </Link>
+                  </h3>
                   {field.description && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-muted">{field.description}</p>}
-                  <p className="mt-auto pt-4 text-xs font-semibold text-ink-muted">
-                    {field.areaCount} {field.areaCount === 1 ? "programme area" : "programme areas"} · {field.materialCount}{" "}
-                    {field.materialCount === 1 ? "material" : "materials"}
+                  <p className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-4 text-xs font-semibold text-ink-muted">
+                    <span>
+                      {field.areaCount} {field.areaCount === 1 ? "programme area" : "programme areas"} · {field.materialCount}{" "}
+                      {field.materialCount === 1 ? "material" : "materials"}
+                    </span>
+                    <Link
+                      href={fieldHref(field.code)}
+                      className="text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      Areas &amp; materials
+                    </Link>
                   </p>
-                </Link>
+                </div>
               </li>
             ))}
           </ul>
@@ -203,14 +250,45 @@ export default async function TrainingsPage({
 
 
       <section
+        id="register"
         aria-label="Register totals"
-        className="grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-4"
+        className="scroll-mt-24 grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-4"
       >
         <Stat value={summary.total} label="Trainings on the register" />
         <Stat value={summary.planned} label="Planned or upcoming" />
         <Stat value={summary.thisYear} label={`Filed under ${new Date().getFullYear()}`} />
         <Stat value={summary.attendees.toLocaleString("en-GB")} label="People trained (recorded)" />
       </section>
+
+      <nav aria-label="Review queue" className="flex flex-wrap items-center gap-2">
+        {REVIEW_CHIPS.map((chip) => {
+          const active = (query.review ?? "") === chip.key;
+          const href = (() => {
+            const search = new URLSearchParams();
+            if (chip.key) search.set("review", chip.key);
+            if (query.q) search.set("q", query.q);
+            if (query.year) search.set("year", String(query.year));
+            if (query.field) search.set("field", query.field);
+            if (query.status) search.set("status", query.status);
+            const suffix = search.toString();
+            return suffix ? `/trainings?${suffix}` : "/trainings";
+          })();
+          return (
+            <Link
+              key={chip.key || "all"}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={`inline-flex min-h-9 items-center rounded-full border px-3.5 text-xs font-semibold transition-colors ${
+                active
+                  ? "border-primary bg-primary text-primary-ink"
+                  : "border-hairline bg-surface text-ink-muted hover:border-primary/40 hover:text-ink"
+              }`}
+            >
+              {chip.label}
+            </Link>
+          );
+        })}
+      </nav>
 
       <form
         action="/trainings"
@@ -408,6 +486,11 @@ export default async function TrainingsPage({
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
                     <Badge variant="outline">{training.year}</Badge>
                     <Badge variant={STATUS_BADGE[training.status]}>{TRAINING_STATUS_LABELS[training.status]}</Badge>
+                    {training.reviewState !== "PUBLISHED" && (
+                      <Badge variant={REVIEW_BADGE[training.reviewState].variant}>
+                        {REVIEW_BADGE[training.reviewState].label}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </li>

@@ -1,15 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, count, eq, ne, sql } from "drizzle-orm";
+import { and, count, eq, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/index";
-import { users } from "@/db/schema";
+import { areaFacilitators, fieldFacilitators, sessions, users } from "@/db/schema";
 import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
-import { createPasswordResetToken } from "@/lib/server/auth";
+import { createPasswordResetToken, hashPassword } from "@/lib/server/auth";
+import { randomBytes } from "node:crypto";
 
 /*
  * Directory administration. Every action re-checks the capability on the server
@@ -21,6 +22,8 @@ import { createPasswordResetToken } from "@/lib/server/auth";
  *   · an administrator cannot change their own role or close their own account;
  *   · the last active administrator can never be demoted or deactivated.
  */
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface UserActionState {
   ok: boolean;
@@ -385,5 +388,238 @@ export async function setUnitHeadAction(_previous: UserActionState, formData: Fo
     message: next
       ? `${target.fullName} is now a unit head: the review queue is on their dashboard.`
       : `${target.fullName} is no longer a unit head.`,
+  };
+}
+
+/* ── Password: set a temporary one and show it to the administrator ───────────
+ * No mail provider exists in this pilot, so "send the new details" means the
+ * administrator reads them off the screen and hands them over. The plaintext is
+ * returned once, never stored, and never written to the log.
+ */
+
+const PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#%*";
+
+function temporaryPassword(length = 14): string {
+  const bytes = randomBytes(length);
+  let value = "";
+  for (let index = 0; index < length; index += 1) value += PASSWORD_ALPHABET[bytes[index] % PASSWORD_ALPHABET.length];
+  return value;
+}
+
+export interface CredentialState extends UserActionState {
+  /** Shown once, to be copied by the administrator. Never persisted or logged. */
+  credentials?: { email: string; fullName: string; password: string };
+}
+
+export async function resetUserPasswordAction(
+  _previous: CredentialState,
+  formData: FormData,
+): Promise<CredentialState> {
+  const parsed = targetInput.safeParse({ userId: field(formData, "userId") });
+  if (!parsed.success) return { ok: false, message: "Choose a person." };
+
+  const guard = await checkCapability("user.reset_password");
+  if (!guard.ok) return { ok: false, message: guard.message };
+  const { session } = guard;
+
+  const [target] = await db
+    .select({ id: users.id, fullName: users.fullName, email: users.email, isActive: users.isActive })
+    .from(users)
+    .where(eq(users.id, parsed.data.userId))
+    .limit(1);
+  if (!target) return { ok: false, message: "That person is no longer in the directory." };
+  if (!target.isActive) return { ok: false, message: "Reactivate the account before resetting its password." };
+
+  const password = temporaryPassword();
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        // A reset also clears the lockout: the reason somebody needs a new
+        // password is usually that they were locked out of the old one.
+        .set({
+          passwordHash: await hashPassword(password),
+          passwordResetToken: null,
+          passwordResetExpiresAt: null,
+          failedLoginCount: 0,
+          lockedUntil: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, target.id));
+
+      await tx
+        .update(sessions)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(sessions.userId, target.id), isNull(sessions.revokedAt)));
+
+      await logAudit(
+        {
+          actor: auditActor(session),
+          action: "USER_PASSWORD_RESET",
+          entity: "user",
+          entityId: target.id,
+          metadata: { fullName: target.fullName },
+        },
+        tx,
+      );
+    });
+  } catch (error) {
+    log.error({ event: "user.password_reset_failed", userId: target.id, err: String(error) });
+    return { ok: false, message: "The password was not changed. Try again." };
+  }
+
+  revalidatePath("/users");
+  return {
+    ok: true,
+    message: `New password for ${target.fullName}. Copy it now — it is not shown again.`,
+    credentials: { email: target.email, fullName: target.fullName, password },
+  };
+}
+
+/* ── Details ───────────────────────────────────────────────────────────────── */
+
+const detailsInput = z
+  .object({
+    userId: z.string().uuid(),
+    fullName: z.string().trim().min(3, "Enter the full name.").max(120),
+    email: z.string().trim().toLowerCase().email("Enter a valid e-mail address."),
+    phone: z.string().trim().max(32).optional().or(z.literal("")),
+    cadre: z.string().trim().max(80).optional().or(z.literal("")),
+    facility: z.string().trim().max(120).optional().or(z.literal("")),
+    region: z.string().trim().max(60).optional().or(z.literal("")),
+  })
+  .strict();
+
+export async function updateUserDetailsAction(
+  _previous: UserActionState,
+  formData: FormData,
+): Promise<UserActionState> {
+  const parsed = detailsInput.safeParse({
+    userId: field(formData, "userId"),
+    fullName: field(formData, "fullName"),
+    email: field(formData, "email"),
+    phone: field(formData, "phone"),
+    cadre: field(formData, "cadre"),
+    facility: field(formData, "facility"),
+    region: field(formData, "region"),
+  });
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Check the details and try again." };
+  }
+
+  const guard = await checkCapability("user.create");
+  if (!guard.ok) return { ok: false, message: guard.message };
+  const { session } = guard;
+
+  const [target] = await db
+    .select({ id: users.id, fullName: users.fullName, email: users.email })
+    .from(users)
+    .where(eq(users.id, parsed.data.userId))
+    .limit(1);
+  if (!target) return { ok: false, message: "That person is no longer in the directory." };
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          fullName: parsed.data.fullName,
+          email: parsed.data.email,
+          phone: parsed.data.phone || null,
+          cadre: parsed.data.cadre || null,
+          facility: parsed.data.facility || null,
+          region: parsed.data.region || null,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, target.id));
+      await logAudit(
+        {
+          actor: auditActor(session),
+          action: "USER_DETAILS_UPDATED",
+          entity: "user",
+          entityId: target.id,
+          metadata: { from: target.email, to: parsed.data.email },
+        },
+        tx,
+      );
+    });
+  } catch (error) {
+    const duplicate = String(error).includes("users_email_unique") || String(error).includes("duplicate key");
+    log.error({ event: "user.details_failed", userId: target.id, err: String(error) });
+    return { ok: false, message: duplicate ? "Another account already uses that e-mail address." : "The details were not saved." };
+  }
+
+  revalidatePath("/users");
+  return { ok: true, message: `Details saved for ${parsed.data.fullName}.` };
+}
+
+/* ── Access: programme fields and areas ──────────────────────────────────────
+ * Replaces the whole grant set in one transaction, so the screen's checkboxes
+ * mean what they say. A field grant covers every area inside it, including ones
+ * created later; an area grant covers just that area.
+ */
+
+export async function setUserAccessAction(
+  _previous: UserActionState,
+  formData: FormData,
+): Promise<UserActionState> {
+  const userId = field(formData, "userId");
+  if (!userId) return { ok: false, message: "Choose a person." };
+
+  const guard = await checkCapability("area.assign_facilitator");
+  if (!guard.ok) return { ok: false, message: guard.message };
+  const { session } = guard;
+
+  const fieldIds = formData.getAll("fieldId").filter((value): value is string => typeof value === "string" && UUID_RE.test(value));
+  const areaIds = formData.getAll("areaId").filter((value): value is string => typeof value === "string" && UUID_RE.test(value));
+
+  const [target] = await db
+    .select({ id: users.id, fullName: users.fullName, role: users.role })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!target) return { ok: false, message: "That person is no longer in the directory." };
+  if (target.role === "LEARNER") {
+    return {
+      ok: false,
+      message: `${target.fullName} is a learner. Make them a facilitator first, then choose the programme fields they hold.`,
+    };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx.delete(fieldFacilitators).where(eq(fieldFacilitators.userId, userId));
+      await tx.delete(areaFacilitators).where(eq(areaFacilitators.userId, userId));
+
+      if (fieldIds.length > 0) {
+        await tx.insert(fieldFacilitators).values(fieldIds.map((fieldId) => ({ fieldId, userId })));
+      }
+      if (areaIds.length > 0) {
+        await tx.insert(areaFacilitators).values(areaIds.map((areaId) => ({ areaId, userId })));
+      }
+
+      await logAudit(
+        {
+          actor: auditActor(session),
+          action: "USER_ACCESS_UPDATED",
+          entity: "user",
+          entityId: userId,
+          metadata: { fields: fieldIds.length, areas: areaIds.length },
+        },
+        tx,
+      );
+    });
+  } catch (error) {
+    log.error({ event: "user.access_failed", userId, err: String(error) });
+    return { ok: false, message: "Those assignments were not saved. Try again." };
+  }
+
+  revalidatePath("/users");
+  const summary = [fieldIds.length ? `${fieldIds.length} field${fieldIds.length === 1 ? "" : "s"}` : null, areaIds.length ? `${areaIds.length} area${areaIds.length === 1 ? "" : "s"}` : null]
+    .filter(Boolean)
+    .join(" and ");
+  return {
+    ok: true,
+    message: summary ? `${target.fullName} now covers ${summary}.` : `${target.fullName} has no programme access.`,
   };
 }
