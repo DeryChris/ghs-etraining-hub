@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   BadgeCheck,
-  BookOpenCheck,
+  FolderOpen,
   FileCheck2,
   FolderKanban,
   History,
@@ -80,7 +80,7 @@ const STEPS = [
     body: "Use your GHS staff account. Your facility administrator issues it — there is no public sign-up.",
   },
   {
-    icon: BookOpenCheck,
+    icon: FolderOpen,
     title: "Open the programme",
     body: "Find the programme field and the area that ran the training you attended.",
   },
