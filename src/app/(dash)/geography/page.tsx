@@ -194,7 +194,7 @@ export default async function GeographyPage({
           title={geography.length === 0 ? "No regions recorded" : "Choose a region"}
           description={
             geography.length === 0
-              ? "Add the first region above. The seeder loads all sixteen, with Upper West's districts and facilities."
+              ? "Add the first region with the button above. The seeder loads all sixteen, with Upper West's districts and facilities."
               : "Pick a region above to see and edit its districts, sub-districts and facilities."
           }
           art="folder"
@@ -302,7 +302,7 @@ export default async function GeographyPage({
 
             {region.districts.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">
-                No districts recorded for {region.name} yet. Add the first one above — a training can still be
+                No districts recorded for {region.name} yet. Add the first one with the button above — a training can still be
                 filed at region level until you do.
               </p>
             ) : (

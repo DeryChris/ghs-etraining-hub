@@ -148,7 +148,7 @@ export default async function ProgrammeFieldsPage({
       {fields.length === 0 ? (
         <ListEmptyState
           title="No programme fields yet"
-          description="Add the first field above, or run the seeder to load the ten fields and forty-one areas GHS supplied."
+          description="Add the first field with the button above, or run the seeder to load the ten fields and forty-one areas GHS supplied."
           art="folder"
         />
       ) : (
