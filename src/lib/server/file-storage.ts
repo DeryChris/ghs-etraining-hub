@@ -119,6 +119,34 @@ export async function createMaterialUploadTarget(storageKey: string): Promise<Up
   }
 }
 
+/**
+ * Reads an object's bytes on the server.
+ *
+ * Only the office reader uses this: PDFs, images and video are handed to the
+ * browser as a signed URL so the bytes never pass through the function. A .pptx
+ * has to be opened here because the browser cannot render it — and the read is
+ * capped, because a 200 MB upload must not become a 200 MB allocation in a
+ * serverless function.
+ */
+export async function readMaterialObject(
+  storageKey: string,
+  maxBytes: number,
+): Promise<{ ok: true; body: Buffer } | { ok: false; reason: string }> {
+  try {
+    const { client, bucket } = config();
+    const head = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: storageKey }));
+    if (typeof head.ContentLength === "number" && head.ContentLength > maxBytes) {
+      return { ok: false, reason: `The file is larger than the ${Math.round(maxBytes / 1024 / 1024)} MB reading limit.` };
+    }
+    const object = await client.send(new GetObjectCommand({ Bucket: bucket, Key: storageKey }));
+    if (!object.Body) return { ok: false, reason: "The file has no contents." };
+    const bytes = await object.Body.transformToByteArray();
+    return { ok: true, body: Buffer.from(bytes) };
+  } catch (error) {
+    return { ok: false, reason: error instanceof Error ? error.message : "The file could not be read." };
+  }
+}
+
 export interface StoredObject {
   sizeBytes: number | null;
   contentType: string | null;

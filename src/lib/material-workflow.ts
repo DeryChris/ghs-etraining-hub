@@ -54,12 +54,20 @@ export function materialStorageKey(materialId: string, extension: string, uuid: 
   return `materials/${materialId}/${uuid}.${extension}`;
 }
 
+const OFFICE_MIMES = new Set([
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]);
+
 function uploadLimit(mimeType: string): number {
   if (mimeType === "application/pdf") return MAX_UPLOAD_BYTES.pdf;
+  if (OFFICE_MIMES.has(mimeType)) return MAX_UPLOAD_BYTES.office;
   if (mimeType.startsWith("video/")) return MAX_UPLOAD_BYTES.video;
+  if (mimeType.startsWith("audio/")) return MAX_UPLOAD_BYTES.audio;
   if (mimeType.startsWith("image/")) return MAX_UPLOAD_BYTES.image;
-  if (mimeType === "text/markdown") return MAX_UPLOAD_BYTES.markdown;
-  return MAX_UPLOAD_BYTES.json;
+  if (mimeType === "application/json") return MAX_UPLOAD_BYTES.json;
+  return MAX_UPLOAD_BYTES.text;
 }
 
 export type UploadCheck = { ok: true; extension: string } | { ok: false; message: string };
@@ -68,11 +76,19 @@ export type UploadCheck = { ok: true; extension: string } | { ok: false; message
 export function checkUpload(mimeType: string, sizeBytes: number): UploadCheck {
   const normalised = mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
   if (!(MIME_ALLOWLIST as readonly string[]).includes(normalised)) {
-    return { ok: false, message: "That file type is not accepted. Upload a PDF, video, image, Markdown or JSON file." };
+    return {
+      ok: false,
+      message:
+        "That file type is not accepted. Upload a PDF, Word, PowerPoint or Excel file, a video, an audio recording, an image, or a text file — and save older .doc, .ppt and .xls files in the modern format first.",
+    };
   }
   const extension = extensionForMime(normalised);
   if (!extension) {
-    return { ok: false, message: "That file type is not accepted. Upload a PDF, video, image, Markdown or JSON file." };
+    return {
+      ok: false,
+      message:
+        "That file type is not accepted. Upload a PDF, Word, PowerPoint or Excel file, a video, an audio recording, an image, or a text file — and save older .doc, .ppt and .xls files in the modern format first.",
+    };
   }
   if (!Number.isFinite(sizeBytes) || sizeBytes <= 0) {
     return { ok: false, message: "That file appears to be empty." };

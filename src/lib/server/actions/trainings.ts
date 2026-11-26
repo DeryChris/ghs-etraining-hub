@@ -511,7 +511,14 @@ export async function requestTrainingResourceAction(input: {
   const target = await createMaterialUploadTarget(storageKey);
   if (!target.ok) {
     log.error({ event: "training.resource_target_failed", storageKey, reason: target.reason });
-    return { ok: false, message: "Storage is not available right now. Try again in a moment." };
+    // An unconfigured bucket is not a transient fault: name the settings, not a
+    // retry that will fail the same way.
+    return {
+      ok: false,
+      message: /not configured|S3_ENDPOINT|S3_ACCESS_KEY_ID|S3_SECRET_ACCESS_KEY/i.test(target.reason)
+        ? "File storage has not been set up for this deployment yet. The ICT administrator needs to add the S3 settings before a deck or report can be attached."
+        : "Storage is not available right now. Try again in a moment.",
+    };
   }
 
   return { ok: true, message: null, uploadUrl: target.target.signedUrl, storageKey, resourceId };

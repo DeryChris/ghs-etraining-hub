@@ -31,6 +31,7 @@ export default async function ActivityPage() {
         title="Your activity did not load"
         description="Your completion history and traffic could not be read in time. Nothing was changed."
         requestId={loaded.requestId}
+        hint={loaded.hint}
       />
     );
   }

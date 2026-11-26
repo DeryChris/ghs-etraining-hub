@@ -58,10 +58,23 @@ export function formatMinutes(minutes: number | null | undefined): string {
 export function formatMimeType(mime: string | null | undefined): string {
   const labels: Record<string, string> = {
     "application/pdf": "PDF document",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "Word document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "PowerPoint deck",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "Excel workbook",
     "text/markdown": "Markdown document",
+    "text/plain": "Text file",
+    "text/csv": "CSV spreadsheet",
+    "application/json": "JSON file",
     "video/mp4": "MP4 video",
+    "video/webm": "WebM video",
+    "video/x-matroska": "Matroska video",
+    "video/quicktime": "QuickTime video",
+    "audio/mpeg": "MP3 audio",
+    "audio/mp4": "M4A audio",
     "image/png": "PNG image",
     "image/jpeg": "JPEG image",
+    "image/webp": "WebP image",
+    "image/gif": "GIF image",
   };
   if (!mime) return "Document";
   return labels[mime] ?? "Document";

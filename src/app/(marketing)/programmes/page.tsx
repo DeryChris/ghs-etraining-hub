@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Layers } from "lucide-react";
+import { Layers } from "lucide-react";
 import { EmptyArt } from "@/components/brand/illustrations";
 import { Reveal } from "@/components/marketing/reveal";
 import { SectionHeading } from "@/components/marketing/section-heading";
+import { ProgrammeFieldTile } from "@/components/programme/programme-tile";
 import { buttonClass } from "@/components/ui/button";
 import { listPublicFields } from "@/lib/server/learning-queries";
 import { SITE } from "@/lib/site";
@@ -50,25 +51,7 @@ export default async function ProgrammesPage() {
             {fields.map((field, index) => (
               <Reveal key={field.id} delay={(index % 3) * 0.06}>
                 <li className="h-full list-none">
-                  <article className="group flex h-full flex-col gap-4 rounded-card border border-hairline bg-surface p-7 shadow-panel transition-[transform,border-color] duration-base ease-out-quint hover:-translate-y-1 hover:border-primary/40">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="rounded-md bg-surface-2 px-2 py-1 font-mono text-[11px] font-semibold tracking-wide text-ink-muted">{field.code}</span>
-                      <span className="text-xs font-semibold text-ink-muted">
-                        {field.materialCount} {field.materialCount === 1 ? "material" : "materials"}
-                      </span>
-                    </div>
-                    <h3 className="text-xl font-bold leading-snug text-ink">{field.name}</h3>
-                    {field.description && <p className="text-sm leading-relaxed text-ink-muted">{field.description}</p>}
-                    <div className="mt-auto flex items-center justify-between gap-3 border-t border-hairline pt-5">
-                      <span className="text-sm font-semibold text-ink-muted">
-                        {field.areaCount} {field.areaCount === 1 ? "programme area" : "programme areas"}
-                      </span>
-                      <Link href="/login" className="inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-primary">
-                        Sign in to open
-                        <ArrowRight className="h-4 w-4 transition-transform duration-base group-hover:translate-x-1" aria-hidden />
-                      </Link>
-                    </div>
-                  </article>
+                  <ProgrammeFieldTile field={field} href="/login" />
                 </li>
               </Reveal>
             ))}

@@ -1,6 +1,7 @@
 import "server-only";
 import { log } from "@/lib/server/logger";
 import { currentRequestId } from "@/lib/server/request-context";
+import { classifyLoadFailure } from "@/lib/load-failure";
 import { DeadlineError, within } from "@/lib/server/deadline";
 import { recordLoad, recordRetry } from "@/lib/server/runtime-stats";
 
@@ -47,7 +48,19 @@ export async function mapLimit<const T extends readonly (() => Promise<unknown>)
  */
 export type DeadlineResult<T> =
   | { ok: true; data: T }
-  | { ok: false; requestId: string; reason: "timeout" | "error" };
+  | {
+      ok: false;
+      requestId: string;
+      reason: "timeout" | "error";
+      /**
+       * Why, in the terms that change what the reader should do: `drift` means
+       * the database and this build disagree (a deploy or a migration is
+       * missing), `database` means the link is down, `timeout` means it was slow.
+       */
+      hint?: "drift" | "database" | "timeout";
+      /** The database's own error code, when there was one. */
+      code?: string;
+    };
 
 export async function withDeadline<T>(
   label: string,
@@ -83,12 +96,21 @@ export async function withDeadline<T>(
     outcome: error instanceof DeadlineError ? "timeout" : "error",
   });
   const requestId = (await currentRequestId().catch(() => null)) ?? "";
+  const failure = classifyLoadFailure(error);
   log.error({
     event: "page.data_unavailable",
     label,
     requestId,
     timeout: error instanceof DeadlineError,
+    failure: failure.kind,
+    code: failure.code,
     error,
   });
-  return { ok: false, requestId, reason: error instanceof DeadlineError ? "timeout" : "error" };
+  return {
+    ok: false,
+    requestId,
+    reason: error instanceof DeadlineError ? "timeout" : "error",
+    hint: failure.hint,
+    code: failure.code,
+  };
 }

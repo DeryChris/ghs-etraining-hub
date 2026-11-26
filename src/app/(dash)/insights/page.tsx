@@ -53,6 +53,7 @@ export default async function InsightsPage() {
         title="Insights did not load"
         description="The traffic and catalogue figures could not be read in time. The numbers on this page are recomputed per request, so nothing is stale or lost."
         requestId={essential.requestId}
+        hint={essential.hint}
       />
     );
   }

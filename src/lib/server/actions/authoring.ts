@@ -34,6 +34,18 @@ import {
  * session, the category scope, the audit chain and the transaction.
  */
 
+/**
+ * Storage that was never configured is a deployment problem, and the person
+ * uploading cannot fix it. Say who can, instead of "try again" — the retry will
+ * fail identically until the S3 variables exist.
+ */
+function storageMessage(reason: string | undefined, fallback: string): string {
+  if (reason && /not configured|S3_ENDPOINT|S3_ACCESS_KEY_ID|S3_SECRET_ACCESS_KEY/i.test(reason)) {
+    return "File storage has not been set up for this deployment yet. The ICT administrator needs to add the S3 settings (S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY) before files can be uploaded.";
+  }
+  return fallback;
+}
+
 export interface AuthoringActionState {
   ok: boolean;
   message: string | null;
@@ -192,7 +204,7 @@ export async function requestUploadAction(input: {
   const target = await createMaterialUploadTarget(storageKey);
   if (!target.ok) {
     log.error({ event: "material.upload_target_failed", storageKey, reason: target.reason });
-    return { ok: false, message: "Storage is not available right now. Try again in a moment." };
+    return { ok: false, message: storageMessage(target.reason, "Storage is not available right now. Try again in a moment.") };
   }
 
   return { ok: true, uploadUrl: target.target.signedUrl, path: target.target.path, storageKey, versionId };

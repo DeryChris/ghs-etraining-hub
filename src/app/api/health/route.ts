@@ -7,6 +7,7 @@ import { databaseTarget } from "@/lib/db-target";
 import { sessionSecretProblem } from "@/lib/server/session";
 import { within } from "@/lib/server/deadline";
 import { mapLimit } from "@/lib/server/page-data";
+import { migrationState } from "@/lib/server/db-diagnosis";
 import { loadStats } from "@/lib/server/runtime-stats";
 import { log } from "@/lib/server/logger";
 import { currentRequestId } from "@/lib/server/request-context";
@@ -215,6 +216,7 @@ export async function GET(request: Request) {
   let dbStatus: "up" | "down" = "down";
   let schemaStatus: "current" | "outdated" | "unknown" = "unknown";
   let missing: string[] = [];
+  let migrations = { state: "unknown" as "current" | "behind" | "ahead" | "unknown", applied: 0, expected: 0 };
 
   try {
     await db.select().from(users).limit(1);
@@ -227,6 +229,12 @@ export async function GET(request: Request) {
       schemaStatus = "unknown";
       log.error({ event: "health.schema_check_failed", requestId, error: cause });
     }
+
+    // The other direction: a database that has run migrations this build does
+    // not know about. Missing tables catch the first half of that story; the
+    // count catches the half where the table is still there and a column is not.
+    migrations = await migrationState();
+    if (migrations.state === "behind" || migrations.state === "ahead") schemaStatus = "outdated";
   } catch (cause) {
     dbStatus = "down";
     log.error({ event: "health.db_unavailable", requestId, error: cause });
@@ -250,6 +258,7 @@ export async function GET(request: Request) {
       checks: {
         db: dbStatus,
         schema: schemaStatus,
+        migrations,
         session: sessionProblem === null ? "configured" : "missing",
         ...(sessionProblem === null ? {} : { sessionHint: sessionProblem }),
       },
@@ -285,10 +294,20 @@ export async function GET(request: Request) {
         : {
             error:
               dbStatus === "up"
-                ? {
-                    code: "SCHEMA_OUTDATED",
-                    message: `The database is missing ${missing.join(", ")}. Run npm run db:migrate, then restart the app.`,
-                  }
+                ? migrations.state === "ahead"
+                  ? {
+                      code: "SCHEMA_AHEAD",
+                      message: `The database has run ${migrations.applied} migrations and this build expects ${migrations.expected}: the site is running an older deployment than the database. Redeploy the site.`,
+                    }
+                  : migrations.state === "behind"
+                    ? {
+                        code: "SCHEMA_BEHIND",
+                        message: `The database has run ${migrations.applied} of ${migrations.expected} migrations. Run npm run db:migrate, then restart the app.`,
+                      }
+                    : {
+                        code: "SCHEMA_OUTDATED",
+                        message: `The database is missing ${missing.join(", ")}. Run npm run db:migrate, then restart the app.`,
+                      }
                 : {
                     code: "UPSTREAM_UNAVAILABLE",
                     message: "The training database is not reachable.",

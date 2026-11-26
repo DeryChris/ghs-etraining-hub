@@ -4,54 +4,59 @@ import { useId } from "react";
 import { cn } from "@/lib/utils";
 
 /*
- * The two decorative layers behind the signed-in menu.
+ * The decorative layers behind the signed-in menu.
  *
- * Nothing here carries meaning: the weave is a kente-derived lattice (the three
- * GHS colours appear as hairlines, never as text), and the star is the black
- * star of the flag drawn as an outline. Both are `aria-hidden` and sit under
- * 10% opacity so the menu keeps a 7:1 contrast ratio on the green.
+ * These were a kente lattice and the black star of the flag. Neither said
+ * anything about the work, and the client asked for the menu's graphics to read
+ * as health and administration. So: a monitor trace running down the rail, the
+ * way a bedside monitor draws one, and a quiet cross-in-ring seal at the foot —
+ * the two marks a health service actually uses for "monitoring" and "care".
+ *
+ * Nothing here carries meaning. Both are `aria-hidden`, both sit under 12%
+ * opacity, and the seal is clipped by the rail, so the menu keeps its contrast.
  */
 
-export function SidebarWeave({ className }: { className?: string }) {
-  const id = `${useId()}-weave`;
+export function SidebarTrace({ className }: { className?: string }) {
+  const id = `${useId()}-trace`;
 
   return (
     <svg
       aria-hidden
       focusable="false"
-      viewBox="0 0 256 720"
+      viewBox="0 0 256 900"
       preserveAspectRatio="xMidYMin slice"
       className={cn("pointer-events-none absolute inset-0 h-full w-full", className)}
     >
       <defs>
-        <pattern id={id} width="72" height="72" patternUnits="userSpaceOnUse">
-          {/* Kente-inspired double diamond. */}
+        {/* One monitor sweep: flat, a beat, flat again. Repeated down the rail it
+            reads as a trace rather than a pattern of shapes. */}
+        <pattern id={id} width="256" height="180" patternUnits="userSpaceOnUse">
           <path
-            d="M36 4 68 36 36 68 4 36Z"
+            d="M0 120h96l14-22 12 48 14-64 16 96 14-58h90"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1"
-            opacity="0.5"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
-          <path d="M36 20 52 36 36 52 20 36Z" fill="currentColor" opacity="0.35" />
-          {/* Weft dashes between the diamonds. */}
-          <path d="M0 36h6M66 36h6M36 0v6M36 66v6" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+          <path d="M0 120h256" stroke="currentColor" strokeWidth="0.6" strokeDasharray="3 7" />
         </pattern>
         <linearGradient id={`${id}-fade`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="white" stopOpacity="0.16" />
-          <stop offset="55%" stopColor="white" stopOpacity="0.07" />
-          <stop offset="100%" stopColor="white" stopOpacity="0.02" />
+          <stop offset="0%" stopColor="white" stopOpacity="0.18" />
+          <stop offset="55%" stopColor="white" stopOpacity="0.09" />
+          <stop offset="100%" stopColor="white" stopOpacity="0.025" />
         </linearGradient>
         <mask id={`${id}-mask`}>
-          <rect width="256" height="720" fill={`url(#${id}-fade)`} />
+          <rect width="256" height="900" fill={`url(#${id}-fade)`} />
         </mask>
       </defs>
-      <rect width="256" height="720" fill={`url(#${id})`} mask={`url(#${id}-mask)`} />
+      <rect width="256" height="900" fill={`url(#${id})`} mask={`url(#${id}-mask)`} />
     </svg>
   );
 }
 
-export function SidebarStar({ className }: { className?: string }) {
+/** A cross in a ring: the seal at the foot of the rail. */
+export function SidebarSeal({ className }: { className?: string }) {
   return (
     <svg
       aria-hidden
@@ -59,18 +64,23 @@ export function SidebarStar({ className }: { className?: string }) {
       viewBox="0 0 100 100"
       className={cn("pointer-events-none absolute", className)}
     >
+      <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="1.4" opacity="0.5" />
+      <circle cx="50" cy="50" r="36" fill="none" stroke="currentColor" strokeWidth="0.9" opacity="0.35" />
+      {/* The cross itself, drawn as one thick plus so it reads at any size. */}
       <path
-        d="M50 4 61.8 35.4 95 36.6 68.9 57.3 77.9 89.4 50 70.2 22.1 89.4 31.1 57.3 5 36.6 38.2 35.4Z"
+        d="M44 30h12v14h14v12H56v14H44V56H30V44h14z"
+        fill="currentColor"
+        opacity="0.28"
+      />
+      {/* A pulse breaking out of the ring, tying the seal to the trace above. */}
+      <path
+        d="M18 74h10l5-9 6 18 5-12 4 6h34"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.8"
+        strokeLinecap="round"
         strokeLinejoin="round"
         opacity="0.55"
-      />
-      <path
-        d="M50 22 57 39.6 75.6 40.3 61 51.6 66 69.9 50 59.6 34 69.9 39 51.6 24.4 40.3 43 39.6Z"
-        fill="currentColor"
-        opacity="0.18"
       />
     </svg>
   );

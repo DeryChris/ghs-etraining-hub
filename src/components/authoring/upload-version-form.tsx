@@ -111,8 +111,9 @@ export function UploadVersionForm({ materialId }: { materialId: string }) {
           className={`${inputClass} file:mr-3 file:rounded-control file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink`}
         />
         <p className={hintClass}>
-          Accepted: {MIME_ALLOWLIST.join(", ")}. Up to {formatBytes(largest)} depending on the type. Files are scanned
-          before a learner can open them.
+          PDF, Word, PowerPoint, Excel, video, audio, image, Markdown or CSV. Up to {formatBytes(largest)} for video,
+          25 MB for a document. It opens in the library for the learner — no app needed — and the original stays
+          downloadable.
         </p>
       </div>
 

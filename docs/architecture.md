@@ -113,28 +113,54 @@ all in one stream, because there is no second database service to lock down (ADR
 detail lives in `docs/migrations.md`.
 `drizzle-kit push` is a sandbox convenience and must never run against a real environment.
 
-## 8. File storage layout
+## 8. Files: what can be uploaded, and how it is read
+
+An accepted file is one that can be **read in the library**, not merely stored.
+The allowlist (`MIME_ALLOWLIST` in `src/lib/ghs-constants.ts`) is therefore a
+promise about the viewer:
+
+| Family | Types | Limit | In the page |
+| --- | --- | --- | --- |
+| PDF | `application/pdf` | 25 MB | Browser's PDF viewer, framed |
+| Word | `.docx` | 25 MB | Text, headings and bullets extracted server-side |
+| PowerPoint | `.pptx` | 25 MB | Slide-by-slide text, extracted server-side |
+| Excel | `.xlsx` | 25 MB | Sheets as tables, first 300 rows × 24 columns |
+| Video | mp4, webm, mkv, mov | 250 MB | Native player, served by range |
+| Audio | mp3, m4a | 60 MB | Native player |
+| Image | png, jpeg, webp, gif | 10 MB | Inline, full width |
+| Text | md, txt, csv | 2 MB | Shown as text |
+| JSON | `application/json` | 1 MB | Shown as text |
+
+The older binary formats (`.doc`, `.ppt`, `.xls`) are deliberately **not**
+accepted: nothing in a browser can read them, and accepting a file the viewer
+cannot open is a promise broken at the moment of upload.
+
+### Storage layout
 
 ```
-private bucket: ghs-materials
-  materials/<materialId>/<uuid>.<ext>               # immutable; version number assigned at finalise
-  avatars/<userId>/<uuid>.<ext>
+private bucket (S3-compatible: Neon Object Storage, R2, AWS S3, MinIO)
+  materials/<materialId>/<uuid>.<ext>   # immutable; version number assigned at finalise
+  resources/<trainingId>/<uuid>.<ext>   # training attachments
 ```
 
-Keys are never derived from user input. Signed URLs are minted per request with a 15‑minute TTL,
-`Content-Disposition: attachment` for downloads and `inline` only for the in‑app viewer.
+Keys are never derived from user input. The browser PUTs to a presigned URL and
+the server re-reads the object's metadata before recording the version, so the
+stored size and content type are the source of truth (ADR-0008). Reads are a
+15-minute presigned GET; the audit trail records every issue.
 
-Uploads use a signed **write** slot rather than a proxy: `POST`‑style Server Action mints the target,
-the browser `PUT`s the file, then a second Action re‑reads the object metadata and records the
-version (ADR‑0008). The key holds no version number because the version is assigned when the object
-is finalised.
+### Reading office files
 
-## 8a. Awards
+`src/lib/server/office-preview.ts` unzips the OOXML container with
+`node:zlib` and reads `word/document.xml`, `ppt/slides/*.xml` and
+`xl/worksheets/*.xml` directly. No converter runs on the host and no client
+bundle ships a document library: the reader is about 300 lines and returns text,
+slides and cell values, which the viewer renders as React nodes. Layout and
+images stay in the original, which is always one click away.
 
-There are none. The awarding model — certificates, serials, CPD credits, public verification — has been
-retired outright: `drizzle/0013_retire_the_award.sql` drops the table, the `/verify` route and its
-capabilities are gone, and a completion record is activity telemetry that feeds programme statistics
-(ADR‑0011). Anything in this document that still describes a certificate describes the product as it was.
+Two consequences worth knowing. The server reads the object for these formats, so
+the cap is 25 MB and a slow read degrades to "download it" rather than failing
+the page. And a document made only of images yields no text — the viewer says so
+instead of showing an empty frame.
 
 ## 9. Material authoring pipeline
 

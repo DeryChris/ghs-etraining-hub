@@ -35,6 +35,7 @@ import {
   getTypeMix,
   periodDelta,
 } from "@/lib/server/insights-queries";
+import { classifyLoadFailure } from "@/lib/load-failure";
 import { DeadlineError, within, withinOr } from "@/lib/server/deadline";
 import { log } from "@/lib/server/logger";
 import { getLearnerDashboard } from "@/lib/server/learning-queries";
@@ -66,20 +67,36 @@ function greetingFor(now: Date): string {
  * real page, not a spinner: the visitor can act on it, and it says what to do
  * next instead of leaving the skeleton up.
  */
-function DashboardRetry() {
+function DashboardRetry({ hint }: { hint?: "drift" | "database" | "timeout" }) {
   return (
     <div className="space-y-6">
       <div className="surface-card p-7 sm:p-10">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-warn">
-          Taking too long
+          {hint === "drift" ? "This page and the database disagree" : "Taking too long"}
         </p>
         <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
           The dashboard could not load its data.
         </h1>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-muted">
-          Nothing was changed. The training library is busy or the connection
-          dropped — try again in a moment. If it keeps happening, quote the time
-          in your message to the ICT helpdesk.
+          {hint === "drift" ? (
+            <>
+              Nothing was changed. The database has been updated but this deployment has not — the
+              site and its database are out of step, so the queries this page makes no longer
+              match. Open{" "}
+              <a href="/api/health" className="font-semibold text-primary underline underline-offset-4">
+                /api/health
+              </a>{" "}
+              to see which side is behind, then redeploy the site (or run{" "}
+              <code className="font-mono text-xs">npm run db:migrate</code> if the database is the
+              side that is behind).
+            </>
+          ) : (
+            <>
+              Nothing was changed. The training library is busy or the connection dropped — try
+              again in a moment. If it keeps happening, quote the time in your message to the ICT
+              helpdesk.
+            </>
+          )}
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
@@ -120,29 +137,27 @@ export default async function DashboardPage({
    * optional, so a slow one drops out and the rest of the page still renders.
    * Without this a stalled query left the skeleton on screen indefinitely.
    */
-  let essential: [
-    Awaited<ReturnType<typeof getLearnerDashboard>>,
-    Awaited<ReturnType<typeof listNotifications>>,
-  ];
+  let dashboard: Awaited<ReturnType<typeof getLearnerDashboard>>;
   try {
-    essential = await Promise.all([
-      within("dashboard.learner", getLearnerDashboard(session)),
-      within("dashboard.notifications", listNotifications(session, 4)),
-    ]);
+    dashboard = await within("dashboard.learner", getLearnerDashboard(session), 6_000);
   } catch (error) {
+    const failure = classifyLoadFailure(error);
     log.error({
       event: "dashboard.essential_failed",
       userId: session.sub,
       label: error instanceof DeadlineError ? error.label : undefined,
+      failure: failure.kind,
+      code: failure.code,
       error,
     });
-    return <DashboardRetry />;
+    return <DashboardRetry hint={failure.hint} />;
   }
 
-  const [dashboard, announcements, insights, traffic, sessionRecord, trainings, typeMix, programmeTraffic] =
+  // The notices are a sidebar of the page, not the page: a slow bell falls back
+  // to an empty list rather than taking the greeting down with it.
+  const [announcements, insights, traffic, sessionRecord, trainings, typeMix, programmeTraffic] =
     await Promise.all([
-      essential[0],
-      essential[1],
+      withinOr("dashboard.notifications", listNotifications(session, 4), []),
       staff ? withinOr("dashboard.insights", getInsights(session), null) : null,
       staff ? withinOr("dashboard.traffic", getTrafficSeries(session, 12), null) : null,
       staff ? withinOr("dashboard.training_counts", getTrainingCounts(session), null) : null,

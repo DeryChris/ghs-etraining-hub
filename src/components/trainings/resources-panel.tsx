@@ -207,7 +207,10 @@ function UploadForm({ trainingId, onDone }: { trainingId: string; onDone: () => 
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           className="block w-full text-sm text-ink file:mr-3 file:rounded-full file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary"
         />
-        <p className={hintClass}>PDF, video, image, markdown or JSON — up to 250 MB for video.</p>
+        <p className={hintClass}>
+          The deck, the attendance sheet, the report, the recording: PDF, Word, PowerPoint, Excel, video, audio,
+          image or CSV. Up to 250 MB for video, 25 MB for a document.
+        </p>
       </div>
 
       {(error || (state.message && !state.ok)) && (

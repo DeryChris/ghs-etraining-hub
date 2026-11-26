@@ -22,6 +22,7 @@ import { CtaArt, HeroArt, MapArt } from "@/components/marketing/landing-art";
 import { CountUp } from "@/components/marketing/count-up";
 import { Faq } from "@/components/marketing/faq";
 import { Reveal } from "@/components/marketing/reveal";
+import { ProgrammeFieldTile } from "@/components/programme/programme-tile";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { buttonClass } from "@/components/ui/button";
 import { SITE } from "@/lib/site";
@@ -421,19 +422,8 @@ export default async function LandingPage() {
             <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {previewFields.map((item, index) => (
                 <Reveal key={item.id} delay={(index % 3) * 0.06}>
-                  <li className="list-none">
-                    <Link
-                      href="/programmes"
-                      className="group flex h-full flex-col gap-4 rounded-card border border-hairline bg-canvas p-6 transition-[transform,border-color] duration-base ease-out-quint hover:-translate-y-1 hover:border-primary/40"
-                    >
-                      <span className="w-fit rounded-md bg-surface-2 px-2 py-1 font-mono text-[11px] font-semibold tracking-wide text-ink-muted">{item.code}</span>
-                      <h3 className="text-lg font-bold leading-snug text-ink">{item.name}</h3>
-                      {item.description && <p className="line-clamp-2 text-sm leading-relaxed text-ink-muted">{item.description}</p>}
-                      <span className="mt-auto inline-flex items-center gap-1.5 pt-2 text-sm font-semibold text-primary">
-                        {item.areaCount} {item.areaCount === 1 ? "programme area" : "programme areas"}
-                        <ArrowRight className="h-4 w-4 transition-transform duration-base group-hover:translate-x-1" aria-hidden />
-                      </span>
-                    </Link>
+                  <li className="h-full list-none">
+                    <ProgrammeFieldTile field={item} href="/programmes" />
                   </li>
                 </Reveal>
               ))}

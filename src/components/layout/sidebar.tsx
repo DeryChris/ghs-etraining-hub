@@ -28,7 +28,7 @@ import { usePathname } from "next/navigation";
 import { useId } from "react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { NavLinkPending } from "@/components/layout/nav-link-pending";
-import { SidebarFlagLine, SidebarStar, SidebarWeave } from "@/components/layout/sidebar-art";
+import { SidebarFlagLine, SidebarSeal, SidebarTrace } from "@/components/layout/sidebar-art";
 import type { ShellUser } from "@/components/layout/types";
 import { ROLE_LABELS } from "@/lib/labels";
 import { isActiveHref, navFor, type NavCount, type NavIcon } from "@/lib/nav";
@@ -86,8 +86,8 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
 
   return (
     <div className="nav-surface relative flex h-full flex-col overflow-hidden">
-      <SidebarWeave className="text-white" />
-      <SidebarStar className="-bottom-10 -right-10 h-56 w-56 text-[var(--nav-active)]" />
+      <SidebarTrace className="text-white" />
+      <SidebarSeal className="-bottom-12 -right-12 h-52 w-52 text-[var(--nav-active)]" />
 
       <div className={cn("relative z-10 flex h-16 items-center gap-2", collapsed ? "justify-center px-2" : "justify-between px-5")}>
         {/*
@@ -102,7 +102,7 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
             aria-label="Expand the menu"
             aria-expanded={false}
             title="Expand the menu"
-            className="hidden h-10 w-10 items-center justify-center rounded-control bg-[var(--nav-wash)] text-[var(--nav-ink)] transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)] md:inline-flex"
+            className="mx-auto hidden h-11 w-11 items-center justify-center rounded-control bg-[var(--nav-wash)] text-[var(--nav-ink)] transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)] md:inline-flex"
           >
             <PanelLeftOpen className="h-5 w-5" aria-hidden />
           </button>
@@ -150,7 +150,13 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
         <SidebarFlagLine />
       </div>
 
-      <nav aria-label="Primary" className="nav-scroll relative z-10 flex-1 space-y-6 overflow-y-auto px-3 py-6">
+      <nav
+        aria-label="Primary"
+        className={cn(
+          "nav-scroll relative z-10 flex-1 space-y-6 overflow-y-auto py-6",
+          collapsed ? "px-0" : "px-3",
+        )}
+      >
         {groups.map((group) => (
           <div key={group.id} className="space-y-1">
             <p
@@ -185,7 +191,7 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
                       aria-current={active ? "page" : undefined}
                       className={cn(
                         "group relative flex min-h-11 items-center gap-3 rounded-control text-sm font-semibold transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)]",
-                        collapsed ? "justify-center px-0" : "px-3",
+                        collapsed ? "mx-auto w-11 justify-center gap-0 px-0" : "px-3",
                         active
                           ? "text-[var(--nav-active-ink)]"
                           : "text-[var(--nav-muted)] hover:bg-white/10 hover:text-[var(--nav-ink)]",
@@ -244,7 +250,12 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
       </nav>
 
       <div className={cn("nav-divider relative z-10 border-t", collapsed ? "p-2" : "p-4")}>
-        <div className={cn("nav-wash flex items-center rounded-control", collapsed ? "justify-center p-2" : "gap-3 p-3")}>
+        <div
+          className={cn(
+            "nav-wash flex items-center rounded-control",
+            collapsed ? "mx-auto w-11 justify-center p-2" : "gap-3 p-3",
+          )}
+        >
           <BrandMark size={32} />
           <div className={cn("min-w-0", collapsed && "sr-only")}>
             <p className="truncate text-sm font-semibold text-[var(--nav-ink)]">{user.name}</p>
