@@ -81,8 +81,6 @@ export interface AuthoringMaterialDetail {
   priority: PriorityLevel;
   requiresAcknowledgement: boolean;
   estimatedMinutes: number | null;
-  cpdCreditsX10: number;
-  recertificationMonths: number | null;
   programmeAreaId: string;
   areaName: string;
   areaCode: string;
@@ -172,8 +170,6 @@ export async function getAuthoringMaterial(materialId: string, viewer: Viewer): 
     priority: row.material.priority,
     requiresAcknowledgement: row.material.requiresAcknowledgement,
     estimatedMinutes: row.material.estimatedMinutes,
-    cpdCreditsX10: row.material.cpdCreditsX10,
-    recertificationMonths: row.material.recertificationMonths,
     programmeAreaId: row.material.programmeAreaId,
     areaName: row.areaName,
     areaCode: row.areaCode,

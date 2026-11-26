@@ -109,8 +109,6 @@ export const materials = pgTable("materials", {
   priority: materialPriorityEnum("priority").notNull().default("LOW"),
   requiresAcknowledgement: boolean("requires_acknowledgement").notNull().default(false),
   estimatedMinutes: integer("estimated_minutes"),
-  cpdCreditsX10: integer("cpd_credits_x10").notNull().default(0),
-  recertificationMonths: integer("recertification_months"),
   programmeAreaId: uuid("programme_area_id").notNull().references(() => programmeAreas.id, { onDelete: "cascade" }),
   authorId: uuid("author_id").notNull().references(() => users.id),
   currentVersionId: uuid("current_version_id"),

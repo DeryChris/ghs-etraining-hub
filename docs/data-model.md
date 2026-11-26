@@ -8,11 +8,11 @@ indexes so an agent does not have to reverse‑engineer them. Naming/style rules
 
 1. Every row has `id uuid defaultRandom` and `createdAt timestamptz defaultNow()`.
 2. Rows that participate in audit history are never hard‑deleted: `users`, `materials`,
-   `material_versions`, `certificates`, `audit_logs`.
+   `material_versions`, `audit_logs`.
 3. Every FK is indexed. Every unique constraint exists because the domain says so, not for convenience.
 4. Enum values are `SCREAMING_SNAKE`; adding a value requires a migration + a UI label mapping in
    `src/lib/labels.ts` (never a raw enum string in JSX).
-5. Monetary/credit values are integers (`cpd_credits_x10`) — never floats.
+5. Counters and durations are integers (`count`, `seconds`) — never floats.
 6. PII columns are listed in `src/lib/pii-inventory.ts` and that file drives SAR/erasure tooling.
 
 ## 2. Tables
@@ -73,10 +73,10 @@ evidence (PRD §9.4).
 `assessment_attempts`: `assessmentId`, `userId`, `startedAt`, `submittedAt`, `answers jsonb`,
 `scorePercent`, `passed`, `attemptNumber`, `gradedById` (null unless overridden), `overrideReason`.
 
-### certificates
-`code` (unique, `GHS-CPD-<year>-<base32>`), `userId`, `materialId`, `materialVersionId`,
-`cpdCreditsX10`, `issuedAt`, `expiresAt`, `verificationCount`, `lastVerifiedAt`.
-Public verification endpoint reveals name, masked PIN, title, issue/expiry, credits — nothing else.
+### activity only, no awards
+Completion and open records (`material_progress`, `material_views`) exist so programme teams can see what
+is being read; nothing is scored, issued or verified. The `certificates` table was dropped in
+`drizzle/0013_retire_the_award.sql` and the awarding model is retired (ADR‑0011).
 
 ### comments
 `materialId`, `authorId`, `parentId`, `body`, `isRemoved`, `removedReason`, `removedById`,

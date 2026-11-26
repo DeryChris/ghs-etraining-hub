@@ -124,7 +124,6 @@ async function main() {
       priority: "CRITICAL" as const,
       requiresAcknowledgement: true,
       estimatedMinutes: 45,
-      cpdCreditsX10: 50,
     },
     {
       areaCode: "PF-PH-01",
@@ -135,7 +134,6 @@ async function main() {
       priority: "HIGH" as const,
       requiresAcknowledgement: false,
       estimatedMinutes: 25,
-      cpdCreditsX10: 20,
     },
     {
       areaCode: "PF-PH-06",
@@ -146,7 +144,6 @@ async function main() {
       priority: "HIGH" as const,
       requiresAcknowledgement: true,
       estimatedMinutes: 30,
-      cpdCreditsX10: 30,
     },
   ];
 
@@ -165,7 +162,6 @@ async function main() {
         priority: starter.priority,
         requiresAcknowledgement: starter.requiresAcknowledgement,
         estimatedMinutes: starter.estimatedMinutes,
-        cpdCreditsX10: starter.cpdCreditsX10,
         authorId: admin.id,
         state: "PUBLISHED",
         isPublished: true,

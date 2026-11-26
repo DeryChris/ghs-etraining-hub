@@ -165,7 +165,6 @@ export interface MaterialListItem {
   priority: PriorityLevel;
   requiresAcknowledgement: boolean;
   estimatedMinutes: number | null;
-  cpdCreditsX10: number;
   authorName: string;
   status: ProgressStatus;
   watchedPercent: number;
@@ -182,7 +181,6 @@ export async function listMaterialsInArea(programmeAreaId: string, viewer: Viewe
       priority: materials.priority,
       requiresAcknowledgement: materials.requiresAcknowledgement,
       estimatedMinutes: materials.estimatedMinutes,
-      cpdCreditsX10: materials.cpdCreditsX10,
       authorName: users.fullName,
       status: sql<ProgressStatus>`coalesce(${materialProgress.status}, 'NOT_STARTED')`,
       watchedPercent: sql<number>`coalesce(${materialProgress.watchedPercent}, 0)`,
@@ -269,7 +267,6 @@ export async function searchLibrary(input: {
       priority: materials.priority,
       requiresAcknowledgement: materials.requiresAcknowledgement,
       estimatedMinutes: materials.estimatedMinutes,
-      cpdCreditsX10: materials.cpdCreditsX10,
       authorName: users.fullName,
       status: sql<ProgressStatus>`coalesce(${materialProgress.status}, 'NOT_STARTED')`,
       watchedPercent: sql<number>`coalesce(${materialProgress.watchedPercent}, 0)`,
@@ -344,7 +341,6 @@ export interface ContinueItem {
 }
 
 export interface LearnerDashboard {
-  creditsX10: number;
   completedCount: number;
   inProgressCount: number;
   mandatoryTotal: number;
@@ -360,7 +356,6 @@ export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashbo
   // continue-learning follow.
   const totalsRows = await db
     .select({
-      creditsX10: sql<number>`coalesce(sum(case when ${materialProgress.status} = 'COMPLETED' then ${materials.cpdCreditsX10} else 0 end), 0)::int`,
       completedCount: sql<number>`(count(*) filter (where ${materialProgress.status} = 'COMPLETED'))::int`,
       inProgressCount: sql<number>`(count(*) filter (where ${materialProgress.status} = 'IN_PROGRESS'))::int`,
     })
@@ -437,7 +432,6 @@ export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashbo
     .sort((a, b) => PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority] || a.title.localeCompare(b.title));
 
   return {
-    creditsX10: totals?.creditsX10 ?? 0,
     completedCount: totals?.completedCount ?? 0,
     inProgressCount: totals?.inProgressCount ?? 0,
     mandatoryTotal: mandatoryRows.length,
@@ -459,7 +453,6 @@ export interface CompletionRecord {
   materialId: string;
   title: string;
   type: MaterialType;
-  creditsX10: number;
   completedAt: Date | null;
   areaName: string;
 }
@@ -474,7 +467,6 @@ export async function listCompletions(userId: string, limit = 500): Promise<Comp
       materialId: materials.id,
       title: materials.title,
       type: materials.type,
-      creditsX10: materials.cpdCreditsX10,
       completedAt: materialProgress.completedAt,
       areaName: programmeAreas.name,
     })

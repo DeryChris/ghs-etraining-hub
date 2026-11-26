@@ -3,13 +3,14 @@
 **Status:** Approved for build, amended 2026‑11 · **Supersedes:** client PRD v1 (2026) · **Owner:** GHS
 Capacity Development Directorate · **Implementation contract:** [`AGENTS.md`](../AGENTS.md)
 
-> **Amendment (2026‑11).** The product is an **informational library**, not a CPD platform: points, cycle
-> targets and certificate awarding are retired, while every certificate already issued stays verifiable
-> ([ADR‑0011](./decisions/0011-informational-library-retires-cpd.md)). Trainings are recorded as dated
-> **sessions** scoped region → district → sub‑district → facility, starting with the Upper West Region and
-> excluding CHPS compounds; programme fields and areas arrive later as a client upload
-> ([ADR‑0012](./decisions/0012-sessions-geography-and-traffic.md)). Where this document still speaks of CPD
-> credits or awards, the ADRs govern.
+> **Amendment (2026‑11).** The product is an **informational library**, not a CPD platform and not an
+> awarding system: points, cycle targets, certification, recertification and the public verification
+> endpoint are all retired — the certificates table is dropped, `/verify` is gone, and completion records
+> exist for programme statistics only ([ADR‑0011](./decisions/0011-informational-library-retires-cpd.md)).
+> Trainings are recorded as dated **sessions** scoped region → district → sub‑district → facility across
+> the whole Upper West establishment list, CHPS compounds included; programme fields and areas come from
+> the client upload ([ADR‑0012](./decisions/0012-sessions-geography-and-traffic.md)). Where this document
+> still speaks of CPD credits, certificates or awards, the ADRs govern and those passages are historical.
 
 > v1 described *content management* well but almost nothing about *learning outcomes*, *data
 > protection*, *upload safety*, or *low‑bandwidth delivery*. v2 keeps everything that was right in
@@ -143,11 +144,11 @@ with resumable chunks for video on flaky connections.
   pass mark configurable (default 80 %); attempts (default 3) with a cooldown (default 24 h);
   server‑side scoring only — the client never receives the answer key; timer optional; results
   audited; manual score override is admin‑only and audited with a reason.
-* **Certification**: on completion, issue a verifiable certificate (unique code
-  `GHS-CPD-<year>-<base32>`, PDF export, QR/link to a public verification endpoint that reveals
-  only name, PIN (masked), title, issue date, credit hours — no other PII).
-* **Recertification**: cycles (e.g. IPC annually, cold chain every 2 years) with automated
-  "expiring in 60 days" reminders and lapse reporting to the regional facilitator.
+* **Certification — retired.** No certificate is issued for anything. Completion is recorded as
+  activity telemetry (who opened, downloaded or marked a material finished, against the version they
+  saw) and feeds programme statistics; there is no code, no PDF, no public verification route and no
+  table behind any of it.
+* **Recertification — retired.** No cycles, no expiry reminders, no lapse reporting.
 
 ### 5.5 Discussion
 Threaded comments per material, unlimited depth but rendered to depth 2 then collapsed. Content is
@@ -228,7 +229,7 @@ Each phase ships something a user can do, and ends with the §10 gates green.
 | **P0 Foundations** | Schema, session, RBAC skeleton, audit logger, design tokens, shell, health endpoint | `/api/health` ok; capability matrix tested; audit writes hash‑chained |
 | **P1 Identity & roster** | Login, forced first‑login, profile, admin users, bulk import, lockout | Admin can import 500 rows; wrong PIN rejected with a readable report |
 | **P2 Content** | Categories, spaces, upload pipeline, versioning, review, publish | New version published by reviewer ≠ author; superseded banner shows |
-| **P3 Learning** | Enrollment, progress, acknowledgement, assessments, certificates, verification link | Certificate verifies publicly with masked PIN only |
+| **P3 Learning** | Enrollment, progress, acknowledgement, assessments — ~~certificates, verification link~~ (retired) | Completion is recorded against the version read; nothing is certified or verified publicly |
 | **P4 Social** | Discussions, messaging, notifications, moderation, abuse reports | Nested threads render; unread counts correct under polling and realtime |
 | **P5 Insight** | Analytics per role, exports, national coverage | p95 analytics query < 800 ms; export streams 50k rows |
 | **P6 Hardening** | Offline SW, data saver, a11y sweep, load test, DPIA sign‑off, DR drill | 3G smoke test passes; axe 0 critical; 5k concurrent users OK |
@@ -237,11 +238,12 @@ Each phase ships something a user can do, and ends with the §10 gates green.
 
 ## 9. Acceptance criteria for "training evidence"
 
-1. For any staff PIN, an admin can produce, in ≤ 3 clicks, a report of: modules completed, versions
-   trained on, scores, attempts, certificates, CPD credits and pending mandatory items.
-2. Every score or completion change has an audit row with actor, timestamp and diff.
-3. A certificate code can be verified by a third party with no login, revealing no PII beyond name,
-   masked PIN and credential details.
+1. For any staff PIN, an admin can produce, in ≤ 3 clicks, a report of: materials opened, downloaded
+   and marked finished, the versions trained on, and pending mandatory items. Nothing is scored and
+   nothing is awarded.
+2. Every completion change has an audit row with actor, timestamp and diff.
+3. ~~A certificate code can be verified by a third party with no login.~~ Retired with the awarding
+   model: there is no certificate, no code and no public verification route.
 4. A superseded SOP still proves which version a staff member was trained on.
 
 ---

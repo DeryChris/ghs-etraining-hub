@@ -132,16 +132,15 @@ export async function updateMaterialProgressAction(
         metadata: {
           versionId,
           title: material.title,
-          cpdCreditsX10: material.cpdCreditsX10,
           supersededVersion: versionChanged,
         },
       },
       tx,
     );
 
-    // Completing a material records that it was read. It does not award points or
-    // issue a certificate: this is an information service, and ADR-0011 retires
-    // the CPD framing. Certificates already issued stay verifiable on /verify.
+    // Completing a material records that it was read. Nothing is awarded for it:
+    // the record exists for programme statistics, and the awarding model has been
+    // retired outright (ADR-0011).
     return { ok: true, message: successMessage(intent) };
   });
 

@@ -19,8 +19,8 @@ Browser ──▶ Edge Middleware (cheap session signature check, redirect, secu
 1. Server Components fetch. Client Components receive serialisable DTOs and own only
    interaction state. A client component must never contain a query path.
 2. `export const revalidate` / `cache tags`: dashboard and library data are user‑scoped, so they
-   are `dynamic = "force-dynamic"` by default. Only truly public artefacts (certificate
-   verification, published SOP *metadata*) may be cached — and then tagged
+   are `dynamic = "force-dynamic"` by default. Only truly public artefacts (the landing page's
+   published SOP *metadata*, the statistics on it) may be cached — and then tagged
    `["material", material.id]` so publishing can `revalidateTag`.
 3. Parallelise independent awaits with `Promise.all`; sequential awaits only when a value feeds the
    next query.
@@ -80,7 +80,7 @@ carries the full id plus Next's digest. No stack trace is ever sent to the brows
   pattern are redacted by `redactMetadata()` before the line is written, so message bodies,
   e-mails and staff PINs never reach stdout.
 * Correlated events: `material.file_issued`, `message.sent`, `progress.recorded`,
-  `progress.rate_limited`, `certificate.verify_rate_limited`.
+  `progress.rate_limited`, `notification.delivered`, `notification.failed`.
 * Alert thresholds (to wire in the hosting platform): p95 > 1.5 s for 10 min, error rate > 1 %,
   `*.rate_limited` spikes, and any `db:verify-chain` failure.
 
@@ -104,7 +104,6 @@ carries the full id plus Next's digest. No stack trace is ever sent to the brows
 | Published material metadata | tagged `material:{id}` | `revalidateTag` on publish |
 | Public directorate list + counters | `unstable_cache` 5 min, tag `taxonomy` | `revalidateTag("taxonomy")` on category/material write |
 | Signed-in directorate/space/material views | none (dynamic, per-viewer cohort) | n/a |
-| Certificate lookup | `unstable_cache` 1 h | `revalidateTag("certificate:{code}")` on verification |
 | Static assets / media | CDN, immutable keys (version‑prefixed) | never — new version = new key |
 
 ## 7a. Schema migrations
@@ -119,7 +118,6 @@ detail lives in `docs/migrations.md`.
 ```
 private bucket: ghs-materials
   materials/<materialId>/<uuid>.<ext>               # immutable; version number assigned at finalise
-  certificates/<certificateId>.pdf
   avatars/<userId>/<uuid>.<ext>
 ```
 
@@ -131,20 +129,12 @@ the browser `PUT`s the file, then a second Action re‑reads the object metadata
 version (ADR‑0008). The key holds no version number because the version is assigned when the object
 is finalised.
 
-## 8a. Certificates
+## 8a. Awards
 
-Issued in the same transaction as completion (random Crockford serial, unique per user/material/
-version). Three surfaces, deliberately different:
-
-| Surface | Who | What it shows |
-| --- | --- | --- |
-| `/verify?code=…` | anyone, rate-limited | Yes/no, masked holder name, material, points, dates |
-| `/certificates/<code>` | holder or staff only | The printable award: full name, staff id, serial, verification URL |
-| `/analytics` transcript | the learner | Every completion with its certificate serial (or "Not issued") |
-
-The award is HTML with `print:` styles rather than a generated PDF, so "save as PDF" is the
-browser's print dialogue: no server-side renderer, no font hunt, and the same page prints on A4.
-Server-side PDF generation and e-mail delivery are still open (see `REPO_ANALYSIS.md`).
+There are none. The awarding model — certificates, serials, CPD credits, public verification — has been
+retired outright: `drizzle/0013_retire_the_award.sql` drops the table, the `/verify` route and its
+capabilities are gone, and a completion record is activity telemetry that feeds programme statistics
+(ADR‑0011). Anything in this document that still describes a certificate describes the product as it was.
 
 ## 9. Material authoring pipeline
 

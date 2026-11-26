@@ -54,11 +54,6 @@ export function formatMinutes(minutes: number | null | undefined): string {
   return `${m} m`;
 }
 
-export function formatCredits(cpdCreditsX10: number | null | undefined): string {
-  if (!cpdCreditsX10 && cpdCreditsX10 !== 0) return "0 pts";
-  return `${(cpdCreditsX10 / 10).toFixed(1)} pts`;
-}
-
 /** Friendly file-type label for a stored MIME type, e.g. "PDF document". */
 export function formatMimeType(mime: string | null | undefined): string {
   const labels: Record<string, string> = {
