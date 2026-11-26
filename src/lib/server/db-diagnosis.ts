@@ -38,6 +38,15 @@ export async function migrationState(): Promise<MigrationReport> {
     );
     const list = Array.isArray(rows) ? rows : [];
     const applied = Number((list[0] as { applied?: number } | undefined)?.applied ?? 0);
+    /*
+     * An empty ledger means "this database was not built by `drizzle-kit
+     * migrate`" — a `db:push` sandbox, or a chain applied by hand — not "this
+     * database is behind". Reporting it as behind would fail the health check and
+     * page loads on a perfectly correct database, so it is unknown instead, and
+     * the table check in /api/health still catches a genuinely missing schema.
+     */
+    if (applied === 0) return { state: "unknown", applied, expected: EXPECTED_MIGRATIONS };
+
     const state: MigrationState =
       applied === EXPECTED_MIGRATIONS ? "current" : applied < EXPECTED_MIGRATIONS ? "behind" : "ahead";
     return { state, applied, expected: EXPECTED_MIGRATIONS };
