@@ -2,20 +2,54 @@
 
 import {
   Activity,
+  Apple,
   Baby,
+  BadgeCheck,
   Bandage,
+  BookOpen,
+  Boxes,
   Brain,
+  Briefcase,
+  Bug,
+  Building2,
+  CalendarCheck,
+  Calculator,
   ClipboardList,
+  Database,
   Droplets,
+  FileText,
+  FlaskConical,
+  Gauge,
+  Gavel,
+  Globe,
+  GraduationCap,
+  HardHat,
+  HeartHandshake,
   HeartPulse,
+  Laptop,
+  LineChart,
+  Moon,
+  Megaphone,
+  MessagesSquare,
   Microscope,
+  MonitorCheck,
+  Network,
+  PersonStanding,
   Pill,
+  Radar,
+  Ribbon,
+  Scale,
+  ScrollText,
+  SearchCheck,
   ShieldPlus,
+  ShoppingCart,
   Stethoscope,
   Syringe,
   Truck,
   Users,
+  Wallet,
   Wind,
+  Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -47,6 +81,37 @@ const SKINS: Skin[] = [
   { light: "#48d3b6", deep: "#0c6d66", glow: "rgba(12,109,102,0.28)", glyph: Pill },
 ];
 
+/**
+ * One glyph per programme field, chosen from what the area is about.
+ *
+ * These ten used to be hashed off the code like the colours, so "Clinical Care"
+ * could be drawn as a microscope while "Finance and Audit" got a stethoscope —
+ * the picture said nothing and the same subject looked different from the words
+ * next to it. The colour still comes from the code (a stable identity, no data
+ * needed to render it); the glyph now says what the tile says:
+ *
+ *   Administration      a building          Policy / Planning   scales
+ *   Clinical Care       a syringe           Public Health       a globe
+ *   Family and Health   a family            Research            a flask
+ *   Finance and Audit   a calculator        Supply Chain        a truck
+ *   Health Promotion    a megaphone         Human Resource      a network
+ */
+const FIELD_GLYPHS: Record<string, LucideIcon> = {
+  "PF-ADM": Building2,
+  "PF-CLIN": Syringe,
+  "PF-FAM": HeartHandshake,
+  "PF-FIN": Calculator,
+  "PF-HPR": Megaphone,
+  "PF-HR": Network,
+  "PF-PPME": Scale,
+  "PF-PH": Globe,
+  "PF-RD": FlaskConical,
+  "PF-SCM": Truck,
+};
+
+/** The codes that have a named glyph — one per programme area GHS supplied. */
+export const FIELD_GLYPH_KEYS: readonly string[] = Object.keys(FIELD_GLYPHS);
+
 /** Stable per field: the same code gets the same colour on every screen. */
 function skinFor(code: string): Skin {
   let hash = 0;
@@ -70,7 +135,10 @@ export function FieldTileIcon({
   className?: string;
 }) {
   const skin = skinFor(code);
-  const Glyph = skin.glyph;
+  // A record lookup, not a call: the lint rule refuses a component that is
+  // *created* during render, and a custom code an administrator adds falls back
+  // to the glyph its colour already has.
+  const Glyph = FIELD_GLYPHS[code.toUpperCase()] ?? skin.glyph;
   const id = `field-${code.replace(/[^a-zA-Z0-9]/g, "")}`;
 
   return (
@@ -121,6 +189,73 @@ export function FieldTileIcon({
  * relatives wherever they appear, and the tile reads as an object sitting on the
  * card rather than a badge printed on it.
  */
+/**
+ * One glyph per subject, named exactly as the taxonomy names it.
+ *
+ * The regex list below guesses from words, and guessing is why a page of cards
+ * showed the same stethoscope ten times: "NACP", "NTCP", "Anaesthesia", "Quality
+ * Assurance" and half the rest matched nothing and fell through to the default.
+ * A card whose picture is the same as its neighbour's says nothing. These are the
+ * forty-seven programmes GHS supplied, each drawn as the thing it is about — an
+ * insect for malaria, a ribbon for HIV, a hard hat for occupational health.
+ *
+ * Matched case-insensitively on the full name, so an administrator who renames a
+ * programme gets a sensible guess from the regexes rather than a wrong picture.
+ */
+const NAMED_GLYPHS: Record<string, AreaGlyphKey> = {
+  // Administration and Support Services
+  "BIOMEDICAL EQUIPMENT": "wrench",
+  "ESTATE MANAGEMENT": "building",
+  "HEALTH ADMINISTRATION": "briefcase",
+  "TRANSPORT MANAGEMENT": "truck",
+  // Clinical Care
+  "CLINICAL INFORMATION AND MONITORING": "monitor",
+  "CLINICAL SERVICE DEVELOPMENT": "stethoscope",
+  "QUALITY ASSURANCE": "badge",
+  // Family and Health
+  NUTRITION: "apple",
+  "REPRODUCTIVE AND CHILD HEALTH": "baby",
+  // Finance and Audit
+  "CONTROL AND COMPLIANCE": "scale",
+  "FINANCIAL INFORMATION SYSTEMS MANAGEMENT (FISM)": "database",
+  "FINANCIAL REPORTING AND ANALYSIS": "chart",
+  "PERFORMANCE AUDIT": "search",
+  // Health Promotion
+  "ADVOCACY AND SOCIAL MOBILISATION": "megaphone",
+  ANAESTHESIA: "anaesthetic",
+  "CASE MANAGEMENT": "clipboard",
+  "DIAGNOSTIC SERVICES": "microscope",
+  "HEALTH COMMUNICATION": "speech",
+  "MENTAL HEALTH": "brain",
+  "NURSING PRACTICE": "hands",
+  PHARMACY: "pill",
+  REHABILITATION: "standing",
+  "RESEARCH AND HEALTH POLICY": "book",
+  // Human Resource
+  MANAGEMENT: "users",
+  PLANNING: "calendar",
+  TRAINING: "graduation",
+  // Policy, Planning, Monitoring and Evaluation
+  "INFORMATION COMMUNICATION TECHNOLOGY": "laptop",
+  "MONITORING AND EVALUATION": "gauge",
+  "PLANNING AND BUDGET": "wallet",
+  POLICY: "scroll",
+  // Public Health
+  EPI: "syringe",
+  NACP: "ribbon",
+  NMCP: "mosquito",
+  NTCP: "lungs",
+  "OCCUPATIONAL HEALTH": "hardhat",
+  SURVEILLANCE: "radar",
+  // Research and Development
+  "DISSEMINATION, DOCUMENTATION AND ADVOCACY": "document",
+  "ETHICS AND RESEARCH MANAGEMENT": "gavel",
+  "RESEARCH COORDINATION": "flask",
+  // Supply Chain Management
+  PROCUREMENT: "cart",
+  "SUPPLY CHAIN MANAGEMENT": "boxes",
+};
+
 const AREA_GLYPHS: { key: AreaGlyphKey; match: RegExp }[] = [
   { key: "shield", match: /infect|ipc|hygien|steril|waste/i },
   { key: "syringe", match: /immunis|immuniz|vaccin|cold chain|epi/i },
@@ -153,7 +288,40 @@ export type AreaGlyphKey =
   | "clipboard"
   | "droplets"
   | "heart"
-  | "stethoscope";
+  | "stethoscope"
+  /* the named subjects, so no card has to borrow its neighbour's picture */
+  | "wrench"
+  | "building"
+  | "briefcase"
+  | "monitor"
+  | "badge"
+  | "apple"
+  | "scale"
+  | "database"
+  | "chart"
+  | "search"
+  | "megaphone"
+  | "lungs"
+  | "anaesthetic"
+  | "boxes"
+  | "speech"
+  | "hands"
+  | "standing"
+  | "book"
+  | "calendar"
+  | "graduation"
+  | "laptop"
+  | "gauge"
+  | "wallet"
+  | "scroll"
+  | "ribbon"
+  | "mosquito"
+  | "hardhat"
+  | "radar"
+  | "document"
+  | "gavel"
+  | "flask"
+  | "cart";
 
 /** Module scope, so the icon is looked up rather than created during render. */
 const AREA_GLYPH_ICONS: Record<AreaGlyphKey, LucideIcon> = {
@@ -172,9 +340,43 @@ const AREA_GLYPH_ICONS: Record<AreaGlyphKey, LucideIcon> = {
   droplets: Droplets,
   heart: HeartPulse,
   stethoscope: Stethoscope,
+  wrench: Wrench,
+  building: Building2,
+  briefcase: Briefcase,
+  monitor: MonitorCheck,
+  badge: BadgeCheck,
+  apple: Apple,
+  scale: Scale,
+  database: Database,
+  chart: LineChart,
+  search: SearchCheck,
+  megaphone: Megaphone,
+  lungs: Wind,
+  anaesthetic: Moon,
+  boxes: Boxes,
+  speech: MessagesSquare,
+  hands: HeartHandshake,
+  standing: PersonStanding,
+  book: BookOpen,
+  calendar: CalendarCheck,
+  graduation: GraduationCap,
+  laptop: Laptop,
+  gauge: Gauge,
+  wallet: Wallet,
+  scroll: ScrollText,
+  ribbon: Ribbon,
+  mosquito: Bug,
+  hardhat: HardHat,
+  radar: Radar,
+  document: FileText,
+  gavel: Gavel,
+  flask: FlaskConical,
+  cart: ShoppingCart,
 };
 
 export function areaGlyphKey(name: string): AreaGlyphKey {
+  const named = NAMED_GLYPHS[name.trim().toUpperCase()];
+  if (named) return named;
   return AREA_GLYPHS.find((entry) => entry.match.test(name))?.key ?? "stethoscope";
 }
 

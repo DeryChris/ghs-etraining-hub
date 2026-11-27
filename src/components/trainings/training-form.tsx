@@ -61,7 +61,7 @@ const BLANK: TrainingFormValues = {
 /**
  * The New/Edit training form.
  *
- * Three cascades run in the browser — programme area follows programme field,
+ * Three cascades run in the browser — programme field follows programme area,
  * district follows region, and sub-district/facility follow district — so the
  * lists only ever offer combinations that exist. The Server Action re-checks
  * every one of them against the database anyway; this is for speed, not trust.
@@ -145,7 +145,7 @@ export function TrainingForm({
           {mode === "create" ? "New training" : "Edit training"}
         </h2>
         <p className="text-sm text-ink-muted">
-          Three short steps. Title, plan year and programme field are the only things that must be there — place
+          Three short steps. Title, plan year and programme area are the only things that must be there — place
           and date can be filled in later, because a plan is allowed to be provisional.
         </p>
       </div>
@@ -205,16 +205,16 @@ export function TrainingForm({
           </div>
           <div>
             <label htmlFor="training-field" className={labelClass}>
-              Programme field <span className="text-danger">*</span>
+              Programme area <span className="text-danger">*</span>
             </label>
             <Select
               id="training-field"
               name="programmeFieldId"
               required
               value={fieldId}
-              placeholder="— Select programme field —"
+              placeholder="— Select programme area —"
               options={[
-                { value: "", label: "— Select programme field —" },
+                { value: "", label: "— Select programme area —" },
                 ...fields.map((field) => ({ value: field.id, label: field.name })),
               ]}
               onChange={(next) => {
@@ -225,7 +225,7 @@ export function TrainingForm({
           </div>
           <div>
             <label htmlFor="training-area" className={labelClass}>
-              Programme area <span className="text-danger">*</span>
+              Programme field <span className="text-danger">*</span>
             </label>
             <Select
               id="training-area"
@@ -233,18 +233,18 @@ export function TrainingForm({
               required
               value={areaId}
               disabled={!fieldId}
-              placeholder={fieldId ? "— Select programme area —" : "— Select programme field first —"}
+              placeholder={fieldId ? "— Select programme field —" : "— Select programme area first —"}
               options={[
                 {
                   value: "",
-                  label: fieldId ? "— Select programme area —" : "— Select programme field first —",
+                  label: fieldId ? "— Select programme field —" : "— Select programme area first —",
                 },
                 ...areas.map((area) => ({ value: area.id, label: area.name })),
               ]}
               onChange={setAreaId}
             />
             {fieldId && areas.length === 0 && (
-              <p className={hintClass}>That field has no areas yet. Add one under Administration → Programme fields.</p>
+              <p className={hintClass}>That area has no fields yet. Add one under Administration → Programme areas.</p>
             )}
           </div>
           <div>

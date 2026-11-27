@@ -5,7 +5,7 @@
  * A regular grid reads as graph paper — texture for its own sake — and at low
  * opacity it turned every section into a rectangle of squares. What is here
  * instead is drawn from the things the platform is actually about: woven kente
- * bands (the wrappers a protocol arrives in), the Ghana black star, and the
+ * bands (the wrappers a document arrives in), the Ghana black star, and the
  * contour rings of a map. Gradients carry the transitions rather than blurs, so
  * nothing soft ever sits on top of text.
  *

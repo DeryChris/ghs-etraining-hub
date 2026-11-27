@@ -6,9 +6,8 @@ import {
   ClipboardCheck,
   Download,
   Eye,
-  History,
   Layers,
-  PenLine,
+  Undo2,
 } from "lucide-react";
 import { AreaChart } from "@/components/charts/area-chart";
 import { ChartCard, EmptyChart, chartColor } from "@/components/charts/chart-card";
@@ -24,7 +23,6 @@ import {
   STAFF_ROLE_LABELS,
   notificationTypeLabel,
 } from "@/lib/labels";
-import { firstNameOf } from "@/lib/names";
 import { staffRoleOf } from "@/lib/rbac/capabilities";
 import {
   getInsights,
@@ -35,10 +33,9 @@ import {
   getTypeMix,
   periodDelta,
 } from "@/lib/server/insights-queries";
-import { classifyLoadFailure } from "@/lib/load-failure";
-import { DeadlineError, within, withinOr } from "@/lib/server/deadline";
-import { log } from "@/lib/server/logger";
-import { getLearnerDashboard } from "@/lib/server/learning-queries";
+import { withinOr } from "@/lib/server/deadline";
+import { listReturnedTrainings } from "@/lib/server/training-queries";
+import { LearnerHome, greetingFor } from "./learner-home";
 import { listNotifications } from "@/lib/server/notification-queries";
 import { requireSession } from "@/lib/server/rbac";
 import { isStaffRole } from "@/lib/viewer";
@@ -47,78 +44,6 @@ const NOTICES: Record<string, string> = {
   forbidden: "That page is not available for your role.",
   "password-updated": "Your password has been updated.",
 };
-
-function greetingFor(now: Date): string {
-  const hour =
-    Number(
-      new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Africa/Accra",
-        hour: "numeric",
-        hour12: false,
-      }).format(now),
-    ) % 24;
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-/**
- * Shown when the data the page is built from does not arrive in time. It is a
- * real page, not a spinner: the visitor can act on it, and it says what to do
- * next instead of leaving the skeleton up.
- */
-function DashboardRetry({ hint }: { hint?: "drift" | "database" | "timeout" }) {
-  return (
-    <div className="space-y-6">
-      <div className="surface-card p-7 sm:p-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-warn">
-          {hint === "drift" ? "This page and the database disagree" : "Taking too long"}
-        </p>
-        <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
-          The dashboard could not load its data.
-        </h1>
-        <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-muted">
-          {hint === "drift" ? (
-            <>
-              Nothing was changed. The database has been updated but this deployment has not — the
-              site and its database are out of step, so the queries this page makes no longer
-              match. Open{" "}
-              <a href="/api/health" className="font-semibold text-primary underline underline-offset-4">
-                /api/health
-              </a>{" "}
-              to see which side is behind, then redeploy the site (or run{" "}
-              <code className="font-mono text-xs">npm run db:migrate</code> if the database is the
-              side that is behind).
-            </>
-          ) : (
-            <>
-              Nothing was changed. The training library is busy or the connection dropped — try
-              again in a moment. If it keeps happening, quote the time in your message to the ICT
-              helpdesk.
-            </>
-          )}
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            href="/dashboard"
-            className={buttonClass({ className: "h-11 px-5" })}
-          >
-            Try again
-          </Link>
-          <Link
-            href="/catalogue"
-            className={buttonClass({
-              variant: "secondary",
-              className: "h-11 px-5",
-            })}
-          >
-            Go to the library
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default async function DashboardPage({
   searchParams,
@@ -132,32 +57,33 @@ export default async function DashboardPage({
   const staff = isStaffRole(session.role);
 
   /*
-   * Every section has a deadline. The two the page cannot do without are
-   * awaited together and fail to a retry card; the staff statistics are
-   * optional, so a slow one drops out and the rest of the page still renders.
-   * Without this a stalled query left the skeleton on screen indefinitely.
+   * Members of staff get the reading home, not this page: no charts, no review
+   * counts, nothing that belongs to running the library (ADR‑0027).
    */
-  let dashboard: Awaited<ReturnType<typeof getLearnerDashboard>>;
-  try {
-    dashboard = await within("dashboard.learner", getLearnerDashboard(session), 6_000);
-  } catch (error) {
-    const failure = classifyLoadFailure(error);
-    log.error({
-      event: "dashboard.essential_failed",
-      userId: session.sub,
-      label: error instanceof DeadlineError ? error.label : undefined,
-      failure: failure.kind,
-      code: failure.code,
-      error,
-    });
-    return <DashboardRetry hint={failure.hint} />;
-  }
+  if (!staff) return <LearnerHome session={session} />;
 
+  /*
+   * Every section has a deadline. None of them is the page: the greeting and the
+   * links are drawn from the session, so a slow statistics query drops its own
+   * section out and the rest still renders. Without this a stalled query left
+   * the skeleton on screen indefinitely.
+   */
   // The notices are a sidebar of the page, not the page: a slow bell falls back
   // to an empty list rather than taking the greeting down with it.
-  const [announcements, insights, traffic, sessionRecord, trainings, typeMix, programmeTraffic] =
-    await Promise.all([
+  const [
+    announcements,
+    returned,
+    insights,
+    traffic,
+    sessionRecord,
+    trainings,
+    typeMix,
+    programmeTraffic,
+  ] = await Promise.all([
       withinOr("dashboard.notifications", listNotifications(session, 4), []),
+      // A returned training is a task with somebody's name on it, not a row in a
+      // list: it gets its own read and its own card.
+      session.role === "FACILITATOR" ? withinOr("dashboard.returned", listReturnedTrainings(session.sub), []) : [],
       staff ? withinOr("dashboard.insights", getInsights(session), null) : null,
       staff ? withinOr("dashboard.traffic", getTrafficSeries(session, 12), null) : null,
       staff ? withinOr("dashboard.training_counts", getTrainingCounts(session), null) : null,
@@ -167,7 +93,6 @@ export default async function DashboardPage({
     ]);
 
   const noticeText = notice ? NOTICES[notice] : undefined;
-  const nextUp = dashboard.recentlyOpened[0] ?? null;
 
   return (
     <div className="space-y-10">
@@ -187,32 +112,32 @@ export default async function DashboardPage({
       >
         <div className="grid items-center gap-10 lg:grid-cols-[1fr_auto]">
           <div className="space-y-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-              {STAFF_ROLE_LABELS[staffRoleOf({ role: session.role, unitHead: session.unitHead })]} · {formatDate(now)}
-            </p>
+            {/* Who you are, top-left, in the order a person would say it: the
+                grade they hold, then the duty, then the date. The greeting below
+                keeps the name, so "Good morning" is addressed to somebody with a
+                role and not to a first name floating on its own. */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              {session.grade && (
+                <span className="rounded-full border border-primary/25 bg-primary/[0.08] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+                  {session.grade}
+                </span>
+              )}
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">
+                {STAFF_ROLE_LABELS[staffRoleOf({ role: session.role, unitHead: session.unitHead })]} · {formatDate(now)}
+              </p>
+            </div>
             <h1
               id="dash-title"
               className="text-balance text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl"
             >
-              {greetingFor(now)}, {firstNameOf(session.name)}.
+              {greetingFor(now)},{" "}
+              {STAFF_ROLE_LABELS[staffRoleOf({ role: session.role, unitHead: session.unitHead })]} {session.name}.
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
-              {dashboard.mandatoryOutstanding.length > 0
-                ? `${dashboard.mandatoryOutstanding.length} ${dashboard.mandatoryOutstanding.length === 1 ? "protocol is" : "protocols are"} still waiting for your signature. Everything else is in the library whenever you need it.`
-                : "Everything GHS has published for your programmes is in the library, filed under the field and area it belongs to."}
+              Everything GHS has published for your programmes is in the library, filed under the area and
+              field it belongs to.
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              {nextUp ? (
-                <Link
-                  href={`/materials/${nextUp.id}`}
-                  className={buttonClass({
-                    className: "h-12 rounded-[var(--radius-pill)] px-6",
-                  })}
-                >
-                  Pick up where you left off
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-              ) : null}
               <Link
                 href="/catalogue"
                 className={buttonClass({
@@ -227,6 +152,59 @@ export default async function DashboardPage({
         </div>
       </section>
 
+      {/*
+       * The one thing on this page that is a task rather than a statistic. A unit
+       * head can return a training for correction; until now the author found out
+       * only by opening the training and reading the banner, so corrections waited.
+       */}
+      {returned.length > 0 && (
+        <section
+          aria-labelledby="returned-heading"
+          className="rounded-card border border-danger/40 bg-danger/[0.05] p-5 shadow-panel sm:p-6"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h2 id="returned-heading" className="flex items-center gap-2 text-base font-bold text-ink">
+                <Undo2 className="h-4 w-4 text-danger" aria-hidden />
+                Returned for correction
+              </h2>
+              <p className="max-w-[70ch] text-sm leading-relaxed text-ink-muted">
+                A unit head read {returned.length === 1 ? "this training" : "these trainings"} and needs a change before
+                it can go live. Correct it, save, and it goes straight back to them.
+              </p>
+            </div>
+            <Link href="/trainings?review=REJECTED" className={buttonClass({ variant: "secondary", size: "sm" })}>
+              See all returned
+            </Link>
+          </div>
+
+          <ul className="mt-4 space-y-2">
+            {returned.map((training) => (
+              <li key={training.id}>
+                <Link
+                  href={`/trainings/${training.id}`}
+                  className="group flex flex-col gap-1.5 rounded-control border border-danger/25 bg-surface px-4 py-3 transition-colors hover:border-danger/50"
+                >
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-sm font-semibold text-ink group-hover:text-danger">{training.title}</span>
+                    {training.areaName && <span className="text-xs text-ink-muted">· {training.areaName}</span>}
+                  </span>
+                  {training.reviewNote && (
+                    <span className="text-[13px] leading-relaxed text-ink-muted">
+                      <span className="font-semibold text-ink">What to correct: </span>
+                      {training.reviewNote}
+                    </span>
+                  )}
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-danger">
+                    Open and correct →
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Overview analytics: the numbers, then the shapes behind them. */}
       {staff && traffic && insights && sessionRecord ? (
         <>
@@ -235,7 +213,7 @@ export default async function DashboardPage({
               icon={Eye}
               label="Material opens · 12 weeks"
               value={traffic.totals.views}
-              hint={`${insights.catalogue.published} materials published`}
+              hint={`${insights.library.published} materials published`}
               delta={periodDelta(traffic.views)}
               spark={traffic.views}
               color="var(--chart-4)"
@@ -253,15 +231,15 @@ export default async function DashboardPage({
               icon={CalendarCheck2}
               label="Trainings · 90 days"
               value={sessionRecord.last90Days}
-              hint={`${sessionRecord.total} on the register`}
+              hint={`${sessionRecord.total} recorded`}
               spark={trainings?.counts ?? []}
               color="var(--chart-5)"
             />
             <KpiCard
               icon={ClipboardCheck}
               label="Awaiting review"
-              value={insights.catalogue.inReview}
-              hint={insights.catalogue.inReview > 0 ? "Waiting for a decision" : "The queue is clear"}
+              value={insights.library.inReview}
+              hint={insights.library.inReview > 0 ? "Waiting for a decision" : "The queue is clear"}
               color="var(--chart-2)"
             />
           </KpiGrid>
@@ -327,10 +305,10 @@ export default async function DashboardPage({
             </ChartCard>
 
             <ChartCard
-              title="Busiest programme areas"
-              description="Opens in the last 30 days, by the area the material is filed under."
+              title="Busiest programme fields"
+              description="Opens in the last 30 days, by the programme field the material is filed under."
               table={{
-                head: ["Programme area", "Opens"],
+                head: ["Programme field", "Opens"],
                 rows: programmeTraffic.map((row) => [row.label, row.value]),
               }}
             >
@@ -352,24 +330,6 @@ export default async function DashboardPage({
       ) : (
         <KpiGrid>
           <KpiCard
-            icon={PenLine}
-            label="Protocols to sign"
-            value={dashboard.mandatoryOutstanding.length}
-            hint={
-              dashboard.mandatoryTotal > 0
-                ? `of ${dashboard.mandatoryTotal} that ask for a signature`
-                : "Nothing published asks for one"
-            }
-            color="var(--chart-4)"
-          />
-          <KpiCard
-            icon={History}
-            label="Opened recently"
-            value={dashboard.recentlyOpened.length}
-            hint="Pick one up again below"
-            color="var(--chart-1)"
-          />
-          <KpiCard
             icon={Layers}
             label="Open library"
             value="Browse"
@@ -388,44 +348,6 @@ export default async function DashboardPage({
 
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="space-y-10 lg:col-span-2">
-          <section aria-labelledby="recent-heading" className="space-y-4">
-            <h2 id="recent-heading" className="text-lg font-bold text-ink">
-              Recently opened
-            </h2>
-            {dashboard.recentlyOpened.length === 0 ? (
-              <ListEmptyState
-                art="search"
-                title="Nothing opened yet"
-                description="Everything published for your programmes is in the library. What you open shows up here."
-                actionText="Browse the library"
-                actionHref="/catalogue"
-              />
-            ) : (
-              <ul className="surface-card divide-y divide-hairline overflow-hidden">
-                {dashboard.recentlyOpened.map((item) => (
-                  <li key={item.id}>
-                    <Link
-                      href={`/materials/${item.id}`}
-                      className="block p-5 transition-colors duration-fast hover:bg-surface-2"
-                    >
-                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                        {MATERIAL_TYPE_LABELS[item.type]} · {item.areaName}
-                      </p>
-                      <p className="mt-1 font-semibold text-ink">
-                        {item.title}
-                      </p>
-                      <p className="mt-1 text-xs text-ink-muted">Last opened {formatDateTime(item.lastViewedAt)}</p>
-                    </Link>
-                  </li>
-                ))}
-                <li className="p-4">
-                  <Link href="/analytics" className="text-sm font-semibold text-primary hover:underline">
-                    See all of your activity
-                  </Link>
-                </li>
-              </ul>
-            )}
-          </section>
         </div>
 
         <aside aria-labelledby="announcements-heading" className="space-y-4">
@@ -440,7 +362,6 @@ export default async function DashboardPage({
           </div>
           {announcements.length === 0 ? (
             <ListEmptyState
-              art="bell"
               title="No announcements"
               description="Notices from your directorate appear here."
             />

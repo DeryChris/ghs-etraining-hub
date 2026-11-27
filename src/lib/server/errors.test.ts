@@ -40,7 +40,7 @@ describe("toFieldErrors", () => {
     const schema = z
       .object({
         title: z.string().min(3, "Give the material a title of at least 3 characters."),
-        programmeAreaId: z.string().uuid("Choose a space."),
+        programmeAreaId: z.string().uuid("Choose a programme area."),
       })
       .strict();
 
@@ -50,7 +50,7 @@ describe("toFieldErrors", () => {
 
     expect(toFieldErrors(parsed.error)).toEqual({
       title: "Give the material a title of at least 3 characters.",
-      programmeAreaId: "Choose a space.",
+      programmeAreaId: "Choose a programme area.",
     });
   });
 

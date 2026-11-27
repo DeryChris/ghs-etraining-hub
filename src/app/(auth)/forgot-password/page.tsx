@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthCard } from "../auth-card";
 import { KeyRound, Mail } from "lucide-react";
 
 /**
@@ -12,7 +13,7 @@ import { KeyRound, Mail } from "lucide-react";
  */
 export default function ForgotPasswordPage() {
   return (
-    <>
+    <AuthCard>
       <div className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Account</p>
         <h1 className="text-2xl font-extrabold tracking-tight text-ink">Forgotten your password?</h1>
@@ -63,6 +64,6 @@ export default function ForgotPasswordPage() {
           Lodge a complaint
         </Link>
       </div>
-    </>
+    </AuthCard>
   );
 }

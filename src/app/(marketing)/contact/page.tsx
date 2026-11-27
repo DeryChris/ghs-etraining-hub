@@ -28,7 +28,7 @@ export default function ContactPage() {
     {
       icon: MessagesSquare,
       title: "Clinical content",
-      body: "Questions about a protocol belong with the facilitator for that directorate. Sign in and use Messages to reach them.",
+      body: "Questions about a document belong with the facilitator for that directorate. Sign in and use Messages to reach them.",
     },
     {
       icon: ShieldCheck,

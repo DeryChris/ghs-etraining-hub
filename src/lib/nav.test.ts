@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/rbac/capabilities";
-import { activeHref, isActiveHref, navFor } from "@/lib/nav";
+import { activeHref, isActiveHref, LEARNER_NAV, navFor } from "@/lib/nav";
 
 const ROLES = ["SYSTEM_ADMIN", "FACILITATOR", "LEARNER"] as const;
 
@@ -20,14 +20,18 @@ describe("navFor", () => {
     expect(admin).not.toContain("/notices");
   });
 
-  it("gives a facilitator authoring and notices but no administration and no review queue", () => {
+  it("gives a facilitator notices but no administration, review queue or upload door", () => {
     const facilitator = hrefs("FACILITATOR");
-    expect(facilitator).toEqual(expect.arrayContaining(["/authoring", "/notices"]));
+    expect(facilitator).toContain("/notices");
+    // Material is uploaded from the training it belongs to, so there is no
+    // authoring workspace to walk into.
+    expect(facilitator).not.toContain("/authoring");
     // The review queue is a sign-off duty: administrators and unit heads only.
     expect(facilitator).not.toContain("/review");
-    // The desk, not the public help pages: the Complaint Hub is for people who
-    // cannot sign in, so it is not a signed-in destination.
-    expect(facilitator).toContain("/complaints");
+    // The desk lives inside messages now, and the public help pages are for
+    // people who cannot sign in at all: neither is a destination of its own.
+    expect(facilitator).toContain("/messages");
+    expect(facilitator).not.toContain("/complaints");
     expect(facilitator).not.toContain("/help");
     expect(facilitator).not.toContain("/users");
     expect(facilitator).not.toContain("/settings");
@@ -42,9 +46,28 @@ describe("navFor", () => {
       "/trainings",
       "/messages",
       "/notifications",
-      "/analytics",
     ]);
-    expect(navFor("LEARNER").map((section) => section.id)).toEqual(["learn", "community", "record"]);
+    // "My record" held only "My activity", which lives on the dashboard now.
+    expect(navFor("LEARNER").map((section) => section.id)).toEqual(["learn", "community"]);
+  });
+
+  it("draws the learner's top bar from the same five destinations", () => {
+    expect(LEARNER_NAV.map((item) => item.href)).toEqual(hrefs("LEARNER"));
+    expect(LEARNER_NAV.map((item) => item.label)).toEqual([
+      "Dashboard",
+      "Library",
+      "Trainings",
+      "Messages",
+      "Notifications",
+    ]);
+    // Nothing administrative in a member of staff's bar.
+    for (const href of ["/insights", "/users", "/review", "/authoring", "/notices", "/settings"]) {
+      expect(LEARNER_NAV.map((item) => item.href)).not.toContain(href);
+    }
+  });
+
+  it("no longer offers a separate activity tab", () => {
+    for (const role of ROLES) expect(hrefs(role)).not.toContain("/analytics");
   });
 
   it("drops sections that have no items for the role, and never reorders the rest", () => {
@@ -61,7 +84,7 @@ describe("navFor", () => {
     expect(admin[3]?.items.map((item) => item.href)).toEqual(["/review"]);
   });
 
-  it("gives every role both doors: the register and the library by subject", () => {
+  it("gives every role both doors: Trainings and the library by subject", () => {
     for (const role of ROLES) {
       expect(hrefs(role)).toContain("/trainings");
       // One library, filed by programme: field → area → trainings and material.
@@ -90,8 +113,7 @@ describe("navFor", () => {
     expect(admin?.items.map((item) => item.label)).toEqual([
       "Users",
       "Geography & facilities",
-      "Programme fields",
-      "Complaints",
+      "Programme areas",
       "Settings",
     ]);
   });
@@ -113,7 +135,7 @@ describe("navFor", () => {
     expect(head.slice().sort()).toEqual([...plain, "/review"].sort());
     expect(head).not.toContain("/users");
     // The desk is open to every member of staff, head or not.
-    expect(head).toContain("/complaints");
+    expect(head).toContain("/messages");
   });
 });
 
@@ -124,7 +146,7 @@ describe("isActiveHref", () => {
   });
 
   it("keeps a section selected on its sub-pages", () => {
-    expect(isActiveHref("/authoring/8f2c", "/authoring")).toBe(true);
+    expect(isActiveHref("/trainings/8f2c", "/trainings")).toBe(true);
     expect(isActiveHref("/trainings/abc", "/trainings")).toBe(true);
   });
 
@@ -135,7 +157,7 @@ describe("isActiveHref", () => {
 
 describe("activeHref", () => {
   it("prefers the most specific match", () => {
-    expect(activeHref("/authoring/8f2c", "FACILITATOR")).toBe("/authoring");
+    expect(activeHref("/trainings/8f2c", "FACILITATOR")).toBe("/trainings");
     expect(activeHref("/messages", "LEARNER")).toBe("/messages");
     expect(activeHref("/unknown", "LEARNER")).toBeUndefined();
   });

@@ -80,6 +80,18 @@ const nextConfig: NextConfig = {
       ...(storage.hostname ? [{ protocol: "https" as const, hostname: storage.hostname }] : []),
     ],
   },
+  /*
+   * /analytics was "My activity" — the reading record on a tab of its own. It
+   * lives on the dashboard now (ADR‑0027), so a bookmark, a notification written
+   * under the old menu or a link in an old e-mail lands somewhere useful instead
+   * of on a 404.
+   */
+  async redirects() {
+    return [
+      { source: "/analytics", destination: "/dashboard", permanent: true },
+      { source: "/analytics/:path*", destination: "/dashboard", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

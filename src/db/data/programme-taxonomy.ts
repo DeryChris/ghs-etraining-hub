@@ -119,7 +119,7 @@ export const PROGRAMME_FIELDS: readonly ProgrammeFieldSeed[] = [
   },
 ];
 
-/** Every area in the catalogue, flattened — used by the seeder and its test. */
+/** Every area in the taxonomy, flattened — used by the seeder and its test. */
 export function flatProgrammeAreas(): { fieldCode: string; code: string; name: string }[] {
   return PROGRAMME_FIELDS.flatMap((field) =>
     field.areas.map((area) => ({ fieldCode: field.code, code: area.code, name: area.name })),

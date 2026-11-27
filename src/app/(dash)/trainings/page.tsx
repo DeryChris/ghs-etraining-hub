@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
-import { inputClass, labelClass } from "@/components/ui/input";
+import { labelClass } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { LiveRefresh } from "@/components/layout/live-refresh";
+import { FilterBar } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
@@ -69,18 +70,18 @@ function pageHref(params: Query, page: number): string {
 
 const REVIEW_STATES = ["PENDING", "PUBLISHED", "REJECTED"];
 
-/** Chips above the register: the review queue is one click, not a filter hunt. */
+/** Chips above the list: the review queue is one click, not a filter hunt. */
 const REVIEW_CHIPS = [
   { key: "", label: "Everything" },
   { key: "PENDING", label: "Pending review" },
   { key: "PUBLISHED", label: "Live" },
-  { key: "REJECTED", label: "Sent back" },
+  { key: "REJECTED", label: "Returned" },
 ] as const;
 
 const REVIEW_BADGE = {
   PENDING: { label: "Pending review", variant: "outline" },
   PUBLISHED: { label: "Live", variant: "success" },
-  REJECTED: { label: "Sent back", variant: "danger" },
+  REJECTED: { label: "Returned for correction", variant: "danger" },
 } as const;
 
 const STATUS_BADGE = {
@@ -143,8 +144,8 @@ export default async function TrainingsPage({
   if (!loaded.ok) {
     return (
       <DataUnavailable
-        title="The training register did not load"
-        description="The register and its filters could not be read in time. Nothing was changed."
+        title="Trainings did not load"
+        description="The trainings list and its filters could not be read in time. Nothing was changed."
         requestId={loaded.requestId}
       />
     );
@@ -160,6 +161,11 @@ export default async function TrainingsPage({
     query.district !== null ||
     query.status !== null;
 
+  // Everything except the search box, which is always visible.
+  const activeFilters = [query.year, query.field, query.area, query.region, query.district, query.status].filter(
+    (value) => value !== null,
+  ).length;
+
   const firstOnPage = list.total === 0 ? 0 : (list.page - 1) * TRAININGS_PAGE_SIZE + 1;
   const lastOnPage = (list.page - 1) * TRAININGS_PAGE_SIZE + list.items.length;
   const mayManage = can(session.role, "training.manage");
@@ -171,13 +177,13 @@ export default async function TrainingsPage({
       <LiveRefresh label="trainings" />
 
       <PageHeader
-        eyebrow="Training register"
-        title="Trainings"
-        description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme field and the area inside it, so coverage can be counted by programme rather than by memory. To browse by subject instead of by year, open the catalogue."
+        eyebrow="Trainings"
+        title="Every training GHS has planned or run"
+        description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme area and the field inside it, so coverage can be counted by programme rather than by memory. To browse by subject instead of by year, open the library."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
-              Browse the catalogue
+              Browse the library
             </Link>
             {mayManage ? (
               <NewTrainingDialog fields={fields} geography={geography} label="Create new training" />
@@ -189,11 +195,11 @@ export default async function TrainingsPage({
       <Notice notice={notice} error={error} />
 
       <section
-        id="register"
-        aria-label="Register totals"
+        id="training-totals"
+        aria-label="Training totals"
         className="scroll-mt-24 grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-4"
       >
-        <Stat value={summary.total} label="Trainings on the register" />
+        <Stat value={summary.total} label="Trainings recorded" />
         <Stat value={summary.planned} label="Planned or upcoming" />
         <Stat value={summary.thisYear} label={`Filed under ${new Date().getFullYear()}`} />
         <Stat value={summary.attendees.toLocaleString("en-GB")} label="People trained (recorded)" />
@@ -229,155 +235,131 @@ export default async function TrainingsPage({
         })}
       </nav>
 
-      <form
+      <FilterBar
         action="/trainings"
-        method="get"
-        role="search"
-        aria-label="Filter trainings"
-        className="grid gap-3 rounded-card border border-hairline bg-surface p-4 shadow-panel md:grid-cols-2 xl:grid-cols-4"
+        label="Filter trainings"
+        searchName="q"
+        searchValue={query.q}
+        searchPlaceholder="Search by title, target group or venue"
+        activeCount={activeFilters}
+        clearHref="/trainings"
+        summary={
+          list.total === 0
+            ? "No matches"
+            : `Showing ${firstOnPage}–${lastOnPage} of ${list.total} training${list.total === 1 ? "" : "s"}`
+        }
       >
-        <div className="md:col-span-2">
-          <label htmlFor="training-q" className={labelClass}>
-            Search
-          </label>
-          <input
-            id="training-q"
-            name="q"
-            type="search"
-            defaultValue={query.q}
-            placeholder="Title, target group or venue"
-            className={inputClass}
-          />
-        </div>
+      <div>
+        <label htmlFor="filter-year" className={labelClass}>
+          Year
+        </label>
+        <Select
+          id="filter-year"
+          name="year"
+          defaultValue={query.year ? String(query.year) : ""}
+          options={[
+            { value: "", label: "All years" },
+            ...options.years.map((year) => ({ value: String(year), label: String(year) })),
+          ]}
+        />
+      </div>
 
-        <div>
-          <label htmlFor="filter-year" className={labelClass}>
-            Year
-          </label>
-          <Select
-            id="filter-year"
-            name="year"
-            defaultValue={query.year ? String(query.year) : ""}
-            options={[
-              { value: "", label: "All years" },
-              ...options.years.map((year) => ({ value: String(year), label: String(year) })),
-            ]}
-          />
-        </div>
+      <div>
+        <label htmlFor="filter-status" className={labelClass}>
+          Status
+        </label>
+        <Select
+          id="filter-status"
+          name="status"
+          defaultValue={query.status ?? ""}
+          options={[
+            { value: "", label: "Any status" },
+            ...TRAINING_STATUSES.map((status) => ({ value: status, label: TRAINING_STATUS_LABELS[status] })),
+          ]}
+        />
+      </div>
 
-        <div>
-          <label htmlFor="filter-status" className={labelClass}>
-            Status
-          </label>
-          <Select
-            id="filter-status"
-            name="status"
-            defaultValue={query.status ?? ""}
-            options={[
-              { value: "", label: "Any status" },
-              ...TRAINING_STATUSES.map((status) => ({ value: status, label: TRAINING_STATUS_LABELS[status] })),
-            ]}
-          />
-        </div>
+      <div>
+        <label htmlFor="filter-field" className={labelClass}>
+          Programme area
+        </label>
+        <Select
+          id="filter-field"
+          name="field"
+          defaultValue={query.field ?? ""}
+          options={[
+            { value: "", label: "All fields" },
+            ...fields.map((field) => ({ value: field.id, label: field.name })),
+          ]}
+        />
+      </div>
 
-        <div>
-          <label htmlFor="filter-field" className={labelClass}>
-            Programme field
-          </label>
-          <Select
-            id="filter-field"
-            name="field"
-            defaultValue={query.field ?? ""}
-            options={[
-              { value: "", label: "All fields" },
-              ...fields.map((field) => ({ value: field.id, label: field.name })),
-            ]}
-          />
-        </div>
+      <div>
+        <label htmlFor="filter-area" className={labelClass}>
+          Programme field
+        </label>
+        <Select
+          id="filter-area"
+          name="area"
+          searchable
+          defaultValue={query.area ?? ""}
+          options={[
+            { value: "", label: "All areas" },
+            ...fields.flatMap((field) =>
+              field.areas.map((area) => ({ value: area.id, label: area.name, group: field.name })),
+            ),
+          ]}
+        />
+      </div>
 
-        <div>
-          <label htmlFor="filter-area" className={labelClass}>
-            Programme area
-          </label>
-          <Select
-            id="filter-area"
-            name="area"
-            searchable
-            defaultValue={query.area ?? ""}
-            options={[
-              { value: "", label: "All areas" },
-              ...fields.flatMap((field) =>
-                field.areas.map((area) => ({ value: area.id, label: area.name, group: field.name })),
-              ),
-            ]}
-          />
-        </div>
+      <div>
+        <label htmlFor="filter-region" className={labelClass}>
+          Region
+        </label>
+        <Select
+          id="filter-region"
+          name="region"
+          defaultValue={query.region ?? ""}
+          options={[
+            { value: "", label: "All regions" },
+            ...options.regions.map((region) => ({ value: region.id, label: region.name })),
+          ]}
+        />
+      </div>
 
-        <div>
-          <label htmlFor="filter-region" className={labelClass}>
-            Region
-          </label>
-          <Select
-            id="filter-region"
-            name="region"
-            defaultValue={query.region ?? ""}
-            options={[
-              { value: "", label: "All regions" },
-              ...options.regions.map((region) => ({ value: region.id, label: region.name })),
-            ]}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="filter-district" className={labelClass}>
-            District
-          </label>
-          <Select
-            id="filter-district"
-            name="district"
-            searchable
-            defaultValue={query.district ?? ""}
-            options={[
-              { value: "", label: "All districts" },
-              ...options.regions.flatMap((region) =>
-                options.districts
-                  .filter((district) => district.regionId === region.id)
-                  .map((district) => ({ value: district.id, label: district.name, group: region.name })),
-              ),
-            ]}
-          />
-        </div>
-
-        <div className="flex items-center gap-2 md:col-span-2 xl:col-span-4">
-          <button type="submit" className={buttonClass({ variant: "secondary" })}>
-            Apply filters
-          </button>
-          {filtered && (
-            <Link href="/trainings" className={buttonClass({ variant: "ghost" })}>
-              Clear
-            </Link>
-          )}
-          <p className="ml-auto text-xs text-ink-muted" aria-live="polite">
-            {list.total === 0
-              ? "No matches"
-              : `Showing ${firstOnPage}–${lastOnPage} of ${list.total} training${list.total === 1 ? "" : "s"}`}
-          </p>
-        </div>
-      </form>
+      <div>
+        <label htmlFor="filter-district" className={labelClass}>
+          District
+        </label>
+        <Select
+          id="filter-district"
+          name="district"
+          searchable
+          defaultValue={query.district ?? ""}
+          options={[
+            { value: "", label: "All districts" },
+            ...options.regions.flatMap((region) =>
+              options.districts
+                .filter((district) => district.regionId === region.id)
+                .map((district) => ({ value: district.id, label: district.name, group: region.name })),
+            ),
+          ]}
+        />
+      </div>
+      </FilterBar>
 
       {list.items.length === 0 ? (
         <ListEmptyState
-          title={filtered ? "Nothing matches those filters" : "The register is empty"}
+          title={filtered ? "Nothing matches those filters" : "No trainings yet"}
           description={
             filtered
-              ? "Try a wider year, or clear the filters to see every training on the register."
+              ? "Try a wider year, or clear the filters to see every training."
               : mayManage
-                ? "Create the first training: the programme field and its area are the only things that must be right on day one."
+                ? "Create the first training: the programme area and its field are the only things that must be right on day one."
                 : "Trainings appear here once the ICT team files them. Check back after the next planning cycle."
           }
           actionText={filtered ? "Clear filters" : mayManage ? "New training" : undefined}
           actionHref={filtered ? "/trainings" : mayManage ? "/trainings/new" : undefined}
-          art="folder"
         />
       ) : (
         <ul className="space-y-3">

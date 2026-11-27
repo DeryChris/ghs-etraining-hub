@@ -11,7 +11,7 @@ import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Programmes",
-  description: `The programme fields GHS trains in, and the areas whose material is catalogued in the ${SITE.name}.`,
+  description: `The programme areas GHS trains in, and the fields whose material is kept in the ${SITE.name} library.`,
 };
 
 export default async function ProgrammesPage() {
@@ -30,7 +30,7 @@ export default async function ProgrammesPage() {
               Learning owned by the fields that set the standards.
             </h1>
             <p className="max-w-2xl text-lg leading-relaxed text-ink-muted">
-              Each field publishes its own protocols and material. Sign in to open them.
+              Each area publishes its own documents and material. Sign in to open them.
             </p>
           </Reveal>
         </div>

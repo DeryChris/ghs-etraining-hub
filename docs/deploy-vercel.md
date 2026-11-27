@@ -188,7 +188,7 @@ In a browser:
 1. `/` renders the marketing page.
 2. `/login` accepts a staff account (step 9 if nobody can sign in).
 3. `/dashboard` shows the greeting, numbers and staff panels.
-4. `/catalogue` lists the programme fields; `/library` lists the materials.
+4. `/catalogue` is the Library: it lists the programme fields, and search returns the materials.
 5. `/trainings`, `/complaints`, `/users` open without sitting on skeletons.
 
 ---
@@ -237,7 +237,10 @@ and `/forgot-password` says so rather than promising a mail that never arrives.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `/api/health` → `db: "down"` | wrong password, or the endpoint is suspended | `npm run db:doctor` prints the host, port and the exact errno |
+| `/api/health` → `checks.db: "down"` | the connection itself failed; the body names which of six faults | read `error.dbError.code` below, or run `npm run db:doctor` |
+| `/api/health` → `checks.db: "up"`, `schema: "outdated"` | the database answered and lacks something this build reads | **not a connection problem** — run `npm run db:migrate`; the body names the pending file, and `docs/apply-pending-migrations.sql` does the same from the Neon SQL editor |
+| Login refuses every correct password | the same fault, seen from the form: the query selects a column that is not there | `/api/health` names the pending migration; fix it there, not in the password |
+| `db: "up"` and `error.code: "SCHEMA_BEHIND"` | the deployment is newer than the database | `npm run db:migrate` (uses `DIRECT_URL`), then redeploy/restart |
 | `db: "down"` and host shows no `-pooler` | direct host in `DATABASE_URL` | each instance opens its own connection; use the pooled host |
 | Migrations hang or deadlock | `DIRECT_URL` points at the pooled host | use the direct host for `db:migrate` |
 | `password authentication failed` after a Neon reset | password rotated in the console | update both URLs in Vercel, redeploy |
@@ -248,3 +251,39 @@ and `/forgot-password` says so rather than promising a mail that never arrives.
 | Login loops back to `/login` | cookie not accepted | `NEXT_PUBLIC_APP_URL` must match the deployed origin exactly, and `SESSION_SECRET` must be stable across deploys |
 | Login says the server could not reach the directory | Postgres unreachable from the function | check the region pairing and `DB_POOL_MAX` |
 | Reset link says "expired" immediately | token already used, or `NEXT_PUBLIC_APP_URL` points at another host | issue a new one; links are single-use |
+
+### `db: "down"`: what `error.dbError.code` means
+
+The health body carries the driver's own code, because "not reachable" is six
+different faults with six different fixes.
+
+| `dbError.code` | What happened | What to change |
+| --- | --- | --- |
+| `ENOTFOUND`, `EAI_AGAIN` | the host name does not resolve | the endpoint was renamed or the project deleted — copy the connection string from Neon → Connect into `DATABASE_URL` again |
+| `ECONNREFUSED` | nothing is listening on that host:port | check the port (5432 for the pooled endpoint) and that the project is running |
+| `CONNECT_TIMEOUT`, `ETIMEDOUT` | the function cannot reach that region, or the project is suspended | open the Neon console once to wake it; pair `fra1` with `eu-central-1` |
+| `28P01` | the password is wrong for that role | reset it in Neon and paste the whole string again — both URLs |
+| `3D000` | that database name does not exist | check the path (`/neondb`) |
+| `NO_PG_HBA`, `SELF_SIGNED_CERT_IN_CHAIN` | the connection arrived without TLS | `DATABASE_URL` must end in `?sslmode=require`; the app now asks for TLS anyway on any host that is not local |
+| `UNKNOWN` | a fault with no written remedy | the code is still the thing to search for or paste into a support request |
+
+### A SQLSTATE in class 42 is not an outage
+
+`checks.db` is now answered by `select 1` — a statement that reads no table — and
+the app's own columns are checked separately. Before that split, `select * from
+users limit 1` answered both questions with one error, so a database that was
+merely one migration behind reported `db: "down"` with advice about the
+connection string, and `migrations.applied: 0` because the probe never got far
+enough to count.
+
+| Code | What it means | Where to look |
+| --- | --- | --- |
+| `42703` | the build selects a column the database does not have | `checks.schemaError.detail` names it; `checks.migrations.pending` names the file |
+| `42P01` | a table is missing | `missingTables`, then `npm run db:migrate` |
+| `SCHEMA_BEHIND` | this build ships migrations the database has not run | run `npm run db:migrate`, then restart |
+| `SCHEMA_AHEAD` | the database is newer than this deployment | redeploy; the running build is older than its data |
+
+`applied: 0` and `migrations.state: "unknown"` only mean the ledger could not be
+read (that is what a real connection failure produces). With the connection up,
+the same endpoint names the pending file — at the time of writing,
+`0022_grade_not_cadre`, which renames `users.cadre` to `users.grade`.

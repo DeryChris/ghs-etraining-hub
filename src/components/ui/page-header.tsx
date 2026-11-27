@@ -11,7 +11,7 @@ export function PageHeader({
   title: string;
   description?: string;
   actions?: ReactNode;
-  /** An illustration for the thing being described — a programme field, say. */
+  /** An illustration for the thing being described — a programme area, say. */
   icon?: ReactNode;
 }) {
   return (

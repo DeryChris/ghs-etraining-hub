@@ -47,7 +47,7 @@ describe("capability matrix", () => {
   it("answers for every documented action and every role", () => {
     // A floor, not a pin: it catches a vocabulary that silently loses an action
     // as the product sheds features.
-    expect(ACTIONS.length).toBeGreaterThanOrEqual(35);
+    expect(ACTIONS.length).toBeGreaterThanOrEqual(33);
     for (const role of ROLES) {
       for (const action of ACTIONS) {
         expect(CAPABILITY_MATRIX[role][action], `${role} → ${action}`).toBeTypeOf("boolean");

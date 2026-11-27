@@ -94,7 +94,7 @@ type LoadedVersion =
       areaName: string;
       areaRegion: string | null;
       areaDirectorate: string | null;
-      areaCadre: string | null;
+      areaGrade: string | null;
     };
 
 async function loadVersion(materialId: string, versionId: string): Promise<LoadedVersion> {
@@ -106,7 +106,7 @@ async function loadVersion(materialId: string, versionId: string): Promise<Loade
       areaName: programmeAreas.name,
       areaRegion: programmeAreas.audienceRegion,
       areaDirectorate: programmeAreas.audienceDirectorate,
-      areaCadre: programmeAreas.audienceCadre,
+      areaGrade: programmeAreas.audienceGrade,
     })
     .from(materialVersions)
     .innerJoin(materials, eq(materials.id, materialVersions.materialId))
@@ -176,7 +176,7 @@ export async function createDraftAction(
     log.error({ event: "material.draft_create_failed", err: String(error) });
     return {
       ok: false,
-      message: duplicate ? "A material with that title already exists in this space." : GENERIC_FAILURE,
+      message: duplicate ? "A material with that title already exists in this field." : GENERIC_FAILURE,
     };
   }
 }
@@ -568,7 +568,7 @@ export async function publishVersionAction(
     audienceFilter: compactAudience({
       region: loaded.areaRegion,
       directorate: loaded.areaDirectorate,
-      cadre: loaded.areaCadre,
+      grade: loaded.areaGrade,
     }),
   });
 

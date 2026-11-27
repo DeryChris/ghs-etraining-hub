@@ -24,11 +24,14 @@ export function OfficeFile({
   title,
   fileHref,
   downloadHref,
+  expanded = false,
 }: {
   kind: OfficeKind;
   title: string;
   fileHref: string;
   downloadHref: string;
+  /** Given the whole screen: a deck fills the height it has instead of 16:9 of its width. */
+  expanded?: boolean;
 }) {
   const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
   const [message, setMessage] = useState<string | null>(null);
@@ -127,7 +130,7 @@ export function OfficeFile({
   }
 
   return (
-    <div className="relative">
+    <div className={expanded ? "relative h-full" : "relative"}>
       {status === "loading" && (
         <div className="absolute inset-0 z-10 flex min-h-40 items-center justify-center gap-3 bg-surface/85 text-sm text-ink-muted" aria-live="polite">
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -139,8 +142,8 @@ export function OfficeFile({
       <div ref={docxRef} hidden={kind !== "docx"} className="docx-host bg-surface-2" />
 
       {kind === "pptx" && deck && (
-        <div className="bg-surface-2 p-4 sm:p-6">
-          <PptxView deck={deck} />
+        <div className={expanded ? "flex h-full min-h-0 flex-col bg-surface-2" : "bg-surface-2 p-4 sm:p-6"}>
+          <PptxView deck={deck} expanded={expanded} />
         </div>
       )}
 

@@ -44,7 +44,7 @@ describe("audienceMatches", () => {
         role: "LEARNER",
         region: "Upper West",
         directorate: null,
-        cadre: "Nurse",
+        grade: "Nurse",
       }),
     );
 

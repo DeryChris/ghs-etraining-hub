@@ -25,7 +25,7 @@ export default async function NewTrainingPage() {
     return (
       <DataUnavailable
         title="New training form did not load"
-        description="Programme fields and geography could not be read in time. Nothing was changed."
+        description="Programme areas and geography could not be read in time. Nothing was changed."
         requestId={loaded.requestId}
       />
     );
@@ -35,9 +35,9 @@ export default async function NewTrainingPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Training register"
+        eyebrow="Trainings"
         title="New training"
-        description="A training plan is filed under a programme field and one of its areas, then given a place and a date. It becomes the record the register counts against once it runs."
+        description="A training plan is filed under a programme area and one of its fields, then given a place and a date. It becomes one of the trainings recorded here once it runs."
         actions={
           <Link href="/trainings" className={buttonClass({ variant: "ghost" })}>
             Back to trainings
@@ -47,11 +47,10 @@ export default async function NewTrainingPage() {
 
       {fields.length === 0 ? (
         <ListEmptyState
-          title="No programme fields yet"
-          description="A training needs a programme field and an area inside it. Add them under Administration → Programme fields, or run the seeder to load the GHS list."
-          actionText="Programme fields"
+          title="No programme areas yet"
+          description="A training needs a programme area and a field inside it. Add them under Administration → Programme areas, or run the seeder to load the GHS list."
+          actionText="Programme areas"
           actionHref="/programme-fields"
-          art="folder"
         />
       ) : (
         <TrainingForm fields={fields} geography={geography} mode="create" />

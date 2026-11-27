@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AccountBlocked } from "@/components/layout/account-blocked";
 import { DatabaseUnavailable } from "@/components/layout/database-unavailable";
 import { AppShell } from "@/components/layout/app-shell";
+import { LearnerShell } from "@/components/layout/learner-shell";
 import { countReviewQueue } from "@/lib/server/authoring-queries";
 import { countUnreadMessages } from "@/lib/server/messaging-queries";
 import { countUnreadNotifications, listNotifications } from "@/lib/server/notification-queries";
@@ -77,30 +78,49 @@ export default async function DashboardLayout({
     withinOr("shell.drawer_notices", listNotifications(session, 6), [], 5_000),
   ]);
 
+  const props = {
+    user: {
+      name: session.name,
+      role: session.role,
+      staffId: session.staffId,
+      unitHead: session.unitHead,
+    },
+    counts: {
+      messages: unreadMessages,
+      notifications: unreadNotifications,
+      reviews: reviewCount,
+    },
+    notifications: drawerNotices.map((notice) => ({
+      id: notice.id,
+      title: notice.title,
+      body: notice.body,
+      type: notice.type,
+      priority: notice.priority,
+      linkUrl: notice.linkUrl,
+      publishedAt: notice.publishedAt.toISOString(),
+      isRead: notice.isRead,
+    })),
+  };
+
+  /*
+   * Two shells, one gate (ADR‑0027). Staff administer the library and keep the
+   * rail; everybody else reads it, and gets the public site's shape — a top bar,
+   * five destinations, a bottom bar on a phone — rather than a cut-down console.
+   */
+  if (!staff) {
+    return (
+      <LearnerShell
+        user={props.user}
+        counts={{ messages: props.counts.messages, notifications: props.counts.notifications }}
+        notifications={props.notifications}
+      >
+        {children}
+      </LearnerShell>
+    );
+  }
+
   return (
-    <AppShell
-      user={{
-        name: session.name,
-        role: session.role,
-        staffId: session.staffId,
-        unitHead: session.unitHead,
-      }}
-      counts={{
-        messages: unreadMessages,
-        notifications: unreadNotifications,
-        reviews: reviewCount,
-      }}
-      notifications={drawerNotices.map((notice) => ({
-        id: notice.id,
-        title: notice.title,
-        body: notice.body,
-        type: notice.type,
-        priority: notice.priority,
-        linkUrl: notice.linkUrl,
-        publishedAt: notice.publishedAt.toISOString(),
-        isRead: notice.isRead,
-      }))}
-    >
+    <AppShell {...props}>
       {children}
     </AppShell>
   );

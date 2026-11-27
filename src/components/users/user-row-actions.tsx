@@ -53,7 +53,7 @@ export function UserRowActions({
   email,
   role,
   region,
-  cadre,
+  grade,
   facility,
   isActive,
   isUnitHead,
@@ -66,7 +66,7 @@ export function UserRowActions({
   email: string | null;
   role: Role;
   region: string | null;
-  cadre: string | null;
+  grade: string | null;
   facility: string | null;
   isActive: boolean;
   isUnitHead: boolean;
@@ -96,7 +96,7 @@ export function UserRowActions({
         role={role}
         isUnitHead={isUnitHead}
         region={region}
-        cadre={cadre}
+        grade={grade}
         facility={facility}
       />
 
@@ -308,7 +308,7 @@ function DetailsDialog({
   role,
   isUnitHead,
   region,
-  cadre,
+  grade,
   facility,
 }: {
   userId: string;
@@ -317,7 +317,7 @@ function DetailsDialog({
   role: Role;
   isUnitHead: boolean;
   region: string | null;
-  cadre: string | null;
+  grade: string | null;
   facility: string | null;
 }) {
   const currentRole = staffRoleOf({ role, unitHead: isUnitHead });
@@ -366,10 +366,10 @@ function DetailsDialog({
               <input id={`region-${userId}`} name="region" defaultValue={region ?? ""} className={inputClass} />
             </div>
             <div>
-              <label htmlFor={`cadre-${userId}`} className={labelClass}>
-                Cadre
+              <label htmlFor={`grade-${userId}`} className={labelClass}>
+                Grade
               </label>
-              <input id={`cadre-${userId}`} name="cadre" defaultValue={cadre ?? ""} className={inputClass} />
+              <input id={`grade-${userId}`} name="grade" defaultValue={grade ?? ""} className={inputClass} />
             </div>
             <div className="sm:col-span-2">
               <label htmlFor={`facility-${userId}`} className={labelClass}>

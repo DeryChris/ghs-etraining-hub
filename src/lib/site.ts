@@ -22,10 +22,10 @@ export const SITE = {
   /** Second line of the wordmark. */
   tagline: "Training Library",
   /** One sentence. Shell footers, share cards, structured data. */
-  purpose: "Every Ghana Health Service training programme, with its materials catalogued, versioned and traceable.",
+  purpose: "Every Ghana Health Service training programme, with its material kept in one library — versioned and traceable.",
   /** Metadata description: what the service is, for a search result or share card. */
   description:
-    "The Ghana Health Service Training Library keeps the material from every GHS training programme — slides, protocols, videos and references — catalogued by programme and module, versioned, and traceable to the people who uploaded, reviewed and downloaded it.",
+    "The Ghana Health Service Training Library keeps the material from every GHS training programme — slides, documents, videos and references — filed by programme area and field, versioned, and traceable to the people who uploaded, reviewed and downloaded it.",
   regionCount: 16,
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? null,
   supportPhone: process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? null,

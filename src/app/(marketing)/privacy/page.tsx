@@ -15,14 +15,14 @@ export default function PrivacyPage() {
         {
           heading: "Who we are",
           paragraphs: [
-            `The ${SITE.fullName} is an internal service for GHS staff. It stores the material from training programmes, records what each person opened, downloaded or acknowledged, and keeps the audit history that makes those records trustworthy.`,
+            `The ${SITE.fullName} is an internal service for GHS staff. It stores the material from training programmes, records which material each person opened or downloaded, and keeps the audit history that makes those records trustworthy.`,
           ],
         },
         {
           heading: "What we collect",
           paragraphs: [
             "Directory details: your staff ID, name, work email, role, directorate, region and facility.",
-            "Training records: material you open or download, and the acknowledgements you sign, against the version you saw. Views are counted once per person per day. Downloads are recorded because controlled material leaves the platform this way.",
+            "Reading records: which material you open or download, and the version you opened it against. Views are counted once per person per day. Downloads are recorded because controlled material leaves the platform this way.",
             "Communication: messages you send and notices addressed to you.",
             "Security records: sign-in and sign-out events, the network address and browser used, and audit entries for privileged actions.",
             `The ${SITE.name} does not hold patient information. Do not send it through messages or support requests.`,
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
         {
           heading: "Why we use it",
           paragraphs: [
-            "To catalogue each training programme's material, keep superseded versions available, let staff find the version that applies to them, record what staff actually consulted, and keep the platform secure and accountable for what was uploaded, changed or withdrawn.",
+            "To keep each training programme's material in one library, keep superseded versions available, let staff find the version that applies to them, record what staff actually consulted, and keep the platform secure and accountable for what was uploaded, changed or withdrawn.",
           ],
         },
         {

@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ChevronDown,
-  Menu,
-  Search,
-  Settings,
-  UserRound,
-} from "lucide-react";
+import { ChevronDown, Menu, Search, Settings } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { ShellUser } from "@/components/layout/types";
 import { NotificationBell, type DrawerNotice } from "@/components/layout/notification-drawer";
@@ -53,7 +47,7 @@ export function Header({
         </button>
 
         <form
-          action="/catalogue"
+          action="/trainings"
           method="get"
           role="search"
           className="relative hidden w-full max-w-lg md:block"
@@ -69,7 +63,7 @@ export function Header({
             id="global-search"
             name="q"
             type="search"
-            placeholder="Search protocols, videos and labs"
+            placeholder="Search documents, videos and labs"
             className={`${inputClass} h-11 rounded-[var(--radius-pill)] pl-10`}
           />
         </form>
@@ -92,11 +86,12 @@ export function Header({
 }
 
 /**
- * The account card. A `<details>` keeps it working without JavaScript; the
+ * The account card, shared by both shells. A `<details>` keeps it working
+ * without JavaScript; the
  * effect below only adds the behaviour a menu should have and a disclosure does
  * not — close on outside click or Escape, and reopen closed after signing out.
  */
-function AccountMenu({ user }: { user: ShellUser }) {
+export function AccountMenu({ user }: { user: ShellUser }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
@@ -176,13 +171,6 @@ function AccountMenu({ user }: { user: ShellUser }) {
         </div>
 
         <div className="p-1.5">
-          <Link
-            href="/analytics"
-            className="flex min-h-10 items-center gap-2.5 rounded-control px-2.5 text-sm font-medium text-ink hover:bg-surface-2"
-          >
-            <UserRound className="h-4 w-4 text-ink-muted" aria-hidden />
-            My activity
-          </Link>
           {user.role === "SYSTEM_ADMIN" && (
             <Link
               href="/settings"

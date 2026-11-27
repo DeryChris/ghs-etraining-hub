@@ -2,56 +2,23 @@
 
 import { motion } from "framer-motion";
 import {
-  BarChart3,
-  Bell,
-  CalendarCheck2,
-  FolderOpen,
-  FolderTree,
-  ClipboardCheck,
-  LayoutGrid,
-  MapPinned,
-  Megaphone,
-  MessageSquare,
-  MessageSquareWarning,
   PanelLeftClose,
   PanelLeftOpen,
-  PenLine,
-  Settings,
-  TrendingUp,
-  Users,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId } from "react";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { NAV_ICONS } from "@/components/layout/nav-icons";
 import { NavLinkPending } from "@/components/layout/nav-link-pending";
 import { SidebarFlagLine, SidebarSeal, SidebarTrace } from "@/components/layout/sidebar-art";
 import type { ShellUser } from "@/components/layout/types";
 import { STAFF_ROLE_LABELS } from "@/lib/labels";
 import { staffRoleOf } from "@/lib/rbac/capabilities";
-import { isActiveHref, navFor, type NavCount, type NavIcon } from "@/lib/nav";
+import { isActiveHref, navFor, type NavCount } from "@/lib/nav";
 import { SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
-
-const ICONS: Record<NavIcon, LucideIcon> = {
-  dashboard: LayoutGrid,
-  training: CalendarCheck2,
-  library: FolderOpen,
-  messages: MessageSquare,
-  notifications: Bell,
-  cpd: BarChart3,
-  insights: TrendingUp,
-  materials: PenLine,
-  review: ClipboardCheck,
-  notice: Megaphone,
-  users: Users,
-  geography: MapPinned,
-  taxonomy: FolderTree,
-  complaint: MessageSquareWarning,
-  settings: Settings,
-};
 
 export interface SidebarCounts {
   messages: number;
@@ -171,7 +138,7 @@ export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onN
               {group.items.map((item) => {
                 const active = isActiveHref(pathname, item.href);
                 const count = item.count ? counts[item.count as NavCount] : 0;
-                const Icon = ICONS[item.icon];
+                const Icon = NAV_ICONS[item.icon];
                 return (
                   <li key={item.href}>
                     {/*

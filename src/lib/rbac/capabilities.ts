@@ -48,8 +48,6 @@ export type Action =
   | "material.read_draft"
   | "material.read_published"
   | "material.download"
-  | "enrollment.self"
-  | "enrollment.assign"
   | "comment.create"
   | "comment.edit_own"
   | "comment.moderate"
@@ -70,7 +68,7 @@ export type Scope = {
   areaId?: string;
   region?: string;
   directorate?: string;
-  cadre?: string;
+  grade?: string;
   reviewerIsAuthor?: boolean;
   audienceMatch?: boolean;
 };
@@ -98,8 +96,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "training.manage": true,
     "taxonomy.manage": true,
     "geography.manage": true,
-    "enrollment.self": true,
-    "enrollment.assign": true,
     "comment.create": true,
     "comment.edit_own": true,
     "comment.moderate": true,
@@ -135,8 +131,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "training.manage": true,
     "taxonomy.manage": false,
     "geography.manage": false,
-    "enrollment.self": true,
-    "enrollment.assign": true,
     "comment.create": true,
     "comment.edit_own": true,
     "comment.moderate": true,
@@ -172,8 +166,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "training.manage": false,
     "taxonomy.manage": false,
     "geography.manage": false,
-    "enrollment.self": true,
-    "enrollment.assign": false,
     "comment.create": true,
     "comment.edit_own": true,
     "comment.moderate": false,
@@ -208,7 +200,6 @@ export const FACILITATOR_GLOBAL_ACTIONS: readonly Action[] = [
   "training.manage",
   "material.read_published",
   "material.download",
-  "enrollment.self",
   "comment.create",
   "comment.edit_own",
   "message.send",

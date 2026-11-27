@@ -22,8 +22,8 @@
  *     is a failed import, not a cosmetic problem: the first row keeps it and the
  *     rest fall back to signing in with their employee number, which is what
  *     most of this sheet does anyway.
- *   • "UpperWest" typed as a region, cadre typos, trailing spaces: cleaned, not
- *     corrected. Guessing that "Human ResourceManager" is a cadre is somebody
+ *   • "UpperWest" typed as a region, grade typos, trailing spaces: cleaned, not
+ *     corrected. Guessing that "Human ResourceManager" is a grade is somebody
  *     else's job; this files it as written.
  *
  * Nothing here prints anything: no names, no numbers, no addresses. The counts
@@ -86,7 +86,7 @@ export interface StaffRow {
   district: string;
   subDistrict: string | null;
   facility: string | null;
-  cadre: string | null;
+  grade: string | null;
 }
 
 export interface SheetStats {
@@ -215,7 +215,7 @@ export function parseStaffSheet(file: string, options: ParseOptions = {}): Parse
       district,
       subDistrict: clean(cells[COL.subDistrict]) || null,
       facility: clean(cells[COL.facility]) || null,
-      cadre: clean(cells[COL.category]) || null,
+      grade: clean(cells[COL.category]) || null,
     });
 
     if (Number.isFinite(options.limit) && rows.length >= (options.limit as number)) break;

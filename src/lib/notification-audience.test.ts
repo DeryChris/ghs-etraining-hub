@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compactAudience, describeAudience, isAudienceFilter, matchesAudience } from "./notification-audience";
 
-const viewer = { region: "Greater Accra", directorate: "Pharmacy", cadre: "Pharmacist" };
+const viewer = { region: "Greater Accra", directorate: "Pharmacy", grade: "Pharmacist" };
 
 describe("notification audience", () => {
   it("treats a null filter as everyone", () => {
@@ -14,17 +14,17 @@ describe("notification audience", () => {
     expect(matchesAudience({ region: "Greater Accra" }, viewer)).toBe(true);
     expect(matchesAudience({ region: "Ashanti" }, viewer)).toBe(false);
     expect(matchesAudience({ region: "Greater Accra", directorate: "Pharmacy" }, viewer)).toBe(true);
-    expect(matchesAudience({ region: "Greater Accra", cadre: "Midwife" }, viewer)).toBe(false);
+    expect(matchesAudience({ region: "Greater Accra", grade: "Midwife" }, viewer)).toBe(false);
   });
 
   it("hides a targeted notice from a viewer with no value for that dimension", () => {
-    expect(matchesAudience({ cadre: "Pharmacist" }, { ...viewer, cadre: null })).toBe(false);
+    expect(matchesAudience({ grade: "Pharmacist" }, { ...viewer, grade: null })).toBe(false);
     expect(matchesAudience({ region: "Ashanti" }, { ...viewer, region: null })).toBe(false);
   });
 
   it("drops blank values instead of narrowing to nobody", () => {
     expect(compactAudience({ region: "  ", directorate: "Pharmacy" })).toEqual({ directorate: "Pharmacy" });
-    expect(compactAudience({ region: "", cadre: null })).toBeNull();
+    expect(compactAudience({ region: "", grade: null })).toBeNull();
   });
 
   it("summarises the audience for staff screens", () => {

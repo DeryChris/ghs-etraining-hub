@@ -81,7 +81,7 @@ export default async function ReportComplaintPage({
           </h2>
           <p className="mt-2 text-xs leading-relaxed text-ink-muted">
             Access complaints are answered the same working day where staff are on duty. Course and content complaints
-            go to the facilitator for that programme area, so allow a little longer. The status page always shows where
+            go to the facilitator for that programme field, so allow a little longer. The status page always shows where
             yours has reached.
           </p>
         </div>

@@ -31,7 +31,7 @@ export async function markAllNotificationsReadAction(): Promise<void> {
             or (
               (n.audience_filter->>'region' is null or n.audience_filter->>'region' = ${session.region})
               and (n.audience_filter->>'directorate' is null or n.audience_filter->>'directorate' = ${session.directorate})
-              and (n.audience_filter->>'cadre' is null or n.audience_filter->>'cadre' = ${session.cadre})
+              and (n.audience_filter->>'grade' is null or n.audience_filter->>'grade' = ${session.grade})
             )
           )
         )

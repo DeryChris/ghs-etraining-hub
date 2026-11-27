@@ -34,20 +34,20 @@ export function NewDraftForm({ programmeAreas }: { programmeAreas: AuthoringArea
     <form action={formAction} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label htmlFor="draft-space" className={labelClass}>
-            Space
+          <label htmlFor="draft-area" className={labelClass}>
+            Programme area
           </label>
           <Select
-            id="draft-space"
+            id="draft-area"
             name="programmeAreaId"
             required
             searchable
             defaultValue=""
             placeholder="Choose a programme area"
-            options={programmeAreas.map((space) => ({
-              value: space.id,
-              label: space.name,
-              hint: space.fieldName,
+            options={programmeAreas.map((area) => ({
+              value: area.id,
+              label: area.name,
+              hint: area.fieldName,
             }))}
           />
         </div>

@@ -43,7 +43,7 @@ export interface AuthenticatedUser {
   mustChangePassword: boolean;
   region: string | null;
   directorate: string | null;
-  cadre: string | null;
+  grade: string | null;
   unitHead: boolean;
 }
 
@@ -126,7 +126,7 @@ export async function authenticateUser(identifier: string, password: string): Pr
       mustChangePassword: user.mustChangePassword,
       region: user.region,
       directorate: user.directorate,
-      cadre: user.cadre,
+      grade: user.grade,
       unitHead: user.isUnitHead,
     },
   };
@@ -228,7 +228,7 @@ export async function createUserWithPassword(params: {
   role: Role;
   region?: string | null;
   directorate?: string | null;
-  cadre?: string | null;
+  grade?: string | null;
   facility?: string | null;
 }) {
   const passwordHash = await hashPassword(params.password);
@@ -243,7 +243,7 @@ export async function createUserWithPassword(params: {
       role: params.role,
       region: params.region ?? null,
       directorate: params.directorate ?? null,
-      cadre: params.cadre ?? null,
+      grade: params.grade ?? null,
       facility: params.facility ?? null,
       isActive: true,
     })

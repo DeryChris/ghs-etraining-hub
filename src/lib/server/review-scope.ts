@@ -14,7 +14,7 @@ import type { Viewer } from "@/lib/viewer";
  * submitted. That distinction is the whole point of this module. A queue built
  * from a snapshot at submit time goes stale the moment a unit head is appointed:
  * every item filed before their first day stays invisible to them, and the queue
- * silently stops matching the role. A unit head who holds a programme field
+ * silently stops matching the role. A unit head who holds a programme area
  * signs off everything in that field, however old — and the moment the
  * appointment exists, they see it.
  *

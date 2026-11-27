@@ -51,7 +51,7 @@ export default async function InsightsPage() {
     return (
       <DataUnavailable
         title="Insights did not load"
-        description="The traffic and catalogue figures could not be read in time. The numbers on this page are recomputed per request, so nothing is stale or lost."
+        description="The traffic and library figures could not be read in time. The numbers on this page are recomputed per request, so nothing is stale or lost."
         requestId={essential.requestId}
         hint={essential.hint}
       />
@@ -111,11 +111,11 @@ export default async function InsightsPage() {
         actions={
           <>
             <Link href="/trainings" className={buttonClass({ variant: "secondary" })}>
-              Open the register
+              Open Trainings
             </Link>
             {reviewer && (
               <Link href="/review" className={buttonClass({ variant: "ghost" })}>
-                Review queue {insights.catalogue.inReview > 0 ? `(${insights.catalogue.inReview})` : ""}
+                Review queue {insights.library.inReview > 0 ? `(${insights.library.inReview})` : ""}
               </Link>
             )}
           </>
@@ -152,8 +152,8 @@ export default async function InsightsPage() {
         <KpiCard
           icon={TrendingUp}
           label="Published materials"
-          value={insights.catalogue.published}
-          hint={`${insights.catalogue.inReview} awaiting review`}
+          value={insights.library.published}
+          hint={`${insights.library.inReview} awaiting review`}
           color="var(--chart-6)"
         />
       </KpiGrid>
@@ -293,26 +293,26 @@ export default async function InsightsPage() {
           <div>
             <h2 id="health-heading" className="flex items-center gap-2 text-base font-bold text-ink">
               <ClipboardCheck className="h-4 w-4 text-primary" aria-hidden />
-              Catalogue health
+              Library health
             </h2>
             <p className="mt-1 text-sm text-ink-muted">The numbers behind the charts, and what is still thin.</p>
           </div>
           <dl className="space-y-2 text-sm">
             <div className="flex items-center justify-between gap-3">
               <dt className="text-ink-muted">Programmes in scope</dt>
-              <dd className="tabular-nums font-semibold text-ink">{insights.catalogue.programmes}</dd>
+              <dd className="tabular-nums font-semibold text-ink">{insights.library.programmes}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Programme areas</dt>
-              <dd className="tabular-nums font-semibold text-ink">{insights.catalogue.programmeAreas}</dd>
+              <dt className="text-ink-muted">Programme fields</dt>
+              <dd className="tabular-nums font-semibold text-ink">{insights.library.programmeAreas}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
               <dt className="text-ink-muted">Awaiting review</dt>
-              <dd className="tabular-nums font-semibold text-ink">{insights.catalogue.inReview}</dd>
+              <dd className="tabular-nums font-semibold text-ink">{insights.library.inReview}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
               <dt className="text-ink-muted">Drafts</dt>
-              <dd className="tabular-nums font-semibold text-ink">{insights.catalogue.draft}</dd>
+              <dd className="tabular-nums font-semibold text-ink">{insights.library.draft}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
               <dt className="text-ink-muted">Trainings on record</dt>

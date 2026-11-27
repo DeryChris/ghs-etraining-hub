@@ -25,7 +25,7 @@ export default async function FieldPage({ params }: { params: Promise<{ fieldCod
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/catalogue" className="hover:text-ink">
-              Catalogue
+              Library
             </Link>
           </li>
           <li aria-hidden>/</li>
@@ -42,14 +42,14 @@ export default async function FieldPage({ params }: { params: Promise<{ fieldCod
         icon={<FieldTileIcon code={field.code} size={54} />}
       />
 
-      <section aria-labelledby="areas-heading" className="space-y-4">
-        <h2 id="areas-heading" className="text-lg font-bold text-ink">
-          Programme areas
+      <section aria-labelledby="fields-heading" className="space-y-4">
+        <h2 id="fields-heading" className="text-lg font-bold text-ink">
+          Programme fields
         </h2>
         {areas.length === 0 ? (
           <ListEmptyState
-            title="No areas in this field yet"
-            description="An administrator adds the areas at Administration → Programme fields. A training cannot be filed under this field until it has one."
+            title="No programme fields in this area yet"
+            description="An administrator adds the fields at Administration → Programme areas. A training cannot be filed under this area until it has one."
           />
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">

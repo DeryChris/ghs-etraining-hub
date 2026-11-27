@@ -26,7 +26,7 @@ describe("computeAuditHash", () => {
   const base = {
     prevHash: null,
     actorId: "user-1",
-    action: "MATERIAL_ACKNOWLEDGED",
+    action: "MATERIAL_FILE_ISSUED",
     entity: "Material",
     entityId: "material-1",
     metadata: { versionId: "v1" },

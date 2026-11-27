@@ -38,7 +38,7 @@ const noticeInput = z
 
 /**
  * Publishes an official notice. An area announcement reaches the cohort that can
- * see that programme area (its `audience_*` columns become the notice's
+ * see that programme field (its `audience_*` columns become the notice's
  * `audience_filter`); only a SYSTEM_ADMIN may address everyone. Both paths are
  * capability-checked and audited — a notice is an instruction to staff, so the
  * record of who sent it matters.
@@ -66,7 +66,7 @@ export async function broadcastNoticeAction(
   let linkUrl: string | null = null;
 
   if (scope === "AREA") {
-    if (!areaId) return { ok: false, message: "Choose the programme area the notice belongs to." };
+    if (!areaId) return { ok: false, message: "Choose the programme field the notice belongs to." };
 
     const [area] = await db
       .select({
@@ -76,20 +76,20 @@ export async function broadcastNoticeAction(
         fieldId: programmeAreas.fieldId,
         audienceRegion: programmeAreas.audienceRegion,
         audienceDirectorate: programmeAreas.audienceDirectorate,
-        audienceCadre: programmeAreas.audienceCadre,
+        audienceGrade: programmeAreas.audienceGrade,
         fieldCode: programmeFields.code,
       })
       .from(programmeAreas)
       .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
       .where(eq(programmeAreas.id, areaId))
       .limit(1);
-    if (!area) return { ok: false, message: "That programme area no longer exists." };
+    if (!area) return { ok: false, message: "That programme field no longer exists." };
 
     areaIdForScope = area.id;
     audienceFilter = compactAudience({
       region: area.audienceRegion,
       directorate: area.audienceDirectorate,
-      cadre: area.audienceCadre,
+      grade: area.audienceGrade,
     });
     linkUrl = areaHref(area.fieldCode, area.code);
   }
@@ -143,6 +143,6 @@ export async function broadcastNoticeAction(
 
   return {
     ok: true,
-    message: `Sent as “${notificationTypeLabel(type)}”. ${scope === "ALL" ? "Everyone will see it." : "The space's cohort will see it."}`,
+    message: `Sent as “${notificationTypeLabel(type)}”. ${scope === "ALL" ? "Everyone will see it." : "That training's cohort will see it."}`,
   };
 }

@@ -207,7 +207,7 @@ async function main() {
         text(row.gender),
         text(row.email),
         text(row.phone),
-        text(row.cadre),
+        text(row.grade),
         text(row.region),
         text(row.district),
         text(row.subDistrict),
@@ -217,7 +217,7 @@ async function main() {
     });
 
     push(`insert into "users" (`);
-    push(`  "ghs_staff_id", "full_name", "gender", "email", "phone", "cadre", "region",`);
+    push(`  "ghs_staff_id", "full_name", "gender", "email", "phone", "grade", "region",`);
     push(`  "district", "sub_district", "facility", "role", "password_hash", "must_change_password"`);
     push(`)`);
     push(`select`);
@@ -230,17 +230,17 @@ async function main() {
     push(`    when exists (select 1 from "users" u where u."email" = v.email and u."ghs_staff_id" <> v.ghs_staff_id) then null`);
     push(`    else v.email`);
     push(`  end,`);
-    push(`  v.phone, v.cadre, v.region, v.district, v.sub_district, v.facility,`);
+    push(`  v.phone, v.grade, v.region, v.district, v.sub_district, v.facility,`);
     push(`  'LEARNER'::"user_role", v.password_hash, ${noPasswords ? "false" : "true"}`);
     push(`from (values`);
     tuples.forEach((tuple, index) => push(`  ${tuple}${index === tuples.length - 1 ? "" : ","}`));
-    push(`) as v(ghs_staff_id, full_name, gender, email, phone, cadre, region, district, sub_district, facility, password_hash)`);
+    push(`) as v(ghs_staff_id, full_name, gender, email, phone, grade, region, district, sub_district, facility, password_hash)`);
     push(`on conflict ("ghs_staff_id") do update set`);
     push(`  "full_name" = excluded."full_name",`);
     push(`  "gender" = excluded."gender",`);
     push(`  "email" = excluded."email",`);
     push(`  "phone" = excluded."phone",`);
-    push(`  "cadre" = excluded."cadre",`);
+    push(`  "grade" = excluded."grade",`);
     push(`  "region" = excluded."region",`);
     push(`  "district" = excluded."district",`);
     push(`  "sub_district" = excluded."sub_district",`);

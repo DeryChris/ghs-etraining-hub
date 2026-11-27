@@ -308,3 +308,37 @@ capabilities behind them are gone, "finished" leaves the interface, and the
 disclaimers that kept explaining what was not awarded are deleted rather than
 reworded. The complaint form keeps one narrative field. See
 `0026-no-marks-no-certificates.md`.
+
+## ADR‑0027 — Two shells
+
+A rail for the people who run the library, a top bar (and a bottom bar on a
+phone) for the people who read it. "My activity" folds into the dashboard;
+`/analytics` redirects there. See `0027-two-shells.md`.
+
+## ADR‑0028 — No signature
+
+The library stops asking anybody to certify that they have read a document. The
+flag, the panel, the dashboard section, `material_progress`, `enrollments` and the
+`enrollment.*` capabilities are gone; the record of what was opened, by whom and
+when stays. Same release: one name per surface — the material area is the
+**Library** (still `/catalogue`), the trainings area is **Trainings** (never "the
+register"). See `0028-no-signature.md`.
+
+## ADR‑0029 — One inbox, and work that comes back
+
+Messages and complaints are one list with a chip on each thread and three
+buttons above it (All / Messages / Complaints); `/complaints` redirects into it.
+A training a unit head sends back is shown as **Returned for correction**, opens
+as a task card at the top of the author's dashboard, and goes straight back to
+that unit head when saved. See `0029-one-inbox-and-returned-work.md`.
+
+## ADR‑0030 — Accounts are claimed, not created
+
+`/register` verifies the employee number against the imported staff sheet and
+then asks only for what the sheet cannot know. Name, region, district, facility
+and grade are read-only facts; an account that already has a password cannot be
+claimed. Sign-in is a split card again: getting started beside the form. See
+`0030-accounts-are-claimed.md`.
+
+## ADR‑0031 — Material belongs to a training, not to a programme
+`0031-material-belongs-to-a-training.md`.

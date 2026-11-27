@@ -80,9 +80,9 @@ async function resolveReferences(input: {
     .from(programmeAreas)
     .where(eq(programmeAreas.id, input.programmeAreaId))
     .limit(1);
-  if (!area) return { ok: false, message: "That programme area no longer exists." };
+  if (!area) return { ok: false, message: "That programme field no longer exists." };
   if (area.fieldId !== input.programmeFieldId) {
-    return { ok: false, message: "That programme area belongs to a different programme field." };
+    return { ok: false, message: "That programme field belongs to a different programme area." };
   }
 
   // 2. The district must belong to the region.
@@ -283,7 +283,7 @@ export async function createTrainingAction(
   const message =
     reviewState === "PENDING"
       ? `“${parsed.data.title}” was saved and sent to the unit head for review.`
-      : `“${parsed.data.title}” is on the register.`;
+      : `“${parsed.data.title}” is in Trainings.`;
   redirect(`/trainings/${createdId}?notice=${encodeURIComponent(message)}`);
 }
 
@@ -373,12 +373,12 @@ export async function updateTrainingAction(
   }
   redirect(
     `/trainings/${parsed.data.trainingId}?notice=${encodeURIComponent(
-      resubmit ? "Changes saved and sent back for review." : "Changes saved.",
+      resubmit ? "Corrections saved and sent back to the unit head for review." : "Changes saved.",
     )}`,
   );
 }
 
-/** Withdraw a training from the register. The row stays: history is not deleted. */
+/** Withdraw a training from Trainings. The row stays: history is not deleted. */
 export async function archiveTrainingAction(formData: FormData): Promise<void> {
   const guard = await checkCapability("training.manage");
   if (!guard.ok) redirect(`/trainings?error=${encodeURIComponent(guard.message)}`);
@@ -409,7 +409,7 @@ export async function archiveTrainingAction(formData: FormData): Promise<void> {
   }
 
   revalidateTrainings(id);
-  redirect(`/trainings?notice=${encodeURIComponent("Training archived. It is out of the register; the row and its audit trail remain.")}`);
+  redirect(`/trainings?notice=${encodeURIComponent("Training archived. It no longer appears in Trainings; the record and its audit trail remain.")}`);
 }
 
 /* ── Review ───────────────────────────────────────────────────────────────────
@@ -440,7 +440,7 @@ export async function reviewTrainingAction(
     return { ok: false, message: "That review could not be read. Reload the page." };
   }
   if (decision === "reject" && !note) {
-    return { ok: false, message: "Say why it was sent back, so the facilitator knows what to change." };
+    return { ok: false, message: "Say what needs correcting, so the facilitator knows what to change." };
   }
 
   const guard = await checkCapability("training.manage");
@@ -463,7 +463,7 @@ export async function reviewTrainingAction(
   if (!training) return { ok: false, message: "That training no longer exists." };
 
   if (!(await mayReviewField(session, training.fieldId))) {
-    return { ok: false, message: "Only a unit head of that programme field can review it." };
+    return { ok: false, message: "Only a unit head of that programme area can review it." };
   }
   if (training.reviewState !== "PENDING") {
     return { ok: false, message: "That training has already been reviewed." };
@@ -518,7 +518,7 @@ export async function reviewTrainingAction(
     message:
       decision === "approve"
         ? `“${training.title}” is live, and the people it is for have been notified.`
-        : `“${training.title}” was sent back to the facilitator, who has been notified.`,
+        : `“${training.title}” was returned to the facilitator for correction, and they have been notified.`,
   };
 }
 

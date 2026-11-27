@@ -2,6 +2,7 @@ import Link from "next/link";
 import { KeyRound } from "lucide-react";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import { verifyPasswordResetToken } from "@/lib/server/auth";
+import { AuthCard } from "../auth-card";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function ResetPasswordPage({
 
   if (status === "unavailable") {
     return (
-      <>
+      <AuthCard>
         <div className="space-y-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-warn/12 text-warn">
             <KeyRound className="h-6 w-6" aria-hidden />
@@ -54,13 +55,13 @@ export default async function ResetPasswordPage({
             Lodge a complaint
           </Link>
         </div>
-      </>
+      </AuthCard>
     );
   }
 
   if (status !== "ok") {
     return (
-      <>
+      <AuthCard>
         <div className="space-y-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-warn/12 text-warn">
             <KeyRound className="h-6 w-6" aria-hidden />
@@ -80,12 +81,12 @@ export default async function ResetPasswordPage({
             Back to sign in
           </Link>
         </div>
-      </>
+      </AuthCard>
     );
   }
 
   return (
-    <>
+    <AuthCard>
       <div className="space-y-3">
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/12 text-primary">
           <KeyRound className="h-6 w-6" aria-hidden />
@@ -97,6 +98,6 @@ export default async function ResetPasswordPage({
       </div>
 
       <ResetPasswordForm token={token ?? ""} />
-    </>
+    </AuthCard>
   );
 }

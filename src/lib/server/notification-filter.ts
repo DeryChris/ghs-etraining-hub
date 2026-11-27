@@ -54,7 +54,7 @@ export function audienceMatches(viewer: Viewer) {
     and(
       sql`(${filter}->>'region' is null or ${filter}->>'region' = ${viewer.region ?? null})`,
       sql`(${filter}->>'directorate' is null or ${filter}->>'directorate' = ${viewer.directorate ?? null})`,
-      sql`(${filter}->>'cadre' is null or ${filter}->>'cadre' = ${viewer.cadre ?? null})`,
+      sql`(${filter}->>'grade' is null or ${filter}->>'grade' = ${viewer.grade ?? null})`,
     ),
   );
 }

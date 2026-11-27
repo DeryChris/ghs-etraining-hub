@@ -24,22 +24,26 @@ export function FilePreview({
   title,
   fileHref,
   className = "",
+  expanded = false,
 }: {
   kind: PreviewKind;
   title: string;
   /** Inline URL: streams the bytes with the right content type. */
   fileHref: string;
   className?: string;
+  /** Given the whole screen by the panel around it: fill it instead of 72vh. */
+  expanded?: boolean;
 }) {
   const downloadHref = `${fileHref}${fileHref.includes("?") ? "&" : "?"}download=1`;
+  const tall = expanded ? "h-full" : "h-[72vh]";
 
   if (kind === "pdf") {
     return (
-      <div className={`bg-surface-2 ${className}`}>
+      <div className={`bg-surface-2 ${expanded ? "h-full" : ""} ${className}`}>
         <object
           data={`${fileHref}#view=FitH`}
           type="application/pdf"
-          className="h-[72vh] w-full"
+          className={`${tall} w-full`}
           aria-label={`${title} (PDF)`}
         >
           <div className="px-5 py-8">
@@ -63,17 +67,21 @@ export function FilePreview({
 
   if (kind === "image") {
     return (
-      <div className={`flex items-center justify-center bg-surface-2 p-4 ${className}`}>
+      <div className={`flex items-center justify-center bg-surface-2 ${expanded ? "h-full p-0" : "p-4"} ${className}`}>
         {/* eslint-disable-next-line @next/next/no-img-element -- a signed, redirect-backed URL; next/image cannot optimise a redirect */}
-        <img src={fileHref} alt={title} className="mx-auto max-h-[72vh] w-auto rounded-control" />
+        <img
+          src={fileHref}
+          alt={title}
+          className={`mx-auto w-auto max-w-full object-contain ${expanded ? "max-h-full" : "max-h-[72vh] rounded-control"}`}
+        />
       </div>
     );
   }
 
   if (kind === "video") {
     return (
-      <div className={`bg-black ${className}`}>
-        <video controls preload="metadata" src={fileHref} className="max-h-[72vh] w-full">
+      <div className={`bg-black ${expanded ? "h-full" : ""} ${className}`}>
+        <video controls preload="metadata" src={fileHref} className={`w-full ${expanded ? "max-h-full" : "max-h-[72vh]"}`}>
           <track kind="captions" />
         </video>
         <p className="px-4 py-2 text-xs text-ink-muted">Captions are not attached to this recording.</p>
@@ -92,8 +100,8 @@ export function FilePreview({
 
   if (kind === "docx" || kind === "pptx" || kind === "xlsx") {
     return (
-      <div className={className}>
-        <OfficeFile kind={kind} title={title} fileHref={fileHref} downloadHref={downloadHref} />
+      <div className={`${expanded ? "h-full" : ""} ${className}`}>
+        <OfficeFile kind={kind} title={title} fileHref={fileHref} downloadHref={downloadHref} expanded={expanded} />
       </div>
     );
   }

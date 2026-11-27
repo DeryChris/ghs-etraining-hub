@@ -37,7 +37,7 @@ export default async function NotificationsPage() {
       />
 
       {items.length === 0 ? (
-        <ListEmptyState title="No notifications" description="Official notices, protocol updates and messages addressed to you will appear here." />
+        <ListEmptyState title="No notifications" description="Official notices, material updates and messages addressed to you will appear here." />
       ) : (
         <ul className="divide-y divide-hairline overflow-hidden rounded-card border border-hairline bg-surface">
           {items.map((item) => {

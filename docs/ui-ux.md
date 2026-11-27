@@ -30,19 +30,24 @@ and use the utility it generates.
 
 ## 2. Layout
 
-* Shell: fixed 264 px sidebar (collapsible to 72 px icons, persisted in a cookie, `<main>` shifts
-  with a CSS grid template so there is no layout thrash), sticky 60 px header with global search,
-  notification bell and avatar menu.
-* Navigation is **role‑aware and sectioned**, and its source is `src/lib/nav.ts` (ADR‑0010): *Learn*
-  (Dashboard · Programmes · Library), *Community* (Messages · Notifications), *My record*
-  (My activity · Insights), *Author* (Sessions · My materials · Review queue · Send notice — assembled per
-  role) and
-  *Administration* (Users · Settings, administrators only). A section with nothing in it for a role does
-  not render, and an item's badge (unread messages, unread notifications, versions awaiting review) shows
-  only when it is above zero.
-* Mobile: sidebar becomes a focus‑trapped drawer, priority nav visible in the header; tables
-  collapse to stacked definition lists at `< 720 px` (never horizontal scroll for clinical data).
-* Content column max width 1200 px; long‑form reading width 72 ch.
+* **Two shells, one gate** (ADR‑0027). `(dash)/layout.tsx` resolves the session once and then draws one
+  of two frames, so a page never knows which is around it:
+  * **Staff — the rail.** Facilitators and administrators get the fixed 264 px sidebar (collapsible to
+    72 px icons, persisted in a cookie, `<main>` shifts with a CSS grid template so there is no layout
+    thrash), the sticky 60 px header with global search, the notification bell and the avatar menu.
+    Sections are *Learn*, *Community*, *My record* (Insights), *Author* and *Administration*. A
+    section with nothing in it for a role does not render, and a badge (unread messages, unread
+    notifications, versions awaiting review) shows only when it is above zero.
+  * **Staff on the roster — the top bar.** A member of staff with the roster role gets the public
+    site's shape: brand, five links (Dashboard · Library · Trainings · Messages · Notifications),
+    search, theme, bell, account. No rail, no sections, nothing administrative. On a phone the same
+    five links are a fixed bottom bar within thumb reach, which is how most of this audience will
+    meet the product.
+* The learner's dashboard is the whole record: the greeting, the material they were reading, the
+  reading totals, the list of opens, the announcements and the programme fields. There is no separate "My activity" tab (ADR‑0027); `/analytics` redirects here so
+  old links keep working.
+* Tables collapse to stacked definition lists at `< 720 px` (never horizontal scroll for clinical data).
+* Content column max width 1200 px for staff, 1280 px for the learner shell; long‑form reading width 72 ch.
 * Grid: 12‑column desktop, 4‑column tablet, 1‑column mobile, 24 px gutters.
 
 ### Public pages: art and photography
@@ -69,26 +74,45 @@ preserves width), `badge`, `card`, `stat`, `input`, `textarea`, `select`, `check
 (focus trap, Esc, restore focus), `tabs`, `table` (sortable, sticky header, empty row),
 `skeleton`, `toast`, `tooltip`, `empty-state`, `progress-bar`, `priority-chip`, `state-chip`.
 
-`layout/`: `app-shell`, `sidebar`, `header`, `notification-center`, `search-command`.
+`layout/`: `app-shell`, `learner-shell`, `sidebar`, `header`, `nav-icons`, `notification-center`,
+`search-command`.
 `materials/`: `material-card`, `pdf-viewer` (lazy), `video-player` (lazy, no autoplay, poster +
-duration + size before play), `acknowledge-button`, `discussion-thread`, `lab-environment` (Monaco
+duration + size before play), `view-beacon`, `discussion-thread`, `lab-environment` (Monaco
 behind a "Start lab" gesture so 400 KB of editor never loads by default).
-`analytics/`: `coverage-bar`, `score-distribution`, `completion-trend` — all client components
-loaded with `next/dynamic` and rendered only when `dataSaver === false`.
+`charts/`: `area-chart`, `donut-chart`, `rank-bars`, `kpi-card`, `chart-card` — client components,
+rendered on the staff surfaces only.
 
 Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard operable, and a
 `data-` hook for tests (`data-testid`).
 
 ## 4. Page recipes
 
-* **Dashboard (learner)** — three mandatory cards first (priority chips + due dates), then
-  "Continue where you left off", then announcements, then a compact CPD summary. Nothing below the
-  fold is a chart if `dataSaver` is on.
+* **Dashboard (learner)** — the greeting and the one button back to the material they were reading,
+  then the reading record, then announcements, then the programme fields. No chart appears on this
+  page: charts are staff equipment.
 * **Space page** — sticky sub‑header with progress, materials as cards grouped by type, discussion
   at the bottom, "Download all for offline" action with total size shown.
-* **Material viewer** — title, version + "superseded" banner, metadata row (programme field and
-  area, version, published date, size, est. minutes), the artefact, then the acknowledgement panel
-  where a protocol asks for a signature. No unrelated sidebars, no marks (ADR‑0026).
+* **Signed-out screens** — the sign-in card is two halves: getting started and what the platform is
+  for on the left, the form on the right (`lg` and above; a phone sees the form first). Under the
+  Sign in button, *Create an account* and then the Complaint Hub, in that order, because that is the
+  order they are reached for. `/register` is one column: staff ID, then the HRIMS facts read-only,
+  then e-mail, phone and password (ADR‑0030).
+* **Search bars collapse** — one search box, always visible; the rest of the filters behind a
+  native `<details>` that says how many are set (`components/ui/filter-bar.tsx`). The fields are
+  still submitted while it is shut, because they stay in the DOM.
+* **Material viewer** — breadcrumb, title, one wrapped line of metadata (author, updated, est.
+  minutes, priority), then the file. The frame around the file is a single 44 px strip: what it is on
+  the left, and three icon buttons on the right — new tab, download, full screen. Nothing else, because
+  every line of chrome above a document on a 375 px screen is a line of the document the reader loses.
+  No unrelated sidebars, no signature to collect, no marks (ADR‑0026, ADR‑0028).
+* **Full screen is ours, not the browser's.** The expand button puts the panel over the viewport with
+  CSS and *then* asks for `requestFullscreen` as a bonus: iOS Safari has no
+  `Element.requestFullscreen` for anything but `<video>`, so the browser-only version of this button
+  did nothing on exactly the device the product is used on (`components/ui/use-expand.ts`). Escape,
+  the system gesture and the browser's own exit all collapse it, and the page behind is scroll-locked.
+* **Slides are read, not indexed.** A deck shows one slide, `‹ 3 / 40 ›` and swipe. No grid of slide
+  numbers under the canvas, no speaker notes — a deck is read in order, and the digits were the
+  loudest thing in the panel on a phone.
 * **Data tables (admin)** — server‑side pagination with a page‑size selector (25/50/100), saved
   filters in the URL (shareable, back‑button safe), row actions in a kebab menu, count in the
   caption ("Showing 1–25 of 4,182 GHS staff"). `/users` is the reference implementation: 25 per page,

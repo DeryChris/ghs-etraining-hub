@@ -63,7 +63,7 @@ const FEATURES: { icon: LucideIcon; title: string; body: string; tone: string }[
   {
     icon: Search,
     title: "Find it by programme, area or title",
-    body: "Search the whole catalogue, open the current version, or check what was in force when a session ran.",
+    body: "Search the whole library, open the current version, or check what was in force when a session ran.",
     tone: "bg-accent/25 text-accent-ink dark:text-accent",
   },
   {
@@ -83,7 +83,7 @@ const STEPS = [
   {
     icon: FolderOpen,
     title: "Open the programme",
-    body: "Find the programme field and the area that ran the training you attended.",
+    body: "Find the programme area and the field that ran the training you attended.",
   },
   {
     icon: FileCheck2,
@@ -98,7 +98,7 @@ const STEPS = [
 ];
 
 const CADRES: { icon: LucideIcon; title: string; body: string }[] = [
-  { icon: HeartPulse, title: "Nurses and midwives", body: "Ward protocols, maternal care and IPC material from the sessions you attended." },
+  { icon: HeartPulse, title: "Nurses and midwives", body: "Ward guidelines, maternal care and IPC material from the sessions you attended." },
   { icon: Stethoscope, title: "Medical officers", body: "Clinical guidelines and case definitions, with the version that was current at the time." },
   { icon: Pill, title: "Pharmacists", body: "Medicines safety, dispensing standards and the national formulary as taught." },
   { icon: FlaskConical, title: "Laboratory staff", body: "Specimen handling, quality control and result reporting, by programme." },
@@ -172,7 +172,7 @@ export default async function LandingPage() {
 
             <Reveal delay={0.12}>
               <p className="max-w-xl text-lg leading-relaxed text-ink-muted">
-                After a session, slides and protocols used to go into a WhatsApp group and sink under the next morning&apos;s
+                After a session, slides and printed guidance used to go into a WhatsApp group and sink under the next morning&apos;s
                 messages. Here they are filed under the programme that ran it — with the version, the date and the people who
                 uploaded, reviewed and used it.
               </p>
@@ -203,7 +203,7 @@ export default async function LandingPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Programme areas</dt>
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Programme fields</dt>
                   <dd className="mt-1 text-3xl font-extrabold text-ink">
                     <CountUp value={stats.areas} />
                   </dd>
@@ -273,9 +273,9 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Programme field strip (live taxonomy) ────────────────────────── */}
+      {/* ── Programme area strip (live taxonomy) ────────────────────────── */}
       {previewFields.length > 0 && (
-        <section aria-label="Programme fields on the platform" className="border-y border-hairline bg-surface/60">
+        <section aria-label="Programme areas on the platform" className="border-y border-hairline bg-surface/60">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-3 px-5 py-6 sm:px-8 lg:px-10">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">Programmes include</p>
             <ul className="flex flex-wrap gap-2">
@@ -295,7 +295,7 @@ export default async function LandingPage() {
           <SectionHeading
             eyebrow={`Why ${SITE.code}`}
             title={<span id="features-title">Built to keep training material findable, not to lose it gracefully.</span> as unknown as string}
-            description="A catalogue with a memory: what was uploaded, for which programme, by whom, and which version was in force on the day you needed it."
+            description="A library with a memory: what was uploaded, for which programme, by whom, and which version was in force on the day you needed it."
           />
         </Reveal>
         <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -403,7 +403,7 @@ export default async function LandingPage() {
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <Reveal>
-              <SectionHeading eyebrow="Programmes" title={<span id="programmes-title">Filed by the programme fields that run the training.</span> as unknown as string} />
+              <SectionHeading eyebrow="Programmes" title={<span id="programmes-title">Filed by the programme areas that run the training.</span> as unknown as string} />
             </Reveal>
             <Reveal delay={0.1}>
               <Link href="/programmes" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline underline-offset-4">
@@ -432,20 +432,20 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Cadres ───────────────────────────────────────────────────────── */}
-      <section aria-labelledby="cadres-title" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 lg:px-10 lg:py-32">
+      {/* ── Grades ───────────────────────────────────────────────────────── */}
+      <section aria-labelledby="grades-title" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 lg:px-10 lg:py-32">
         <Reveal>
-          <SectionHeading eyebrow="For every cadre" title={<span id="cadres-title">Who the material is for.</span> as unknown as string} />
+          <SectionHeading eyebrow="For every grade" title={<span id="grades-title">Who the material is for.</span> as unknown as string} />
         </Reveal>
         <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {CADRES.map((cadre, index) => {
-            const Icon = cadre.icon;
+          {CADRES.map((grade, index) => {
+            const Icon = grade.icon;
             return (
-              <Reveal key={cadre.title} delay={index * 0.05}>
+              <Reveal key={grade.title} delay={index * 0.05}>
                 <li className="h-full list-none rounded-card border border-hairline bg-surface p-6 transition-colors duration-base hover:border-primary/40">
                   <Icon className="h-7 w-7 text-primary" aria-hidden />
-                  <h3 className="mt-5 text-base font-bold text-ink">{cadre.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ink-muted">{cadre.body}</p>
+                  <h3 className="mt-5 text-base font-bold text-ink">{grade.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-ink-muted">{grade.body}</p>
                 </li>
               </Reveal>
             );
@@ -459,7 +459,7 @@ export default async function LandingPage() {
           <div className="relative mx-auto max-w-7xl overflow-hidden rounded-hero border border-hairline shadow-lift">
             <Image
               src="/images/stock/nurses-clipboard.jpg"
-              alt="Two nurses at a district hospital desk reading a printed clinical protocol together"
+              alt="Two nurses at a district hospital desk reading printed clinical guidance together"
               width={1200}
               height={627}
               sizes="(min-width: 1280px) 1200px, 100vw"

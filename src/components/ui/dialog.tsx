@@ -36,12 +36,19 @@ export function Dialog({
   const ref = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  /**
+   * Browser full screen is not available everywhere — iOS Safari has no
+   * `requestFullscreen` for anything but `<video>` — so a refusal used to make
+   * this button do nothing at all. Instead the panel fills the viewport with
+   * CSS, which is what the visitor asked for anyway.
+   */
+  const [filled, setFilled] = useState(false);
 
   /*
-   * The browser owns full screen: `requestFullscreen` on the dialog element, and
-   * the `fullscreenchange` event is the only truth about whether it worked (a
-   * denied request, an Escape key and a gesture all end here). The CSS below
-   * removes the panel's own frame in that state, so the file gets the screen.
+   * The browser owns full screen when it offers it: the `fullscreenchange` event
+   * is the only truth about whether it worked (a denied request, an Escape key
+   * and a gesture all end here). The CSS removes the panel's own frame in either
+   * state, so the file gets the screen.
    */
   useEffect(() => {
     const onChange = () => setFullscreen(document.fullscreenElement === ref.current);
@@ -49,15 +56,28 @@ export function Dialog({
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  const expanded = fullscreen || filled;
+
   async function toggleFullscreen() {
     const dialog = ref.current;
     if (!dialog) return;
+    if (filled) {
+      setFilled(false);
+      return;
+    }
+    if (document.fullscreenElement === dialog) {
+      try {
+        await document.exitFullscreen();
+      } catch {
+        // Already out; nothing to undo.
+      }
+      return;
+    }
     try {
-      if (document.fullscreenElement === dialog) await document.exitFullscreen();
-      else await dialog.requestFullscreen();
+      if (typeof dialog.requestFullscreen !== "function") throw new Error("unsupported");
+      await dialog.requestFullscreen();
     } catch {
-      // Some browsers refuse without a direct gesture; the button is a gesture,
-      // so a failure here means full screen is simply unavailable.
+      setFilled(true);
     }
   }
   const titleId = useId();
@@ -102,12 +122,16 @@ export function Dialog({
         ref={ref}
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          // Reopen at the panel's own size, not the last visitor's full screen.
+          setFilled(false);
+        }}
         onClick={(event) => {
           // A click on the backdrop lands on the dialog element itself.
           if (event.target === ref.current) setOpen(false);
         }}
-        className={`overlay-panel m-auto w-[calc(100vw-1.5rem)] ${width} max-h-[calc(100dvh-2rem)] overflow-hidden rounded-card border border-hairline bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/45 backdrop:backdrop-blur-[3px]`}
+        className={`overlay-panel ${expanded ? "overlay-panel-filled" : `m-auto w-[calc(100vw-1.5rem)] ${width} max-h-[calc(100dvh-2rem)] rounded-card border border-hairline shadow-2xl`} overflow-hidden bg-surface p-0 text-ink backdrop:bg-ink/45 backdrop:backdrop-blur-[3px]`}
       >
         {open && (
           /*
@@ -119,7 +143,7 @@ export function Dialog({
            * inset track (`.overlay-scroll`), so the bar stops short of the rounded
            * corners instead of cutting across them.
            */
-          <div className="flex max-h-[calc(100dvh-2rem)] flex-col">
+          <div className={`flex flex-col ${expanded ? "h-[100dvh] max-h-[100dvh]" : "max-h-[calc(100dvh-2rem)]"}`}>
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-hairline px-6 py-4 sm:px-7">
               <div className="space-y-1">
                 <h2 id={titleId} className="text-lg font-bold text-ink">
@@ -135,11 +159,11 @@ export function Dialog({
                 <button
                   type="button"
                   onClick={toggleFullscreen}
-                  aria-label={fullscreen ? "Leave full screen" : "Full screen"}
-                  title={fullscreen ? "Leave full screen" : "Full screen"}
+                  aria-label={expanded ? "Leave full screen" : "Full screen"}
+                  title={expanded ? "Leave full screen" : "Full screen"}
                   className="-mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
-                  {fullscreen ? <Minimize2 className="h-4 w-4" aria-hidden /> : <Maximize2 className="h-4 w-4" aria-hidden />}
+                  {expanded ? <Minimize2 className="h-4 w-4" aria-hidden /> : <Maximize2 className="h-4 w-4" aria-hidden />}
                 </button>
               )}
               <button

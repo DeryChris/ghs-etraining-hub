@@ -8,7 +8,7 @@ import { TrainingForm } from "./training-form";
 /**
  * "Record a training" as an overlay rather than a trip to /trainings/new.
  *
- * The register is where somebody notices a missing record, so the form comes to
+ * The trainings list is where somebody notices a missing record, so the form comes to
  * them: closing it leaves the list, its filters and its scroll position exactly
  * where they were. `/trainings/new` stays as a fallback for a bare link.
  */
@@ -24,7 +24,7 @@ export function NewTrainingDialog({
   return (
     <Dialog
       title="Record a training"
-      description="Filed under a programme field and one of its areas. A facilitator's record goes to the unit head for review before it is visible to everyone else."
+      description="Filed under a programme area and one of its fields. A facilitator's record goes to the unit head for review before it is visible to everyone else."
       size="lg"
       trigger={({ open }) => (
         <button

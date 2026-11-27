@@ -22,7 +22,7 @@ type State =
  *
  * The card is a real link — middle-click, open-in-new-tab and a browser without
  * JavaScript all still work — but a plain click opens the training in an overlay
- * over the library instead of navigating to the register. Browsing a catalogue
+ * over the library instead of navigating to Trainings. Browsing a library
  * should not cost you the page you were browsing.
  *
  * The content is loaded when the panel opens, not with the page: an area with

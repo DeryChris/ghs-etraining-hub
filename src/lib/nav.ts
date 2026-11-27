@@ -13,10 +13,15 @@
  * it — which is why the administrator sees "Author" holding only the review
  * queue, while a facilitator sees their materials and notices there too.
  *
- * "Trainings" is the register: a flat, filterable list of events (ADR-0013).
- * "Library" is the way in by subject — programme field, then programme area, then
- * the trainings and material filed under it (ADR-0014). They were briefly one
- * screen, which left the register sharing space with the taxonomy; they are two
+ * The learner does not use the sections at all: `LEARNER_NAV` below is the top bar
+ * of the reading shell (ADR-0027), and a test keeps the two lists in step.
+ *
+ * "Trainings" is the flat, filterable list of events (ADR-0013).
+ * "Library" is the way in by subject — programme area, then programme field, then
+ * the trainings held for it (ADR-0014). Material is attached to its training, so
+ * there is no separate authoring or upload door: a facilitator uploads from the
+ * training it belongs to. They were briefly one
+ * screen, which left the trainings list sharing space with the taxonomy; they are two
  * doors again because people arrive with one of two questions — "what ran this
  * year?" or "what exists for malaria?".
  *
@@ -86,14 +91,14 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         label: "Library",
         icon: "library",
         roles: EVERYONE,
-        hint: "Programme fields and areas, with the trainings and material filed under each",
+        hint: "Programme areas and the fields inside them, with the training filed under each",
       },
       {
         href: "/trainings",
         label: "Trainings",
         icon: "training",
         roles: EVERYONE,
-        hint: "Every training GHS has planned or run, by programme field and area",
+        hint: "Every training GHS has planned or run, by programme area and field",
       },
     ],
   },
@@ -101,7 +106,14 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     id: "community",
     label: "Community",
     items: [
-      { href: "/messages", label: "Messages", icon: "messages", roles: EVERYONE, count: "messages" },
+      {
+        href: "/messages",
+        label: "Messages & complaints",
+        icon: "messages",
+        roles: EVERYONE,
+        count: "messages",
+        hint: "Conversations with colleagues and what staff have reported, in one list",
+      },
       {
         href: "/notifications",
         label: "Notifications",
@@ -115,7 +127,6 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     id: "record",
     label: "My record",
     items: [
-      { href: "/analytics", label: "My activity", icon: "cpd", roles: EVERYONE },
       {
         href: "/insights",
         label: "Insights",
@@ -129,7 +140,6 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     id: "author",
     label: "Author",
     items: [
-      { href: "/authoring", label: "My materials", icon: "materials", roles: FACILITATOR_ONLY },
       {
         href: "/review",
         label: "Review queue",
@@ -156,21 +166,45 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       },
       {
         href: "/programme-fields",
-        label: "Programme fields",
+        label: "Programme areas",
         icon: "taxonomy",
         roles: ADMIN_ONLY,
-        hint: "The programme fields and areas a training plan is filed under",
-      },
-      {
-        href: "/complaints",
-        label: "Complaints",
-        icon: "complaint",
-        roles: STAFF,
-        hint: "What staff have reported, to answer or reset access from",
+        hint: "The programme areas and fields a training plan is filed under",
       },
       { href: "/settings", label: "Settings", icon: "settings", roles: ADMIN_ONLY },
     ],
   },
+];
+
+/**
+ * The learner's five destinations — a top bar, not a sidebar.
+ *
+ * Members of staff are trained, not administered: they open the library, read
+ * what their programme published, and write to a facilitator. A rail built for
+ * people who live in tables made the product look like a management console and
+ * pushed the two things they do most (find material, pick up where they left
+ * off) into a corner. So the learner gets the same shape as the public site —
+ * brand, five links, search, their account — and a bottom bar on a phone, which
+ * is how most of them will see it.
+ *
+ * What is *not* here matters as much: no insights, no review queue, no user
+ * administration, and no "My activity" tab. Their activity is on the dashboard,
+ * where they will actually meet it (ADR‑0027).
+ */
+export interface LearnerNavItem {
+  href: string;
+  label: string;
+  icon: NavIcon;
+  /** Unread count to show as a badge, when this destination carries one. */
+  count?: NavCount;
+}
+
+export const LEARNER_NAV: readonly LearnerNavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
+  { href: "/catalogue", label: "Library", icon: "library" },
+  { href: "/trainings", label: "Trainings", icon: "training" },
+  { href: "/messages", label: "Messages", icon: "messages", count: "messages" },
+  { href: "/notifications", label: "Notifications", icon: "notifications", count: "notifications" },
 ];
 
 /**

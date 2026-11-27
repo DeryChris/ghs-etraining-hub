@@ -23,7 +23,7 @@ import { yearRange } from "@/lib/training-dates";
  * Everything the page needs in one place: the filtered list, the counters above
  * it, the values its filters offer, and one training for its detail page. The
  * joins are all LEFT joins on purpose — a training keeps its place in the list
- * when the programme area, the district or the facility it referenced is later
+ * when the programme field, the district or the facility it referenced is later
  * removed, and reads "not recorded" instead of disappearing.
  */
 
@@ -41,7 +41,7 @@ export interface TrainingFilters {
   review?: TrainingReviewState;
   /**
    * Who is asking. Anything not yet approved is a draft between its author and
-   * the unit head, so it must not leak into a learner's register — but the
+   * the unit head, so it must not leak into the trainings a learner sees — but the
    * author still needs to see their own row to fix and resubmit it.
    */
   viewer?: { userId: string; seeAll: boolean };
@@ -163,6 +163,52 @@ export async function listTrainings(filters: TrainingFilters): Promise<{
   };
 }
 
+/**
+ * What a facilitator has to act on: their own trainings that a unit head
+ * returned for correction.
+ *
+ * The review banner on the training page already explains the state, but nothing
+ * told the author to go and look — a returned training sat in the list exactly
+ * like a live one, so a correction could wait weeks. This is the read the
+ * dashboard's "needs your attention" card makes, and it is scoped to the author:
+ * a returned training is nobody else's task.
+ */
+export interface ReturnedTraining {
+  id: string;
+  title: string;
+  areaName: string | null;
+  fieldName: string | null;
+  reviewNote: string | null;
+  reviewedByName: string | null;
+  reviewedAt: Date | null;
+}
+
+export async function listReturnedTrainings(userId: string): Promise<ReturnedTraining[]> {
+  return db
+    .select({
+      id: trainingSessions.id,
+      title: trainingSessions.title,
+      areaName: programmeAreas.name,
+      fieldName: programmeFields.name,
+      reviewNote: trainingSessions.reviewNote,
+      reviewedByName: users.fullName,
+      reviewedAt: trainingSessions.reviewedAt,
+    })
+    .from(trainingSessions)
+    .leftJoin(programmeFields, eq(programmeFields.id, trainingSessions.programmeFieldId))
+    .leftJoin(programmeAreas, eq(programmeAreas.id, trainingSessions.programmeAreaId))
+    .leftJoin(users, eq(users.id, trainingSessions.reviewedById))
+    .where(
+      and(
+        eq(trainingSessions.createdById, userId),
+        eq(trainingSessions.reviewState, "REJECTED"),
+        eq(trainingSessions.isArchived, false),
+      ),
+    )
+    .orderBy(desc(trainingSessions.reviewedAt))
+    .limit(5);
+}
+
 export interface TrainingSummary {
   total: number;
   planned: number;
@@ -226,7 +272,7 @@ async function loadTrainingFilterOptions(): Promise<TrainingFilterOptions> {
  * Filter options are reference data: the regions, the districts, the years
  * anything has been filed in. They change when an administrator edits geography,
  * not between two clicks of the same session — and they are three of the dozen
- * queries the register fires on every visit. Thirty seconds of cache means
+ * queries Trainings fires on every visit. Thirty seconds of cache means
  * hopping back to Trainings costs the browser nothing at all.
  */
 export const getTrainingFilterOptions = unstable_cache(loadTrainingFilterOptions, ["training-filter-options"], {
@@ -381,12 +427,12 @@ export async function listTrainingComments(trainingId: string, limit = 200): Pro
 }
 
 /**
- * Every published training filed under one programme area, newest first.
+ * Every published training filed under one programme field, newest first.
  *
- * This is what the catalogue's area page shows: the trainings held for that area,
+ * This is what the library's area page shows: the trainings held for that area,
  * so a member of staff can find the one they attended and the material that went
  * with it. Unreviewed rows are excluded — a facilitator's draft is not the
- * catalogue.
+ * library.
  */
 export interface AreaTrainingRow {
   id: string;
@@ -432,7 +478,7 @@ export async function listTrainingsInArea(programmeAreaId: string, limit = 50): 
 }
 
 /**
- * Trainings per programme field, for the small breakdown under the counters.
+ * Trainings per programme area, for the small breakdown under the counters.
  * Grouped in SQL so a field with no trainings can still be shown as zero.
  */
 export async function trainingsByField(): Promise<{ fieldName: string; n: number }[]> {

@@ -34,7 +34,7 @@ export default async function NoticesPage() {
       <PageHeader
         eyebrow="Official notices"
         title="Send a notice"
-        description="Tell a cohort about a changed protocol, a planned outage or a new requirement. Notices appear in their bell and on their notifications page."
+        description="Tell a cohort about material that changed, a planned outage or a new requirement. Notices appear in their bell and on their notifications page."
       />
 
       <div className="flex flex-wrap gap-3">

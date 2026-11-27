@@ -3,7 +3,7 @@
  * actually serves are rendered as links; anything else is shown as plain text.
  */
 const KNOWN_ROUTES: RegExp[] = [
-  /^\/(?:library|catalogue|trainings|notifications|analytics|messages)$/,
+  /^\/(?:library|catalogue|trainings|notifications|dashboard|messages)$/,
   /^\/catalogue\/[A-Za-z0-9-]+$/,
   /^\/catalogue\/[A-Za-z0-9-]+\/[A-Za-z0-9-]+$/,
   /^\/trainings\/[0-9a-f-]{36}$/i,
@@ -16,12 +16,12 @@ export function safeAppLink(url: string | null | undefined): string | null {
   return KNOWN_ROUTES.some((pattern) => pattern.test(path)) ? url : null;
 }
 
-/** The catalogue URL for a programme area: /catalogue/PF-PH/PF-PH-03. */
+/** The library URL for a programme field: /catalogue/PF-PH/PF-PH-03 (the route keeps its old name). */
 export function areaHref(fieldCode: string, areaCode: string): string {
   return `/catalogue/${encodeURIComponent(fieldCode)}/${encodeURIComponent(areaCode)}`;
 }
 
-/** The catalogue URL for a programme field: /catalogue/PF-PH. */
+/** The library URL for a programme area: /catalogue/PF-PH. */
 export function fieldHref(fieldCode: string): string {
   return `/catalogue/${encodeURIComponent(fieldCode)}`;
 }

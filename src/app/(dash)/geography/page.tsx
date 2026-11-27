@@ -199,7 +199,6 @@ export default async function GeographyPage({
               ? "Add the first region with the button above. The seeder loads all sixteen, with Upper West's districts and facilities."
               : "Pick a region above to see and edit its districts, sub-districts and facilities."
           }
-          art="folder"
         />
       ) : (
         <section aria-labelledby="region-heading" className="space-y-5 rounded-card border border-hairline bg-surface p-5 shadow-panel">

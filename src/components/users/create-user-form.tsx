@@ -170,10 +170,10 @@ export function CreateUserForm() {
                       <input id="new-directorate" name="directorate" className={inputClass} />
                     </div>
                     <div>
-                      <label htmlFor="new-cadre" className={labelClass}>
-                        Cadre
+                      <label htmlFor="new-grade" className={labelClass}>
+                        Grade
                       </label>
-                      <input id="new-cadre" name="cadre" placeholder="Nurse, Midwife, Pharmacist…" className={inputClass} />
+                      <input id="new-grade" name="grade" placeholder="Nurse, Midwife, Pharmacist…" className={inputClass} />
                     </div>
                     <div>
                       <label htmlFor="new-facility" className={labelClass}>
