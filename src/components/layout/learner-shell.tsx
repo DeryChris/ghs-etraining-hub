@@ -70,7 +70,7 @@ export function LearnerShell({
           <Link
             href="/dashboard"
             aria-label={`${SITE.name} — dashboard`}
-            className="rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="shrink-0 rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <Wordmark size={32} />
           </Link>
