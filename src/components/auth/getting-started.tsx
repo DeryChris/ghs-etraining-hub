@@ -1,22 +1,9 @@
 import { BookOpen, ClipboardCheck, LogIn, UserPlus } from "lucide-react";
-import Link from "next/link";
-import { BrandMark } from "@/components/brand/brand-mark";
-import { SITE } from "@/lib/site";
 
 /** A compact left-panel guide: signing in is the normal path; account creation is the alternative. */
 export function GettingStarted() {
   return (
     <div className="space-y-6">
-      <Link href="/" className="flex items-center gap-3 rounded-control text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]">
-        <span className="flex h-11 w-11 items-center justify-center rounded-control bg-white/12 ring-1 ring-white/25">
-          <BrandMark size={26} />
-        </span>
-        <span className="flex flex-col leading-tight">
-          <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/75">Ghana Health Service</span>
-          <span className="text-base font-extrabold">{SITE.name}</span>
-        </span>
-      </Link>
-
       <div className="space-y-2">
         <h2 className="text-xl font-extrabold tracking-tight">Sign in, or create your account</h2>
         <p className="text-sm leading-relaxed text-white/80">

@@ -4,9 +4,7 @@ import { ArrowRight, MessageSquareWarning, UserPlus } from "lucide-react";
 import { LoginForm } from "@/components/auth/login-form";
 import { AuthSplit } from "../auth-split";
 import { GettingStarted } from "@/components/auth/getting-started";
-import { BrandMark } from "@/components/brand/brand-mark";
 import { safeNextPath } from "@/lib/safe-redirect";
-import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -35,15 +33,11 @@ export default async function LoginPage({
   return (
     <AuthSplit aside={<GettingStarted />}>
       <div className="space-y-6">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <BrandMark size={40} />
-          <div className="space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-ink-muted">{SITE.fullName}</p>
-            <h1 className="text-2xl font-extrabold tracking-tight text-ink">Sign in</h1>
-            <p className="text-[13px] leading-relaxed text-ink-muted">
-              Use your GHS Staff ID and the password you chose.
-            </p>
-          </div>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-extrabold tracking-tight text-ink">Sign in</h1>
+          <p className="text-[13px] leading-relaxed text-ink-muted">
+            Use your GHS Staff ID and the password you chose.
+          </p>
         </div>
 
         <LoginForm next={next} initialError={initialError} />
