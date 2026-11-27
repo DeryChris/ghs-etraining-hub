@@ -7,6 +7,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { FormFeedback } from "@/components/ui/form-feedback";
 import { FormSteps } from "@/components/ui/form-steps";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { createUserAction, type UserActionState } from "@/lib/server/actions/users";
 import { STAFF_ROLE_HINTS, STAFF_ROLE_LABELS } from "@/lib/labels";
@@ -133,33 +134,33 @@ export function CreateUserForm() {
                       <label htmlFor="new-role" className={labelClass}>
                         Role
                       </label>
-                      <select
+                      <Select
                         id="new-role"
                         name="role"
                         value={role}
-                        onChange={(event) => setRole(event.target.value as StaffRole)}
-                        className={inputClass}
-                      >
-                        {STAFF_ROLE_VALUES.map((option) => (
-                          <option key={option} value={option}>
-                            {STAFF_ROLE_LABELS[option]}
-                          </option>
-                        ))}
-                      </select>
+                        options={STAFF_ROLE_VALUES.map((option) => ({
+                          value: option,
+                          label: STAFF_ROLE_LABELS[option],
+                          hint: STAFF_ROLE_HINTS[option],
+                        }))}
+                        onChange={(next) => setRole(next as StaffRole)}
+                      />
                       <p className={hintClass}>{STAFF_ROLE_HINTS[role]}</p>
                     </div>
                     <div>
                       <label htmlFor="new-region" className={labelClass}>
                         Region
                       </label>
-                      <select id="new-region" name="region" defaultValue="" className={inputClass}>
-                        <option value="">Not recorded</option>
-                        {REGIONS.map((region) => (
-                          <option key={region} value={region}>
-                            {region}
-                          </option>
-                        ))}
-                      </select>
+                      <Select
+                        id="new-region"
+                        name="region"
+                        defaultValue=""
+                        placeholder="Not recorded"
+                        options={[
+                          { value: "", label: "Not recorded" },
+                          ...REGIONS.map((region) => ({ value: region, label: region })),
+                        ]}
+                      />
                       <p className={hintClass}>Only regions where the library is live are listed.</p>
                     </div>
                     <div>

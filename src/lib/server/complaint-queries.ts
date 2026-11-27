@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { complaintMessages, complaints } from "@/db/schema";
+import type { ComplaintIssue } from "@/lib/labels";
 
 /**
  * Reads for the Complaint Hub. The public read is deliberately narrow: a staff ID
@@ -12,7 +13,9 @@ import { complaintMessages, complaints } from "@/db/schema";
 
 export interface PublicComplaint {
   reference: string;
-  issueType: "PERSONAL_DETAILS" | "COURSE_RELATED" | "LOGIN_ACCESS" | "OTHERS";
+  issueType: ComplaintIssue;
+  /** Set when the complaint is about a file on a particular training. */
+  trainingTitle: string | null;
   subject: string;
   status: "SUBMITTED" | "IN_PROGRESS" | "RESOLVED";
   response: string | null;
@@ -25,6 +28,7 @@ export async function complaintsForStaffId(staffId: string): Promise<PublicCompl
     .select({
       reference: complaints.reference,
       issueType: complaints.issueType,
+      trainingTitle: complaints.trainingTitle,
       subject: complaints.subject,
       status: complaints.status,
       response: complaints.response,
@@ -70,6 +74,7 @@ export async function listComplaints(status?: "OPEN" | "RESOLVED" | "ALL"): Prom
       region: complaints.region,
       facility: complaints.facility,
       issueType: complaints.issueType,
+      trainingTitle: complaints.trainingTitle,
       subject: complaints.subject,
       description: complaints.description,
       status: complaints.status,

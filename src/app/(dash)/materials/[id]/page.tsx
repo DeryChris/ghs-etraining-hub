@@ -8,10 +8,6 @@ import { PriorityChip } from "@/components/ui/priority-chip";
 import { PageHeader } from "@/components/ui/page-header";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { formatDate, formatMinutes } from "@/lib/format";
-import { previewKindFor } from "@/lib/ghs-constants";
-import { readMaterialObject } from "@/lib/server/file-storage";
-import { log } from "@/lib/server/logger";
-import { readOfficePreview, type OfficePreview } from "@/lib/server/office-preview";
 import { isUuid } from "@/lib/ids";
 import { MATERIAL_TYPE_LABELS } from "@/lib/labels";
 import { getMaterialDetail } from "@/lib/server/learning-queries";
@@ -44,37 +40,6 @@ export default async function MaterialPage({
   const versionChanged = progress?.acknowledgedAt != null && signedVersion !== null && !acknowledged;
   const hasFile = Boolean(version?.storageKey);
   const noticeText = notice ? NOTICES[notice] : undefined;
-
-  /*
-   * Word, PowerPoint, Excel and text files are read here, because the browser
-   * cannot render them. Everything else — PDF, image, video, audio — is handed
-   * to the browser as a signed URL and never passes through this function.
-   *
-   * A failure to read is not a failure of the page: the viewer says so and the
-   * download still works, which is the whole point of keeping the original.
-   */
-  const kind = previewKindFor(version?.mimeType);
-  let office: OfficePreview | null = null;
-  let text: string | null = null;
-  let viewError: string | null = null;
-
-  if (hasFile && version?.storageKey && (kind === "docx" || kind === "pptx" || kind === "xlsx" || kind === "text")) {
-    const cap = kind === "text" ? 2 * 1024 * 1024 : 25 * 1024 * 1024;
-    const object = await readMaterialObject(version.storageKey, cap);
-    if (!object.ok) {
-      viewError = "The stored file could not be read just now. The download link still works.";
-      log.warn({ event: "material.preview_unavailable", materialId: id, reason: object.reason });
-    } else if (kind === "text") {
-      text = object.body.toString("utf8");
-    } else {
-      try {
-        office = readOfficePreview(object.body, version.mimeType ?? "");
-      } catch (error) {
-        viewError = "This file could not be read in the page — it may be corrupt, or saved in a format this reader does not open. Download it to read.";
-        log.warn({ event: "material.preview_failed", materialId: id, error: String(error) });
-      }
-    }
-  }
 
   return (
     <div className="space-y-8">
@@ -142,9 +107,6 @@ export default async function MaterialPage({
               title={material.title}
               mimeType={version?.mimeType ?? null}
               sizeBytes={version?.sizeBytes ?? null}
-              office={office}
-              text={text}
-              error={viewError}
             />
           ) : (
             <section aria-labelledby="file-heading" className="rounded-card border border-hairline bg-surface p-6 shadow-panel">

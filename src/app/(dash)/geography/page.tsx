@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { ActionDialog } from "@/components/ui/action-dialog";
@@ -283,13 +284,12 @@ export default async function GeographyPage({
                   <label htmlFor="new-district-kind" className={labelClass}>
                     Kind
                   </label>
-                  <select id="new-district-kind" name="kind" defaultValue="DISTRICT" className={inputClass}>
-                    {DISTRICT_KINDS.map((kind) => (
-                      <option key={kind} value={kind}>
-                        {DISTRICT_KIND_LABELS[kind]}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    id="new-district-kind"
+                    name="kind"
+                    defaultValue="DISTRICT"
+                    options={DISTRICT_KINDS.map((kind) => ({ value: kind, label: DISTRICT_KIND_LABELS[kind] }))}
+                  />
                 </div>
                 <div>
                   <label htmlFor="new-district-capital" className={labelClass}>
@@ -371,18 +371,12 @@ export default async function GeographyPage({
                             <label htmlFor={`district-kind-${row.id}`} className={labelClass}>
                               Kind
                             </label>
-                            <select
+                            <Select
                               id={`district-kind-${row.id}`}
                               name="kind"
                               defaultValue={row.kind}
-                              className={inputClass}
-                            >
-                              {DISTRICT_KINDS.map((kind) => (
-                                <option key={kind} value={kind}>
-                                  {DISTRICT_KIND_LABELS[kind]}
-                                </option>
-                              ))}
-                            </select>
+                              options={DISTRICT_KINDS.map((kind) => ({ value: kind, label: DISTRICT_KIND_LABELS[kind] }))}
+                            />
                           </div>
                           <div>
                             <label htmlFor={`district-capital-${row.id}`} className={labelClass}>
@@ -503,38 +497,41 @@ export default async function GeographyPage({
                       <label htmlFor="new-facility-type" className={labelClass}>
                         Type
                       </label>
-                      <select id="new-facility-type" name="type" defaultValue="HEALTH_CENTRE" className={inputClass}>
-                        {FACILITY_TYPES.map((type) => (
-                          <option key={type} value={type}>
-                            {FACILITY_TYPE_LABELS[type]}
-                          </option>
-                        ))}
-                      </select>
+                      <Select
+                        id="new-facility-type"
+                        name="type"
+                        defaultValue="HEALTH_CENTRE"
+                        options={FACILITY_TYPES.map((type) => ({ value: type, label: FACILITY_TYPE_LABELS[type] }))}
+                      />
                     </div>
                     <div>
                       <label htmlFor="new-facility-ownership" className={labelClass}>
                         Ownership
                       </label>
-                      <select id="new-facility-ownership" name="ownership" defaultValue="GHS" className={inputClass}>
-                        {FACILITY_OWNERSHIPS.map((ownership) => (
-                          <option key={ownership} value={ownership}>
-                            {FACILITY_OWNERSHIP_LABELS[ownership]}
-                          </option>
-                        ))}
-                      </select>
+                      <Select
+                        id="new-facility-ownership"
+                        name="ownership"
+                        defaultValue="GHS"
+                        options={FACILITY_OWNERSHIPS.map((ownership) => ({
+                          value: ownership,
+                          label: FACILITY_OWNERSHIP_LABELS[ownership],
+                        }))}
+                      />
                     </div>
                     <div>
                       <label htmlFor="new-facility-subdistrict" className={labelClass}>
                         Sub-district
                       </label>
-                      <select id="new-facility-subdistrict" name="subDistrictId" defaultValue="" className={inputClass}>
-                        <option value="">— optional —</option>
-                        {district.subDistricts.map((sub) => (
-                          <option key={sub.id} value={sub.id}>
-                            {sub.name}
-                          </option>
-                        ))}
-                      </select>
+                      <Select
+                        id="new-facility-subdistrict"
+                        name="subDistrictId"
+                        defaultValue=""
+                        placeholder="— optional —"
+                        options={[
+                          { value: "", label: "— optional —" },
+                          ...district.subDistricts.map((sub) => ({ value: sub.id, label: sub.name })),
+                        ]}
+                      />
                     </div>
                     <button type="submit" className={buttonClass()}>
                       Add facility
@@ -621,53 +618,41 @@ export default async function GeographyPage({
                               <label htmlFor={`facility-type-${facility.id}`} className={labelClass}>
                                 Type
                               </label>
-                              <select
+                              <Select
                                 id={`facility-type-${facility.id}`}
                                 name="type"
                                 defaultValue={facility.type}
-                                className={inputClass}
-                              >
-                                {FACILITY_TYPES.map((type) => (
-                                  <option key={type} value={type}>
-                                    {FACILITY_TYPE_LABELS[type]}
-                                  </option>
-                                ))}
-                              </select>
+                                options={FACILITY_TYPES.map((type) => ({ value: type, label: FACILITY_TYPE_LABELS[type] }))}
+                              />
                             </div>
                             <div>
                               <label htmlFor={`facility-ownership-${facility.id}`} className={labelClass}>
                                 Ownership
                               </label>
-                              <select
+                              <Select
                                 id={`facility-ownership-${facility.id}`}
                                 name="ownership"
                                 defaultValue={facility.ownership}
-                                className={inputClass}
-                              >
-                                {FACILITY_OWNERSHIPS.map((ownership) => (
-                                  <option key={ownership} value={ownership}>
-                                    {FACILITY_OWNERSHIP_LABELS[ownership]}
-                                  </option>
-                                ))}
-                              </select>
+                                options={FACILITY_OWNERSHIPS.map((ownership) => ({
+                                  value: ownership,
+                                  label: FACILITY_OWNERSHIP_LABELS[ownership],
+                                }))}
+                              />
                             </div>
                             <div>
                               <label htmlFor={`facility-subdistrict-${facility.id}`} className={labelClass}>
                                 Sub-district
                               </label>
-                              <select
+                              <Select
                                 id={`facility-subdistrict-${facility.id}`}
                                 name="subDistrictId"
                                 defaultValue={facility.subDistrictId ?? ""}
-                                className={inputClass}
-                              >
-                                <option value="">— none —</option>
-                                {district.subDistricts.map((sub) => (
-                                  <option key={sub.id} value={sub.id}>
-                                    {sub.name}
-                                  </option>
-                                ))}
-                              </select>
+                                placeholder="— none —"
+                                options={[
+                                  { value: "", label: "— none —" },
+                                  ...district.subDistricts.map((sub) => ({ value: sub.id, label: sub.name })),
+                                ]}
+                              />
                             </div>
                             <input type="hidden" name="isActive" value={String(facility.isActive)} />
                             <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>

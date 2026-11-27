@@ -180,7 +180,7 @@ function TrainingViewBody({ data, href }: { data: TrainingView; href: string }) 
          * pick, and a row stretched across the panel reads like a section heading
          * with a download bolted on. Two-up, and each one opens to be read.
          */}
-        <ResourceTiles trainingId={data.id} resources={data.resources} />
+        <ResourceTiles trainingId={data.id} trainingTitle={data.title} resources={data.resources} />
       </section>
 
       <section aria-labelledby="panel-discussion" className="space-y-2">

@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { inputClass, labelClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
@@ -196,24 +197,30 @@ npm run staff:status`}
           <label htmlFor="user-role" className={labelClass}>
             Role
           </label>
-          <select id="user-role" name="role" defaultValue={role ?? ""} className={inputClass}>
-            <option value="">All roles</option>
-            {STAFF_ROLE_VALUES.map((value) => (
-              <option key={value} value={value}>
-                {STAFF_ROLE_LABELS[value]}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="user-role"
+            name="role"
+            defaultValue={role ?? ""}
+            options={[
+              { value: "", label: "All roles" },
+              ...STAFF_ROLE_VALUES.map((value) => ({ value, label: STAFF_ROLE_LABELS[value] })),
+            ]}
+          />
         </div>
         <div>
           <label htmlFor="user-status" className={labelClass}>
             Status
           </label>
-          <select id="user-status" name="status" defaultValue={status ?? ""} className={inputClass}>
-            <option value="">All accounts</option>
-            <option value="active">Active</option>
-            <option value="inactive">Deactivated</option>
-          </select>
+          <Select
+            id="user-status"
+            name="status"
+            defaultValue={status ?? ""}
+            options={[
+              { value: "", label: "All accounts" },
+              { value: "active", label: "Active" },
+              { value: "inactive", label: "Deactivated" },
+            ]}
+          />
         </div>
         <div className="flex items-center gap-2">
           <button type="submit" className={buttonClass({ variant: "secondary" })}>

@@ -275,3 +275,28 @@ for every format, the browser draws PDF/image/video/audio while the server reads
 Word/PowerPoint/Excel/text, and attachments inside the library panel are compact
 tiles instead of full-width rows. See
 `0023-attachments-open-before-they-save.md`.
+
+---
+
+## ADR‑0024 — The file is drawn, not described
+
+**Status:** accepted · **Date:** 2026‑11 · **Supersedes** the reading-view part of ADR‑0023
+
+A .pptx is drawn slide by slide at the author's coordinates, a .docx as Word's own
+pages, an .xlsx as a grid with its own widths, merges, fills and number formats,
+and a PDF through the browser's own engine. The readers run in the browser and are
+unit-tested; what cannot be drawn is stated. A wrong upload can be replaced from
+the viewer it was discovered in. See `0024-the-file-is-drawn-not-described.md`.
+
+---
+
+## ADR‑0025 — Complaints about files, and menus that match the product
+
+**Status:** accepted · **Date:** 2026‑11
+
+"Wrong document uploaded" and "document cannot be opened" are their own complaint
+types, and either one asks which training — stored with a copy of its title. The
+complaint form becomes three steps with issue cards. One listbox replaces every
+native `<select>` in the product, posting through a real hidden select so forms
+submit exactly what they did before. See
+`0025-complaints-about-files-and-menus-that-match.md`.

@@ -7,6 +7,7 @@ import { ProgrammeFieldTile } from "@/components/programme/programme-tile";
 import { buttonClass } from "@/components/ui/button";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { inputClass, labelClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { fieldHref } from "@/lib/links";
 import { MATERIAL_TYPES, MATERIAL_TYPE_LABELS, isMaterialType } from "@/lib/labels";
 import { listFields, searchLibrary } from "@/lib/server/learning-queries";
@@ -219,14 +220,15 @@ function SearchForm({ query, type }: { query: string; type: string | null }) {
         <label htmlFor="library-type" className={labelClass}>
           Type
         </label>
-        <select id="library-type" name="type" defaultValue={type ?? ""} className={inputClass}>
-          <option value="">All types</option>
-          {MATERIAL_TYPES.map((value) => (
-            <option key={value} value={value}>
-              {MATERIAL_TYPE_LABELS[value]}
-            </option>
-          ))}
-        </select>
+        <Select
+          id="library-type"
+          name="type"
+          defaultValue={type ?? ""}
+          options={[
+            { value: "", label: "All types" },
+            ...MATERIAL_TYPES.map((value) => ({ value, label: MATERIAL_TYPE_LABELS[value] })),
+          ]}
+        />
       </div>
       <button type="submit" className={buttonClass({ className: "w-full md:w-auto" })}>
         Search

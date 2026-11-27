@@ -2,13 +2,26 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Clock, Lock } from "lucide-react";
 import { ComplaintForm } from "@/components/help/complaint-form";
+import { COMPLAINT_ISSUES, type ComplaintIssue } from "@/lib/labels";
 
 export const metadata: Metadata = {
   title: "Lodge a complaint",
   description: "Tell us what is wrong with your account, your course or your details — no sign-in needed.",
 };
 
-export default function ReportComplaintPage() {
+/**
+ * The form can be opened with a complaint already half-filled: a failed viewer
+ * links here with the training and the issue it could not show, so the person
+ * picks up where the broken file left off instead of starting from a blank page.
+ */
+export default async function ReportComplaintPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ issue?: string; training?: string; trainingTitle?: string; subject?: string }>;
+}) {
+  const params = await searchParams;
+  const issue = COMPLAINT_ISSUES.find((entry) => entry === params.issue) as ComplaintIssue | undefined;
+
   return (
     <section className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:px-8 lg:grid-cols-[1fr_20rem] lg:px-10">
       <div className="space-y-8">
@@ -30,7 +43,14 @@ export default function ReportComplaintPage() {
         </div>
 
         <div className="rounded-card border border-hairline bg-surface p-6 shadow-panel sm:p-8">
-          <ComplaintForm />
+          <ComplaintForm
+            initial={{
+              issue,
+              trainingId: params.training ?? null,
+              trainingTitle: params.trainingTitle ?? null,
+              subject: params.subject ?? null,
+            }}
+          />
         </div>
       </div>
 

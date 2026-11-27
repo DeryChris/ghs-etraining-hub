@@ -115,6 +115,7 @@ export default async function ComplaintsPage({
                 region: row.region,
                 facility: row.facility,
                 issueType: row.issueType,
+                trainingTitle: row.trainingTitle,
                 subject: row.subject,
                 description: row.description,
                 status: row.status,

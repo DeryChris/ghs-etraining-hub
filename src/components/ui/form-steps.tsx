@@ -21,7 +21,7 @@ export interface FormStep {
  * them at any moment.
  *
  * Every panel stays mounted — inactive steps are `hidden`, not unmounted — for two
- * reasons: a `<select>` whose options were filtered by an earlier answer keeps its
+ * reasons: a dropdown whose options were filtered by an earlier answer keeps its
  * state, and the browser still posts every field, so the server sees the whole
  * form. Because a hidden required field cannot be focused, the form runs
  * `noValidate`: on submit this component finds the first invalid control, brings

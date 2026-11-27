@@ -612,6 +612,68 @@ export async function finaliseTrainingResourceAction(
   return { ok: true, message: `“${title}” is attached to this training.` };
 }
 
+/**
+ * Swap the bytes behind an attachment that was uploaded wrongly.
+ *
+ * The usual case is not a change of mind about the file's name but a deck that
+ * turns out to be last year's, or a sheet attached to the wrong training. Deleting
+ * and re-adding would lose the place in the list and the record of when it was
+ * first attached, so the row keeps its identity and only the object changes; the
+ * old object is removed once the new one has been inspected and recorded.
+ */
+export async function replaceTrainingResourceAction(input: {
+  trainingId: string;
+  resourceId: string;
+  storageKey: string;
+  mimeType: string;
+  title?: string;
+}): Promise<TrainingActionState> {
+  const training = await loadReviewableTraining(input.trainingId);
+  if (!training.ok) return { ok: false, message: training.message };
+
+  if (!input.storageKey.startsWith(`trainings/${input.trainingId}/`)) {
+    return { ok: false, message: "That upload does not belong to this training." };
+  }
+
+  const [existing] = await db
+    .select({ id: trainingResources.id, storageKey: trainingResources.storageKey, title: trainingResources.title })
+    .from(trainingResources)
+    .where(and(eq(trainingResources.id, input.resourceId), eq(trainingResources.trainingId, input.trainingId)))
+    .limit(1);
+  if (!existing) return { ok: false, message: "That attachment no longer exists. Reload the page." };
+
+  const inspected = await inspectMaterialObject(input.storageKey);
+  if (!inspected.ok) return { ok: false, message: "The file did not arrive. Nothing has been changed." };
+
+  const title = input.title?.trim() || existing.title;
+
+  try {
+    await db
+      .update(trainingResources)
+      .set({
+        storageKey: input.storageKey,
+        title,
+        mimeType: inspected.object.contentType ?? input.mimeType,
+        sizeBytes: inspected.object.sizeBytes,
+        uploadedById: training.sessionId,
+      })
+      .where(eq(trainingResources.id, input.resourceId));
+  } catch (error) {
+    log.error({ event: "training.resource_replace_failed", id: input.resourceId, err: String(error) });
+    await removeMaterialObject(input.storageKey);
+    return { ok: false, message: "The file arrived but the change was not recorded. Nothing was replaced." };
+  }
+
+  // The old bytes go only after the new row is in place: a failed delete leaves
+  // an orphan object, which is invisible; the other order loses the file.
+  const removed = await removeMaterialObject(existing.storageKey);
+  if (!removed.ok) log.warn({ event: "training.resource_object_orphaned", storageKey: existing.storageKey });
+
+  log.info({ event: "training.resource_replaced", trainingId: input.trainingId, resourceId: input.resourceId });
+  revalidateTrainings(input.trainingId);
+  return { ok: true, message: `“${title}” now holds the new file.` };
+}
+
 export async function removeTrainingResourceAction(formData: FormData): Promise<void> {
   const trainingId = field(formData, "trainingId");
   const resourceId = field(formData, "resourceId");

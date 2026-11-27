@@ -599,6 +599,13 @@ export const complaintIssueEnum = pgEnum("complaint_issue", [
   "PERSONAL_DETAILS",
   "COURSE_RELATED",
   "LOGIN_ACCESS",
+  /**
+   * A file on a training is the wrong one, or will not open at all. They are
+   * separate answers because the remedies differ: one is a replacement upload,
+   * the other is a broken object the desk has to fetch and inspect.
+   */
+  "WRONG_DOCUMENT",
+  "DOC_INACCESSIBLE",
   "OTHERS",
 ]);
 
@@ -618,6 +625,14 @@ export const complaints = pgTable("complaints", {
   region: text("region"),
   facility: text("facility"),
   issueType: complaintIssueEnum("issue_type").notNull(),
+  /**
+   * Which training the complaint is about, when the issue is one of its files.
+   * Null for everything else. The title is copied as well as the id: a complaint
+   * is a record of what somebody said, and it has to keep reading that way if the
+   * training is later withdrawn.
+   */
+  trainingId: uuid("training_id").references(() => trainingSessions.id, { onDelete: "set null" }),
+  trainingTitle: text("training_title"),
   subject: text("subject").notNull(),
   description: text("description").notNull(),
   status: complaintStatusEnum("status").notNull().default("SUBMITTED"),

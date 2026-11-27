@@ -3,7 +3,6 @@ import { buttonClass } from "@/components/ui/button";
 import { FilePreview } from "@/components/materials/file-preview";
 import { formatBytes, formatMimeType } from "@/lib/format";
 import { previewKindFor } from "@/lib/ghs-constants";
-import type { OfficePreview } from "@/lib/server/office-preview";
 
 /**
  * The file, opened in the page.
@@ -15,9 +14,8 @@ import type { OfficePreview } from "@/lib/server/office-preview";
  *  - PDF: the browser's own viewer, framed.
  *  - Image, video, audio: native elements, with the video served by range through
  *    the signed URL so seeking works.
- *  - Word, PowerPoint, Excel: text and tables extracted on the server (`office-preview.ts`)
- *    — a reading view, with the original one click away because layout belongs to
- *    the file, not to the library.
+ *  - Word, PowerPoint, Excel: drawn from the file itself in the browser — pages for
+ *    a document, the slide canvas for a deck, the grid for a sheet (`file-preview.tsx`).
  *  - Text, Markdown, CSV: shown as text.
  *
  * The download is always present and always the same action, so nothing is
@@ -28,19 +26,11 @@ export function MaterialViewer({
   title,
   mimeType,
   sizeBytes,
-  office,
-  text,
-  error,
 }: {
   materialId: string;
   title: string;
   mimeType: string | null;
   sizeBytes?: number | null;
-  office?: OfficePreview | null;
-  /** Already-read text for text/markdown/csv items. */
-  text?: string | null;
-  /** Why the in-page view is not showing, when it is not. */
-  error?: string | null;
 }) {
   const kind = previewKindFor(mimeType);
   const fileHref = `/api/materials/${materialId}/file`;
@@ -69,18 +59,7 @@ export function MaterialViewer({
         </div>
       </div>
 
-      <FilePreview
-        kind={kind}
-        title={title}
-        fileHref={fileHref}
-        office={office}
-        text={text}
-        error={error}
-      />
-
-      {office?.notes?.length ? (
-        <p className="border-t border-hairline px-5 py-3 text-xs leading-relaxed text-ink-muted">{office.notes.join(" ")}</p>
-      ) : null}
+      <FilePreview kind={kind} title={title} fileHref={fileHref} />
     </section>
   );
 }

@@ -122,9 +122,9 @@ promise about the viewer:
 | Family | Types | Limit | In the page |
 | --- | --- | --- | --- |
 | PDF | `application/pdf` | 25 MB | Browser's PDF viewer, framed |
-| Word | `.docx` | 25 MB | Text, headings and bullets extracted server-side |
-| PowerPoint | `.pptx` | 25 MB | Slide-by-slide text, extracted server-side |
-| Excel | `.xlsx` | 25 MB | Sheets as tables, first 300 rows × 24 columns |
+| Word | `.docx` | 25 MB | Drawn as pages in the browser (`docx-preview`) — margins, tables, images |
+| PowerPoint | `.pptx` | 25 MB | Every slide drawn on its canvas: shapes, text, pictures, fills |
+| Excel | `.xlsx` | 25 MB | Drawn as a grid with its own widths, merges, fills and number formats |
 | Video | mp4, webm, mkv, mov | 250 MB | Native player, served by range |
 | Audio | mp3, m4a | 60 MB | Native player |
 | Image | png, jpeg, webp, gif | 10 MB | Inline, full width |
@@ -171,19 +171,29 @@ the server re-reads the object's metadata before recording the version, so the
 stored size and content type are the source of truth (ADR-0008). Reads are a
 15-minute presigned GET; the audit trail records every issue.
 
-### Reading office files
+### Drawing office files
 
-`src/lib/server/office-preview.ts` unzips the OOXML container with
-`node:zlib` and reads `word/document.xml`, `ppt/slides/*.xml` and
-`xl/worksheets/*.xml` directly. No converter runs on the host and no client
-bundle ships a document library: the reader is about 300 lines and returns text,
-slides and cell values, which the viewer renders as React nodes. Layout and
-images stay in the original, which is always one click away.
+The viewer draws the file; it does not quote it (ADR‑0024). Nothing is extracted
+on the server any more, so opening a 25 MB deck no longer costs the page a
+25 MB read before the first pixel:
 
-Two consequences worth knowing. The server reads the object for these formats, so
-the cap is 25 MB and a slow read degrades to "download it" rather than failing
-the page. And a document made only of images yields no text — the viewer says so
-instead of showing an empty frame.
+| Format | Reader | What is drawn |
+| --- | --- | --- |
+| `.docx` | `docx-preview` (`src/components/materials/office-file.tsx`) | Word's own page layout — margins, headings, tables, images, headers and footers |
+| `.pptx` | `src/lib/office/pptx.ts` | Each slide's canvas: every shape at its EMU position, text with its size, weight and colour, pictures from the archive, fills and table frames |
+| `.xlsx` | `src/lib/office/xlsx.ts` | The grid: column widths, row heights, merged cells, fonts, fills, number formats and sheet tabs |
+| `.pdf` | the browser | The browser's PDF engine — the same class of renderer as Acrobat |
+
+The bytes come from the same file route the download uses, so a reader sees only
+what they were already allowed to open. `jszip` inflates the OOXML and
+`DOMParser` reads the XML, so both readers are browser-safe and, because the
+model they produce is plain data, they are unit-tested in Node (`pptx.test.ts`,
+`xlsx.test.ts`) rather than only eyeballed.
+
+What is deliberately not attempted: animation, SmartArt, gradients, charts and
+the more exotic effects in a deck. The viewers say so where they notice one, and
+the original stays one click away. A file the readers cannot open says so
+plainly with the download beside it instead of showing an empty frame.
 
 ## 9. Material authoring pipeline
 

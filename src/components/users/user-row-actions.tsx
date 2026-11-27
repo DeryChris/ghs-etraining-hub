@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { STAFF_ROLE_HINTS, STAFF_ROLE_LABELS } from "@/lib/labels";
 import { staffRoleOf, STAFF_ROLE_VALUES, type Role } from "@/lib/rbac/capabilities";
@@ -390,13 +391,16 @@ function DetailsDialog({
             Role
           </label>
           <div className="flex gap-2">
-            <select id={`role-${userId}`} name="role" defaultValue={currentRole} className={inputClass}>
-              {STAFF_ROLE_VALUES.map((value) => (
-                <option key={value} value={value}>
-                  {STAFF_ROLE_LABELS[value]}
-                </option>
-              ))}
-            </select>
+            <Select
+              id={`role-${userId}`}
+              name="role"
+              defaultValue={currentRole}
+              options={STAFF_ROLE_VALUES.map((value) => ({
+                value,
+                label: STAFF_ROLE_LABELS[value],
+                hint: STAFF_ROLE_HINTS[value],
+              }))}
+            />
             <SubmitButton variant="secondary" pendingLabel="Saving…">
               Save role
             </SubmitButton>

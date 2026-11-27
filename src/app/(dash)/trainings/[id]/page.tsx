@@ -202,7 +202,14 @@ export default async function TrainingDetailPage({
           </p>
         )}
 
-        <ResourceChips trainingId={training.id} resources={chips} />
+        <ResourceChips
+          trainingId={training.id}
+          trainingTitle={training.title}
+          resources={chips}
+          canEdit={
+            !fromLibrary && mayManage && (session.role === "SYSTEM_ADMIN" || training.createdById === session.sub || canReview)
+          }
+        />
       </div>
 
       {(notice || error) && (

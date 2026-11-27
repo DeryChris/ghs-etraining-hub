@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { inputClass, labelClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { LiveRefresh } from "@/components/layout/live-refresh";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
@@ -253,96 +254,98 @@ export default async function TrainingsPage({
           <label htmlFor="filter-year" className={labelClass}>
             Year
           </label>
-          <select id="filter-year" name="year" defaultValue={query.year ? String(query.year) : ""} className={inputClass}>
-            <option value="">All years</option>
-            {options.years.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="filter-year"
+            name="year"
+            defaultValue={query.year ? String(query.year) : ""}
+            options={[
+              { value: "", label: "All years" },
+              ...options.years.map((year) => ({ value: String(year), label: String(year) })),
+            ]}
+          />
         </div>
 
         <div>
           <label htmlFor="filter-status" className={labelClass}>
             Status
           </label>
-          <select id="filter-status" name="status" defaultValue={query.status ?? ""} className={inputClass}>
-            <option value="">Any status</option>
-            {TRAINING_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {TRAINING_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="filter-status"
+            name="status"
+            defaultValue={query.status ?? ""}
+            options={[
+              { value: "", label: "Any status" },
+              ...TRAINING_STATUSES.map((status) => ({ value: status, label: TRAINING_STATUS_LABELS[status] })),
+            ]}
+          />
         </div>
 
         <div>
           <label htmlFor="filter-field" className={labelClass}>
             Programme field
           </label>
-          <select id="filter-field" name="field" defaultValue={query.field ?? ""} className={inputClass}>
-            <option value="">All fields</option>
-            {fields.map((field) => (
-              <option key={field.id} value={field.id}>
-                {field.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="filter-field"
+            name="field"
+            defaultValue={query.field ?? ""}
+            options={[
+              { value: "", label: "All fields" },
+              ...fields.map((field) => ({ value: field.id, label: field.name })),
+            ]}
+          />
         </div>
 
         <div>
           <label htmlFor="filter-area" className={labelClass}>
             Programme area
           </label>
-          <select id="filter-area" name="area" defaultValue={query.area ?? ""} className={inputClass}>
-            <option value="">All areas</option>
-            {fields.map((field) => (
-              <optgroup key={field.id} label={field.name}>
-                {field.areas.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+          <Select
+            id="filter-area"
+            name="area"
+            searchable
+            defaultValue={query.area ?? ""}
+            options={[
+              { value: "", label: "All areas" },
+              ...fields.flatMap((field) =>
+                field.areas.map((area) => ({ value: area.id, label: area.name, group: field.name })),
+              ),
+            ]}
+          />
         </div>
 
         <div>
           <label htmlFor="filter-region" className={labelClass}>
             Region
           </label>
-          <select id="filter-region" name="region" defaultValue={query.region ?? ""} className={inputClass}>
-            <option value="">All regions</option>
-            {options.regions.map((region) => (
-              <option key={region.id} value={region.id}>
-                {region.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="filter-region"
+            name="region"
+            defaultValue={query.region ?? ""}
+            options={[
+              { value: "", label: "All regions" },
+              ...options.regions.map((region) => ({ value: region.id, label: region.name })),
+            ]}
+          />
         </div>
 
         <div>
           <label htmlFor="filter-district" className={labelClass}>
             District
           </label>
-          <select id="filter-district" name="district" defaultValue={query.district ?? ""} className={inputClass}>
-            <option value="">All districts</option>
-            {options.regions.map((region) => {
-              const districts = options.districts.filter((district) => district.regionId === region.id);
-              if (districts.length === 0) return null;
-              return (
-                <optgroup key={region.id} label={region.name}>
-                  {districts.map((district) => (
-                    <option key={district.id} value={district.id}>
-                      {district.name}
-                    </option>
-                  ))}
-                </optgroup>
-              );
-            })}
-          </select>
+          <Select
+            id="filter-district"
+            name="district"
+            searchable
+            defaultValue={query.district ?? ""}
+            options={[
+              { value: "", label: "All districts" },
+              ...options.regions.flatMap((region) =>
+                options.districts
+                  .filter((district) => district.regionId === region.id)
+                  .map((district) => ({ value: district.id, label: district.name, group: region.name })),
+              ),
+            ]}
+          />
         </div>
 
         <div className="flex items-center gap-2 md:col-span-2 xl:col-span-4">

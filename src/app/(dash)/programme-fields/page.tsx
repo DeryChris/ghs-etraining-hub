@@ -5,6 +5,7 @@ import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { FieldTileIcon } from "@/components/ui/field-tile-icon";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
@@ -439,24 +440,18 @@ export default async function ProgrammeFieldsPage({
                                       >
                                         Give someone this area
                                       </label>
-                                      <select
+                                      <Select
                                         id={`area-person-${area.id}`}
                                         name="userId"
                                         required
-                                        className={inputClass}
-                                      >
-                                        <option value="">
-                                          Choose a person…
-                                        </option>
-                                        {assignable.map((person) => (
-                                          <option
-                                            key={person.id}
-                                            value={person.id}
-                                          >
-                                            {person.fullName} · {person.staffId}
-                                          </option>
-                                        ))}
-                                      </select>
+                                        searchable
+                                        placeholder="Choose a person…"
+                                        options={assignable.map((person) => ({
+                                          value: person.id,
+                                          label: person.fullName,
+                                          hint: person.staffId,
+                                        }))}
+                                      />
                                     </div>
                                     <button
                                       type="submit"

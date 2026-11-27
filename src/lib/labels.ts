@@ -153,22 +153,44 @@ export function isFacilityOwnership(value: string | null | undefined): value is 
  * aloud on the phone.
  */
 
-export const COMPLAINT_ISSUES = ["PERSONAL_DETAILS", "COURSE_RELATED", "LOGIN_ACCESS", "OTHERS"] as const;
+export const COMPLAINT_ISSUES = [
+  "LOGIN_ACCESS",
+  "WRONG_DOCUMENT",
+  "DOC_INACCESSIBLE",
+  "COURSE_RELATED",
+  "PERSONAL_DETAILS",
+  "OTHERS",
+] as const;
 export type ComplaintIssue = (typeof COMPLAINT_ISSUES)[number];
 
 export const COMPLAINT_ISSUE_LABELS: Record<ComplaintIssue, string> = {
   PERSONAL_DETAILS: "Changing of personal details",
   COURSE_RELATED: "Course related",
   LOGIN_ACCESS: "Login access",
-  OTHERS: "Others",
+  WRONG_DOCUMENT: "Wrong document uploaded",
+  DOC_INACCESSIBLE: "Document cannot be opened",
+  OTHERS: "Something else",
 };
 
 export const COMPLAINT_ISSUE_HELP: Record<ComplaintIssue, string> = {
   PERSONAL_DETAILS: "A wrong name, staff ID, facility or posting.",
-  COURSE_RELATED: "A material that will not open, or a training you were not credited for.",
+  COURSE_RELATED: "A training you were not credited for, or a session that was not what was advertised.",
   LOGIN_ACCESS: "Forgotten password, no account yet, or a locked account.",
-  OTHERS: "Anything that does not fit the three above.",
+  WRONG_DOCUMENT: "The file attached to a training is not the one it should be — the wrong deck, an old version, somebody else's sheet.",
+  DOC_INACCESSIBLE: "The file is there but will not open, will not download, or opens to an error.",
+  OTHERS: "Anything that does not fit the list above.",
 };
+
+/**
+ * The issues that are about a particular file. They ask which training, because
+ * "the document will not open" is unanswerable without it, and asking later costs
+ * a round trip through email.
+ */
+export const COMPLAINT_ISSUES_ABOUT_A_FILE: readonly ComplaintIssue[] = ["WRONG_DOCUMENT", "DOC_INACCESSIBLE"];
+
+export function complaintIsAboutAFile(issue: string | null | undefined): boolean {
+  return issue === "WRONG_DOCUMENT" || issue === "DOC_INACCESSIBLE";
+}
 
 export const COMPLAINT_STATUSES = ["SUBMITTED", "IN_PROGRESS", "RESOLVED"] as const;
 export type ComplaintStatus = (typeof COMPLAINT_STATUSES)[number];

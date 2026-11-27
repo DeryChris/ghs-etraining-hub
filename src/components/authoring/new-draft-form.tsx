@@ -4,6 +4,7 @@ import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { MATERIAL_TYPE_LABELS, MATERIAL_TYPES } from "@/lib/labels";
 import { MATERIAL_STATES } from "@/lib/material-workflow";
@@ -36,28 +37,31 @@ export function NewDraftForm({ programmeAreas }: { programmeAreas: AuthoringArea
           <label htmlFor="draft-space" className={labelClass}>
             Space
           </label>
-          <select id="draft-space" name="programmeAreaId" required className={inputClass} defaultValue="">
-            <option value="" disabled>
-              Choose a programme area
-            </option>
-            {programmeAreas.map((space) => (
-              <option key={space.id} value={space.id}>
-                {space.fieldName} · {space.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="draft-space"
+            name="programmeAreaId"
+            required
+            searchable
+            defaultValue=""
+            placeholder="Choose a programme area"
+            options={programmeAreas.map((space) => ({
+              value: space.id,
+              label: space.name,
+              hint: space.fieldName,
+            }))}
+          />
         </div>
         <div>
           <label htmlFor="draft-type" className={labelClass}>
             Type
           </label>
-          <select id="draft-type" name="type" required className={inputClass} defaultValue="DOCUMENT">
-            {MATERIAL_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {MATERIAL_TYPE_LABELS[type]}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="draft-type"
+            name="type"
+            required
+            defaultValue="DOCUMENT"
+            options={MATERIAL_TYPES.map((type) => ({ value: type, label: MATERIAL_TYPE_LABELS[type] }))}
+          />
         </div>
       </div>
 
@@ -79,12 +83,17 @@ export function NewDraftForm({ programmeAreas }: { programmeAreas: AuthoringArea
         <label htmlFor="draft-priority" className={labelClass}>
           Priority
         </label>
-        <select id="draft-priority" name="priority" className={inputClass} defaultValue="MEDIUM">
-          <option value="LOW">Low</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="HIGH">High</option>
-          <option value="CRITICAL">Critical</option>
-        </select>
+        <Select
+          id="draft-priority"
+          name="priority"
+          defaultValue="MEDIUM"
+          options={[
+            { value: "LOW", label: "Low" },
+            { value: "MEDIUM", label: "Medium" },
+            { value: "HIGH", label: "High" },
+            { value: "CRITICAL", label: "Critical" },
+          ]}
+        />
         <p className={hintClass}>Priority drives notification ordering, not access.</p>
       </div>
 

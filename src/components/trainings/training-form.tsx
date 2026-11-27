@@ -4,6 +4,7 @@ import { useActionState, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { FormFeedback } from "@/components/ui/form-feedback";
 import { FormSteps } from "@/components/ui/form-steps";
+import { Select } from "@/components/ui/select";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { TRAINING_STATUSES, TRAINING_STATUS_LABELS, type TrainingStatus } from "@/lib/labels";
@@ -206,45 +207,42 @@ export function TrainingForm({
             <label htmlFor="training-field" className={labelClass}>
               Programme field <span className="text-danger">*</span>
             </label>
-            <select
+            <Select
               id="training-field"
               name="programmeFieldId"
               required
               value={fieldId}
-              onChange={(event) => {
-                setFieldId(event.target.value);
+              placeholder="— Select programme field —"
+              options={[
+                { value: "", label: "— Select programme field —" },
+                ...fields.map((field) => ({ value: field.id, label: field.name })),
+              ]}
+              onChange={(next) => {
+                setFieldId(next);
                 setAreaId("");
               }}
-              className={inputClass}
-            >
-              <option value="">— Select Programme field —</option>
-              {fields.map((field) => (
-                <option key={field.id} value={field.id}>
-                  {field.name}
-                </option>
-              ))}
-            </select>
+            />
           </div>
           <div>
             <label htmlFor="training-area" className={labelClass}>
               Programme area <span className="text-danger">*</span>
             </label>
-            <select
+            <Select
               id="training-area"
               name="programmeAreaId"
               required
               value={areaId}
               disabled={!fieldId}
-              onChange={(event) => setAreaId(event.target.value)}
-              className={inputClass}
-            >
-              <option value="">{fieldId ? "— Select programme area —" : "— Select Programme field first —"}</option>
-              {areas.map((area) => (
-                <option key={area.id} value={area.id}>
-                  {area.name}
-                </option>
-              ))}
-            </select>
+              placeholder={fieldId ? "— Select programme area —" : "— Select programme field first —"}
+              options={[
+                {
+                  value: "",
+                  label: fieldId ? "— Select programme area —" : "— Select programme field first —",
+                },
+                ...areas.map((area) => ({ value: area.id, label: area.name })),
+              ]}
+              onChange={setAreaId}
+            />
             {fieldId && areas.length === 0 && (
               <p className={hintClass}>That field has no areas yet. Add one under Administration → Programme fields.</p>
             )}
@@ -268,25 +266,22 @@ export function TrainingForm({
             <label htmlFor="training-region" className={labelClass}>
               Region <span className="text-danger">*</span>
             </label>
-            <select
+            <Select
               id="training-region"
               name="regionId"
               required
               value={regionId}
-              onChange={(event) => {
-                setRegionId(event.target.value);
+              placeholder="— Select region —"
+              options={[
+                { value: "", label: "— Select region —" },
+                ...regionChoices.map((row) => ({ value: row.id, label: row.name })),
+              ]}
+              onChange={(next) => {
+                setRegionId(next);
                 setDistrictId("");
                 setSubDistrictId("");
               }}
-              className={inputClass}
-            >
-              <option value="">— Select region —</option>
-              {regionChoices.map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.name}
-                </option>
-              ))}
-            </select>
+            />
             <p className={hintClass}>
               {regionChoices.length <= 1
                 ? "The library is live in Upper West only; the other regions are added as the rollout reaches them."
@@ -297,30 +292,34 @@ export function TrainingForm({
             <label htmlFor="training-district" className={labelClass}>
               District
             </label>
-            <select
+            <Select
               id="training-district"
               name="districtId"
               value={districtId}
               disabled={!regionId || (region?.districts.length ?? 0) === 0}
-              onChange={(event) => {
-                setDistrictId(event.target.value);
-                setSubDistrictId("");
-              }}
-              className={inputClass}
-            >
-              <option value="">
-                {!regionId
-                  ? "— Select Region first —"
+              placeholder={
+                !regionId
+                  ? "— Select region first —"
                   : (region?.districts.length ?? 0) === 0
                     ? "— no districts recorded for this region —"
-                    : "— Select district —"}
-              </option>
-              {(region?.districts ?? []).map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.name}
-                </option>
-              ))}
-            </select>
+                    : "— Select district —"
+              }
+              options={[
+                {
+                  value: "",
+                  label: !regionId
+                    ? "— Select region first —"
+                    : (region?.districts.length ?? 0) === 0
+                      ? "— no districts recorded for this region —"
+                      : "— Select district —",
+                },
+                ...(region?.districts ?? []).map((row) => ({ value: row.id, label: row.name })),
+              ]}
+              onChange={(next) => {
+                setDistrictId(next);
+                setSubDistrictId("");
+              }}
+            />
             <p className={hintClass}>
               {regionChoices.length <= 1
                 ? "The library is live in Upper West only; the other regions are added as the rollout reaches them."
@@ -331,27 +330,31 @@ export function TrainingForm({
             <label htmlFor="training-subdistrict" className={labelClass}>
               Sub-district
             </label>
-            <select
+            <Select
               id="training-subdistrict"
               name="subDistrictId"
               value={subDistrictId}
               disabled={!districtId || (district?.subDistricts.length ?? 0) === 0}
-              onChange={(event) => setSubDistrictId(event.target.value)}
-              className={inputClass}
-            >
-              <option value="">
-                {!districtId
+              placeholder={
+                !districtId
                   ? "— optional —"
                   : (district?.subDistricts.length ?? 0) === 0
                     ? "— none recorded —"
-                    : "— optional —"}
-              </option>
-              {(district?.subDistricts ?? []).map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.name}
-                </option>
-              ))}
-            </select>
+                    : "— optional —"
+              }
+              options={[
+                {
+                  value: "",
+                  label: !districtId
+                    ? "— optional —"
+                    : (district?.subDistricts.length ?? 0) === 0
+                      ? "— none recorded —"
+                      : "— optional —",
+                },
+                ...(district?.subDistricts ?? []).map((row) => ({ value: row.id, label: row.name })),
+              ]}
+              onChange={setSubDistrictId}
+            />
             <p className={hintClass}>
               {regionChoices.length <= 1
                 ? "The library is live in Upper West only; the other regions are added as the rollout reaches them."
@@ -362,34 +365,27 @@ export function TrainingForm({
             <label htmlFor="training-facility" className={labelClass}>
               Facility (venue)
             </label>
-            <select
+            <Select
               id="training-facility"
               name="facilityId"
               defaultValue={start.facilityId}
               disabled={!districtId || facilities.length === 0}
-              className={inputClass}
-            >
-              <option value="">
-                {!districtId ? "— optional —" : facilities.length === 0 ? "— none recorded —" : "— optional —"}
-              </option>
-              {facilityGroups.map((group) =>
-                group.label === null ? (
-                  group.items.map((facility) => (
-                    <option key={facility.id} value={facility.id}>
-                      {facility.name}
-                    </option>
-                  ))
-                ) : (
-                  <optgroup key={group.key} label={group.label}>
-                    {group.items.map((facility) => (
-                      <option key={facility.id} value={facility.id}>
-                        {facility.name}
-                      </option>
-                    ))}
-                  </optgroup>
+              searchable
+              placeholder={!districtId ? "— optional —" : facilities.length === 0 ? "— none recorded —" : "— optional —"}
+              options={[
+                {
+                  value: "",
+                  label: !districtId ? "— optional —" : facilities.length === 0 ? "— none recorded —" : "— optional —",
+                },
+                ...facilityGroups.flatMap((group) =>
+                  group.items.map((facility) => ({
+                    value: facility.id,
+                    label: facility.name,
+                    group: group.label ?? undefined,
+                  })),
                 ),
-              )}
-            </select>
+              ]}
+            />
           </div>
           <div>
             <label htmlFor="training-starts" className={labelClass}>
@@ -468,13 +464,15 @@ export function TrainingForm({
             <label htmlFor="training-status" className={labelClass}>
               Status
             </label>
-            <select id="training-status" name="status" defaultValue={start.status} className={inputClass}>
-              {TRAINING_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {TRAINING_STATUS_LABELS[status]}
-                </option>
-              ))}
-            </select>
+            <Select
+              id="training-status"
+              name="status"
+              defaultValue={start.status}
+              options={TRAINING_STATUSES.map((status) => ({
+                value: status,
+                label: TRAINING_STATUS_LABELS[status],
+              }))}
+            />
           </div>
           <div>
             <label htmlFor="training-attendees" className={labelClass}>
