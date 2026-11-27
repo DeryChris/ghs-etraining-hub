@@ -237,7 +237,9 @@ and `/forgot-password` says so rather than promising a mail that never arrives.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `/api/health` → `db: "down"` | one of six faults; the body now names which | read `error.dbError.code` below, or run `npm run db:doctor` |
+| `/api/health` → `checks.db: "down"` | the connection itself failed; the body names which of six faults | read `error.dbError.code` below, or run `npm run db:doctor` |
+| `/api/health` → `checks.db: "up"`, `schema: "outdated"` | the database answered and lacks something this build reads | **not a connection problem** — run `npm run db:migrate`; the body names the pending file |
+| `db: "up"` and `error.code: "SCHEMA_BEHIND"` | the deployment is newer than the database | `npm run db:migrate` (uses `DIRECT_URL`), then redeploy/restart |
 | `db: "down"` and host shows no `-pooler` | direct host in `DATABASE_URL` | each instance opens its own connection; use the pooled host |
 | Migrations hang or deadlock | `DIRECT_URL` points at the pooled host | use the direct host for `db:migrate` |
 | `password authentication failed` after a Neon reset | password rotated in the console | update both URLs in Vercel, redeploy |
@@ -264,8 +266,23 @@ different faults with six different fixes.
 | `NO_PG_HBA`, `SELF_SIGNED_CERT_IN_CHAIN` | the connection arrived without TLS | `DATABASE_URL` must end in `?sslmode=require`; the app now asks for TLS anyway on any host that is not local |
 | `UNKNOWN` | a fault with no written remedy | the code is still the thing to search for or paste into a support request |
 
-A connection failure is never a migration problem: `/api/health` reports
-`db: "down"` *before* it counts migrations, so `applied: 0` and
-`migrations.state: "unknown"` in that report do not mean the database is empty.
-Once the connection answers, the same endpoint will name the pending file (at the
-time of writing, `0022_grade_not_cadre`).
+### A SQLSTATE in class 42 is not an outage
+
+`checks.db` is now answered by `select 1` — a statement that reads no table — and
+the app's own columns are checked separately. Before that split, `select * from
+users limit 1` answered both questions with one error, so a database that was
+merely one migration behind reported `db: "down"` with advice about the
+connection string, and `migrations.applied: 0` because the probe never got far
+enough to count.
+
+| Code | What it means | Where to look |
+| --- | --- | --- |
+| `42703` | the build selects a column the database does not have | `checks.schemaError.detail` names it; `checks.migrations.pending` names the file |
+| `42P01` | a table is missing | `missingTables`, then `npm run db:migrate` |
+| `SCHEMA_BEHIND` | this build ships migrations the database has not run | run `npm run db:migrate`, then restart |
+| `SCHEMA_AHEAD` | the database is newer than this deployment | redeploy; the running build is older than its data |
+
+`applied: 0` and `migrations.state: "unknown"` only mean the ledger could not be
+read (that is what a real connection failure produces). With the connection up,
+the same endpoint names the pending file — at the time of writing,
+`0022_grade_not_cadre`, which renames `users.cadre` to `users.grade`.

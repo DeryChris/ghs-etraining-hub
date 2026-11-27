@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { connectionProblem, isPooledHost } from "@/lib/db-error";
+import { connectionProblem, isPooledHost, isSchemaError, schemaProblem } from "@/lib/db-error";
 
 describe("connectionProblem", () => {
   it("names DNS and refuses to blame the password", () => {
@@ -48,5 +48,33 @@ describe("isPooledHost", () => {
     expect(isPooledHost("ep-wispy-firefly-bg805qxg-pooler.c-9.eu-central-1.aws.neon.tech")).toBe(true);
     expect(isPooledHost("ep-wispy-firefly-bg805qxg.c-9.eu-central-1.aws.neon.tech")).toBe(false);
     expect(isPooledHost("localhost")).toBe(false);
+  });
+});
+
+describe("schema failures are not connection failures", () => {
+  it("reads a missing column as a migration problem, not a network one", () => {
+    const error = Object.assign(new Error('column "grade" of relation "users" does not exist'), { code: "42703" });
+    expect(isSchemaError(error)).toBe(true);
+    const problem = schemaProblem(error);
+    expect(problem.code).toBe("42703");
+    expect(problem.detail).toBe('column "grade" of relation "users" does not exist');
+    expect(problem.remedy).toMatch(/db:migrate/);
+    // The classifier that answers for connections must not send anyone to
+    // re-paste a connection string that is already correct.
+    expect(connectionProblem(error).remedy).not.toMatch(/Neon → Connect/);
+    expect(connectionProblem(error).remedy).toMatch(/db:migrate/);
+  });
+
+  it("prefers the sentence on `cause` over drizzle's truncated query", () => {
+    const error = new Error(
+      'Failed query: select "id", "ghs_staff_id", "email", "grade" from "users" limit $1',
+      { cause: Object.assign(new Error('column "grade" of relation "users" does not exist'), { code: "42703" }) },
+    );
+    expect(schemaProblem(error).detail).toBe('column "grade" of relation "users" does not exist');
+  });
+
+  it("recognises the wording when the driver gives no code", () => {
+    expect(isSchemaError(new Error('relation "complaint_messages" does not exist'))).toBe(true);
+    expect(isSchemaError(Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }))).toBe(false);
   });
 });

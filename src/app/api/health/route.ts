@@ -3,7 +3,14 @@ import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { poolMax, poolMaxConfigured, poolMaxSource } from "@/db/client";
 import { complaints, districts, materials, programmeFields, regions, sessions, trainingSessions, users } from "@/db/schema";
-import { connectionProblem, isPooledHost, type ConnectionProblem } from "@/lib/db-error";
+import {
+  connectionProblem,
+  isPooledHost,
+  isSchemaError,
+  schemaProblem,
+  type ConnectionProblem,
+  type SchemaProblem,
+} from "@/lib/db-error";
 import { databaseTarget } from "@/lib/db-target";
 import { sessionSecretProblem } from "@/lib/server/session";
 import { within } from "@/lib/server/deadline";
@@ -221,6 +228,8 @@ export async function GET(request: Request) {
   let missing: string[] = [];
   /** Set only when the connection itself failed; the code and the next step. */
   let dbFailure: ConnectionProblem | null = null;
+  /** Set when the database answered but lacks a table or column this build reads. */
+  let schemaFailure: SchemaProblem | null = null;
   let migrations: Awaited<ReturnType<typeof migrationState>> = {
     state: "unknown",
     applied: 0,
@@ -232,23 +241,19 @@ export async function GET(request: Request) {
     remedy: null,
   };
 
+  /*
+   * Reachability is asked on its own, with a statement that reads no table.
+   *
+   * It used to be `select * from users limit 1`, which answers two different
+   * questions with one error: a rolled-back password and a column this build has
+   * and the database has not both land in the same `catch` and were both reported
+   * as `db: "down"`. A deployment one migration behind was therefore
+   * indistinguishable from one pointed at a suspended project, and the advice
+   * ("check the connection string") was wrong for it.
+   */
   try {
-    await db.select().from(users).limit(1);
+    await db.execute(sql`select 1`);
     dbStatus = "up";
-
-    try {
-      missing = await missingTables();
-      schemaStatus = missing.length === 0 ? "current" : "outdated";
-    } catch (cause) {
-      schemaStatus = "unknown";
-      log.error({ event: "health.schema_check_failed", requestId, error: cause });
-    }
-
-    // The other direction: a database that has run migrations this build does
-    // not know about. Missing tables catch the first half of that story; the
-    // count catches the half where the table is still there and a column is not.
-    migrations = await migrationState();
-    if (migrations.state === "behind" || migrations.state === "ahead") schemaStatus = "outdated";
   } catch (cause) {
     dbStatus = "down";
     /*
@@ -258,6 +263,41 @@ export async function GET(request: Request) {
      */
     dbFailure = connectionProblem(cause);
     log.error({ event: "health.db_unavailable", requestId, dbErrorCode: dbFailure.code, error: cause });
+  }
+
+  if (dbStatus === "up") {
+    try {
+      missing = await missingTables();
+      schemaStatus = missing.length === 0 ? "current" : "outdated";
+    } catch (cause) {
+      schemaStatus = "unknown";
+      log.error({ event: "health.schema_check_failed", requestId, error: cause });
+    }
+
+    // Tables can all be there while a column is not — the case that reads as
+    // `42703` and, before the split above, was reported as an outage.
+    try {
+      await db.select().from(users).limit(1);
+    } catch (cause) {
+      if (isSchemaError(cause)) {
+        schemaStatus = "outdated";
+        schemaFailure = schemaProblem(cause);
+        log.error({ event: "health.schema_column_missing", requestId, code: schemaFailure.code, error: cause });
+      } else {
+        log.error({ event: "health.schema_probe_failed", requestId, error: cause });
+      }
+    }
+
+    // The other direction: a database that has run migrations this build does
+    // not know about. Missing tables catch the first half of that story; the
+    // count catches the half where the table is still there and a column is not.
+    try {
+      migrations = await migrationState();
+      if (migrations.state === "behind" || migrations.state === "ahead") schemaStatus = "outdated";
+    } catch (cause) {
+      // The reachability answer still stands even if the ledger cannot be read.
+      log.error({ event: "health.migration_state_failed", requestId, error: cause });
+    }
   }
 
   // A deployment with no session key cannot sign anybody in, and the failure
@@ -278,6 +318,7 @@ export async function GET(request: Request) {
       checks: {
         db: dbStatus,
         schema: schemaStatus,
+        ...(schemaFailure ? { schemaError: { code: schemaFailure.code, detail: schemaFailure.detail } } : {}),
         migrations,
         session: sessionProblem === null ? "configured" : "missing",
         ...(sessionProblem === null ? {} : { sessionHint: sessionProblem }),
@@ -334,10 +375,16 @@ export async function GET(request: Request) {
                             : "") +
                           (migrations.remedy ?? ""),
                       }
-                    : {
-                        code: "SCHEMA_OUTDATED",
-                        message: `The database is missing ${missing.join(", ")}. Run npm run db:migrate, then restart the app.`,
-                      }
+                    : schemaFailure
+                      ? {
+                          code: "SCHEMA_OUTDATED",
+                          message: `${schemaFailure.detail}. ${schemaFailure.remedy}`,
+                          dbError: { code: schemaFailure.code, remedy: schemaFailure.remedy },
+                        }
+                      : {
+                          code: "SCHEMA_OUTDATED",
+                          message: `The database is missing ${missing.join(", ")}. Run npm run db:migrate, then restart the app.`,
+                        }
                 : {
                     code: "UPSTREAM_UNAVAILABLE",
                     message: "The training database is not reachable.",

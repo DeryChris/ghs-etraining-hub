@@ -21,6 +21,14 @@ export interface ConnectionProblem {
   remedy: string;
 }
 
+export interface SchemaProblem {
+  /** The SQLSTATE — `42703` (no such column), `42P01` (no such table) … */
+  code: string;
+  /** What Postgres said, which for these codes names only identifiers. */
+  detail: string;
+  remedy: string;
+}
+
 const REMEDIES: Record<string, string> = {
   ENOTFOUND:
     "That host name does not resolve, so the endpoint has been renamed or the project deleted. Copy the connection string from Neon → Connect into DATABASE_URL again.",
@@ -58,12 +66,75 @@ const MESSAGE_HINTS: { match: RegExp; code: string }[] = [
   { match: /self[- ]signed certificate|unable to verify/i, code: "SELF_SIGNED_CERT_IN_CHAIN" },
 ];
 
+/**
+ * A failure inside SQLSTATE class 42 is the database *answering*: it parsed the
+ * statement, looked for the object, and did not find it. That is a build and a
+ * database from different versions, not a connection problem — and calling it
+ * one sends people to re-paste a connection string that is already correct.
+ * (`42703` is the one that shipped here: the query selected `users.grade`, the
+ * database still had `users.cadre`, and the health check said "not reachable".)
+ */
+const SCHEMA_CODES = new Set([
+  "42703", // undefined_column
+  "42P01", // undefined_table
+  "42P02", // undefined_parameter
+  "42883", // undefined_function
+  "42704", // undefined_object
+  "3F000", // invalid_schema_name
+]);
+
 const EXTRA_REMEDIES: Record<string, string> = {
   NO_PG_HBA:
     "The server's host rules refuse this address. With Neon this means the connection arrived without TLS — append `?sslmode=require` to DATABASE_URL.",
   SSL_UNSUPPORTED:
     "The server only speaks TLS but the client did not ask for it. Append `?sslmode=require` to DATABASE_URL.",
 };
+
+export function isSchemaError(error: unknown): boolean {
+  const code = codeOf(error);
+  if (code) return SCHEMA_CODES.has(code);
+  // Without a code, the wording still gives it away.
+  return /column .* does not exist|relation .* does not exist|undefined_column|undefined_table/i.test(
+    messageOf(error),
+  );
+}
+
+/** The identifiers in a Postgres message, with anything URL-shaped dropped. */
+function safeDetail(message: string): string {
+  return message
+    .replace(/postgres(ql)?:\/\/[^\s"']+/gi, "<connection string>")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240);
+}
+
+/**
+ * Drizzle wraps driver errors: the outer message is `Failed query: select "id",
+ * "ghs_staff_id", …` — the statement, truncated before the part that explains
+ * anything — and the useful sentence is on `cause`. Prefer the sentence.
+ */
+function detailOf(error: unknown): string {
+  const messages: string[] = [];
+  let cursor: unknown = error;
+  for (let depth = 0; cursor && typeof cursor === "object" && depth < 5; depth += 1) {
+    const message = (cursor as { message?: unknown }).message;
+    if (typeof message === "string" && message.length > 0) messages.push(message);
+    cursor = (cursor as { cause?: unknown }).cause;
+  }
+  const explains = messages.find((message) => /\b(column|relation|table|function|type)\b.*does not exist/i.test(message));
+  return safeDetail(explains ?? messages.sort((a, b) => a.length - b.length)[0] ?? "");
+}
+
+export function schemaProblem(error: unknown): SchemaProblem {
+  const code = codeOf(error) ?? "42P01";
+  const detail = detailOf(error) || "the database does not have an object this build expects";
+  return {
+    code,
+    detail,
+    remedy:
+      "This build expects a table or column the database does not have. Apply the pending migration with `npm run db:migrate` (it uses DIRECT_URL — the direct host, not the pooled one), then restart the app.",
+  };
+}
 
 function codeOf(error: unknown): string | undefined {
   if (!error || typeof error !== "object") return undefined;
@@ -84,6 +155,11 @@ function messageOf(error: unknown): string {
 }
 
 export function connectionProblem(error: unknown): ConnectionProblem {
+  if (isSchemaError(error)) {
+    const problem = schemaProblem(error);
+    return { code: problem.code, remedy: `${problem.detail} — ${problem.remedy}` };
+  }
+
   const code = codeOf(error);
   if (code && REMEDIES[code]) return { code, remedy: REMEDIES[code] };
 
