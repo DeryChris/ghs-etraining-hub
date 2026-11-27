@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/rbac/capabilities";
-import { activeHref, isActiveHref, navFor } from "@/lib/nav";
+import { activeHref, isActiveHref, LEARNER_NAV, navFor } from "@/lib/nav";
 
 const ROLES = ["SYSTEM_ADMIN", "FACILITATOR", "LEARNER"] as const;
 
@@ -42,9 +42,28 @@ describe("navFor", () => {
       "/trainings",
       "/messages",
       "/notifications",
-      "/analytics",
     ]);
-    expect(navFor("LEARNER").map((section) => section.id)).toEqual(["learn", "community", "record"]);
+    // "My record" held only "My activity", which lives on the dashboard now.
+    expect(navFor("LEARNER").map((section) => section.id)).toEqual(["learn", "community"]);
+  });
+
+  it("draws the learner's top bar from the same five destinations", () => {
+    expect(LEARNER_NAV.map((item) => item.href)).toEqual(hrefs("LEARNER"));
+    expect(LEARNER_NAV.map((item) => item.label)).toEqual([
+      "Dashboard",
+      "Library",
+      "Trainings",
+      "Messages",
+      "Notifications",
+    ]);
+    // Nothing administrative in a member of staff's bar.
+    for (const href of ["/insights", "/users", "/review", "/authoring", "/notices", "/settings"]) {
+      expect(LEARNER_NAV.map((item) => item.href)).not.toContain(href);
+    }
+  });
+
+  it("no longer offers a separate activity tab", () => {
+    for (const role of ROLES) expect(hrefs(role)).not.toContain("/analytics");
   });
 
   it("drops sections that have no items for the role, and never reorders the rest", () => {

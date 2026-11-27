@@ -13,6 +13,9 @@
  * it — which is why the administrator sees "Author" holding only the review
  * queue, while a facilitator sees their materials and notices there too.
  *
+ * The learner does not use the sections at all: `LEARNER_NAV` below is the top bar
+ * of the reading shell (ADR-0027), and a test keeps the two lists in step.
+ *
  * "Trainings" is the register: a flat, filterable list of events (ADR-0013).
  * "Library" is the way in by subject — programme field, then programme area, then
  * the trainings and material filed under it (ADR-0014). They were briefly one
@@ -115,7 +118,6 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     id: "record",
     label: "My record",
     items: [
-      { href: "/analytics", label: "My activity", icon: "cpd", roles: EVERYONE },
       {
         href: "/insights",
         label: "Insights",
@@ -171,6 +173,37 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       { href: "/settings", label: "Settings", icon: "settings", roles: ADMIN_ONLY },
     ],
   },
+];
+
+/**
+ * The learner's five destinations — a top bar, not a sidebar.
+ *
+ * Members of staff are trained, not administered: they open the library, read
+ * what their programme published, and write to a facilitator. A rail built for
+ * people who live in tables made the product look like a management console and
+ * pushed the two things they do most (find material, pick up where they left
+ * off) into a corner. So the learner gets the same shape as the public site —
+ * brand, five links, search, their account — and a bottom bar on a phone, which
+ * is how most of them will see it.
+ *
+ * What is *not* here matters as much: no insights, no review queue, no user
+ * administration, and no "My activity" tab. Their activity is on the dashboard,
+ * where they will actually meet it (ADR‑0027).
+ */
+export interface LearnerNavItem {
+  href: string;
+  label: string;
+  icon: NavIcon;
+  /** Unread count to show as a badge, when this destination carries one. */
+  count?: NavCount;
+}
+
+export const LEARNER_NAV: readonly LearnerNavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
+  { href: "/catalogue", label: "Library", icon: "library" },
+  { href: "/trainings", label: "Trainings", icon: "training" },
+  { href: "/messages", label: "Messages", icon: "messages", count: "messages" },
+  { href: "/notifications", label: "Notifications", icon: "notifications", count: "notifications" },
 ];
 
 /**

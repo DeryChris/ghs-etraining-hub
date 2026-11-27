@@ -30,19 +30,25 @@ and use the utility it generates.
 
 ## 2. Layout
 
-* Shell: fixed 264 px sidebar (collapsible to 72 px icons, persisted in a cookie, `<main>` shifts
-  with a CSS grid template so there is no layout thrash), sticky 60 px header with global search,
-  notification bell and avatar menu.
-* Navigation is **role‑aware and sectioned**, and its source is `src/lib/nav.ts` (ADR‑0010): *Learn*
-  (Dashboard · Programmes · Library), *Community* (Messages · Notifications), *My record*
-  (My activity · Insights), *Author* (Sessions · My materials · Review queue · Send notice — assembled per
-  role) and
-  *Administration* (Users · Settings, administrators only). A section with nothing in it for a role does
-  not render, and an item's badge (unread messages, unread notifications, versions awaiting review) shows
-  only when it is above zero.
-* Mobile: sidebar becomes a focus‑trapped drawer, priority nav visible in the header; tables
-  collapse to stacked definition lists at `< 720 px` (never horizontal scroll for clinical data).
-* Content column max width 1200 px; long‑form reading width 72 ch.
+* **Two shells, one gate** (ADR‑0027). `(dash)/layout.tsx` resolves the session once and then draws one
+  of two frames, so a page never knows which is around it:
+  * **Staff — the rail.** Facilitators and administrators get the fixed 264 px sidebar (collapsible to
+    72 px icons, persisted in a cookie, `<main>` shifts with a CSS grid template so there is no layout
+    thrash), the sticky 60 px header with global search, the notification bell and the avatar menu.
+    Sections are *Learn*, *Community*, *My record* (Insights), *Author* and *Administration*. A
+    section with nothing in it for a role does not render, and a badge (unread messages, unread
+    notifications, versions awaiting review) shows only when it is above zero.
+  * **Staff on the roster — the top bar.** A member of staff with the roster role gets the public
+    site's shape: brand, five links (Dashboard · Library · Trainings · Messages · Notifications),
+    search, theme, bell, account. No rail, no sections, nothing administrative. On a phone the same
+    five links are a fixed bottom bar within thumb reach, which is how most of this audience will
+    meet the product.
+* The learner's dashboard is the whole record: the greeting, the material they were reading, the
+  protocols waiting for a signature, the reading totals, the list of opens, the announcements and the
+  programme fields. There is no separate "My activity" tab (ADR‑0027); `/analytics` redirects here so
+  old links keep working.
+* Tables collapse to stacked definition lists at `< 720 px` (never horizontal scroll for clinical data).
+* Content column max width 1200 px for staff, 1280 px for the learner shell; long‑form reading width 72 ch.
 * Grid: 12‑column desktop, 4‑column tablet, 1‑column mobile, 24 px gutters.
 
 ### Public pages: art and photography
@@ -69,7 +75,8 @@ preserves width), `badge`, `card`, `stat`, `input`, `textarea`, `select`, `check
 (focus trap, Esc, restore focus), `tabs`, `table` (sortable, sticky header, empty row),
 `skeleton`, `toast`, `tooltip`, `empty-state`, `progress-bar`, `priority-chip`, `state-chip`.
 
-`layout/`: `app-shell`, `sidebar`, `header`, `notification-center`, `search-command`.
+`layout/`: `app-shell`, `learner-shell`, `sidebar`, `header`, `nav-icons`, `notification-center`,
+`search-command`.
 `materials/`: `material-card`, `pdf-viewer` (lazy), `video-player` (lazy, no autoplay, poster +
 duration + size before play), `acknowledge-button`, `discussion-thread`, `lab-environment` (Monaco
 behind a "Start lab" gesture so 400 KB of editor never loads by default).

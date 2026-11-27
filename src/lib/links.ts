@@ -3,7 +3,7 @@
  * actually serves are rendered as links; anything else is shown as plain text.
  */
 const KNOWN_ROUTES: RegExp[] = [
-  /^\/(?:library|catalogue|trainings|notifications|analytics|messages)$/,
+  /^\/(?:library|catalogue|trainings|notifications|dashboard|messages)$/,
   /^\/catalogue\/[A-Za-z0-9-]+$/,
   /^\/catalogue\/[A-Za-z0-9-]+\/[A-Za-z0-9-]+$/,
   /^\/trainings\/[0-9a-f-]{36}$/i,

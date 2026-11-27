@@ -39,6 +39,8 @@ import { classifyLoadFailure } from "@/lib/load-failure";
 import { DeadlineError, within, withinOr } from "@/lib/server/deadline";
 import { log } from "@/lib/server/logger";
 import { getLearnerDashboard } from "@/lib/server/learning-queries";
+import { LearnerHome, greetingFor } from "./learner-home";
+import { DashboardRetry } from "./retry-card";
 import { listNotifications } from "@/lib/server/notification-queries";
 import { requireSession } from "@/lib/server/rbac";
 import { isStaffRole } from "@/lib/viewer";
@@ -47,78 +49,6 @@ const NOTICES: Record<string, string> = {
   forbidden: "That page is not available for your role.",
   "password-updated": "Your password has been updated.",
 };
-
-function greetingFor(now: Date): string {
-  const hour =
-    Number(
-      new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Africa/Accra",
-        hour: "numeric",
-        hour12: false,
-      }).format(now),
-    ) % 24;
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-/**
- * Shown when the data the page is built from does not arrive in time. It is a
- * real page, not a spinner: the visitor can act on it, and it says what to do
- * next instead of leaving the skeleton up.
- */
-function DashboardRetry({ hint }: { hint?: "drift" | "database" | "timeout" }) {
-  return (
-    <div className="space-y-6">
-      <div className="surface-card p-7 sm:p-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-warn">
-          {hint === "drift" ? "This page and the database disagree" : "Taking too long"}
-        </p>
-        <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
-          The dashboard could not load its data.
-        </h1>
-        <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-muted">
-          {hint === "drift" ? (
-            <>
-              Nothing was changed. The database has been updated but this deployment has not — the
-              site and its database are out of step, so the queries this page makes no longer
-              match. Open{" "}
-              <a href="/api/health" className="font-semibold text-primary underline underline-offset-4">
-                /api/health
-              </a>{" "}
-              to see which side is behind, then redeploy the site (or run{" "}
-              <code className="font-mono text-xs">npm run db:migrate</code> if the database is the
-              side that is behind).
-            </>
-          ) : (
-            <>
-              Nothing was changed. The training library is busy or the connection dropped — try
-              again in a moment. If it keeps happening, quote the time in your message to the ICT
-              helpdesk.
-            </>
-          )}
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            href="/dashboard"
-            className={buttonClass({ className: "h-11 px-5" })}
-          >
-            Try again
-          </Link>
-          <Link
-            href="/catalogue"
-            className={buttonClass({
-              variant: "secondary",
-              className: "h-11 px-5",
-            })}
-          >
-            Go to the library
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default async function DashboardPage({
   searchParams,
@@ -130,6 +60,12 @@ export default async function DashboardPage({
   const now = new Date();
 
   const staff = isStaffRole(session.role);
+
+  /*
+   * Members of staff get the reading home, not this page: no charts, no review
+   * counts, nothing that belongs to running the library (ADR‑0027).
+   */
+  if (!staff) return <LearnerHome session={session} />;
 
   /*
    * Every section has a deadline. The two the page cannot do without are
@@ -419,8 +355,8 @@ export default async function DashboardPage({
                   </li>
                 ))}
                 <li className="p-4">
-                  <Link href="/analytics" className="text-sm font-semibold text-primary hover:underline">
-                    See all of your activity
+                  <Link href="/catalogue" className="text-sm font-semibold text-primary hover:underline">
+                    Browse the whole library
                   </Link>
                 </li>
               </ul>

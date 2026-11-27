@@ -40,6 +40,18 @@ For each row of `docs/rbac.md` §1, as each role:
   with the display name replaced and PII columns nulled.
 * No public endpoint returns a person's name, staff ID or record: nothing is published about a person.
 
+## 3a. Two shells drill
+
+1. Sign in as a member of staff (roster role) → `/dashboard` is the reading home: top bar with
+   Dashboard · Library · Trainings · Messages · Notifications, no sidebar, no charts. At 375 px wide
+   the same five links are a fixed bottom bar, each with an unread badge where it applies.
+2. Sign in as a facilitator or administrator → the rail is back, with Author/Administration as their
+   role allows. Nothing on the learner's bar is reachable from the rail by accident.
+3. `/analytics` → 308 to `/dashboard`. Old notification links that point at it still land.
+4. A learner's dashboard shows the material they were reading, the protocols waiting for a signature,
+   the reading totals, the list of opens and the announcements — and no "My activity" tab anywhere in
+   the menu or the account card.
+
 ## 4. Low‑bandwidth drill (Chrome DevTools, Slow 3G, 4× CPU throttle)
 
 | Page | Budget | Check |

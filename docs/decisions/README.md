@@ -308,3 +308,9 @@ capabilities behind them are gone, "finished" leaves the interface, and the
 disclaimers that kept explaining what was not awarded are deleted rather than
 reworded. The complaint form keeps one narrative field. See
 `0026-no-marks-no-certificates.md`.
+
+## ADR‑0027 — Two shells
+
+A rail for the people who run the library, a top bar (and a bottom bar on a
+phone) for the people who read it. "My activity" folds into the dashboard;
+`/analytics` redirects there. See `0027-two-shells.md`.
