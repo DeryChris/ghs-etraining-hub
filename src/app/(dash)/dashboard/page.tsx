@@ -321,8 +321,8 @@ export default async function DashboardPage({
             </ChartCard>
 
             <ChartCard
-              title="Busiest programme areas"
-              description="Opens in the last 30 days, by the area the material is filed under."
+              title="Busiest programme fields"
+              description="Opens in the last 30 days, by the programme field the material is filed under."
               table={{
                 head: ["Programme field", "Opens"],
                 rows: programmeTraffic.map((row) => [row.label, row.value]),

@@ -83,7 +83,7 @@ const STEPS = [
   {
     icon: FolderOpen,
     title: "Open the programme",
-    body: "Find the programme area and the area that ran the training you attended.",
+    body: "Find the programme area and the field that ran the training you attended.",
   },
   {
     icon: FileCheck2,
@@ -203,7 +203,7 @@ export default async function LandingPage() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Programme areas</dt>
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Programme fields</dt>
                   <dd className="mt-1 text-3xl font-extrabold text-ink">
                     <CountUp value={stats.areas} />
                   </dd>
@@ -275,7 +275,7 @@ export default async function LandingPage() {
 
       {/* ── Programme area strip (live taxonomy) ────────────────────────── */}
       {previewFields.length > 0 && (
-        <section aria-label="Programme fields on the platform" className="border-y border-hairline bg-surface/60">
+        <section aria-label="Programme areas on the platform" className="border-y border-hairline bg-surface/60">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-3 px-5 py-6 sm:px-8 lg:px-10">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">Programmes include</p>
             <ul className="flex flex-wrap gap-2">
@@ -403,7 +403,7 @@ export default async function LandingPage() {
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <Reveal>
-              <SectionHeading eyebrow="Programmes" title={<span id="programmes-title">Filed by the programme fields that run the training.</span> as unknown as string} />
+              <SectionHeading eyebrow="Programmes" title={<span id="programmes-title">Filed by the programme areas that run the training.</span> as unknown as string} />
             </Reveal>
             <Reveal delay={0.1}>
               <Link href="/programmes" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline underline-offset-4">

@@ -2,28 +2,54 @@
 
 import {
   Activity,
+  Apple,
   Baby,
+  BadgeCheck,
   Bandage,
+  BookOpen,
+  Boxes,
   Brain,
+  Briefcase,
+  Bug,
   Building2,
+  CalendarCheck,
   Calculator,
   ClipboardList,
+  Database,
   Droplets,
+  FileText,
   FlaskConical,
+  Gauge,
+  Gavel,
   Globe,
+  GraduationCap,
+  HardHat,
   HeartHandshake,
   HeartPulse,
+  Laptop,
+  LineChart,
+  Moon,
   Megaphone,
+  MessagesSquare,
   Microscope,
+  MonitorCheck,
   Network,
+  PersonStanding,
   Pill,
+  Radar,
+  Ribbon,
   Scale,
+  ScrollText,
+  SearchCheck,
   ShieldPlus,
+  ShoppingCart,
   Stethoscope,
   Syringe,
   Truck,
   Users,
+  Wallet,
   Wind,
+  Wrench,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -82,6 +108,9 @@ const FIELD_GLYPHS: Record<string, LucideIcon> = {
   "PF-RD": FlaskConical,
   "PF-SCM": Truck,
 };
+
+/** The codes that have a named glyph — one per programme area GHS supplied. */
+export const FIELD_GLYPH_KEYS: readonly string[] = Object.keys(FIELD_GLYPHS);
 
 /** Stable per field: the same code gets the same colour on every screen. */
 function skinFor(code: string): Skin {
@@ -160,6 +189,73 @@ export function FieldTileIcon({
  * relatives wherever they appear, and the tile reads as an object sitting on the
  * card rather than a badge printed on it.
  */
+/**
+ * One glyph per subject, named exactly as the taxonomy names it.
+ *
+ * The regex list below guesses from words, and guessing is why a page of cards
+ * showed the same stethoscope ten times: "NACP", "NTCP", "Anaesthesia", "Quality
+ * Assurance" and half the rest matched nothing and fell through to the default.
+ * A card whose picture is the same as its neighbour's says nothing. These are the
+ * forty-seven programmes GHS supplied, each drawn as the thing it is about — an
+ * insect for malaria, a ribbon for HIV, a hard hat for occupational health.
+ *
+ * Matched case-insensitively on the full name, so an administrator who renames a
+ * programme gets a sensible guess from the regexes rather than a wrong picture.
+ */
+const NAMED_GLYPHS: Record<string, AreaGlyphKey> = {
+  // Administration and Support Services
+  "BIOMEDICAL EQUIPMENT": "wrench",
+  "ESTATE MANAGEMENT": "building",
+  "HEALTH ADMINISTRATION": "briefcase",
+  "TRANSPORT MANAGEMENT": "truck",
+  // Clinical Care
+  "CLINICAL INFORMATION AND MONITORING": "monitor",
+  "CLINICAL SERVICE DEVELOPMENT": "stethoscope",
+  "QUALITY ASSURANCE": "badge",
+  // Family and Health
+  NUTRITION: "apple",
+  "REPRODUCTIVE AND CHILD HEALTH": "baby",
+  // Finance and Audit
+  "CONTROL AND COMPLIANCE": "scale",
+  "FINANCIAL INFORMATION SYSTEMS MANAGEMENT (FISM)": "database",
+  "FINANCIAL REPORTING AND ANALYSIS": "chart",
+  "PERFORMANCE AUDIT": "search",
+  // Health Promotion
+  "ADVOCACY AND SOCIAL MOBILISATION": "megaphone",
+  ANAESTHESIA: "anaesthetic",
+  "CASE MANAGEMENT": "clipboard",
+  "DIAGNOSTIC SERVICES": "microscope",
+  "HEALTH COMMUNICATION": "speech",
+  "MENTAL HEALTH": "brain",
+  "NURSING PRACTICE": "hands",
+  PHARMACY: "pill",
+  REHABILITATION: "standing",
+  "RESEARCH AND HEALTH POLICY": "book",
+  // Human Resource
+  MANAGEMENT: "users",
+  PLANNING: "calendar",
+  TRAINING: "graduation",
+  // Policy, Planning, Monitoring and Evaluation
+  "INFORMATION COMMUNICATION TECHNOLOGY": "laptop",
+  "MONITORING AND EVALUATION": "gauge",
+  "PLANNING AND BUDGET": "wallet",
+  POLICY: "scroll",
+  // Public Health
+  EPI: "syringe",
+  NACP: "ribbon",
+  NMCP: "mosquito",
+  NTCP: "lungs",
+  "OCCUPATIONAL HEALTH": "hardhat",
+  SURVEILLANCE: "radar",
+  // Research and Development
+  "DISSEMINATION, DOCUMENTATION AND ADVOCACY": "document",
+  "ETHICS AND RESEARCH MANAGEMENT": "gavel",
+  "RESEARCH COORDINATION": "flask",
+  // Supply Chain Management
+  PROCUREMENT: "cart",
+  "SUPPLY CHAIN MANAGEMENT": "boxes",
+};
+
 const AREA_GLYPHS: { key: AreaGlyphKey; match: RegExp }[] = [
   { key: "shield", match: /infect|ipc|hygien|steril|waste/i },
   { key: "syringe", match: /immunis|immuniz|vaccin|cold chain|epi/i },
@@ -192,7 +288,40 @@ export type AreaGlyphKey =
   | "clipboard"
   | "droplets"
   | "heart"
-  | "stethoscope";
+  | "stethoscope"
+  /* the named subjects, so no card has to borrow its neighbour's picture */
+  | "wrench"
+  | "building"
+  | "briefcase"
+  | "monitor"
+  | "badge"
+  | "apple"
+  | "scale"
+  | "database"
+  | "chart"
+  | "search"
+  | "megaphone"
+  | "lungs"
+  | "anaesthetic"
+  | "boxes"
+  | "speech"
+  | "hands"
+  | "standing"
+  | "book"
+  | "calendar"
+  | "graduation"
+  | "laptop"
+  | "gauge"
+  | "wallet"
+  | "scroll"
+  | "ribbon"
+  | "mosquito"
+  | "hardhat"
+  | "radar"
+  | "document"
+  | "gavel"
+  | "flask"
+  | "cart";
 
 /** Module scope, so the icon is looked up rather than created during render. */
 const AREA_GLYPH_ICONS: Record<AreaGlyphKey, LucideIcon> = {
@@ -211,9 +340,43 @@ const AREA_GLYPH_ICONS: Record<AreaGlyphKey, LucideIcon> = {
   droplets: Droplets,
   heart: HeartPulse,
   stethoscope: Stethoscope,
+  wrench: Wrench,
+  building: Building2,
+  briefcase: Briefcase,
+  monitor: MonitorCheck,
+  badge: BadgeCheck,
+  apple: Apple,
+  scale: Scale,
+  database: Database,
+  chart: LineChart,
+  search: SearchCheck,
+  megaphone: Megaphone,
+  lungs: Wind,
+  anaesthetic: Moon,
+  boxes: Boxes,
+  speech: MessagesSquare,
+  hands: HeartHandshake,
+  standing: PersonStanding,
+  book: BookOpen,
+  calendar: CalendarCheck,
+  graduation: GraduationCap,
+  laptop: Laptop,
+  gauge: Gauge,
+  wallet: Wallet,
+  scroll: ScrollText,
+  ribbon: Ribbon,
+  mosquito: Bug,
+  hardhat: HardHat,
+  radar: Radar,
+  document: FileText,
+  gavel: Gavel,
+  flask: FlaskConical,
+  cart: ShoppingCart,
 };
 
 export function areaGlyphKey(name: string): AreaGlyphKey {
+  const named = NAMED_GLYPHS[name.trim().toUpperCase()];
+  if (named) return named;
   return AREA_GLYPHS.find((entry) => entry.match.test(name))?.key ?? "stethoscope";
 }
 

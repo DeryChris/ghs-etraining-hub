@@ -127,7 +127,7 @@ export default async function TrainingDetailPage({
       return (
         <DataUnavailable
           title="Training detail did not load"
-          description="Programme fields and geography could not be read in time. Nothing was changed."
+          description="Programme areas and geography could not be read in time. Nothing was changed."
           requestId={loaded.requestId}
         />
       );

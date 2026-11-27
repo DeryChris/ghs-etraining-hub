@@ -11,7 +11,7 @@ import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Programmes",
-  description: `The programme fields GHS trains in, and the areas whose material is kept in the ${SITE.name} library.`,
+  description: `The programme areas GHS trains in, and the fields whose material is kept in the ${SITE.name} library.`,
 };
 
 export default async function ProgrammesPage() {

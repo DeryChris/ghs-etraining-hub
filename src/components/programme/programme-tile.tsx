@@ -124,7 +124,7 @@ export function ProgrammeFieldTile({
       }
       cta={
         <>
-          {href.startsWith("/trainings") ? "See trainings" : href.startsWith("/programmes") ? "Open programmes" : "Open field"}
+          {href.startsWith("/trainings") ? "See trainings" : href.startsWith("/programmes") ? "Open programmes" : "Open area"}
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
         </>
       }
@@ -153,7 +153,7 @@ export function ProgrammeAreaTile({
       cta={
         <>
           <FolderOpen className="h-3.5 w-3.5" aria-hidden />
-          Open materials
+          Open field
         </>
       }
     />

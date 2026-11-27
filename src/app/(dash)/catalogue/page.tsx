@@ -143,7 +143,7 @@ export default async function LibraryPage({
     return (
       <DataUnavailable
         title="The library did not load"
-        description="The programme fields could not be read in time. Nothing was changed."
+        description="The programme areas could not be read in time. Nothing was changed."
         requestId={loaded.requestId}
         hint={loaded.hint}
       />
@@ -169,7 +169,7 @@ export default async function LibraryPage({
       <SearchForm query="" type={null} />
 
       <p className="text-sm text-ink-muted">
-        {fields.length} {fields.length === 1 ? "programme area" : "programme fields"} ·{" "}
+        {fields.length} {fields.length === 1 ? "programme area" : "programme areas"} ·{" "}
         {trainings.toLocaleString("en-GB")} published {trainings === 1 ? "training" : "trainings"}
       </p>
 

@@ -81,8 +81,8 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
 
         {trainings.length === 0 ? (
           <ListEmptyState
-            title="No trainings filed under this area yet"
-            description="A facilitator or an administrator records a training against this area and it appears here — with its slides, attendance sheet and report."
+            title="No trainings filed under this field yet"
+            description="A facilitator or an administrator records a training against this field and it appears here — with its slides, attendance sheet and report."
           />
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">

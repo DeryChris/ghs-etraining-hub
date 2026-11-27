@@ -390,7 +390,7 @@ export default async function TrainingsPage({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 space-y-1.5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
-                      {training.fieldName ?? "Programme area not recorded"}
+                      {training.fieldName ?? "Programme field not recorded"}
                       {training.areaName ? ` · ${training.areaName}` : ""}
                     </p>
                     <h2 className="text-base font-bold text-ink transition-colors group-hover:text-primary">{training.title}</h2>

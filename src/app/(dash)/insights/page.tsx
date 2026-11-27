@@ -275,10 +275,10 @@ export default async function InsightsPage() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <ChartCard
-          title="Trainings by programme area"
+          title="Trainings by programme field"
           description="Which programmes are actually running trainings in the last 12 months."
           table={{
-            head: ["Programme area", "Trainings"],
+            head: ["Programme field", "Trainings"],
             rows: sessions.byProgramme.map((row) => [row.label, row.value]),
           }}
         >
@@ -303,7 +303,7 @@ export default async function InsightsPage() {
               <dd className="tabular-nums font-semibold text-ink">{insights.library.programmes}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Programme areas</dt>
+              <dt className="text-ink-muted">Programme fields</dt>
               <dd className="tabular-nums font-semibold text-ink">{insights.library.programmeAreas}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">

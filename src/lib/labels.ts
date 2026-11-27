@@ -59,9 +59,9 @@ export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
 /** One line under each choice in a role field, in the same order. */
 export const STAFF_ROLE_HINTS: Record<StaffRole, string> = {
   LEARNER: "Signs in, reads and downloads what has been published for staff.",
-  FACILITATOR: "Files material and trains, inside the programme areas they are given.",
+  FACILITATOR: "Files material and trains, inside the programme fields they are given.",
   UNIT_HEAD: "A facilitator who also signs off the review queue for their fields.",
-  SYSTEM_ADMIN: "Runs the directory, the taxonomy and every programme field.",
+  SYSTEM_ADMIN: "Runs the directory, the taxonomy and every programme area.",
 };
 
 export const MATERIAL_TYPE_LABELS: Record<MaterialType, string> = {

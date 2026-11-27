@@ -154,7 +154,7 @@ export function TrainingForm({
         steps={[
           {
             title: "The basics",
-            blurb: "what it is and which programme field owns it — the only step with required fields.",
+            blurb: "what it is and which programme area owns it — the only step with required fields.",
           },
           {
             title: "Where and when",
@@ -244,7 +244,7 @@ export function TrainingForm({
               onChange={setAreaId}
             />
             {fieldId && areas.length === 0 && (
-              <p className={hintClass}>That field has no areas yet. Add one under Administration → Programme fields.</p>
+              <p className={hintClass}>That area has no fields yet. Add one under Administration → Programme areas.</p>
             )}
           </div>
           <div>

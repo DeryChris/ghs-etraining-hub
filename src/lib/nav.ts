@@ -89,7 +89,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         label: "Library",
         icon: "library",
         roles: EVERYONE,
-        hint: "Programme areas and the fields inside them, with the trainings and material filed under each",
+        hint: "Programme areas and the fields inside them, with the training filed under each",
       },
       {
         href: "/trainings",
