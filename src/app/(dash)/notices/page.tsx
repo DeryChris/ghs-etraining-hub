@@ -41,9 +41,6 @@ export default async function NoticesPage() {
         <Link href="/notifications" className={buttonClass({ variant: "secondary" })}>
           What people see
         </Link>
-        <Link href="/authoring" className={buttonClass({ variant: "ghost" })}>
-          My materials
-        </Link>
       </div>
 
       <section aria-labelledby="compose-heading" className="rounded-card border border-hairline bg-surface p-5 shadow-panel">

@@ -14,13 +14,14 @@ import type { Viewer } from "@/lib/viewer";
  * submitted. That distinction is the whole point of this module. A queue built
  * from a snapshot at submit time goes stale the moment a unit head is appointed:
  * every item filed before their first day stays invisible to them, and the queue
- * silently stops matching the role. A unit head who holds a programme area
- * signs off everything in that field, however old — and the moment the
- * appointment exists, they see it.
+ * silently stops matching the role. A unit head assigned to a Programme Area
+ * can decide on records under all of its Programme Fields, however old — and
+ * the moment the appointment exists, they see the queue.
  *
- * A grant may be at either level: the whole field (`field_facilitators`) or one
- * area inside it (`area_facilitators`). Both are read here, and nothing is
- * cached between calls.
+ * A grant may be at either level: the whole parent Programme Area (the legacy
+ * `field_facilitators` table) or one child Programme Field (the legacy
+ * `area_facilitators` table). Both are read here, and nothing is cached between
+ * calls.
  */
 
 export interface ReviewScope {
@@ -61,9 +62,10 @@ export async function reviewScopeFor(viewer: Viewer): Promise<ReviewScope> {
 /**
  * The SQL predicate for "this row falls in the viewer's scope".
  *
- * The caller supplies the two columns of the row under test, because a training
- * and a material name their field and area differently — a training carries a
- * field id, a material reaches its field through its area's join.
+ * The caller supplies the parent and child taxonomy columns of the row under
+ * test. In this schema, `field` means the parent Programme Area id and `area`
+ * means the child Programme Field id; a material reaches its parent through the
+ * Programme Field join.
  */
 export function reviewsInScope(
   scope: ReviewScope,
@@ -77,7 +79,7 @@ export function reviewsInScope(
   return parts.length === 0 ? sql`false` : or(...parts);
 }
 
-/** Ids of the active unit heads who currently hold (or are given) a field. */
+/** Active unit heads granted a parent Programme Area or one of its Programme Fields. */
 export async function unitHeadsForField(fieldId: string | null): Promise<string[]> {
   if (!fieldId) return [];
   try {

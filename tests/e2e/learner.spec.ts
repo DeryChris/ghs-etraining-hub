@@ -1,22 +1,22 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /**
- * Signed-in smoke tests. They need a seeded database and one provisioned learner:
+ * Signed-in smoke tests. They need a migrated database with the GHS taxonomy and
+ * one provisioned learner. E2E_LEARNER_EMAIL accepts either the account's work
+ * email or its Staff ID because both are valid sign-in identifiers.
  *
- *   E2E_LEARNER_EMAIL=… E2E_LEARNER_PASSWORD=… npm run test:e2e
- *
- * Skipped (not failed) when those are absent, so the suite is runnable in every
- * environment without leaking credentials into the repository.
+ * Skipped (not failed) when credentials are absent, so the suite is runnable in
+ * every environment without leaking them into the repository.
  */
-const email = process.env.E2E_LEARNER_EMAIL;
+const identifier = process.env.E2E_LEARNER_EMAIL;
 const password = process.env.E2E_LEARNER_PASSWORD;
-const configured = Boolean(email && password);
+const configured = Boolean(identifier && password);
 
 async function signIn(page: Page): Promise<void> {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(String(email));
+  await page.getByLabel("Staff ID").fill(String(identifier));
   await page.getByLabel("Password", { exact: true }).fill(String(password));
-  await page.getByRole("button", { name: /sign in/i }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL(/\/dashboard/);
 }
 
@@ -27,36 +27,30 @@ test.describe("signed-in learner", () => {
     await signIn(page);
   });
 
-  test("dashboard shows the learner's own summary", async ({ page }) => {
-    await expect(page.getByRole("heading", { name: /dashboard/i })).toBeVisible();
-    await expect(page.getByText(/CPD/i).first()).toBeVisible();
+  test("dashboard shows a personal greeting and reading summary", async ({ page }) => {
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(/Good (morning|afternoon|evening)/);
+    await expect(page.getByRole("heading", { name: "Your reading" })).toBeVisible();
   });
 
-  test("library paginates rather than rendering every material", async ({ page }) => {
-    await page.goto("/library");
-    await expect(page.getByText(/showing \d+–\d+ of \d+ materials/i)).toBeVisible();
+  test("signed-in catalogue remains separate from public browse routes", async ({ page }) => {
+    await page.goto("/catalogue");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Programme Areas and their Programme Fields");
+    await expect(page.getByRole("search")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Explore Programme Areas" })).toHaveCount(0);
   });
 
-  test("directorates list links into a space", async ({ page }) => {
-    await page.goto("/directorates");
-    await expect(page.getByRole("heading", { name: "Directorates" })).toBeVisible();
-    const firstSpace = page.getByRole("link", { name: /spaces?/i }).first();
-    if (await firstSpace.count()) await firstSpace.click();
-    await expect(page.getByRole("main")).toBeVisible();
-  });
-
-  test("message composer is present and labelled", async ({ page }) => {
+  test("messages and complaints share the signed-in inbox", async ({ page }) => {
     await page.goto("/messages");
-    await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Messages & complaints", exact: true })).toBeVisible();
     await expect(page.getByRole("main")).toBeVisible();
   });
 
-  test("signing out returns to the sign-in page", async ({ page }) => {
+  test("signing out returns to sign-in and blocks the dashboard", async ({ page }) => {
+    await page.getByRole("button", { name: /Account menu/ }).click();
+    await page.getByRole("button", { name: "Sign out", exact: true }).click();
+    await page.waitForURL(/\/login/);
+
     await page.goto("/dashboard");
-    const signOut = page.getByRole("button", { name: /sign out/i });
-    if (await signOut.count()) {
-      await signOut.click();
-      await page.waitForURL(/\/login/);
-    }
+    await expect(page).toHaveURL(/\/login\?next=%2Fdashboard/);
   });
 });

@@ -4,7 +4,6 @@ import { and, eq, ne, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db/index";
-import { isSchemaError } from "@/lib/db-error";
 import { users } from "@/db/schema";
 import { isValidStaffId, staffIdDigits } from "@/lib/staff-id";
 import { logAudit } from "@/lib/server/audit";
@@ -15,25 +14,12 @@ import { setSessionCookie } from "@/lib/server/session";
 import { staffIdMatches } from "@/lib/server/staff-id-sql";
 
 /**
- * What to say when the directory cannot be read.
+ * Claiming an account against an existing staff-directory record, not creating
+ * a new staff identity from form input.
  *
- * A database one migration behind this build answers with a SQLSTATE, not a
- * network error, and telling the person to "try again in a moment" sends them to
- * retry something that will fail identically until the deployment is fixed.
- */
-const DIRECTORY_DOWN = (stale: boolean) =>
-  stale
-    ? "The staff directory is being updated and cannot be read at the moment. Try again in a few minutes."
-    : "The staff directory could not be reached. Try again in a moment.";
-
-/**
- * Creating an account, against the staff sheet rather than against a form.
- *
- * The directory is already here: ICT imports the payroll extract, and every row
- * carries the name, region, district, facility and grade the sheet holds. What a
- * person adds is only the part the sheet cannot know — an e-mail address, a
- * telephone number, and a password. Verifying the employee number first is what
- * lets the rest of the form be read-only facts: nobody types their own grade.
+ * The directory row supplies the name, region, district, facility and grade.
+ * The person supplies contact details and a password. Verifying the employee
+ * number first lets the remaining directory facts stay read-only.
  *
  * The account is *claimed*, never duplicated. A row that already has a password
  * is somebody's account, and this path refuses it — otherwise anyone who knows an
@@ -103,8 +89,8 @@ async function findStaff(staffId: string): Promise<DirectoryRow | undefined> {
 }
 
 /**
- * Step one: does the staff sheet know this employee number, and is the account
- * still unclaimed? The answer decides whether the form opens at all.
+ * Step one: does the staff directory contain this employee number, and is the
+ * account still unclaimed? The answer decides whether the form opens at all.
  */
 export async function verifyStaffIdAction(
   _previous: RegistrationState,
@@ -135,14 +121,14 @@ export async function verifyStaffIdAction(
   try {
     row = await findStaff(typed);
   } catch (error) {
-    log.error({ event: "auth.register_lookup_failed", schemaDrift: isSchemaError(error), error: String(error) });
-    return { error: DIRECTORY_DOWN(isSchemaError(error)) };
+    log.error({ event: "auth.register_lookup_failed", error: String(error) });
+    return { error: "The staff directory could not be reached. Try again in a moment." };
   }
 
   if (!row) {
     return {
       error:
-        "That staff ID is not on the GHS sheet. Check the digits, or lodge a complaint — we can add you to the directory.",
+        "That staff ID was not found in the staff directory. Check the digits, or report the issue through the Complaint Hub.",
     };
   }
   if (!row.isActive) {
@@ -203,12 +189,12 @@ export async function registerAction(
   try {
     row = await findStaff(typed);
   } catch (error) {
-    log.error({ event: "auth.register_lookup_failed", schemaDrift: isSchemaError(error), error: String(error) });
-    return { ...kept, error: DIRECTORY_DOWN(isSchemaError(error)) };
+    log.error({ event: "auth.register_lookup_failed", error: String(error) });
+    return { ...kept, error: "The staff directory could not be reached. Try again in a moment." };
   }
 
   if (!row || !row.isActive) {
-    return { ...kept, error: "That staff ID is no longer on the GHS sheet. Lodge a complaint and we will check it." };
+    return { ...kept, error: "That staff ID is no longer in the staff directory. Report the issue through the Complaint Hub." };
   }
   if (row.passwordHash) {
     return { ...kept, error: "That account was set up while this page was open. Sign in instead." };

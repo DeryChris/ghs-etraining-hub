@@ -27,7 +27,7 @@ export function GettingStarted() {
       <div className="space-y-2">
         <h2 className="text-xl font-extrabold tracking-tight">Sign in, or create your account</h2>
         <p className="text-sm leading-relaxed text-white/80">
-          One account for the trainings you attend and the material your programme publishes.
+          Use the Training Library and the staff tools available to your assigned role.
         </p>
       </div>
 
@@ -52,7 +52,7 @@ export function GettingStarted() {
           </li>
           <li className="flex gap-3">
             <Step n={3} />
-            <span>Your name, region, facility and grade are read from HRIMS — you only choose a password.</span>
+            <span>If your staff-directory record is eligible, its details are read-only; you provide contact details and choose a password.</span>
           </li>
           <li className="flex gap-3">
             <Step n={4} />
@@ -61,7 +61,7 @@ export function GettingStarted() {
               <Link href="/help" className="font-semibold text-white underline underline-offset-4">
                 Complaint Hub
               </Link>{" "}
-              and keep the answer in writing.
+              and use your reference to check its status.
             </span>
           </li>
         </ol>
@@ -70,8 +70,8 @@ export function GettingStarted() {
       <div className="hidden rounded-control border border-[var(--accent)]/45 bg-[var(--accent)]/[0.12] p-4 text-[13px] leading-relaxed text-white">
         <p className="font-bold text-[var(--accent)]">Used the old portal?</p>
         <p className="mt-1 text-white/85">
-          This is a new system, so an old password will not open it. Create an account with your GHS Staff ID — the
-          trainings already recorded against your number are here, waiting.
+          This system uses its own staff directory and credentials. If your directory record has no password, use Create
+          an account to claim it; information from another portal is not assumed to be here.
         </p>
       </div>
 

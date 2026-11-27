@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
  * is already heading for the Sign in button. Off entirely under
  * `prefers-reduced-motion`.
  *
- * `width="wide"` is for the registration form, whose HRIMS rows are two columns.
+ * `width="wide"` is for the registration form, whose staff-directory details use two columns.
  */
 export function AuthCard({ children, width = "narrow" }: { children: ReactNode; width?: "narrow" | "wide" }) {
   const reduce = useReducedMotion();

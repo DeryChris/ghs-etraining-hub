@@ -329,18 +329,16 @@ export const facilities = pgTable("facilities", {
   isActive: boolean("is_active").notNull().default(true),
 }, (t) => [uniqueIndex("facilities_district_name_idx").on(t.districtId, t.name)]);
 
-/* ── Programme taxonomy (fields → areas) ────────────────────────────────────
- * The vocabulary a training plan is written in: "Administration and Support
- * Services" is a programme area, "Biomedical Equipment" a field inside it. GHS supplied
- * the list (src/db/data/programme-taxonomy.ts) and administrators maintain it
- * at /programme-fields.
+/* ── Programme taxonomy (legacy table names; interface Areas → Fields) ──────
+ * Keep this mapping explicit: stored names predate the user-facing hierarchy.
  *
- * This is the only taxonomy in the product (ADR-0014). A field holds areas; an
- * area holds the materials that teach it, the facilitators who author and review
- * them, and the trainings that were planned or run under it. The directorates
- * and programmeAreas this replaced are gone: they were a second vocabulary for the same
- * question, and a material filed under one and a training under the other could
- * never be counted together.
+ *   programme_fields  = parent Programme Areas
+ *   programme_areas   = child Programme Fields (`field_id` points to the parent)
+ *   materials.programme_area_id = child Programme Field
+ *
+ * GHS-supplied taxonomy is in `src/db/data/programme-taxonomy.ts` and maintained
+ * at `/programme-fields`. Do not reverse the interface labels to match the legacy
+ * table names. These are the only current programme taxonomy entities (ADR-0014).
  */
 
 export const programmeFields = pgTable("programme_fields", {
@@ -376,9 +374,9 @@ export const programmeAreas = pgTable("programme_areas", {
 ]);
 
 /**
- * Who may author and review in an area. Replaces category_facilitators: the old
- * table granted a facilitator a whole directorate, which is no longer the unit
- * content is filed under.
+ * Who may author and review in one child Programme Field. The column name
+ * `area_id` is retained for schema compatibility; its foreign key points to
+ * `programme_areas`, the stored table for user-facing Programme Fields.
  */
 export const areaFacilitators = pgTable("area_facilitators", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -391,14 +389,13 @@ export const areaFacilitators = pgTable("area_facilitators", {
 ]);
 
 /* ── Trainings (physical table: training_sessions) ───────────────────────────
- * The registry behind the Trainings tab. A row is either a training that ran
- * (status COMPLETED, attendance and notes filled in) or one that is planned
- * (PLANNED), which is what makes the same table serve both the calendar and
- * the record.
+ * The registry behind the Trainings tab. A row may be planned (PLANNED), held
+ * (COMPLETED) or cancelled (CANCELLED). Attendee counts and notes are optional
+ * fields; they are not required to create a record.
  *
- * A training is classified by programme area and the field inside it — nothing
- * else. `organisedOn` is the start date, `endsOn` the last day, and `year` the
- * plan year trainings are reported by.
+ * A Training Session is classified by its Programme Area and Programme Field.
+ * `organisedOn` is its recorded start date, `endsOn` the last day, and `year`
+ * the plan year used for reporting.
  */
 
 export const trainingStatusEnum = pgEnum("training_status", ["PLANNED", "COMPLETED", "CANCELLED"]);
@@ -480,11 +477,10 @@ export const trainingComments = pgTable("training_comments", {
 }, (t) => [index("training_comments_training_idx").on(t.trainingId, t.createdAt)]);
 
 /**
- * "May work anywhere in this programme area."
- *
- * `area_facilitators` grants one area at a time; this grants the field, so a
- * facilitator appointed to Malaria keeps working as areas are added. Unit heads
- * are appointed this way.
+ * Grants work across all child Programme Fields within one parent Programme
+ * Area. In this legacy naming, `field_id` points to `programme_fields` (the
+ * user-facing Programme Area); the `area_facilitators` table grants a single
+ * child Programme Field. Unit heads are appointed at this broader level.
  */
 export const fieldFacilitators = pgTable("field_facilitators", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -497,10 +493,10 @@ export const fieldFacilitators = pgTable("field_facilitators", {
 ]);
 
 /* ── Views ──────────────────────────────────────────────────────────────────
- * Traffic, counted honestly: one row per person, material and day, so a refresh
- * loop cannot inflate a number and a repeat visit is a visit. Downloads are
- * already in the audit trail; together they answer "is this programme being
- * used?", which is the question the insights page exists to answer.
+ * Traffic is stored at one row per person, material and Accra calendar day.
+ * Repeated opens update the last-viewed timestamp but never inflate the daily
+ * reporting grain. Downloads are already in the audit trail; together they
+ * answer "is this programme being used?" for the Insights page.
  */
 
 export const materialViews = pgTable("material_views", {
@@ -508,6 +504,7 @@ export const materialViews = pgTable("material_views", {
   materialId: uuid("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   viewedOn: date("viewed_on").notNull(),
+  /** Legacy counter; reporting counts unique daily ledger rows, not repeat mounts. */
   viewCount: integer("view_count").notNull().default(1),
   firstViewedAt: timestamp("first_viewed_at", { withTimezone: true }).notNull().defaultNow(),
   lastViewedAt: timestamp("last_viewed_at", { withTimezone: true }).notNull().defaultNow(),

@@ -77,12 +77,11 @@ export default async function ReportComplaintPage({
         <div className="rounded-card border border-hairline bg-canvas p-5">
           <h2 className="flex items-center gap-2 text-sm font-bold text-ink">
             <Clock className="h-4 w-4 text-primary" aria-hidden />
-            How long it takes
+            After you submit
           </h2>
           <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-            Access complaints are answered the same working day where staff are on duty. Course and content complaints
-            go to the facilitator for that programme field, so allow a little longer. The status page always shows where
-            yours has reached.
+            Your reference number lets you check the report&apos;s status and any response recorded. Processing time depends
+            on the issue and the team responsible for reviewing it.
           </p>
         </div>
       </aside>

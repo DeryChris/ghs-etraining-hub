@@ -25,11 +25,10 @@ const globalForDb = globalThis as unknown as {
 /**
  * Connections per instance.
  *
- * Neon is serverless Postgres with no PgBouncer and no transaction pooler
- * connection limits. Each serverless function instance opens its own
- * connections directly. A ceiling of 5 per instance is plenty — the queries
- * themselves take milliseconds, so postgres.js queues the rest client-side
- * instead of starving the pool.
+ * Each serverless function instance owns its postgres-js pool. The runtime URL
+ * may point at Neon's transaction pooler; keeping this client pool small limits
+ * how many upstream connections each warm instance can request. A ceiling of 5
+ * is plenty for these short queries, and postgres-js queues additional work.
  */
 const POOL_MAX_CEILING = 5;
 
@@ -105,7 +104,7 @@ function createClient(url: string) {
 if (!globalForDb.__ghsPg) {
   const target = databaseTarget(connectionString);
   console.log(
-    `[ghs-tl] database → ${target ? `${target.host}:${target.port}` : "DATABASE_URL could not be parsed"}`,
+    `[GHS-UWRHD-TL] database → ${target ? `${target.host}:${target.port}` : "DATABASE_URL could not be parsed"}`,
   );
 }
 

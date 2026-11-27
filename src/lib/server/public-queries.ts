@@ -3,31 +3,71 @@ import { unstable_cache } from "next/cache";
 import { and, count, eq } from "drizzle-orm";
 import { log } from "@/lib/server/logger";
 import { db } from "@/db/index";
-import { programmeFields, materials, programmeAreas } from "@/db/schema";
+import { programmeFields, materials, programmeAreas, regions, trainingSessions } from "@/db/schema";
+import { UPPER_WEST_REGION_CODE } from "@/db/data/geography";
+import { audienceFor, fieldFor, liveArea, liveField, visibleMaterial } from "@/lib/server/visibility";
 
-/** Aggregate counts only. No individual learner or content detail is exposed. */
-export async function getPublicStats(): Promise<{ fields: number; areas: number; materials: number }> {
-  const [fieldRows, areaRows, materialRows] = await Promise.all([
-    db.select({ n: count() }).from(programmeFields).where(eq(programmeFields.isArchived, false)),
-    db.select({ n: count() }).from(programmeAreas).where(eq(programmeAreas.isArchived, false)),
+/**
+ * Aggregate counts only. No individual learner or content detail is exposed.
+ *
+ * The taxonomy and material aggregates use the same visibility predicates as
+ * public browse. Training totals include published, unarchived sessions linked
+ * to the Upper West Region only. They are database-derived aggregates, not
+ * seed/demo figures; the cached response can be up to five minutes old.
+ *
+ * Naming note: the interface calls the parent taxonomy node a **Programme Area**
+ * and the child node a **Programme Field** (see src/db/schema.ts — the stored
+ * tables are `programme_fields` → `programme_areas` → `materials`, so the keys
+ * below map the database's field table to the interface's "Programme Area").
+ */
+export async function getPublicStats(): Promise<{
+  programmeAreas: number;
+  programmeFields: number;
+  materials: number;
+  trainings: number;
+}> {
+  const [areaRows, fieldRows, materialRows, trainingRows] = await Promise.all([
+    db
+      .select({ n: count() })
+      .from(programmeFields)
+      .where(and(liveField, fieldFor(null))),
+    db
+      .select({ n: count() })
+      .from(programmeAreas)
+      .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
+      .where(and(liveArea, liveField, fieldFor(null), audienceFor(null))),
     db
       .select({ n: count() })
       .from(materials)
-      .where(and(eq(materials.isPublished, true), eq(materials.state, "PUBLISHED"))),
+      .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+      .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
+      .where(visibleMaterial(null)),
+    db
+      .select({ n: count() })
+      .from(trainingSessions)
+      .innerJoin(regions, eq(regions.id, trainingSessions.regionId))
+      .where(
+        and(
+          eq(trainingSessions.reviewState, "PUBLISHED"),
+          eq(trainingSessions.isArchived, false),
+          eq(regions.code, UPPER_WEST_REGION_CODE),
+        ),
+      ),
   ]);
   return {
-    fields: fieldRows[0]?.n ?? 0,
-    areas: areaRows[0]?.n ?? 0,
+    programmeAreas: areaRows[0]?.n ?? 0,
+    programmeFields: fieldRows[0]?.n ?? 0,
     materials: materialRows[0]?.n ?? 0,
+    trainings: trainingRows[0]?.n ?? 0,
   };
 }
 
 /**
  * Public counters, cached for five minutes. The marketing site is the only
- * caller, and a stale-by-minutes count is preferable to three aggregates on
+ * caller, and a stale-by-minutes count is preferable to four aggregates on
  * every visit from a metered mobile connection.
  */
-export type PublicStats = { fields: number; areas: number; materials: number };
+export type PublicStats = Awaited<ReturnType<typeof getPublicStats>>;
 
 /**
  * Cached public counters, with a deliberate soft failure: if the database is

@@ -9,7 +9,8 @@ import { RankBars } from "@/components/charts/rank-bars";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { MATERIAL_TYPE_LABELS } from "@/lib/labels";
+import { MATERIAL_TYPE_COLORS, MATERIAL_TYPE_LABELS } from "@/lib/labels";
+import { periodDelta, periodDeltaLabel } from "@/lib/period-delta";
 import {
   getInsights,
   getProgrammeTraffic,
@@ -18,10 +19,10 @@ import {
   getTrafficSeries,
   getTypeMix,
   getUploadSeries,
-  periodDelta,
 } from "@/lib/server/insights-queries";
 
 import { DataUnavailable } from "@/components/ui/data-unavailable";
+import { countReviewQueue } from "@/lib/server/authoring-queries";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { requireRole } from "@/lib/server/rbac";
 
@@ -58,6 +59,8 @@ export default async function InsightsPage() {
     );
   }
   const [insights, trainingCounts] = essential.data;
+  const reviewCount = reviewer ? await withDeadline("insights.review-count", () => countReviewQueue(session)) : null;
+  const visibleReviewCount = reviewCount && reviewCount.ok ? reviewCount.data : null;
 
   const optional = await withDeadline(
     "insights.series",
@@ -77,26 +80,28 @@ export default async function InsightsPage() {
 
   // Empty shapes rather than nulls: every chart below already knows how to draw
   // "nothing yet", and the page keeps its layout while the figures arrive.
-  const traffic = optional.ok ? optional.data[0] : { buckets: [], views: [], downloads: [], totals: { views: 0, downloads: 0 } };
+  const traffic = optional.ok
+    ? optional.data[0]
+    : { buckets: [], views: [], downloads: [], totals: { views: 0, downloads: 0 }, previousTotals: { views: 0, downloads: 0 } };
   const uploads = optional.ok ? optional.data[1] : { buckets: [], series: [], total: 0 };
   const sessions = optional.ok ? optional.data[2] : { buckets: [], counts: [], byProgramme: [], total: 0 };
   const programmeTraffic = optional.ok ? optional.data[3] : [];
   const typeMix = optional.ok
     ? optional.data[4]
     : (["DOCUMENT", "VIDEO", "LAB", "ASSESSMENT_LINK"] as const).map((type) => ({ type, count: 0 }));
-  const partial = !optional.ok;
+  const partial = !optional.ok || (reviewer && visibleReviewCount === null);
 
   const hasTraffic = traffic.totals.views + traffic.totals.downloads > 0;
   const hasUploads = uploads.total > 0;
   const hasSessions = sessions.total > 0;
   const typeTotal = typeMix.reduce((sum, entry) => sum + entry.count, 0);
+  const typeMixReconciles = typeTotal === insights.library.published;
 
   return (
     <div className="space-y-8">
       {partial && (
         <p className="rounded-control border border-warn/40 bg-warn/10 px-4 py-3 text-sm leading-relaxed text-ink">
-          The headline figures loaded, but the charts below did not answer in time. Refresh in a moment to fill them in
-          — nothing has been lost.
+          Some supporting figures did not load in time. Refresh in a moment to retrieve them; the values are recomputed from current records.
         </p>
       )}
 
@@ -105,8 +110,8 @@ export default async function InsightsPage() {
         title={admin ? "Service insights" : "Programme insights"}
         description={
           admin
-            ? "Traffic, upload rate and the trainings that ran — across every programme. Views are counted once per person per day; downloads come from the audit trail."
-            : "Traffic, upload rate and the trainings that ran in the programmes you are assigned to. Views are counted once per person per day."
+            ? "Material opens, downloads, uploaded versions and Training register records across the service. Opens are counted once per person per day; downloads come from the audit trail."
+            : "Training Material activity within your assigned Programme Area and Programme Field scopes; Training register figures count records visible to you. Opens are counted once per person per day."
         }
         actions={
           <>
@@ -115,7 +120,7 @@ export default async function InsightsPage() {
             </Link>
             {reviewer && (
               <Link href="/review" className={buttonClass({ variant: "ghost" })}>
-                Review queue {insights.library.inReview > 0 ? `(${insights.library.inReview})` : ""}
+                Review queue {visibleReviewCount !== null && visibleReviewCount > 0 ? `(${visibleReviewCount})` : ""}
               </Link>
             )}
           </>
@@ -126,76 +131,77 @@ export default async function InsightsPage() {
         <KpiCard
           icon={Eye}
           label="Material opens · 12 weeks"
-          value={traffic.totals.views}
-          hint="Once per person per day"
-          delta={periodDelta(traffic.views)}
-          spark={traffic.views}
-          color="var(--chart-4)"
+          value={optional.ok ? traffic.totals.views : "—"}
+          hint={optional.ok ? "Once per person per day" : "Traffic figures could not be loaded"}
+          delta={optional.ok ? periodDelta(traffic.totals.views, traffic.previousTotals.views) : null}
+          deltaLabel={optional.ok ? periodDeltaLabel(traffic.totals.views, traffic.previousTotals.views) : null}
+          spark={optional.ok ? traffic.views : []}
+          color="var(--chart-1)"
         />
         <KpiCard
           icon={Download}
           label="Downloads · 12 weeks"
-          value={traffic.totals.downloads}
-          hint="From the audit trail"
-          delta={periodDelta(traffic.downloads)}
-          spark={traffic.downloads}
-          color="var(--chart-1)"
+          value={optional.ok ? traffic.totals.downloads : "—"}
+          hint={optional.ok ? "From the audit trail" : "Download figures could not be loaded"}
+          delta={optional.ok ? periodDelta(traffic.totals.downloads, traffic.previousTotals.downloads) : null}
+          deltaLabel={optional.ok ? periodDeltaLabel(traffic.totals.downloads, traffic.previousTotals.downloads) : null}
+          spark={optional.ok ? traffic.downloads : []}
+          color="var(--chart-2)"
         />
         <KpiCard
           icon={ClipboardCheck}
-          label="Trainings · 90 days"
+          label="Training records · 90 days"
           value={trainingCounts.last90Days}
-          hint={`${trainingCounts.total} on record`}
-          spark={sessions.counts}
-          color="var(--chart-5)"
+          hint={`${trainingCounts.total} unarchived records visible to you`}
+          color="var(--chart-3)"
         />
         <KpiCard
           icon={TrendingUp}
           label="Published materials"
           value={insights.library.published}
-          hint={`${insights.library.inReview} awaiting review`}
-          color="var(--chart-6)"
+          hint={`${insights.library.inReview} material records in review`}
+          color="var(--chart-4)"
         />
       </KpiGrid>
 
       <ChartCard
-        title="Traffic"
-        description="Opens of published material against file downloads, by week. A quiet week in one programme is information, not a gap in the data."
-        series={[
-          { label: "Opens", color: "var(--chart-1)" },
-          { label: "Downloads", color: "var(--chart-4)" },
-        ]}
+        title="Material Opens vs Downloads"
+        description="Material opens from the daily ledger against completed file downloads from the audit trail, grouped by week."
+        className="border-primary/15 p-5 sm:p-6"
         table={{
-          head: ["Week of", "Opens", "Downloads"],
+          head: ["Week beginning", "Material opens", "Downloads"],
           rows: traffic.buckets.map((bucket, index) => [bucket.label, traffic.views[index] ?? 0, traffic.downloads[index] ?? 0]),
         }}
       >
-        {hasTraffic ? (
+        {!optional.ok ? (
+          <EmptyChart message="Traffic details could not be loaded in time. The headline figures remain available above." />
+        ) : hasTraffic ? (
           <AreaChart
             labels={traffic.buckets.map((bucket) => bucket.label)}
             series={[
-              { label: "Opens", color: "var(--chart-1)", values: traffic.views },
-              { label: "Downloads", color: "var(--chart-4)", values: traffic.downloads },
+              { label: "Material opens", color: "var(--chart-1)", values: traffic.views },
+              { label: "Downloads", color: "var(--chart-2)", values: traffic.downloads },
             ]}
-            unit="opens"
-            height={240}
+            height={300}
           />
         ) : (
-          <EmptyChart message="No opens recorded yet. Views start counting from the first material someone opens after this deploy." />
+          <EmptyChart message="No material opens or downloads were recorded in the last 12 weeks." />
         )}
       </ChartCard>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <ChartCard
           title="Upload rate"
-          description="New versions filed per month, split by the programmes doing the uploading."
+          description="New versions filed per month, grouped by Programme Field under its parent Programme Area."
           series={uploads.series.map((item, index) => ({ label: item.label, color: chartColor(index) }))}
           table={{
             head: ["Month", ...uploads.series.map((item) => item.label)],
             rows: uploads.buckets.map((bucket, index) => [bucket.label, ...uploads.series.map((item) => item.values[index] ?? 0)]),
           }}
         >
-          {hasUploads ? (
+          {!optional.ok ? (
+            <EmptyChart message="Upload history could not be loaded in time. Refresh to try again." />
+          ) : hasUploads ? (
             <BarChart
               labels={uploads.buckets.map((bucket) => bucket.label)}
               series={uploads.series.map((item, index) => ({ label: item.label, color: chartColor(index), values: item.values }))}
@@ -207,32 +213,34 @@ export default async function InsightsPage() {
         </ChartCard>
 
         <ChartCard
-          title="Trainings organised"
-          description="Trainings recorded per month. This is the count of trainings that actually ran, not material that exists."
+          title="Training records by date"
+          description="Training register records visible to you, grouped by recorded start date. Includes entries marked planned, held and cancelled."
           table={{
-            head: ["Month", "Trainings"],
+            head: ["Month", "Training records"],
             rows: sessions.buckets.map((bucket, index) => [bucket.label, sessions.counts[index] ?? 0]),
           }}
         >
-          {hasSessions ? (
+          {!optional.ok ? (
+            <EmptyChart message="Training record history could not be loaded in time. Refresh to try again." />
+          ) : hasSessions ? (
             <BarChart
               labels={sessions.buckets.map((bucket) => bucket.label)}
-              series={[{ label: "Trainings", color: "var(--chart-2)", values: sessions.counts }]}
+              series={[{ label: "Training records", color: "var(--chart-3)", values: sessions.counts }]}
               height={230}
             />
           ) : (
-            <EmptyChart message="No trainings recorded yet. Staff add them from Trainings, one per training that ran." />
+            <EmptyChart message="No Training register records fall in this date range." />
           )}
         </ChartCard>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <ChartCard
-          title="Where the traffic goes"
-          description="Material opens per programme over the last 30 days. Traffic that never leaves one programme is worth knowing about."
+          title="Most accessed Programme Fields"
+          description="Training Material opens over the last 30 days, grouped by child Programme Field under its parent Programme Area."
           table={{
-            head: ["Programme", "Opens · 30 days"],
-            rows: programmeTraffic.map((row) => [row.label, row.value]),
+            head: ["Programme Area", "Programme Field", "Opens · 30 days"],
+            rows: programmeTraffic.map((row) => [row.parentLabel, row.label, row.value]),
           }}
           actions={
             <span className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
@@ -241,51 +249,73 @@ export default async function InsightsPage() {
             </span>
           }
         >
-          {programmeTraffic.length > 0 ? (
+          {!optional.ok ? (
+            <EmptyChart message="Programme Field traffic could not be loaded in time. Refresh to try again." />
+          ) : programmeTraffic.length > 0 ? (
             <RankBars
-              items={programmeTraffic.map((row, index) => ({ label: row.label, value: row.value, color: chartColor(index) }))}
-            />
-          ) : (
-            <EmptyChart message="No opens in the last 30 days." />
-          )}
-        </ChartCard>
-
-        <ChartCard
-          title="What the library holds"
-          description="Published material by type."
-          table={{
-            head: ["Type", "Published"],
-            rows: typeMix.map((entry) => [MATERIAL_TYPE_LABELS[entry.type], entry.count]),
-          }}
-        >
-          {typeTotal > 0 ? (
-            <DonutChart
-              centreLabel="published"
-              slices={typeMix.map((entry, index) => ({
-                label: MATERIAL_TYPE_LABELS[entry.type],
-                value: entry.count,
+              unit="opens"
+              items={programmeTraffic.map((row, index) => ({
+                label: row.label,
+                hint: `Programme Area: ${row.parentLabel}`,
+                value: row.value,
                 color: chartColor(index),
               }))}
             />
           ) : (
-            <EmptyChart message="Nothing published yet." />
+            <EmptyChart message="No material opens were recorded in the last 30 days." />
+          )}
+        </ChartCard>
+
+        <ChartCard
+          title="Resource Composition"
+          description="Published Training Materials by their recorded resource type."
+          table={{
+            head: ["Resource type", "Published materials"],
+            rows: optional.ok ? typeMix.map((entry) => [MATERIAL_TYPE_LABELS[entry.type], entry.count]) : [],
+          }}
+        >
+          {!optional.ok ? (
+            <EmptyChart message="Published-material classifications could not be loaded in time. Refresh to retry the type breakdown." />
+          ) : insights.library.published === 0 ? (
+            <EmptyChart message="No Training Materials are marked published in your authorised scope yet." />
+          ) : !typeMixReconciles ? (
+            <EmptyChart message={`Classification is incomplete: ${insights.library.published.toLocaleString("en-GB")} materials are marked published, but the type categories total ${typeTotal.toLocaleString("en-GB")}. No misleading donut is shown.`} />
+          ) : (
+            <DonutChart
+              centreLabel="published"
+              slices={typeMix.filter((entry) => entry.count > 0).map((entry) => ({
+                label: MATERIAL_TYPE_LABELS[entry.type],
+                value: entry.count,
+                color: MATERIAL_TYPE_COLORS[entry.type],
+              }))}
+            />
           )}
         </ChartCard>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <ChartCard
-          title="Trainings by programme field"
-          description="Which programmes are actually running trainings in the last 12 months."
+          title="Training records by Programme Field"
+          description="Training register records visible to you over the last 12 months, shown under their parent Programme Areas."
           table={{
-            head: ["Programme field", "Trainings"],
-            rows: sessions.byProgramme.map((row) => [row.label, row.value]),
+            head: ["Programme Area", "Programme Field", "Records"],
+            rows: sessions.byProgramme.map((row) => [row.parentLabel, row.label, row.value]),
           }}
         >
-          {sessions.byProgramme.length > 0 ? (
-            <RankBars items={sessions.byProgramme.map((row, index) => ({ label: row.label, value: row.value, color: chartColor(index + 2) }))} unit="trainings" />
+          {!optional.ok ? (
+            <EmptyChart message="Training Field breakdown could not be loaded in time. Refresh to try again." />
+          ) : sessions.byProgramme.length > 0 ? (
+            <RankBars
+              unit="records"
+              items={sessions.byProgramme.map((row, index) => ({
+                label: row.label,
+                hint: `Programme Area: ${row.parentLabel}`,
+                value: row.value,
+                color: chartColor(index + 2),
+              }))}
+            />
           ) : (
-            <EmptyChart message="No trainings recorded in the last 12 months." />
+            <EmptyChart message="No Training register records fall in the last 12 months." />
           )}
         </ChartCard>
 
@@ -299,27 +329,27 @@ export default async function InsightsPage() {
           </div>
           <dl className="space-y-2 text-sm">
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Programmes in scope</dt>
+              <dt className="text-ink-muted">Programme Areas</dt>
               <dd className="tabular-nums font-semibold text-ink">{insights.library.programmes}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Programme fields</dt>
+              <dt className="text-ink-muted">Programme Fields</dt>
               <dd className="tabular-nums font-semibold text-ink">{insights.library.programmeAreas}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Awaiting review</dt>
+                <dt className="text-ink-muted">Training Materials marked In review</dt>
               <dd className="tabular-nums font-semibold text-ink">{insights.library.inReview}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Drafts</dt>
+              <dt className="text-ink-muted">Training Material drafts</dt>
               <dd className="tabular-nums font-semibold text-ink">{insights.library.draft}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Trainings on record</dt>
+              <dt className="text-ink-muted">Unarchived Training records visible to you</dt>
               <dd className="tabular-nums font-semibold text-ink">{trainingCounts.total}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">People reached in trainings</dt>
+              <dt className="text-ink-muted">Attendee-count total on held records</dt>
               <dd className="tabular-nums font-semibold text-ink">{trainingCounts.attendees}</dd>
             </div>
             {insights.people && (
@@ -329,6 +359,9 @@ export default async function InsightsPage() {
               </div>
             )}
           </dl>
+          <p className="text-xs leading-relaxed text-ink-muted">
+            Attendee-count totals are sums of optional counts entered on records marked Held; they are not unique-person or service-reach totals.
+          </p>
 
           <div className="space-y-2">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
@@ -336,7 +369,7 @@ export default async function InsightsPage() {
               Nothing published
             </h3>
             {insights.gaps.length === 0 ? (
-              <p className="text-sm text-ink-muted">Every programme in scope has at least one published material.</p>
+              <p className="text-sm text-ink-muted">Every Programme Area in scope has at least one published Training Material.</p>
             ) : (
               <ul className="flex flex-wrap gap-2">
                 {insights.gaps.map((gap) => (
@@ -358,9 +391,7 @@ export default async function InsightsPage() {
 
       <p className="flex flex-wrap items-center gap-2 rounded-card border border-hairline bg-surface-2 p-5 text-sm leading-relaxed text-ink-muted">
         <Download className="h-4 w-4 shrink-0" aria-hidden />
-        Opens are recorded once per person per day and respect Do Not Track. Download counts come from the audit trail, so
-        they cannot be lost or edited later. Per-region reach and time-to-publish are the next figures to add; both are
-        derivable from what is already recorded.
+        Opens are recorded once per person per day and respect Do Not Track; downloads are counted from audit entries.
         <TrendingUp className="h-4 w-4 shrink-0" aria-hidden />
       </p>
     </div>

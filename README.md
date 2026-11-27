@@ -1,11 +1,6 @@
-# GHS-TL — Ghana Health Service Training Library
+# GHS-UWRHD-TL — Ghana Health Service – Upper West Regional Health Directorate – Training Library
 
-The library of record for Ghana Health Service training programmes. Material from a training
-session — slides, protocols, videos, references — is filed under the directorate and module that ran
-it, as a numbered version that a second reviewer has to approve before staff see it. Nothing is
-deleted silently: material is archived, and a hash-chained audit trail records who uploaded,
-reviewed, published, downloaded or withdrew it. Built on **Next.js 16**, **React 19**,
-**Tailwind CSS v4**, **Drizzle ORM**, **Neon Postgres**, any **S3-compatible bucket** and **Vercel**.
+The GHS-UWRHD Training Library serves authorised Ghana Health Service personnel in the Upper West Region. Its public hierarchy is Programme Areas → Programme Fields → Training Materials; materials are associated with their Programme Field. The authoring workflow supports review, version history and archiving, while public pages display only source-backed material that has been published. The catalogue may be empty until approved content is added. Built on **Next.js 16**, **React 19**, **Tailwind CSS v4**, **Drizzle ORM**, **Neon Postgres**, any **S3-compatible bucket** and **Vercel**.
 
 ---
 
@@ -28,34 +23,30 @@ reviewed, published, downloaded or withdrew it. Built on **Next.js 16**, **React
 
 ## What is implemented today
 
-**Shipped:** staff sign-in / password reset; a role-aware dashboard; a **Library** of programme
-fields → areas → material viewer; library search with server-side pagination; a reading record of what
-you opened and downloaded, per version; a **Trainings** list with a
-filter bar, plan form — title, year, programme field and area, target group, region → district →
-sub-district → facility, start/end dates, duration, venue — and an audited archive; **training
-**trainings** recorded at region → district → sub-district → facility; **traffic insights** (opens, downloads, upload rate, trainings
-per programme) drawn as server-rendered SVG charts; staff messaging (paginated threads); notifications;
-**authoring pipeline** (draft → signed upload → review → publish → supersede → archive) with the
-two-person publish rule; **cohort-targeted notices**; marketing site and the GHS emblem brand set.
+**Shipped:** staff sign-in, account claim from an existing directory row and administrator-issued password reset; a role-aware dashboard; a signed-in **Library** organised as Programme Areas → Programme Fields → Training Materials, with search and server-side pagination; version-specific reading and download records; a **Trainings** list and plan form with programme taxonomy, location and date filters; traffic insights from recorded activity; staff messaging, notifications and cohort-targeted notices; an authoring pipeline (draft → upload → review → publish → supersede → archive) with the two-person publish rule; the public marketing site, separate signed-out Programme Area/Field browse routes and database-backed public counters, and official GHS emblem.
+
+On a fresh database, the seed installs taxonomy and reference geography plus a passwordless bootstrap
+administrator; reruns leave existing credentials unchanged. It does not create a learner roster,
+training materials or training sessions. Public taxonomy and
+material counters use public-visibility filters; Training Session counts include only published,
+unarchived records in the Upper West Region. All are database-derived and may be zero.
 
 **Enforced, not just documented:** capability matrix (role × action × scope), facilitator scope
-resolved from `category_facilitators`, cohort visibility (`spaces.audience_*`,
-`categories.is_restricted`), hash-chained audit log written in the same transaction as each
-mutation, rate limits on progress/messages/certificate lookups, RLS lock-down of the public API.
+resolved from database assignments, audience visibility on Programme Fields, hash-chained audit
+records written with mutations, rate limits on sensitive actions, and RLS lock-down of the public API.
 
-**Reference data is administrable:** `/programme-fields` (ten fields, forty-one areas from the GHS
-list) and `/geography` (regions → districts → sub-districts → facilities) are full CRUD surfaces for
-administrators, with archive-instead-of-delete for anything a training already refers to. The
-signed-in sidebar is GHS green in both themes (ADR-0013).
+**Reference data is administrable:** `/programme-fields` maintains the GHS-supplied Programme Areas
+and Programme Fields; `/geography` maintains the location tree used by training records. Upper West
+is the active service region; other reference geography remains read-only. The signed-in sidebar
+uses the institutional green palette in both themes.
 
-**Not built yet:** category/space administration and the audit-log viewer, comments/discussion,
-assessments and grading, message reporting, MFA enforcement and account lockout, server-rendered
-certificate PDFs, and time-to-publish. The tables exist; the flows do not. See `REPO_ANALYSIS.md`
-for the prioritised gap list.
+**Not in the current release:** an audit-log viewer, discussion on training materials, and MFA
+sign-in. Account lockout is implemented after repeated failed sign-in attempts. See
+`REPO_ANALYSIS.md` for the broader prioritised gap list.
 
-**Retired, deliberately:** CPD points, cycle targets and certificate awarding (ADR-0011). The
-`certificates` table, `GHS-CPD-…` serials, `/verify` and the printable award remain, so certificates
-already issued still check out; nothing new is issued.
+**Retired, deliberately:** CPD points, cycle targets, assessments/marks and certificate awarding
+(ADRs 0011 and 0026). The product does not issue certificates and has no public certificate-
+verification route. Reading activity is recorded as activity, not as a completion or certification.
 
 ---
 
@@ -73,14 +64,13 @@ vercel.json                    # build/deploy settings (env vars live in the Ver
 drizzle.config.ts              # drizzle-kit (uses DIRECT_URL)
 src/
   app/
-    (marketing)/               # public: home, programmes, about, verify, legal, contact
-    (auth)/                    # login, forgot-password, reset-password
-    (dash)/                    # protected shell: dashboard, library (/catalogue), trainings,
+    (marketing)/               # public: home, programmes, about, help, contact, legal
+    (auth)/                    # login, registration, forgot-password, reset-password
+    (dash)/                    # protected shell: dashboard, signed-in catalogue (/catalogue), trainings,
                                # review, authoring, users, notices, geography, programme-fields
     api/health/                # liveness/readiness probe
     api/materials/[id]/file/   # audit-logged signed-URL redirect for controlled documents
-    auth/callback/             # PKCE code exchange for reset links
-  assets/fonts/                # self-hosted Plus Jakarta Sans (SIL OFL 1.1)
+  assets/fonts/                # legacy Plus Jakarta assets; current UI uses Manrope and Inter from @fontsource-variable
   components/{ui,layout,materials,messages,analytics,marketing,auth,brand,theme}/
   db/
     client.ts                  # pooled Drizzle singleton (server-only)
@@ -89,19 +79,17 @@ src/
   lib/
     rbac/capabilities.ts       # capability matrix + scope rules (isomorphic, unit-tested)
     viewer.ts                  # Viewer shape, isStaffRole()
-    certificate-code.ts        # random serial generation/validation
     file-name.ts               # MIME-correct download names
-    format.ts / cpd.ts / ghs-constants.ts / labels.ts / links.ts / names.ts
+    format.ts / ghs-constants.ts / labels.ts / links.ts / names.ts
     server/
       session.ts               # signed cookie identity + public.users authority
       rbac.ts                  # requireSession, checkCapability (DB-verified scope)
       audit.ts                 # hash-chained append + chain verifier
-      certificates.ts          # frozen certificate serials (ADR-0011: no new issuance)
       rate-limit.ts            # fixed-window limiter over rate_limit_windows
       learning-queries.ts      # library, materials, reading record + cohort filters
       messaging-queries.ts     # conversations, paginated threads
       notification-queries.ts  # notices + unread counts
-      public-queries.ts        # public stats + certificate verification
+      public-queries.ts        # cached public catalogue counters
       file-storage.ts          # S3 presigned URLs (upload + download) for the private bucket
       logger.ts                # one-line JSON events with PII redaction
       request-context.ts       # client IP / user agent
@@ -121,7 +109,7 @@ npm ci                          # dev dependencies included: @electric-sql/pglit
 cp .env.example .env            # then fill in the Neon values below
 npm run db:check-chain          # pre-flight: applies every migration to an in-memory Postgres
 npm run db:migrate              # against DIRECT_URL
-npm run db:seed                 # taxonomy, Upper West geography, starter content
+npm run db:seed                 # taxonomy/geography; fresh DB gets a passwordless admin, no catalogue content
 SEED_ADMIN_PASSWORD='…' npm run user:create-auth -- you@ghs.gov.gh
 npm run dev                     # http://localhost:3000
 ```
@@ -153,15 +141,17 @@ symptom is a page failing with `relation "material_views" does not exist` (or
 
 ```bash
 npm run db:migrate   # applies drizzle/0003; needs DIRECT_URL
-npm run db:seed            # idempotent; taxonomy + geography + starter content and accounts
+npm run db:seed            # idempotent; reference data; creates bootstrap admin only if absent
 npm run db:seed:geography  # geography only — safe on a database that already has real people in it
 ```
 
-`db:seed:geography` exists because the full seeder also creates a demo administrator, a facilitator
-and three starter materials. If the app is live and only the district/facility pickers are empty
-(`db:doctor` says *"No districts or facilities"*), run the geography command instead: it upserts
-regions, the eleven Upper West districts, their sub-districts and 24 facilities, and touches
-nothing else.
+`db:seed:geography` is the safe option when only location pickers need reference data. It upserts
+region names and the Upper West districts, sub-districts and facilities without creating accounts,
+materials or trainings. The full `db:seed` also installs the programme taxonomy and creates a
+passwordless bootstrap administrator only if the row is absent. It leaves an existing password
+unchanged and never creates learner accounts, published materials or training sessions.
+If the app is live and only the district/facility pickers are empty (`db:doctor` says *"No districts
+or facilities"*), run the geography command instead.
 
 If the connection itself fails — `getaddrinfo ENOTFOUND`, `ECONNREFUSED`, `CONNECT_TIMEOUT`, or
 `read ECONNRESET` — run the doctor first. It checks both URLs, resolves the hosts, connects, and names the fix
@@ -227,11 +217,13 @@ the first attempt.
    | `DATABASE_URL` | Neon **pooled** host (`…-pooler…`), `?sslmode=require` |
    | `SESSION_SECRET` | 32+ random characters; changing it signs everybody out |
    | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | optional object storage; the endpoint is compiled into the CSP, so changing it needs a redeploy |
-   | `NEXT_PUBLIC_APP_URL` | the production origin, e.g. `https://ghstl.vercel.app` (no trailing slash) |
+   | `NEXT_PUBLIC_APP_URL` | the confirmed production origin, e.g. `https://<your-public-domain>` (no trailing slash; replace the placeholder before deploying) |
    | `DB_POOL_MAX` | set `3` — each warm function instance holds its own pool |
    | `DIRECT_URL` | optional at runtime; only `drizzle-kit` reads it |
 
-   There are no `SUPABASE_*` variables any more — delete any that remain. `SEED_ADMIN_EMAIL`,
+   The production hostname is not confirmed in this repository. Replace the placeholder with the
+   actual public origin before building for production; the local build otherwise warns and falls
+   back to `http://localhost:3000` for absolute links. There are no `SUPABASE_*` variables any more — delete any that remain. `SEED_ADMIN_EMAIL`,
    `SEED_ADMIN_PASSWORD` and `ALLOW_PROD_SEED` belong to local seeding and must not be set on Vercel.
 3. **Deploy**, then smoke-test the deployment:
 
@@ -254,10 +246,11 @@ Anything `NEXT_PUBLIC_*` changed later needs a redeploy, because it is compiled 
 
 ## Staff logins
 
-Staff sign in with their **employee number** — the one printed on the payslip — and the password ICT gave
-them. The e-mail is
-optional — most of the Upper West payroll has none — and the first sign-in can only choose a new
-password (`users.must_change_password`, checked by `proxy.ts`).
+Staff sign in with their **GHS Staff ID** (employee number) and password. An active directory row
+without a password can be claimed at `/register` after the person verifies their ID and supplies
+contact details and a password; the form cannot create a new directory row or query HRIMS. The e-mail
+address is not used for sign-in. Imported accounts flagged with `users.must_change_password` must
+choose a new password at sign-in (`src/proxy.ts`).
 
 ### Importing the staffing sheet
 
@@ -307,12 +300,9 @@ import writes one audit row for the batch rather than a row per person.
 
 ### One account at a time
 
-1. Insert the directory row (the source of truth for identity and role):
-
-   ```sql
-   insert into users (ghs_staff_id, email, full_name, role, region, facility)
-   values ('GHS-000123', 'ama.mensah@ghs.gov.gh', 'Ama Serwaa Mensah', 'LEARNER', 'Ashanti', 'Komfo Anokye');
-   ```
+1. Ensure the directory contains a row for the staff member using verified, source-backed Upper West data.
+   `db:seed` does not create learner records; use the approved staff import or the authorised directory workflow.
+   Do not insert sample identities or postings into a production database.
 
 2. Set a password on that row (prints a one-time temporary password; nothing is stored):
 
@@ -323,7 +313,7 @@ import writes one audit row for the batch rather than a row per person.
 
    `npm run user:create-auth -- <email>` sets a known password from `SEED_ADMIN_PASSWORD` instead.
    For a locked-out account, `npm run user:reset-password -- <email>` prints a one-hour, single-use
-   `/reset-password?token=…` link to hand over in person — the pilot sends no e-mail, and
+   `/reset-password?token=…` link to hand over in person — the application does not send e-mail, and
    `/forgot-password` says so.
 
    **Staff accounts are a separate step from the seed.** `db:seed` writes geography, the programme
@@ -364,9 +354,9 @@ import writes one audit row for the batch rather than a row per person.
 * **Audit integrity:** `npm run db:verify-chain` recomputes the hash chain (exit 1 on tamper).
   Run it after every restore and on a schedule. Staff are deactivated, never deleted — the chain
   covers the actor id.
-* **Rate limits:** fixed windows in `rate_limit_windows`, keyed by a SHA-256 of the identifier
-  (progress 60/5 min, messages 30/5 min, certificate verification 20/5 min per connection).
-  `purgeExpiredRateLimits()` is safe to call from a cron.
+* **Rate limits:** fixed windows in `rate_limit_windows`, keyed by a SHA-256 identifier. Sign-in,
+  staff-directory registration lookups, messaging and public complaint/status lookups are limited
+  at their server actions.
 * **Security headers:** CSP, COOP/CORP and Permissions-Policy are set in `next.config.ts`; the
   nonce migration is tracked in `docs/decisions/0007-csp-and-headers.md`.
 * **Seeding:** `npm run db:seed` upserts (the seed is idempotent); it refuses production unless
@@ -390,4 +380,4 @@ npm run db:verify-chain
 
 ## License
 
-Internal GHS use. Fonts: Plus Jakarta Sans, SIL Open Font License 1.1 (`src/assets/fonts/OFL.txt`).
+Internal GHS use. Current UI typography is Manrope (headings) and Inter (body), vendored through `@fontsource-variable/*` (SIL Open Font License 1.1). The retained `src/assets/fonts/` files are legacy Plus Jakarta Sans assets, not loaded by the current layout.

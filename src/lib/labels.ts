@@ -58,17 +58,25 @@ export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
 
 /** One line under each choice in a role field, in the same order. */
 export const STAFF_ROLE_HINTS: Record<StaffRole, string> = {
-  LEARNER: "Signs in, reads and downloads what has been published for staff.",
-  FACILITATOR: "Files material and trains, inside the programme fields they are given.",
-  UNIT_HEAD: "A facilitator who also signs off the review queue for their fields.",
-  SYSTEM_ADMIN: "Runs the directory, the taxonomy and every programme area.",
+  LEARNER: "Browses and opens published Training Materials available to them.",
+  FACILITATOR: "Authors Training Materials within assigned Programme Area and Programme Field scopes. Training Session record permissions are separate.",
+  UNIT_HEAD: "A facilitator who also reviews Training Materials and Training Session records within their review scope.",
+  SYSTEM_ADMIN: "Manages staff access and reference data, including Programme Areas, Programme Fields and geography.",
 };
 
 export const MATERIAL_TYPE_LABELS: Record<MaterialType, string> = {
   DOCUMENT: "Document",
   VIDEO: "Video",
   LAB: "Practical lab",
-  ASSESSMENT_LINK: "Assessment",
+  ASSESSMENT_LINK: "Assessment link",
+};
+
+/** Stable resource-type colours, shared by the dashboard and Insights charts. */
+export const MATERIAL_TYPE_COLORS: Record<MaterialType, string> = {
+  DOCUMENT: "var(--chart-1)",
+  VIDEO: "var(--chart-2)",
+  LAB: "var(--chart-3)",
+  ASSESSMENT_LINK: "var(--chart-6)",
 };
 
 export const PRIORITY_LABELS: Record<PriorityLevel, string> = {
@@ -79,9 +87,9 @@ export const PRIORITY_LABELS: Record<PriorityLevel, string> = {
 };
 
 const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
-  TRAINING_PUBLISHED: "New training",
-  TRAINING_RETURNED: "Training review",
-  MATERIAL_PUBLISHED: "New material",
+  TRAINING_PUBLISHED: "New Training Session record",
+  TRAINING_RETURNED: "Training Session record review",
+  MATERIAL_PUBLISHED: "New Training Material",
   DIRECT_MESSAGE: "Message",
   COMPLAINT_UPDATE: "Complaint update",
   ACCOUNT: "Account",
@@ -111,7 +119,7 @@ export type TrainingStatus = (typeof TRAINING_STATUSES)[number];
 
 export const TRAINING_STATUS_LABELS: Record<TrainingStatus, string> = {
   PLANNED: "Planned",
-  COMPLETED: "Completed",
+  COMPLETED: "Held",
   CANCELLED: "Cancelled",
 };
 
@@ -174,7 +182,7 @@ export const COMPLAINT_ISSUE_LABELS: Record<ComplaintIssue, string> = {
 
 export const COMPLAINT_ISSUE_HELP: Record<ComplaintIssue, string> = {
   PERSONAL_DETAILS: "A wrong name, staff ID, facility or posting.",
-  COURSE_RELATED: "A training you were not credited for, or a session that was not what was advertised.",
+  COURSE_RELATED: "A Training Session record or event detail that needs checking.",
   LOGIN_ACCESS: "Forgotten password, no account yet, or a locked account.",
   WRONG_DOCUMENT: "The file attached to a training is not the one it should be — the wrong deck, an old version, somebody else's sheet.",
   DOC_INACCESSIBLE: "The file is there but will not open, will not download, or opens to an error.",

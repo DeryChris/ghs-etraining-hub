@@ -97,7 +97,7 @@ export async function notifyTrainingPublished(input: {
 }): Promise<void> {
   await deliver({
     title: "New training added",
-    body: `${input.title}${input.fieldName ? ` — ${input.fieldName}` : ""} is now live. Details, attendance and resources are on the training page.`,
+    body: `${input.title}${input.fieldName ? ` — ${input.fieldName}` : ""} is now live. Details and attached resources are on the Training Session record.`,
     type: "TRAINING_PUBLISHED",
     linkUrl: `/trainings/${input.trainingId}`,
     actorId: input.actorId,
@@ -125,7 +125,13 @@ export async function notifyTrainingReturned(input: {
   });
 }
 
-/** A material went live: tell the cohort it was targeted at, nobody else. */
+/**
+ * A material went live: tell the cohort it was targeted at, nobody else.
+ *
+ * There is no standing material page to link to any more (ADR-0031): a file is
+ * read on the training it was used at, so the notice sends people to the
+ * trainings register to find the training itself.
+ */
 export async function notifyMaterialPublished(input: {
   materialId: string;
   title: string;
@@ -134,10 +140,10 @@ export async function notifyMaterialPublished(input: {
   audienceFilter?: AudienceFilter | null;
 }): Promise<void> {
   await deliver({
-    title: "New material in the library",
-    body: `${input.title} — filed under ${input.areaName}. Open it from the library.`,
+    title: "New material on a training",
+    body: `${input.title} — attached to a training in ${input.areaName}. Open the training to read it.`,
     type: "MATERIAL_PUBLISHED",
-    linkUrl: `/materials/${input.materialId}`,
+    linkUrl: "/trainings",
     actorId: input.actorId,
     audienceFilter: input.audienceFilter ?? null,
     priority: "MEDIUM",

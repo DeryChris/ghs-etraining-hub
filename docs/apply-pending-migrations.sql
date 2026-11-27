@@ -2,7 +2,10 @@
 --
 -- For when `npm run db:migrate` is not available (no terminal, or a machine that
 -- cannot reach the database). Run this ONCE on the database that `/api/health`
--- reports as `SCHEMA_BEHIND`, then reload `/api/health` — it should say 23 of 23.
+-- reports as `SCHEMA_BEHIND`, then reload `/api/health` — it should say 24 of 24.
+--
+-- This file carries 0019–0022. Migration 0023 is separate: run
+-- `docs/apply-0023.sql` afterwards (it is safe to run on its own).
 --
 -- It does what drizzle does, in the same order, and records the same ledger rows
 -- (`drizzle.__drizzle_migrations`: sha256 of the file, plus the journal stamp), so a

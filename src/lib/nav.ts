@@ -18,9 +18,7 @@
  *
  * "Trainings" is the flat, filterable list of events (ADR-0013).
  * "Library" is the way in by subject — programme area, then programme field, then
- * the trainings held for it (ADR-0014). Material is attached to its training, so
- * there is no separate authoring or upload door: a facilitator uploads from the
- * training it belongs to. They were briefly one
+ * the trainings and material filed under it (ADR-0014). They were briefly one
  * screen, which left the trainings list sharing space with the taxonomy; they are two
  * doors again because people arrive with one of two questions — "what ran this
  * year?" or "what exists for malaria?".
@@ -39,7 +37,6 @@ export type NavIcon =
   | "library"
   | "messages"
   | "notifications"
-  | "cpd"
   | "insights"
   | "materials"
   | "review"
@@ -91,14 +88,14 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         label: "Library",
         icon: "library",
         roles: EVERYONE,
-        hint: "Programme areas and the fields inside them, with the training filed under each",
+        hint: "Browse Programme Areas → Programme Fields, with published Training Materials and associated Training Session records",
       },
       {
         href: "/trainings",
         label: "Trainings",
         icon: "training",
         roles: EVERYONE,
-        hint: "Every training GHS has planned or run, by programme area and field",
+        hint: "Search planned, held and cancelled Training Session records by Programme Area, Programme Field, date and status",
       },
     ],
   },
@@ -132,7 +129,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         label: "Insights",
         icon: "insights",
         roles: STAFF,
-        hint: "Coverage, review backlog and how much of it is being read",
+        hint: "Training Material activity in your assigned scope, Training register records visible to you, and library reference counts",
       },
     ],
   },

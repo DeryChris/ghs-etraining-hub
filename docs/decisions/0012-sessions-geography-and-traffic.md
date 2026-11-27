@@ -42,10 +42,12 @@ change. This is why a session needs a programme but does not require a module.
 
 **Traffic is two events, recorded differently.**
 
-* **Opens** — `material_views`, unique on `(material_id, user_id, viewed_on)` with a `view_count` that
-  increments on repeat visits the same day. The material page mounts a client beacon that POSTs to
-  `/api/materials/[id]/view`; the route always answers `204`, never blocks rendering, and **honours Do Not
-  Track**. A counter is not worth a broken page or a tracking banner.
+* **Opens** — `material_views`, unique on `(material_id, user_id, viewed_on)`. A person/material pair
+  contributes at most one open per Accra calendar day; repeat beacons update `last_viewed_at` but do not
+  inflate the count. Analytics counts daily ledger rows, not the legacy `view_count` column. The material
+  page mounts a client beacon that POSTs to `/api/materials/[id]/view`; the route always answers `204`,
+  never blocks rendering, and **honours Do Not Track**. A counter is not worth a broken page or a tracking
+  banner.
 * **Downloads** — not a new event type. `MATERIAL_FILE_ISSUED` audit rows already record every controlled
   file that left the platform, per person and per material. Adding a parallel counter would create two
   sources of truth that can drift, and the audit trail is the record that must survive.

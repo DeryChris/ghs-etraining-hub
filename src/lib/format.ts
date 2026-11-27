@@ -2,7 +2,9 @@
  * Display formatting for the training library. Everything is shown in Africa/Accra time, 24-hour
  * clock, with the en-GB conventions the UI copy uses (docs/ui-ux.md §5).
  */
-const ACCRA_TZ = "Africa/Accra";
+import { ACCRA_TIME_ZONE } from "@/lib/dates";
+
+const ACCRA_TZ = ACCRA_TIME_ZONE;
 
 export function formatDateTime(
   date: Date | string | null | undefined,

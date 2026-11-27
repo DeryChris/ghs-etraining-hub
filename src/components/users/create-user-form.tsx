@@ -18,12 +18,12 @@ import { GHS_REGIONS, isLiveRegion } from "@/lib/ghs-constants";
 const INITIAL: UserActionState = { ok: false, message: null };
 
 /**
- * Only the regions that are actually live are offered.
+ * Only the regions the platform actually serves are offered.
  *
- * The library runs in one region for now; listing fifteen more in a dropdown
+ * The library serves the Upper West Region; listing the rest in a dropdown
  * invites people to file a person, a training or a facility against a region the
- * service does not cover yet. `LIVE_REGION.codes` is the single switch — add a
- * code there when a region goes live and it appears in every form that uses this.
+ * service does not cover. `LIVE_REGION.codes` is the single switch — the list is
+ * filtered by it, so every form that uses this stays in step.
  */
 const REGIONS: readonly string[] = GHS_REGIONS.filter((name) => isLiveRegion(null, name));
 

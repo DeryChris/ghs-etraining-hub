@@ -63,10 +63,8 @@ export default async function LoginPage({
             <span className="h-px flex-1 bg-hairline" aria-hidden />
           </div>
 
-          {/* The hub, not the form: it is where a person also checks what
-              happened to a complaint they already lodged. */}
           <Link
-            href="/help"
+            href="/help/report"
             className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-danger/40 bg-danger/10 px-5 text-[15px] font-bold text-danger transition-colors hover:bg-danger/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
           >
             <MessageSquareWarning className="h-4 w-4" aria-hidden />
@@ -75,11 +73,11 @@ export default async function LoginPage({
           </Link>
 
           <p className="text-center text-[12px] leading-relaxed text-ink-muted">
-            Cannot sign in, or used the wrong e-mail address at signup?{" "}
-            <Link href="/help" className="font-semibold text-primary underline underline-offset-4">
-              Open the Complaint Hub
+            Cannot sign in or used the wrong contact details during account setup?{" "}
+            <Link href="/help/report" className="font-semibold text-primary underline underline-offset-4">
+              Report it here
             </Link>{" "}
-            — every complaint is answered in writing.
+            and keep your reference number.
           </p>
         </div>
       </div>

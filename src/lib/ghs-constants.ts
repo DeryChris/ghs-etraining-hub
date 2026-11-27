@@ -20,10 +20,11 @@ export const GHS_REGIONS = [
 export type GhsRegion = (typeof GHS_REGIONS)[number];
 
 /**
- * The pilot. The library is live in one region and the other fifteen are coming
- * soon, so this constant — not copy scattered across pages — decides what the
- * map highlights, which region the geography admin lets you edit, and what the
- * marketing pages promise.
+ * The platform's single regional scope. The Training Library serves the Upper
+ * West Regional Health Directorate — there is no other regional deployment and
+ * no rollout messaging. This constant, not copy scattered across pages, decides
+ * what the map highlights, which region the geography admin lets you edit, and
+ * what the marketing pages say.
  */
 export const LIVE_REGION = {
   code: "UW",

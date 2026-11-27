@@ -163,7 +163,9 @@ export async function getDirectorySummary(): Promise<DirectorySummary> {
 
 
 /**
- * The programme fields and areas each person on the page already holds.
+ * The Programme Areas and Programme Fields each person on the page already
+ * holds. Legacy IDs are returned as `fieldIds` for parent areas and `areaIds`
+ * for child fields.
  *
  * One query per table for the whole page rather than per row: the Users table
  * shows twelve people at a time and two queries beat twenty-four.

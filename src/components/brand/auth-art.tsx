@@ -20,9 +20,9 @@ export function AuthArt({ className = "" }: { className?: string }) {
     >
       <defs>
         <linearGradient id="auth-bg" x1="0" y1="0" x2="0.7" y2="1">
-          <stop offset="0%" stopColor="#0a8f57" />
-          <stop offset="45%" stopColor="#006b3f" />
-          <stop offset="100%" stopColor="#00301c" />
+          <stop offset="0%" stopColor="#1d7d5b" />
+          <stop offset="45%" stopColor="#145c42" />
+          <stop offset="100%" stopColor="#0a3226" />
         </linearGradient>
         <radialGradient id="auth-halo" cx="0.5" cy="0.42" r="0.62">
           <stop offset="0%" stopColor="#eafff2" stopOpacity="0.26" />

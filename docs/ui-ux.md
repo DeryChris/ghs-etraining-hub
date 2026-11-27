@@ -1,4 +1,6 @@
-# UI/UX — GHS-TL
+# UI/UX — GHS-UWRHD-TL
+
+> **Historical note.** The design notes below predate the 2026 institutional overhaul. Their earlier palette, typography, navigation and map descriptions are not current; use `src/app/globals.css`, `src/lib/site.ts` and the implemented app pages/components as the source of truth for the updated design.
 
 Dark‑first, clinical, calm. The platform is read under fluorescent ward lighting and on a phone at
 night; the palette must never shout, and data density must never overwhelm a small screen.
@@ -15,10 +17,10 @@ night; the palette must never shout, and data density must never overwhelm a sma
 | `--color-hairline` | `slate-800` | 1px borders |
 | `--color-primary` | `teal-400` / `teal-500` | actions, active nav, links |
 | `--color-primary-ink` | `teal-950` | text on primary buttons |
-| `--color-accent` | `emerald-400` | success, completion |
+| `--color-accent` | `emerald-400` | success and emphasis |
 | `--color-warn` | `amber-400` | attention, due soon |
 | `--color-danger` | `rose-400` | critical, errors |
-| `--color-ghs-red` / `--color-ghs-gold` / `--color-ghs-green` | `#cf2027` / `#fcd116` / `#006b3f` | **brand only** (crest stripe, certificates) — never for state |
+| `--color-ghs-red` / `--color-ghs-gold` / `--color-ghs-green` | `#cf2027` / `#fcd116` / `#006b3f` | **brand only** (official emblem details) — never for state |
 | `--radius-card` | `14px` | cards |
 | `--radius-control` | `10px` | buttons, inputs |
 | `--shadow-panel` | `0 1px 0 rgba(255,255,255,.04), 0 8px 24px rgba(2,6,23,.45)` | elevation |
@@ -88,15 +90,18 @@ Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard opera
 ## 4. Page recipes
 
 * **Dashboard (learner)** — the greeting and the one button back to the material they were reading,
-  then the reading record, then announcements, then the programme fields. No chart appears on this
-  page: charts are staff equipment.
-* **Space page** — sticky sub‑header with progress, materials as cards grouped by type, discussion
-  at the bottom, "Download all for offline" action with total size shown.
-* **Signed-out screens** — the sign-in card is two halves: getting started and what the platform is
-  for on the left, the form on the right (`lg` and above; a phone sees the form first). Under the
-  Sign in button, *Create an account* and then the Complaint Hub, in that order, because that is the
-  order they are reached for. `/register` is one column: staff ID, then the HRIMS facts read-only,
-  then e-mail, phone and password (ADR‑0030).
+  then the reading record, then announcements, then the Programme Areas and Programme Fields. No
+  chart appears on this page: charts are staff equipment.
+* **Public programme browse** — `/programmes` lists Programme Areas; opening a Programme Area shows
+  its Programme Fields; opening a Programme Field shows listings for currently published, publicly
+  visible Training Materials. The field page keeps the parent-area breadcrumb and an honest empty
+  state when no materials are published. This signed-out hierarchy is separate from the authenticated
+  `/catalogue`.
+* **Signed-out screens** — the sign-in card is split between getting-started guidance and the form
+  on wide screens; mobile puts the form first. Under the Sign in button are *Create an account* and
+  the Complaint Hub. `/register` verifies a GHS Staff ID against the available staff directory and
+  lets an eligible person claim an unclaimed account, then enter contact details and a password. It
+  is not a connection to HRIMS or open registration for arbitrary visitors (ADR‑0030).
 * **Search bars collapse** — one search box, always visible; the rest of the filters behind a
   native `<details>` that says how many are set (`components/ui/filter-bar.tsx`). The fields are
   still submitted while it is shut, because they stay in the DOM.
@@ -113,28 +118,30 @@ Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard opera
 * **Slides are read, not indexed.** A deck shows one slide, `‹ 3 / 40 ›` and swipe. No grid of slide
   numbers under the canvas, no speaker notes — a deck is read in order, and the digits were the
   loudest thing in the panel on a phone.
-* **Data tables (admin)** — server‑side pagination with a page‑size selector (25/50/100), saved
-  filters in the URL (shareable, back‑button safe), row actions in a kebab menu, count in the
-  caption ("Showing 1–25 of 4,182 GHS staff"). `/users` is the reference implementation: 25 per page,
-  filters in the URL, row actions inline (role select, deactivate/reactivate, reset link) with the
-  result of each action announced next to the row it changed.
-* **Insights** — headline numbers first (`/insights`), then charts: an area chart of opens vs
-  downloads by week, stacked bars of versions uploaded per month by programme, a monthly count of
-  sessions run, ranked bars for opens and for sessions per programme, and a donut of published material
-  by type. Charts are server-rendered SVG using the `--chart-1..8` / `--chart-grid` tokens in
-  `globals.css`; each one repeats its figures in a `<details>` table and in `<title>` tooltips. The
-  dashboard shows four headline numbers and a link, and nothing on the dashboard is a chart. Numbers are
-  always labelled with the window they cover ("Opens · 4 weeks"), because an unlabelled total is a claim
-  nobody can check.
-* **Sessions** — one training per row: title, programme (module optional), date, region → district →
-  sub-district → facility, facilitator and attendee count. Facilities exclude CHPS compounds. The
-  cascade narrows as you choose; every optional key is cross-checked against its parent on the server.
+* **Data tables (admin)** — server-side pagination with 25 rows per page, filters in the URL
+  (shareable, back-button safe), a result count and inline row actions. `/users` is the reference:
+  role, status and group filters; role changes, activation, password reset and access assignments
+  each return a result announced beside the affected row.
+* **Insights** — headline numbers first (`/insights`), then charts: weekly opens and downloads,
+  Training Material versions filed per month by Programme Field, Training register records by their
+  recorded start date, opens by Programme Field, and published Training Materials by type. Training
+  register figures follow register visibility: facilitators see published records and their own
+  submissions; administrators and unit heads see all review states. The 12-month record series ends
+  on the current UTC date. Charts use the `--chart-1..8` / `--chart-grid` tokens in `globals.css`; each
+  chart repeats its figures in a table and `<title>` tooltips. Every time-based number names its window
+  (for example, "Opens · 12 weeks").
+* **Trainings register** — one Training Session record per row: title, Programme Area and Programme
+  Field, date, region → district → sub-district → facility, facilitator and an optional attendee count.
+  Members of staff see published records and their own submissions; administrators and unit heads can
+  also see other review states. Facilities exclude CHPS compounds. The location cascade narrows as you
+  choose; every selected key is cross-checked against its parent on the server. An attendee-count total
+  is a sum of values entered on records marked Held, not a unique-person or service-reach measure.
 
 ## 5. Copy style
 
 * Sentence case, plain Ghanaian professional English, second person ("Download this SOP for
   offline use" not "The document can be downloaded").
-* Be specific with numbers: "Due in 4 days", "12 of 15 staff completed", "8.4 MB".
+* Be specific with numbers when the value is source-backed: "3 files attached", "12 Training Session records", "8.4 MB". Label recorded counts as counts; never imply reach, unique attendees or learner outcomes.
 * Errors say what happened and what to do next: "We could not open this SOP. The file may have been
   replaced. Contact your facilitator, or try again in a few minutes." Never "Error 500", never
   "Oops".
@@ -159,21 +166,24 @@ complaint we heard most.
   with a gold-bordered "Used an older portal before?" notice. The right column is the form, then
   "Create an account" (gold, the accepted exception to the brand-colour rule), then a
   "Trouble signing in?" divider and the red Complaint Hub button.
-* `/help` is the Complaint Hub: report an issue, or check a complaint by Staff ID. It is public on
-  purpose — somebody locked out of their account cannot sign in to ask for help. `/help/report`
-  and `/help/status` never require a session and never ask for a password.
-* Only the Upper West Region is presented as live. The landing page map draws all sixteen regions
-  from real 2019 boundaries (`src/lib/ghana-map.ts`), fills Upper West, and labels the rest "coming
-  soon"; the geography admin makes every other region read-only with the same wording. Nothing is
-  hidden and nothing is shown as broken.
+* `/help` is the Help Centre and includes the Complaint Hub. `/help/report` and `/help/status` are
+  public so a person locked out of their account can ask for help. Status lookup uses the Staff ID
+  recorded with the complaint and requires no sign-in or password; it returns the matching complaint
+  status and saved responses, with temporary-password text redacted.
+* The marketing region panel identifies the Upper West Region and uses its isolated boundary from
+  the 2019 source data (`src/lib/ghana-map.ts`). It does not display a multi-region rollout map or
+  availability cards. The geography admin retains existing reference data read-only; this is not
+  deployment messaging.
 
 ### Dashboards: the overview and the detail
 
-The signed-in dashboard opens with four KPI cards — a number, its change against the previous
-period and a sparkline — then one wide trend chart, then the two "shape" charts (materials by type,
-busiest programme areas). Insights repeats the same vocabulary in more detail. There is no
-"Mandatory protocols" list and no mandatory/in-progress/completed tile row: the dashboard is for
-orientation, and anything that needs doing appears as an action under Continue where you left off.
+The member-of-staff reading dashboard shows personal recent activity, notices and Programme Area
+browse; it has no charts. The facilitator and administrator dashboard shows service or assigned-scope
+figures, material activity, and returned Training Session records where follow-up is needed. The
+separate `/insights` page shows material opens and downloads by week, uploaded versions by month,
+Training register records grouped by their recorded start date, opens by Programme Field, material
+mix and library reference counts. Attendee-count totals are sums entered on records marked Held, not
+unique-person or service-reach measures.
 
 Chart colour comes from the eight `--chart-*` tokens, so a series keeps its colour between the
 dashboard, insights and any table that lists the same thing. Colour carries identity, never

@@ -22,7 +22,7 @@ describe("capability matrix", () => {
     expect(can("LEARNER", "audit_log.read")).toBe(false);
   });
 
-  it("lets facilitators author in scope but not run category governance", () => {
+  it("lets facilitators author in scope but not manage the programme taxonomy", () => {
     expect(can("FACILITATOR", "material.create")).toBe(true);
     expect(can("FACILITATOR", "material.review")).toBe(true);
     expect(can("LEARNER", "material.review")).toBe(false);
@@ -70,12 +70,12 @@ describe("scope resolution", () => {
     expect(scopeAllows("FACILITATOR", "material.review", { areaId: "a1", reviewerIsAuthor: true })).toBe(false);
   });
 
-  it("requires a category for facilitator governance actions", () => {
+  it("requires a Programme Field scope for facilitator authoring actions", () => {
     expect(scopeAllows("FACILITATOR", "material.create", {})).toBe(false);
     expect(scopeAllows("FACILITATOR", "material.create", { areaId: "a1" })).toBe(true);
   });
 
-  it("allows facilitators global self-service actions without a category", () => {
+  it("allows facilitators global self-service actions without programme scope", () => {
     for (const action of FACILITATOR_GLOBAL_ACTIONS) {
       expect(scopeAllows("FACILITATOR", action, {}), action).toBe(true);
       expect(isGlobalForFacilitators(action), action).toBe(true);

@@ -4,20 +4,25 @@ import Link from "next/link";
 import {
   ArrowRight,
   BadgeCheck,
-  FolderOpen,
-  FileCheck2,
-  FolderKanban,
-  History,
-  FlaskConical,
+  ClipboardCheck,
+  FileText,
+  FolderTree,
+  GraduationCap,
   HeartPulse,
+  History,
+  LayoutGrid,
+  Library,
+  MapPinned,
   Pill,
   Search,
   ShieldCheck,
-  Smartphone,
   Stethoscope,
+  FlaskConical,
+  Upload,
+  Users,
   type LucideIcon,
 } from "lucide-react";
-import { EmptyArt, HealthMark, RegionMap } from "@/components/brand/illustrations";
+import { UpperWestMap } from "@/components/brand/illustrations";
 import { CtaArt, HeroArt, MapArt } from "@/components/marketing/landing-art";
 import { CountUp } from "@/components/marketing/count-up";
 import { Faq } from "@/components/marketing/faq";
@@ -26,197 +31,192 @@ import { ProgrammeFieldTile } from "@/components/programme/programme-tile";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { buttonClass } from "@/components/ui/button";
 import { SITE } from "@/lib/site";
-import { GHS_REGIONS, LIVE_REGION } from "@/lib/ghs-constants";
-import { listPublicFields } from "@/lib/server/learning-queries";
 import { getPublicStatsCached } from "@/lib/server/public-queries";
+import { listPublicAreas } from "@/lib/server/public-browse";
 
 export const metadata: Metadata = {
-  title: "Training material for every GHS programme",
+  title: { absolute: `${SITE.name} | Ghana Health Service` },
   description: SITE.description,
 };
 
-const FEATURES: { icon: LucideIcon; title: string; body: string; tone: string }[] = [
+/* ── Platform capabilities (7.5) ──────────────────────────────────────────── */
+
+const FEATURES: { icon: LucideIcon; title: string; body: string }[] = [
   {
-    icon: FolderKanban,
-    title: "One home for every programme",
-    body: "Each directorate and unit that runs training gets its own place: the material, the date it last changed and who to ask about it.",
-    tone: "bg-primary/10 text-primary",
+    icon: Library,
+    title: "Centralised Resource Management",
+    body: "Bring institutional training materials together in one organised digital environment. Find resources through their associated Programme Areas and Programme Fields.",
+  },
+  {
+    icon: FolderTree,
+    title: "Structured Programme Organisation",
+    body: "Navigate a clear hierarchy of Programme Areas, their respective Programme Fields and associated training materials.",
   },
   {
     icon: History,
-    title: "Every version kept",
-    body: "A new file never overwrites the old one. The version you were trained on stays readable and clearly marked once it is replaced.",
-    tone: "bg-accent/25 text-accent-ink dark:text-accent",
+    title: "Document Version Control",
+    body: "Maintain previous editions of training documents while clearly identifying the latest approved version.",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Review and Approval",
+    body: "Support an organised review process that allows designated personnel to examine and approve submitted resources before publication.",
   },
   {
     icon: ShieldCheck,
-    title: "Reviewed before it goes live",
-    body: "A colleague who did not upload the file has to approve it first, so one person cannot publish clinical content on their own.",
-    tone: "bg-primary/10 text-primary",
-  },
-  {
-    icon: FileCheck2,
-    title: "Nothing disappears quietly",
-    body: "Uploads, edits, approvals, downloads and withdrawals are written to a tamper-evident audit trail. Material is archived, never silently deleted.",
-    tone: "bg-primary/10 text-primary",
+    title: "Resource Accountability",
+    body: "Maintain records of resource submissions, reviews, approvals, updates and other supported activities.",
   },
   {
     icon: Search,
-    title: "Find it by programme, area or title",
-    body: "Search the whole library, open the current version, or check what was in force when a session ran.",
-    tone: "bg-accent/25 text-accent-ink dark:text-accent",
-  },
-  {
-    icon: Smartphone,
-    title: "Light enough for a weak connection",
-    body: "Pages are text-first and video loads only when you press play, so a phone on a slow network still opens the document you need.",
-    tone: "bg-primary/10 text-primary",
+    title: "Easy Resource Access",
+    body: "After signing in, browse, preview and download published training materials through a clear and accessible interface.",
   },
 ];
 
-const STEPS = [
+/* ── How the platform works (7.6) ─────────────────────────────────────────── */
+
+const STEPS: { icon: LucideIcon; title: string; body: string }[] = [
   {
-    icon: ShieldCheck,
-    title: "Sign in",
-    body: "Use your GHS staff account. Your facility administrator issues it — there is no public sign-up.",
+    icon: FolderTree,
+    title: "Organise",
+    body: "Resources are assigned to the appropriate Programme Area and Programme Field.",
   },
   {
-    icon: FolderOpen,
-    title: "Open the programme",
-    body: "Find the programme area and the field that ran the training you attended.",
+    icon: Upload,
+    title: "Submit",
+    body: "Authorised personnel upload training materials with relevant document information and version details.",
   },
   {
-    icon: FileCheck2,
-    title: "Read or download the material",
-    body: "Take the current version, or the copy that was in force when you were trained. Both stay available.",
+    icon: ClipboardCheck,
+    title: "Review and Publish",
+    body: "Designated reviewers examine submissions and approve suitable resources for publication.",
   },
   {
-    icon: BadgeCheck,
-    title: "Find your way back",
-    body: "The library keeps what you opened and downloaded, so you can return to the same version.",
+    icon: Library,
+    title: "Access and Maintain",
+    body: "Authorised users access published materials while designated personnel maintain updates, version histories and resource records.",
   },
 ];
 
-const CADRES: { icon: LucideIcon; title: string; body: string }[] = [
-  { icon: HeartPulse, title: "Nurses and midwives", body: "Ward guidelines, maternal care and IPC material from the sessions you attended." },
-  { icon: Stethoscope, title: "Medical officers", body: "Clinical guidelines and case definitions, with the version that was current at the time." },
-  { icon: Pill, title: "Pharmacists", body: "Medicines safety, dispensing standards and the national formulary as taught." },
-  { icon: FlaskConical, title: "Laboratory staff", body: "Specimen handling, quality control and result reporting, by programme." },
-  { icon: Stethoscope, title: "Facilitators and managers", body: "Upload, version, review and archive the material for the programmes you run." },
+/* ── Who the platform serves (7.9) ────────────────────────────────────────── */
+
+const AUDIENCE: { icon: LucideIcon; title: string; body: string }[] = [
+  { icon: HeartPulse, title: "Nurses and Midwives", body: "Browse materials published for nursing and midwifery programmes, when available." },
+  { icon: Stethoscope, title: "Medical Officers", body: "Explore published resources filed under relevant clinical Programme Fields, as available." },
+  { icon: Pill, title: "Pharmacists", body: "Browse published materials relevant to pharmacy practice when they are available." },
+  { icon: FlaskConical, title: "Laboratory Professionals", body: "Find approved resources in Programme Fields relevant to laboratory work, when available." },
+  { icon: MapPinned, title: "Public Health Professionals", body: "Browse published materials under relevant Programme Areas and Programme Fields." },
+  { icon: GraduationCap, title: "Training Facilitators", body: "Submit and maintain materials within their assigned Programme Area or Programme Field scope." },
+  { icon: Users, title: "Programme Teams", body: "Find published resources organised under the Programme Areas and Programme Fields they support; authoring access is assigned separately." },
+  { icon: ShieldCheck, title: "Unit Heads and Administrators", body: "Unit heads review submissions within their assigned scope; system administrators manage access and reference data." },
 ];
+
+/* ── FAQ ──────────────────────────────────────────────────────────────────── */
 
 const FAQ = [
   {
     question: `What is the ${SITE.name}?`,
-    answer: `It is the ${SITE.fullName} — ${SITE.purpose} Material from a session is filed under the programme that ran it, with the date and the version, so a facilitator's slides are still findable a year later.`,
+    answer: `The ${SITE.fullName} is an institutional digital library for organising training materials associated with programmes in the Upper West Region. Browse visible Programme Areas and Programme Fields; materials appear in public browse only after they have been uploaded, approved and published.`,
   },
   {
     question: "Who can use it?",
     answer:
-      "Current Ghana Health Service staff with a record in the staff directory. There is no public sign-up; accounts are issued through your facility or regional administrator.",
+      "Ghana Health Service staff with an active, unclaimed record in the staff directory can use Create an account to verify their Staff ID and set up access. The form cannot create a staff-directory record; if your ID is not recognised, report it through the Complaint Hub.",
   },
   {
-    question: "What happens to the material we used to share on WhatsApp?",
+    question: "What happens to material shared in chat groups?",
     answer:
-      "It is filed here instead — under the programme that ran the session, with the date and the version. A group chat can still carry the conversation, but the document of record lives in the library where it cannot be scrolled away.",
+      "The Library does not import chat history or files automatically. Authorised personnel submit materials for review and publication. Once published, a material can be found under its Programme Area and Programme Field.",
   },
   {
     question: "Can I still open an older version?",
     answer:
-      "Yes. Superseded versions stay readable and are clearly marked, so you can see exactly what was in force when you were trained or assessed.",
+      "After signing in, authorised users can view superseded versions in the history. They are clearly marked, while the current published version is identified separately.",
   },
   {
     question: "Who can upload or remove material?",
     answer:
-      "Facilitators assigned to the directorate upload and version it. Nothing is deleted: material is archived, and the audit trail keeps who uploaded, reviewed, published, downloaded or withdrew it.",
+      "Authorised personnel can submit materials for review and publication. Published material can be archived rather than silently removed, and supported actions are recorded in the audit history.",
   },
   {
     question: "What does the library keep about me?",
     answer:
-      "Which material you opened and downloaded, always against the version you saw. The record exists so programme teams can see what is being read and what is being missed."
+      "When you use the signed-in Library, material opens and controlled downloads can be recorded against the material and version for operational activity.",
   },
   {
     question: "I forgot my password. What now?",
     answer:
-      "Choose Forgot password on the sign-in page. The reset link works once and expires after a short time. If it fails, ask your facility ICT officer.",
+      "There is no automated password-reset email. Ask your facility administrator or ICT helpdesk to issue a one-time reset link; it expires after an hour. If you cannot reach them, report the access problem through the Complaint Hub.",
   },
 ];
 
 export default async function LandingPage() {
-  const [stats, fields] = await Promise.all([getPublicStatsCached(), listPublicFields()]);
-  const previewFields = fields.slice(0, 6);
+  const [stats, areas] = await Promise.all([getPublicStatsCached(), listPublicAreas()]);
+  // `undefined` means the database did not answer: the section is omitted rather
+  // than shown with empty numbers. `[]` is a real answer and gets the empty state.
+  const previewAreas = Array.isArray(areas) ? areas.slice(0, 6) : null;
 
   return (
     <>
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      {/* ── Hero (7.2) ──────────────────────────────────────────────────── */}
       <section aria-labelledby="hero-title" className="relative overflow-hidden">
         <HeroArt />
-        <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-5 pb-20 pt-14 sm:px-8 sm:pt-20 lg:grid-cols-12 lg:gap-10 lg:px-10 lg:pb-28 lg:pt-24">
-          <div className="space-y-8 lg:col-span-6">
+        <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 pb-16 pt-10 sm:px-8 sm:pt-16 lg:grid-cols-12 lg:gap-10 lg:px-10 lg:pb-24 lg:pt-20">
+          <div className="space-y-7 lg:col-span-6">
             <Reveal>
-              <p className="inline-flex items-center gap-2.5 rounded-[var(--radius-pill)] border border-hairline bg-surface/80 px-3.5 py-1.5 text-xs font-semibold text-ink-muted backdrop-blur">
+              <p className="inline-flex items-center gap-2.5 rounded-[var(--radius-pill)] border border-hairline bg-surface/80 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted backdrop-blur">
                 <span className="relative flex h-2 w-2" aria-hidden>
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
                 </span>
-                Ghana Health Service · Training programme materials
+                Ghana Health Service · Upper West Regional Health Directorate
               </p>
             </Reveal>
 
             <Reveal delay={0.06}>
-              <h1 id="hero-title" className="text-balance text-[2.75rem] font-extrabold leading-[1.02] tracking-tight text-ink sm:text-6xl lg:text-[4.1rem]">
-                The material from every GHS training,{" "}
-                <span className="text-gradient-brand">kept and versioned</span>.
+              <h1 id="hero-title" className="text-balance text-[2.75rem] font-extrabold leading-[1.04] tracking-tight text-ink sm:text-6xl lg:text-[4rem]">
+                Knowledge organised.{" "}
+                <span className="text-primary">Training resources within reach.</span>
               </h1>
             </Reveal>
 
             <Reveal delay={0.12}>
-              <p className="max-w-xl text-lg leading-relaxed text-ink-muted">
-                After a session, slides and printed guidance used to go into a WhatsApp group and sink under the next morning&apos;s
-                messages. Here they are filed under the programme that ran it — with the version, the date and the people who
-                uploaded, reviewed and used it.
-              </p>
+              <div className="max-w-xl space-y-4">
+                <p className="text-base leading-relaxed text-ink-muted sm:text-lg">
+                  The {SITE.fullName} provides a centralised platform for organising, managing and accessing institutional
+                  training materials.
+                </p>
+                <p className="text-base leading-relaxed text-ink-muted sm:text-lg">
+                  Browse Programme Areas and Programme Fields. Published Training Materials appear under their Programme Field when
+                  they are available, with the current published version identified.
+                </p>
+              </div>
             </Reveal>
 
             <Reveal delay={0.18}>
               <div className="flex flex-wrap items-center gap-3">
-                <Link href="/login" className={buttonClass({ size: "md", className: "h-12 rounded-[var(--radius-pill)] px-6 text-[15px] shadow-lift" })}>
-                  Sign in
+                <Link
+                  href="/programmes"
+                  className={buttonClass({ className: "h-12 rounded-[var(--radius-pill)] px-6 text-[15px] shadow-lift" })}
+                >
+                  Explore Programme Areas
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
                 <Link
-                  href="/programmes"
+                  href="/login"
                   className={buttonClass({ variant: "secondary", className: "h-12 rounded-[var(--radius-pill)] px-6 text-[15px]" })}
                 >
-                  Browse programmes
+                  Sign in to the Library
                 </Link>
               </div>
             </Reveal>
 
-            {stats && (
             <Reveal delay={0.24}>
-              <dl className="grid max-w-md grid-cols-3 gap-6 border-t border-hairline pt-7">
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Programmes</dt>
-                  <dd className="mt-1 text-3xl font-extrabold text-ink">
-                    <CountUp value={stats.fields} />
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Programme fields</dt>
-                  <dd className="mt-1 text-3xl font-extrabold text-ink">
-                    <CountUp value={stats.areas} />
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Materials</dt>
-                  <dd className="mt-1 text-3xl font-extrabold text-ink">
-                    <CountUp value={stats.materials} />
-                  </dd>
-                </div>
-              </dl>
+              <p className="text-sm text-ink-muted">
+                A central resource for training materials in the {SITE.regionName}.
+              </p>
             </Reveal>
-            )}
           </div>
 
           <div className="relative lg:col-span-6">
@@ -227,7 +227,7 @@ export default async function LandingPage() {
                   className="absolute -inset-4 -z-10 rounded-[2.5rem] opacity-70"
                   style={{
                     background:
-                      "linear-gradient(135deg, color-mix(in oklab, var(--primary) 24%, transparent), transparent 52%, color-mix(in oklab, var(--accent) 20%, transparent))",
+                      "linear-gradient(135deg, color-mix(in oklab, var(--primary) 24%, transparent), transparent 52%, color-mix(in oklab, var(--accent) 18%, transparent))",
                   }}
                 />
                 <div className="relative aspect-[4/3] overflow-hidden rounded-hero border border-hairline shadow-lift sm:aspect-[16/11]">
@@ -242,30 +242,36 @@ export default async function LandingPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-canvas/70 via-transparent to-transparent" aria-hidden />
                 </div>
 
-                {/* Product cards: illustrative, decorative, and never the only source of information. */}
-                <div aria-hidden className="glass drift absolute -left-4 top-10 hidden w-56 rounded-card border border-hairline p-4 shadow-lift sm:block">
+                {/* Floating interface composition: decorative representations of real
+                    platform capabilities, never the only source of information. */}
+                <div aria-hidden className="glass drift absolute -left-4 top-10 hidden w-60 rounded-card border border-hairline p-4 shadow-lift sm:block">
                   <div className="flex items-center gap-3">
-                    <HealthMark className="h-11 w-11 shrink-0" />
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-mint text-primary">
+                      <FileText className="h-5 w-5" />
+                    </span>
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Version history</p>
-                      <p className="text-sm font-bold text-ink">Every revision kept</p>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Illustrative interface</p>
+                      <p className="text-sm font-bold text-ink">Training Material</p>
+                      <p className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+                        <History className="h-3.5 w-3.5" /> Version history
+                      </p>
                     </div>
                   </div>
                 </div>
                 <div aria-hidden className="glass absolute -bottom-6 right-4 w-64 rounded-card border border-hairline p-4 shadow-lift sm:right-0" style={{ animation: "drift 8s ease-in-out -2s infinite" }}>
                   <div className="flex items-start gap-3">
                     <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-ink">
-                      <BadgeCheck className="h-5 w-5" />
+                      <ClipboardCheck className="h-5 w-5" />
                     </span>
                     <div>
-                      <p className="text-sm font-bold text-ink">Reviewed before publishing</p>
-                      <p className="text-xs leading-relaxed text-ink-muted">A second person approves it. Their name is on the record.</p>
+                      <p className="text-sm font-bold text-ink">Review before publication</p>
+                      <p className="text-xs leading-relaxed text-ink-muted">Designated reviewers assess submissions before publication.</p>
                     </div>
                   </div>
                 </div>
                 <div aria-hidden className="glass absolute -top-5 right-6 hidden items-center gap-2 rounded-[var(--radius-pill)] border border-hairline px-3.5 py-2 shadow-panel sm:flex">
-                  <span className="h-2 w-2 rounded-full bg-warn" />
-                  <span className="text-xs font-semibold text-ink">New version published</span>
+                  <History className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-xs font-semibold text-ink">Version history</span>
                 </div>
               </div>
             </Reveal>
@@ -273,157 +279,192 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Programme area strip (live taxonomy) ────────────────────────── */}
-      {previewFields.length > 0 && (
-        <section aria-label="Programme areas on the platform" className="border-y border-hairline bg-surface/60">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-8 gap-y-3 px-5 py-6 sm:px-8 lg:px-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">Programmes include</p>
-            <ul className="flex flex-wrap gap-2">
-              {previewFields.map((item) => (
-                <li key={item.id} className="rounded-[var(--radius-pill)] border border-hairline bg-canvas px-3 py-1 text-xs font-semibold text-ink">
-                  {item.name}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-      )}
-
-      {/* ── Features ─────────────────────────────────────────────────────── */}
-      <section aria-labelledby="features-title" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 lg:px-10 lg:py-32">
-        <Reveal>
-          <SectionHeading
-            eyebrow={`Why ${SITE.code}`}
-            title={<span id="features-title">Built to keep training material findable, not to lose it gracefully.</span> as unknown as string}
-            description="A library with a memory: what was uploaded, for which programme, by whom, and which version was in force on the day you needed it."
-          />
-        </Reveal>
-        <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((feature, index) => {
-            const Icon = feature.icon;
-            return (
-              <Reveal key={feature.title} delay={(index % 3) * 0.06}>
-                <article className="group h-full rounded-card border border-hairline bg-surface p-7 shadow-panel transition-[transform,box-shadow,border-color] duration-base ease-out-quint hover:-translate-y-1 hover:border-primary/40 hover:shadow-lift">
-                  <span className={`inline-flex h-12 w-12 items-center justify-center rounded-[1rem] ${feature.tone}`}>
-                    <Icon className="h-6 w-6" aria-hidden />
-                  </span>
-                  <h3 className="mt-6 text-lg font-bold text-ink">{feature.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ink-muted">{feature.body}</p>
-                </article>
-              </Reveal>
-            );
-          })}
+      {/* ── Statistics (7.3) ─────────────────────────────────────────────── */}
+      {stats && (
+      <section aria-labelledby="stats-title" className="border-y border-hairline bg-surface/70">
+        <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
+          <Reveal>
+            <SectionHeading
+              eyebrow="The library at a glance"
+              title={<span id="stats-title">The library at a glance.</span> as unknown as string}
+              description="Counts are drawn from publicly visible taxonomy, published Training Materials and published Training Sessions recorded for the Upper West Region."
+            />
+          </Reveal>
+          <dl className="mt-12 grid grid-cols-2 gap-5 lg:grid-cols-4">
+              {[
+                { icon: LayoutGrid, value: stats.programmeAreas, label: "Programme Areas" },
+                { icon: FolderTree, value: stats.programmeFields, label: "Programme Fields" },
+                { icon: Library, value: stats.materials, label: "Training Materials" },
+                { icon: GraduationCap, value: stats.trainings, label: "Training Sessions" },
+              ].map((stat, index) => {
+                const Icon = stat.icon;
+                return (
+                  <Reveal key={stat.label} delay={index * 0.06}>
+                    <div className="h-full rounded-card border border-hairline bg-mint/70 p-6">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-control bg-surface text-primary shadow-panel">
+                        <Icon className="h-5 w-5" aria-hidden />
+                      </span>
+                      <dd className="mt-5 text-4xl font-extrabold tracking-tight text-ink">
+                        <CountUp value={stat.value} />
+                      </dd>
+                      <dt className="mt-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">{stat.label}</dt>
+                    </div>
+                  </Reveal>
+                );
+              })}
+          </dl>
         </div>
       </section>
+      )}
 
-      {/* ── How it works ─────────────────────────────────────────────────── */}
-      <section aria-labelledby="how-title" className="bg-surface/60 py-24 lg:py-32">
+      {/* ── Problem and solution (7.4) ───────────────────────────────────── */}
+      <section aria-labelledby="problem-title" className="mx-auto grid max-w-7xl items-center gap-14 px-5 py-24 sm:px-8 lg:grid-cols-2 lg:gap-20 lg:px-10 lg:py-32">
+        <Reveal>
+          <div className="space-y-6">
+            <SectionHeading
+              title={<span id="problem-title">Training knowledge should never get lost.</span> as unknown as string}
+              description="Training resources are essential to continuous professional development and effective healthcare delivery. However, materials shared through messaging platforms and informal channels can become difficult to retrieve, organise and maintain. Important documents may get buried in conversations, and outdated copies can continue circulating long after newer versions have been introduced."
+            />
+            <p className="text-base leading-relaxed text-ink-muted">
+              The {SITE.name} provides a structured digital environment where training resources are organised under their
+              respective Programme Areas and Programme Fields. Every resource can be associated with its version history,
+              upload details and review information, making institutional learning materials easier to locate, maintain and
+              reference.
+            </p>
+            <Link href="/programmes" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline underline-offset-4">
+              Explore the library
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+        </Reveal>
+
+        <Reveal delay={0.08}>
+          {/* A restrained comparison: scattered copies on one side, the hierarchy on the other. */}
+          <div aria-hidden className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-card border border-dashed border-hairline bg-surface/60 p-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Scattered copies</p>
+              <div className="mt-4 space-y-2.5">
+                {["Unversioned files", "Hard to find later", "Which copy is current?"].map((line) => (
+                  <p key={line} className="rounded-control border border-hairline bg-canvas px-3 py-2.5 text-xs font-semibold text-ink-muted opacity-80">
+                    {line}
+                  </p>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-card border border-primary/30 bg-mint/70 p-5 shadow-panel">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Organised library</p>
+              <div className="mt-4 space-y-2">
+                <p className="flex items-center gap-2 rounded-control bg-surface px-3 py-2.5 text-xs font-bold text-ink shadow-panel">
+                  <LayoutGrid className="h-3.5 w-3.5 text-primary" /> Programme Area
+                </p>
+                <p className="ml-4 flex items-center gap-2 rounded-control bg-surface px-3 py-2.5 text-xs font-bold text-ink shadow-panel">
+                  <FolderTree className="h-3.5 w-3.5 text-primary" /> Programme Field
+                </p>
+                <p className="ml-8 flex items-center gap-2 rounded-control bg-surface px-3 py-2.5 text-xs font-bold text-ink shadow-panel">
+                  <FileText className="h-3.5 w-3.5 text-primary" /> Training Material
+                </p>
+                <p className="ml-8 flex items-center gap-2 text-[11px] font-semibold text-primary">
+                  <BadgeCheck className="h-3.5 w-3.5" /> Version control · review · audit history
+                </p>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ── Platform capabilities (7.5) ──────────────────────────────────── */}
+      <section aria-labelledby="features-title" className="bg-surface/60 py-24 lg:py-32">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <Reveal>
-            <SectionHeading eyebrow="How it works" title={<span id="how-title">From sign-in to the right version, in four steps.</span> as unknown as string} />
+            <SectionHeading
+              eyebrow="Capabilities"
+              title={<span id="features-title">Everything organised in one place.</span> as unknown as string}
+              description="A structured approach to managing training resources, from initial submission to approved publication and future reference."
+            />
           </Reveal>
-          <ol className="relative mt-16 grid gap-10 md:grid-cols-4 md:gap-6">
-            <div aria-hidden className="absolute left-7 top-7 hidden h-px w-[calc(100%-3.5rem)] bg-gradient-to-r from-primary via-primary/40 to-accent md:block" />
-            {STEPS.map((step, index) => {
-              const Icon = step.icon;
+          <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((feature, index) => {
+              const Icon = feature.icon;
               return (
-                <Reveal key={step.title} delay={index * 0.08}>
-                  <li className="relative list-none space-y-5">
-                    <span className="relative flex h-14 w-14 items-center justify-center rounded-full border border-hairline bg-canvas shadow-panel">
-                      <Icon className="h-6 w-6 text-primary" aria-hidden />
-                      <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-extrabold text-accent-ink">
-                        {index + 1}
-                      </span>
+                <Reveal key={feature.title} delay={(index % 3) * 0.06}>
+                  <article className="group h-full rounded-card border border-hairline bg-surface p-7 shadow-panel transition-[transform,box-shadow,border-color] duration-base ease-out-quint hover:-translate-y-1 hover:border-primary/40 hover:shadow-lift">
+                    <span className="inline-flex h-12 w-12 items-center justify-center rounded-[1rem] bg-mint text-primary">
+                      <Icon className="h-6 w-6" aria-hidden />
                     </span>
-                    <div>
-                      <h3 className="text-lg font-bold text-ink">{step.title}</h3>
-                      <p className="mt-2 text-sm leading-relaxed text-ink-muted">{step.body}</p>
-                    </div>
-                  </li>
+                    <h3 className="mt-6 text-lg font-bold text-ink">{feature.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-ink-muted">{feature.body}</p>
+                  </article>
                 </Reveal>
               );
             })}
-          </ol>
+          </div>
         </div>
       </section>
 
-      {/* ── Regions ──────────────────────────────────────────────────────── */}
-      <section aria-labelledby="regions-title" className="mx-auto grid max-w-7xl items-center gap-14 px-5 py-24 sm:px-8 lg:grid-cols-2 lg:gap-20 lg:px-10 lg:py-32">
+      {/* ── How the platform works (7.6) ─────────────────────────────────── */}
+      <section aria-labelledby="how-title" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 lg:px-10 lg:py-32">
         <Reveal>
-          <div className="relative overflow-hidden rounded-hero border border-hairline bg-surface p-8 shadow-panel sm:p-10">
-            <MapArt />
-            <RegionMap className="relative mx-auto h-auto w-full max-w-[21rem]" />
-          </div>
+          <SectionHeading
+            eyebrow="How it works"
+            title={<span id="how-title">From resource submission to easy access.</span> as unknown as string}
+            description="The library provides a structured approach to managing institutional training materials throughout their lifecycle."
+          />
         </Reveal>
-        <Reveal delay={0.08}>
-          <div className="space-y-6">
-            <SectionHeading
-              eyebrow="Where it is live"
-              title={<span id="regions-title">Live in {LIVE_REGION.name}. {SITE.regionCount - 1} regions to follow.</span> as unknown as string}
-              description={`The library is running in the ${LIVE_REGION.name} Region, with Wa as its hub. The other fifteen regions are already on the rollout map and are next; nothing is half-live elsewhere, so what you see here is what you get.`}
-            />
-            <ul className="flex flex-wrap gap-2">
-              {GHS_REGIONS.map((region) => {
-                const live = region === LIVE_REGION.name;
-                return (
-                  <li
-                    key={region}
-                    className={
-                      live
-                        ? "inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-primary bg-primary px-3 py-1.5 text-xs font-bold text-primary-ink"
-                        : "rounded-[var(--radius-pill)] border border-dashed border-hairline px-3 py-1.5 text-xs font-semibold text-ink-muted"
-                    }
-                  >
-                    {region}
-                    {live ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-primary-ink/15 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide">
-                        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary-ink" />
-                        Live
-                      </span>
-                    ) : (
-                      <span className="ml-1 text-[10px] font-bold uppercase tracking-wide opacity-70">Soon</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-            <p className="text-xs text-ink-muted">
-              Working in a region that is not live yet?{" "}
-              <Link href="/help/report" className="font-semibold text-primary hover:underline underline-offset-4">
-                Tell us through the Complaint Hub
-              </Link>{" "}
-              and you will be told as soon as it opens.
-            </p>
-          </div>
-        </Reveal>
+        <ol className="relative mt-16 grid gap-10 md:grid-cols-4 md:gap-6">
+          <div aria-hidden className="absolute left-6 top-7 bottom-7 w-px bg-gradient-to-b from-primary via-primary/40 to-accent md:left-7 md:right-7 md:top-7 md:bottom-auto md:h-px md:w-auto md:bg-gradient-to-r" />
+          {STEPS.map((step, index) => {
+            const Icon = step.icon;
+            return (
+              <Reveal key={step.title} delay={index * 0.08}>
+                <li className="relative list-none pl-10 md:pl-0">
+                  <span className="absolute left-0 top-0 flex h-12 w-12 items-center justify-center rounded-full border border-hairline bg-canvas shadow-panel md:relative md:left-auto">
+                    <Icon className="h-5 w-5 text-primary" aria-hidden />
+                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-extrabold text-accent-ink">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                  </span>
+                  <div className="mt-0 md:mt-6">
+                    <h3 className="text-lg font-bold text-ink">{step.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-ink-muted">{step.body}</p>
+                  </div>
+                </li>
+              </Reveal>
+            );
+          })}
+        </ol>
       </section>
 
-      {/* ── Programme fields ─────────────────────────────────────────────── */}
-      <section aria-labelledby="programmes-title" className="bg-surface/60 py-24 lg:py-32">
+      {/* ── Programme Areas showcase (7.7) ───────────────────────────────── */}
+      {previewAreas !== null && (
+      <section aria-labelledby="areas-title" className="bg-surface/60 py-24 lg:py-32">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <Reveal>
-              <SectionHeading eyebrow="Programmes" title={<span id="programmes-title">Filed by the programme areas that run the training.</span> as unknown as string} />
+              <SectionHeading
+                eyebrow="Programme Areas"
+                title={<span id="areas-title">Explore our Programme Areas.</span> as unknown as string}
+                description="Browse the Programme Areas configured for the Upper West Regional Health Directorate. Open a Programme Area to view its Programme Fields; listings for published Training Materials appear under the relevant Programme Field when available."
+              />
             </Reveal>
             <Reveal delay={0.1}>
               <Link href="/programmes" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-primary hover:underline underline-offset-4">
-                All programmes
+                All Programme Areas
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </Reveal>
           </div>
 
-          {previewFields.length === 0 ? (
-            <div className="mt-14 flex flex-col items-center gap-4 rounded-card border border-dashed border-hairline bg-canvas p-12 text-center">
-              <EmptyArt variant="folder" className="h-28 w-auto text-ink-muted" />
-              <p className="text-sm text-ink-muted">Programmes will appear here as the programme taxonomy is published.</p>
+          {previewAreas.length === 0 ? (
+            <div className="mt-14 rounded-card border border-dashed border-hairline bg-canvas p-12 text-center">
+              <p className="text-sm font-semibold text-ink">No Programme Areas are available yet.</p>
+              <p className="mt-1.5 text-sm text-ink-muted">Programme Areas appear here once they have been configured for public browsing.</p>
             </div>
           ) : (
             <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {previewFields.map((item, index) => (
-                <Reveal key={item.id} delay={(index % 3) * 0.06}>
+              {previewAreas.map((area, index) => (
+                <Reveal key={area.id} delay={(index % 3) * 0.06}>
                   <li className="h-full list-none">
-                    <ProgrammeFieldTile field={item} href="/programmes" />
+                    <ProgrammeFieldTile field={area} href={`/programmes/${area.code}`} />
                   </li>
                 </Reveal>
               ))}
@@ -431,55 +472,125 @@ export default async function LandingPage() {
           )}
         </div>
       </section>
+      )}
 
-      {/* ── Grades ───────────────────────────────────────────────────────── */}
-      <section aria-labelledby="grades-title" className="mx-auto max-w-7xl px-5 py-24 sm:px-8 lg:px-10 lg:py-32">
+      {/* ── Resource management and version history (7.8) ────────────────── */}
+      <section aria-labelledby="history-title" className="mx-auto grid max-w-7xl items-center gap-14 px-5 py-24 sm:px-8 lg:grid-cols-2 lg:gap-20 lg:px-10 lg:py-32">
         <Reveal>
-          <SectionHeading eyebrow="For every grade" title={<span id="grades-title">Who the material is for.</span> as unknown as string} />
+          <div className="space-y-6">
+            <SectionHeading
+              eyebrow="Version history"
+              title={<span id="history-title">Version history for published materials.</span> as unknown as string}
+              description="Knowing which version is current and how a document changed helps authorised staff manage published training materials."
+            />
+            <p className="text-base leading-relaxed text-ink-muted">
+              When a material is published, its version and review details are recorded. The library keeps previous versions
+              available to authorised users according to the material&apos;s access rules.
+            </p>
+            <p className="rounded-card border border-primary/25 bg-mint px-5 py-4 text-sm font-semibold leading-relaxed text-ink">
+              Know what changed. Know who reviewed it. Know which version you are using.
+            </p>
+          </div>
         </Reveal>
-        <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {CADRES.map((grade, index) => {
-            const Icon = grade.icon;
-            return (
-              <Reveal key={grade.title} delay={index * 0.05}>
-                <li className="h-full list-none rounded-card border border-hairline bg-surface p-6 transition-colors duration-base hover:border-primary/40">
-                  <Icon className="h-7 w-7 text-primary" aria-hidden />
-                  <h3 className="mt-5 text-base font-bold text-ink">{grade.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ink-muted">{grade.body}</p>
-                </li>
-              </Reveal>
-            );
-          })}
-        </ul>
+        <Reveal delay={0.08}>
+          <div className="rounded-card border border-hairline bg-surface p-6 shadow-panel sm:p-8">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Illustrative resource timeline</p>
+            <ol className="mt-6 space-y-0">
+              {[
+                { icon: Upload, label: "Resource submitted", note: "Upload details recorded" },
+                { icon: ClipboardCheck, label: "Review completed", note: "Reviewer identified" },
+                { icon: BadgeCheck, label: "Resource approved", note: "Approved for publication" },
+                { icon: History, label: "New version published", note: "Version number increased" },
+                { icon: FileText, label: "Previous version retained", note: "Remains readable and marked" },
+              ].map((event, index, list) => {
+                const Icon = event.icon;
+                const last = index === list.length - 1;
+                return (
+                  <li key={event.label} className="relative flex gap-4 pb-6 last:pb-0">
+                    {!last && <span aria-hidden className="absolute left-[19px] top-10 bottom-0 w-px bg-hairline" />}
+                    <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-hairline bg-canvas text-primary">
+                      <Icon className="h-4.5 w-4.5" aria-hidden />
+                    </span>
+                    <div className="pt-1.5">
+                      <p className="text-sm font-bold text-ink">{event.label}</p>
+                      <p className="text-xs text-ink-muted">{event.note}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        </Reveal>
       </section>
 
-      {/* ── Photo band ───────────────────────────────────────────────────── */}
-      <section aria-labelledby="band-title" className="px-5 sm:px-8 lg:px-10">
-        <Reveal>
-          <div className="relative mx-auto max-w-7xl overflow-hidden rounded-hero border border-hairline shadow-lift">
-            <Image
-              src="/images/stock/nurses-clipboard.jpg"
-              alt="Two nurses at a district hospital desk reading printed clinical guidance together"
-              width={1200}
-              height={627}
-              sizes="(min-width: 1280px) 1200px, 100vw"
-              className="h-[24rem] w-full object-cover sm:h-[28rem]"
+      {/* ── Who the platform serves (7.9) ────────────────────────────────── */}
+      <section aria-labelledby="audience-title" className="bg-surface/60 py-24 lg:py-32">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+          <Reveal>
+            <SectionHeading
+              eyebrow="Who it serves"
+              title={<span id="audience-title">Supporting the healthcare workforce.</span> as unknown as string}
+              description="A shared resource environment for professionals involved in healthcare delivery, programme work and institutional training."
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-canvas/95 via-canvas/70 to-canvas/10" aria-hidden />
-            <div className="absolute inset-0 flex items-center p-8 sm:p-14">
-              <div className="max-w-lg space-y-5">
-                <h2 id="band-title" className="text-3xl font-extrabold leading-tight text-ink sm:text-4xl">
-                  The slides from your last training should still be findable.
-                </h2>
-                <p className="text-base leading-relaxed text-ink-muted">
-                  Every session&apos;s material is filed under its programme, with the version and the date it changed. Ask for
-                  the current copy and you get the current copy.
+          </Reveal>
+          <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {AUDIENCE.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <Reveal key={item.title} delay={(index % 4) * 0.05}>
+                  <li className="h-full list-none rounded-card border border-hairline bg-surface p-6 transition-[transform,border-color] duration-base ease-out-quint hover:-translate-y-1 hover:border-primary/40">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-[1rem] bg-mint text-primary">
+                      <Icon className="h-5.5 w-5.5" aria-hidden />
+                    </span>
+                    <h3 className="mt-5 text-base font-bold text-ink">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-ink-muted">{item.body}</p>
+                  </li>
+                </Reveal>
+              );
+            })}
+          </ul>
+          <Reveal>
+            <p className="mt-8 text-sm text-ink-muted">
+              This list is illustrative, not exhaustive. Access depends on the staff directory and assigned role; material
+              availability depends on what has been published.
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── Regional identity (7.10) ─────────────────────────────────────── */}
+      <section aria-labelledby="region-title" className="mx-auto grid max-w-7xl items-center gap-14 px-5 py-24 sm:px-8 lg:grid-cols-2 lg:gap-20 lg:px-10 lg:py-32">
+        <Reveal>
+          <div className="relative overflow-hidden rounded-hero border border-hairline bg-surface p-8 shadow-panel sm:p-10">
+            <MapArt />
+            <div className="relative mx-auto flex max-w-[22rem] flex-col items-center gap-5">
+              <UpperWestMap className="h-auto w-full max-w-[17rem]" />
+              <div className="rounded-card border border-hairline bg-canvas/90 px-5 py-4 text-center shadow-panel">
+                <p className="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                  <MapPinned className="h-4 w-4" aria-hidden />
+                  {SITE.authority}
                 </p>
-                <Link href="/login" className={buttonClass({ className: "h-12 rounded-[var(--radius-pill)] px-6" })}>
-                  Open your programmes
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
+                <p className="mt-1.5 text-sm font-semibold text-ink">{SITE.regionName} · Ghana</p>
               </div>
+            </div>
+          </div>
+        </Reveal>
+        <Reveal delay={0.08}>
+          <div className="space-y-6">
+            <SectionHeading
+              eyebrow="Regional identity"
+              title={<span id="region-title">Serving the {SITE.regionName}.</span> as unknown as string}
+              description={`The ${SITE.fullName} provides a centralised environment for organising and accessing training resources associated with programmes delivered within the region.`}
+            />
+            <p className="text-base leading-relaxed text-ink-muted">
+              The platform supports the management of institutional learning materials, helping healthcare personnel access
+              relevant training documents through a structured and reliable digital library.
+            </p>
+            <div className="rounded-card border border-hairline bg-mint/70 p-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">Institutional scope</p>
+              <p className="mt-2 text-sm font-semibold leading-relaxed text-ink">
+                {SITE.institution} · {SITE.authority} · {SITE.tagline}
+              </p>
             </div>
           </div>
         </Reveal>
@@ -491,7 +602,10 @@ export default async function LandingPage() {
           <div className="space-y-5">
             <SectionHeading eyebrow="Questions" title={<span id="faq-title">Answers before you sign in.</span> as unknown as string} />
             <p className="text-sm text-ink-muted">
-              Still stuck? Read the <Link href="/contact" className="font-semibold text-primary underline-offset-4 hover:underline">contact page</Link>{" "}
+              Still stuck? Read the{" "}
+              <Link href="/contact" className="font-semibold text-primary underline-offset-4 hover:underline">
+                contact page
+              </Link>{" "}
               for who to ask.
             </p>
           </div>
@@ -501,7 +615,7 @@ export default async function LandingPage() {
         </Reveal>
       </section>
 
-      {/* ── Closing call to action ───────────────────────────────────────── */}
+      {/* ── Final call to action (7.11) ──────────────────────────────────── */}
       <section aria-labelledby="cta-title" className="px-5 pb-24 sm:px-8 lg:px-10">
         <Reveal>
           <div className="relative mx-auto max-w-7xl overflow-hidden rounded-hero bg-primary px-8 py-14 text-primary-ink sm:px-14 sm:py-20">
@@ -509,19 +623,29 @@ export default async function LandingPage() {
             <div className="relative grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:items-center">
               <div className="space-y-4">
                 <h2 id="cta-title" className="text-3xl font-extrabold leading-tight sm:text-4xl">
-                  Find the material for your programme.
+                  Your training resources, organised and accessible.
                 </h2>
                 <p className="max-w-xl text-base leading-relaxed text-primary-ink/85">
-                  Sign in with your GHS staff account. If you do not have one yet, your facility administrator can add you in minutes.
+                  Browse the Programme Areas and Programme Fields configured for the Upper West Regional Health Directorate. Open a
+                  Programme Field to see the trainings held for it, or sign in to the Training Library to read what came with them.
+                </p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary-ink/70">
+                  For authorised Ghana Health Service personnel.
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-                <Link href="/login" className="inline-flex h-12 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-accent px-6 text-[15px] font-bold text-accent-ink transition-transform duration-fast hover:-translate-y-0.5">
-                  Sign in
+                <Link
+                  href="/programmes"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-[var(--radius-pill)] bg-accent px-6 text-[15px] font-bold text-accent-ink transition-transform duration-fast hover:-translate-y-0.5"
+                >
+                  Explore Programme Areas
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
-                <Link href="/contact" className="inline-flex h-12 items-center justify-center rounded-[var(--radius-pill)] border border-primary-ink/30 px-6 text-[15px] font-semibold text-primary-ink transition-colors hover:bg-primary-ink/10">
-                  Need an account?
+                <Link
+                  href="/login"
+                  className="inline-flex h-12 items-center justify-center rounded-[var(--radius-pill)] border border-primary-ink/30 px-6 text-[15px] font-semibold text-primary-ink transition-colors hover:bg-primary-ink/10"
+                >
+                  Sign in to the Library
                 </Link>
               </div>
             </div>

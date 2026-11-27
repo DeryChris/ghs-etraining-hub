@@ -23,8 +23,8 @@ export default function ComplaintStatusPage() {
           Check my complaint
         </h1>
         <p className="max-w-2xl text-sm leading-relaxed text-ink-muted">
-          Enter your Staff ID to see every complaint lodged under it — what you asked, where it has reached, and the
-          answer that was given.
+          Enter your Staff ID to see complaints lodged under it, their status and any saved response. Temporary
+          passwords are not included in status responses.
         </p>
       </div>
       <StatusLookup />
