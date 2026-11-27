@@ -32,7 +32,6 @@ export type NavIcon =
   | "geography"
   | "taxonomy"
   | "library"
-  | "assessment"
   | "messages"
   | "notifications"
   | "cpd"
@@ -95,13 +94,6 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         icon: "training",
         roles: EVERYONE,
         hint: "Every training GHS has planned or run, by programme field and area",
-      },
-      {
-        href: "/assessments",
-        label: "Pre/Post Test",
-        icon: "assessment",
-        roles: EVERYONE,
-        hint: "Pre-tests, post-tests and the practical labs attached to them",
       },
     ],
   },

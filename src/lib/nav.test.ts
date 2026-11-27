@@ -40,7 +40,6 @@ describe("navFor", () => {
       "/dashboard",
       "/catalogue",
       "/trainings",
-      "/assessments",
       "/messages",
       "/notifications",
       "/analytics",

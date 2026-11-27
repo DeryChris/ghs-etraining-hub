@@ -59,7 +59,6 @@ export interface ComplaintFormInitial {
   issue?: ComplaintIssue | null;
   trainingId?: string | null;
   trainingTitle?: string | null;
-  subject?: string | null;
 }
 
 export function ComplaintForm({ initial }: { initial?: ComplaintFormInitial }) {
@@ -422,24 +421,6 @@ export function ComplaintForm({ initial }: { initial?: ComplaintFormInitial }) {
 
           /* ── Step 3: the words ────────────────────────────────────────────── */
           <div key="details" className="space-y-5">
-            <div>
-              <label htmlFor="subject" className={labelClass}>
-                In a few words
-              </label>
-              <input
-                id="subject"
-                name="subject"
-                required
-                minLength={5}
-                maxLength={140}
-                defaultValue={initial?.subject ?? ""}
-                placeholder={
-                  aboutAFile ? "The slide deck on the IPC refresher is the 2024 one" : "I cannot sign in with my new email"
-                }
-                className={inputClass}
-              />
-            </div>
-
             <div>
               <label htmlFor="description" className={labelClass}>
                 What happened?

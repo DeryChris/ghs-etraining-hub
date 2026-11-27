@@ -92,18 +92,15 @@ The discussion under a training page. Flat and chronological; the author or an a
 remove a message. `training_sessions.image_storage_key` holds the optional cover picture, written
 through the same storage interface.
 
-### assessments, assessment_items, assessment_attempts
-`assessments`: `materialId`, `passMarkPercent`, `questionCount`, `maxAttempts`, `cooldownHours`,
-`timeLimitMinutes`, `isPublished`.
-`assessment_items`: `assessmentId`, `stem`, `options jsonb`, `correctIndex`, `explanation`,
-`isActive`. **`correctIndex` must never be selected into any client‑facing query.**
-`assessment_attempts`: `assessmentId`, `userId`, `startedAt`, `submittedAt`, `answers jsonb`,
-`scorePercent`, `passed`, `attemptNumber`, `gradedById` (null unless overridden), `overrideReason`.
+### activity only, no marks
+Open and download records (`material_progress`, `material_views`) exist so programme teams can see what
+is being read, and `material_progress.acknowledged_at` records a signature against a material version
+where a protocol asks for one. Nothing is marked, scored, issued or verified.
 
-### activity only, no awards
-Completion and open records (`material_progress`, `material_views`) exist so programme teams can see what
-is being read; nothing is scored, issued or verified. The `certificates` table was dropped in
-`drizzle/0013_retire_the_award.sql` and the awarding model is retired (ADR‑0011).
+The `certificates` table was dropped in `drizzle/0013_retire_the_award.sql` (ADR‑0011), and the question
+banks, attempts and pass marks went in `drizzle/0020_retire_the_marks.sql` (ADR‑0026). A material may
+still be of type `ASSESSMENT_LINK` or `LAB` — a training can attach the paper a facilitator hands out —
+but the library stores the paper, not the answers.
 
 ### comments
 `materialId`, `authorId`, `parentId`, `body`, `isRemoved`, `removedReason`, `removedById`,

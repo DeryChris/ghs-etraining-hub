@@ -44,7 +44,7 @@ export default async function ActivityPage() {
       <PageHeader
         eyebrow="My record"
         title="My activity"
-        description="What you have opened and downloaded. The library keeps this so you can find your way back to the material from a training you attended — it is a record of use, not a score."
+        description="What you have opened and downloaded. The library keeps this so you can find your way back to the material from a training you attended."
         actions={
           <Link href="/catalogue" className={buttonClass({ variant: "secondary" })}>
             Browse the library
@@ -67,7 +67,7 @@ export default async function ActivityPage() {
             <History className="h-5 w-5 text-primary" aria-hidden />
             Recently opened
           </h2>
-          <p className="text-sm text-ink-muted">Newest first. Nothing here is a completion — it is where you have been.</p>
+          <p className="text-sm text-ink-muted">Newest first — it is a record of where you have been.</p>
         </div>
 
         {recent.length === 0 ? (

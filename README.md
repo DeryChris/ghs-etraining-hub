@@ -279,6 +279,29 @@ npm run staff:import -- --file "/path/to/Staff Data.csv"             # geography
 * Re-running is safe: names, cadre, facility and geography are refreshed; an existing password, role,
   unit-head duty and programme grants are left alone. `--reset-passwords` reissues the default password
   for everyone in the sheet, which is what you want after a bulk hand-over and not otherwise.
+* Dirty columns are cleaned, not guessed at: `0` and `2147483647` are not phone numbers, an e-mail that
+  is not an address is dropped, and where the sheet repeats one corporate address the first person keeps
+  it and the rest sign in by employee number (`users.email` is unique, so a repeat would otherwise fail
+  the whole batch). `Upper West`, `Upper West Region` and `UpperWest` are one region.
+* Rows are written 100 at a time, inside a transaction with the pool's 30-second statement ceiling lifted.
+  A batch that fails is retried, then reported with its Postgres code and a `--from` value to resume at.
+* Hashing first passwords is the slow part — bcrypt at cost 12, about a third of a second each — so it
+  runs one worker per core and only for people who do not exist yet. Six thousand accounts is a few
+  minutes rather than half an hour, and Ctrl-C is safe: re-run and it continues where it stopped.
+
+When a long-running process against the pooled host is not an option — a locked-down laptop, a flaky
+connection, or a host that keeps cutting the statement — write the same work as plain SQL instead:
+
+```bash
+npm run staff:sql -- --file "/path/to/Staff Data.csv"        # writes staff-accounts.sql
+psql "$DIRECT_URL" -f staff-accounts.sql                     # or paste into the Neon SQL editor
+```
+
+The file is upserts throughout (`on conflict` on the natural key), so it can be run twice; it keeps
+existing passwords, roles and grants; and it is chunked into statements small enough for the SQL editor.
+It contains a bcrypt hash per person, so treat it like the sheet itself: `.gitignore` covers
+`staff-accounts*.sql`, and delete it once it has run. `--no-passwords` writes the accounts without a
+password instead, for `npm run user:password` afterwards.
 
 Personal data from the sheet lives only in the database: `.gitignore` covers `Staff Data.csv`, and the
 import writes one audit row for the batch rather than a row per person.

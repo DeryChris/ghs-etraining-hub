@@ -106,8 +106,7 @@ export function EmptyArt({ variant = "folder", className }: { variant?: EmptyArt
 }
 
 /* ── Health mark ─────────────────────────────────────────────────────────────
- * The service's own mark, for decorative slots that used to carry a certificate
- * seal. A heartbeat inside a ring, drawn from the same palette as the rest so it
+ * The service's own mark, for decorative slots that used to carry a seal. A heartbeat inside a ring, drawn from the same palette as the rest so it
  * reads as a quiet emblem rather than a badge.
  */
 

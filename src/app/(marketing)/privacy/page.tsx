@@ -15,14 +15,14 @@ export default function PrivacyPage() {
         {
           heading: "Who we are",
           paragraphs: [
-            `The ${SITE.fullName} is an internal service for GHS staff. It stores the material from training programmes, records what each person opened, acknowledged or completed, and keeps the audit history that makes those records trustworthy.`,
+            `The ${SITE.fullName} is an internal service for GHS staff. It stores the material from training programmes, records what each person opened, downloaded or acknowledged, and keeps the audit history that makes those records trustworthy.`,
           ],
         },
         {
           heading: "What we collect",
           paragraphs: [
             "Directory details: your staff ID, name, work email, role, directorate, region and facility.",
-            "Training records: material you open or download, and the acknowledgements you sign, against the version you saw. Views are counted once per person per day. Downloads are recorded because controlled material leaves the platform this way. Nothing here is a grade, a credit or a certificate.",
+            "Training records: material you open or download, and the acknowledgements you sign, against the version you saw. Views are counted once per person per day. Downloads are recorded because controlled material leaves the platform this way.",
             "Communication: messages you send and notices addressed to you.",
             "Security records: sign-in and sign-out events, the network address and browser used, and audit entries for privileged actions.",
             `The ${SITE.name} does not hold patient information. Do not send it through messages or support requests.`,

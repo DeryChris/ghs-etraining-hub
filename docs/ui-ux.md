@@ -34,7 +34,7 @@ and use the utility it generates.
   with a CSS grid template so there is no layout thrash), sticky 60 px header with global search,
   notification bell and avatar menu.
 * Navigation is **role‑aware and sectioned**, and its source is `src/lib/nav.ts` (ADR‑0010): *Learn*
-  (Dashboard · Programmes · Library · Pre/Post Test), *Community* (Messages · Notifications), *My record*
+  (Dashboard · Programmes · Library), *Community* (Messages · Notifications), *My record*
   (My activity · Insights), *Author* (Sessions · My materials · Review queue · Send notice — assembled per
   role) and
   *Administration* (Users · Settings, administrators only). A section with nothing in it for a role does
@@ -86,9 +86,9 @@ Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard opera
   fold is a chart if `dataSaver` is on.
 * **Space page** — sticky sub‑header with progress, materials as cards grouped by type, discussion
   at the bottom, "Download all for offline" action with total size shown.
-* **Material viewer** — title, version + "superseded" banner, metadata row (author directorate,
-  version, published date, size, est. minutes, CPD credits), the artefact, then acknowledgement and
-  assessment CTAs. No unrelated sidebars.
+* **Material viewer** — title, version + "superseded" banner, metadata row (programme field and
+  area, version, published date, size, est. minutes), the artefact, then the acknowledgement panel
+  where a protocol asks for a signature. No unrelated sidebars, no marks (ADR‑0026).
 * **Data tables (admin)** — server‑side pagination with a page‑size selector (25/50/100), saved
   filters in the URL (shareable, back‑button safe), row actions in a kebab menu, count in the
   caption ("Showing 1–25 of 4,182 GHS staff"). `/users` is the reference implementation: 25 per page,

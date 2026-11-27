@@ -34,11 +34,11 @@ For each row of `docs/rbac.md` §1, as each role:
 * `SELECT` nothing that exposes PII in a list view without `user.read_pii`.
 * Audit metadata never contains email, phone, staff PIN, password or token — grep the JSONB after a
   profile update.
-* SAR drill: export a single user's data (profile, progress, attempts, certificates, messages) as
-  JSON within one request, audited.
-* Erasure drill: deactivate‑and‑anonymise leaves completion/audit history intact with the display
-  name replaced and PII columns nulled.
-* Verification endpoint leaks only name, masked PIN (`GHS-88****`), title, dates and credits.
+* SAR drill: export a single user's data (profile, opens, acknowledgements, messages) as JSON
+  within one request, audited.
+* Erasure drill: deactivate‑and‑anonymise leaves the open/acknowledgement and audit history intact
+  with the display name replaced and PII columns nulled.
+* No public endpoint returns a person's name, staff ID or record: nothing is published about a person.
 
 ## 4. Low‑bandwidth drill (Chrome DevTools, Slow 3G, 4× CPU throttle)
 
@@ -80,21 +80,21 @@ mobile, and a 200 % zoom check for horizontal scrolling.
    notice is still unread.
 5. `NOTIFICATION_BROADCAST` appears in the audit log with the audience filter.
 
-### 6b. Certificate print drill
+### 6b. Nothing is marked drill
 
-1. Complete a material with CPD points → the transcript row shows a serial.
-2. Open `/certificates/<code>` as the holder → full name and staff id print; check the serial and
-   the verification URL are on the page.
-3. Open the same URL signed in as another learner → 404 (not your certificate).
-4. `/verify?code=<code>` still shows only "First L." — the public page never reveals the full name.
-5. Browser print preview at A4 → no navigation chrome, nothing clipped, serial legible in mono.
+1. Grep the rendered pages for the words the product retired — "certificate", "award", "completion",
+   "finished", "score", "pass mark", "transcript". Nothing should match (ADR‑0026):
+   `curl -s localhost:3111/privacy | grep -Ei "certificate|award|completion"` prints nothing.
+2. Open a material → there is no "mark complete" control; opening and downloading are the only
+   actions, and the acknowledgement panel appears only where `requires_acknowledgement` is set.
+3. Sign in as a learner → `/assessments` is not in the menu and answers 404, and no page offers a
+   score, an attempt count or a result.
 
-## 7. Assessment integrity drill
+## 7. Assessment tables are gone
 
-* Intercept the take‑assessment request → the response must contain no `correctIndex`.
-* Attempt 4 after 3 failures → blocked with a cooldown message and an audit row.
-* Timer expiry → auto‑submit whatever is answered, no client‑side trust.
-* Admin override → requires a reason, records `gradedById`, and emits `UPDATE_ASSESSMENT_ATTEMPT`.
+* `select * from assessments` → `relation does not exist` on a database migrated past 0020.
+* `insert into "materials" (... "type") values (..., 'ASSESSMENT_LINK')` still works: a training may
+  attach the paper; the library stores the paper and nothing else.
 
 ## 8. Load & pool drill
 
@@ -106,7 +106,7 @@ verify `npx drizzle-kit migrate` runs cleanly against staging and `/api/health` 
 
 1. Restore last night's logical backup into a scratch database.
 2. Run the audit hash‑chain verification query and confirm 0 breaks.
-3. Confirm certificate codes resolve after restore.
+3. Confirm a material opens and downloads after restore (the bytes live in `file_blobs`, or in the bucket when Supabase is on).
 4. Record the date and the restore duration below.
 
 | Drill date | Restored by | Duration | Issues |

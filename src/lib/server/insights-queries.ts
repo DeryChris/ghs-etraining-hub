@@ -10,7 +10,7 @@ import { isStaffRole, type Viewer } from "@/lib/viewer";
  *
  * One module, one scope rule: an administrator sees the whole service, a
  * facilitator sees the programmes they are assigned to, and nobody sees another
- * person's learning record here (that lives in the transcript and the directory).
+ * person's activity here (that lives in the directory and on their own page).
  * Counts are aggregated in SQL — the point of this page is to avoid loading rows.
  */
 
@@ -31,7 +31,7 @@ export interface Insights {
   people: { learners: number; facilitators: number; admins: number; total: number } | null;
   catalogue: { programmes: number; programmeAreas: number; published: number; inReview: number; draft: number; archived: number };
   /**
-   * Activity only. There is no award column here on purpose: finishing something
+   * Activity only. There is no mark column here on purpose: opening something
    * is a data point about the service, not a qualification the system hands out.
    */
   learning: { openedInWindow: number; acknowledgementsInWindow: number };
@@ -85,8 +85,8 @@ export async function getInsights(viewer: Viewer): Promise<Insights> {
     .leftJoin(materials, eq(materials.programmeAreaId, programmeAreas.id))
     .where(scopedCategories);
 
-  // Acknowledgements of a protocol, not "completions": somebody signed that they
-  // had read the current version. It is a compliance figure, not a grade.
+  // Acknowledgements of a protocol, not a tick on a course: somebody signed that they
+  // had read the current version. It is a count of signatures, nothing more.
   const [acknowledgedRow] = await db
     .select({ n: count() })
     .from(materialProgress)

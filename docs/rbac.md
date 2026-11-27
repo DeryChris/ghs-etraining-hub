@@ -30,9 +30,6 @@ row.** Any change here is a `ROLE_CHANGE` audit event and requires an ADR.
 | `material.read_draft` | ✅ | ✅ (assigned area) | ❌ |
 | `material.read_published` | ✅ | ✅ | ✅ (audience match) |
 | `material.download` | ✅ | ✅ | ✅ (audience match) |
-| `assessment.configure` | ✅ | ✅ (assigned area) | ❌ |
-| `assessment.take` | ✅ (audited, no answer-key access) | ✅ | ✅ (enrolled + attempts left) |
-| `assessment.override_score` | ✅ (reason + audit) | ❌ | ❌ |
 | `enrollment.self` | ✅ | ✅ | ✅ (open areas) |
 | `enrollment.assign` | ✅ | ✅ (assigned area) | ❌ |
 | `comment.create` / `comment.edit_own` | ✅ | ✅ | ✅ |

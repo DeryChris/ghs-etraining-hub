@@ -204,41 +204,6 @@ export const materialProgress = pgTable("material_progress", {
   index("material_progress_user_idx").on(t.userId, t.updatedAt),
 ]);
 
-export const assessments = pgTable("assessments", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  materialId: uuid("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
-  passMarkPercent: integer("pass_mark_percent").notNull().default(80),
-  questionCount: integer("question_count").notNull().default(10),
-  maxAttempts: integer("max_attempts").notNull().default(3),
-  cooldownHours: integer("cooldown_hours").notNull().default(24),
-  timeLimitMinutes: integer("time_limit_minutes"),
-  isPublished: boolean("is_published").notNull().default(false),
-});
-
-export const assessmentItems = pgTable("assessment_items", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  assessmentId: uuid("assessment_id").notNull().references(() => assessments.id, { onDelete: "cascade" }),
-  stem: text("stem").notNull(),
-  options: jsonb("options").notNull().$type<string[]>(),
-  correctIndex: integer("correct_index").notNull(),
-  explanation: text("explanation"),
-  isActive: boolean("is_active").notNull().default(true),
-});
-
-export const assessmentAttempts = pgTable("assessment_attempts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  assessmentId: uuid("assessment_id").notNull().references(() => assessments.id, { onDelete: "cascade" }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
-  submittedAt: timestamp("submitted_at", { withTimezone: true }),
-  answers: jsonb("answers").$type<Record<string, number>>(),
-  scorePercent: integer("score_percent"),
-  passed: boolean("passed"),
-  attemptNumber: integer("attempt_number").notNull(),
-  gradedById: uuid("graded_by_id").references(() => users.id),
-  overrideReason: text("override_reason"),
-});
-
 export const comments = pgTable("comments", {
   id: uuid("id").primaryKey().defaultRandom(),
   materialId: uuid("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
@@ -653,7 +618,7 @@ export const complaints = pgTable("complaints", {
  * The conversation on a complaint. A complaint is not a ticket that disappears
  * when answered: the person can write back ("I still cannot get in"), and the
  * administrator can answer again. Each message records who wrote it, so the
- * thread is a record rather than a transcript somebody summarised later.
+ * thread is a record rather than a summary somebody wrote later.
  */
 export const complaintMessages = pgTable("complaint_messages", {
   id: uuid("id").primaryKey().defaultRandom(),

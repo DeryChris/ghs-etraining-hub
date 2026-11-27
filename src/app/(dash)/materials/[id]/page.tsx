@@ -115,7 +115,7 @@ export default async function MaterialPage({
               </h2>
               <ListEmptyState
                 title="Nothing uploaded yet"
-                description="Your facilitator will attach the document, slides, video or spreadsheet for this version. Marking it complete is still possible, and the record says which version you saw."
+                description="Your facilitator will attach the document, slides, video or spreadsheet for this version."
               />
             </section>
           )}
@@ -126,8 +126,8 @@ export default async function MaterialPage({
                 Practical lab
               </h2>
               <p className="text-sm leading-relaxed text-ink-muted">
-                This is a hands-on practical. Your facilitator runs it with you, in the facility or on the day of training. Complete the steps,
-                then mark the material complete.
+                This is a hands-on practical. Your facilitator runs it with you, in the facility or on the day of training — open this page
+                when you are there to take part.
               </p>
             </section>
           )}
@@ -135,10 +135,10 @@ export default async function MaterialPage({
           {material.type === "ASSESSMENT_LINK" && (
             <section aria-labelledby="assessment-heading" className="space-y-3 rounded-card border border-hairline bg-surface p-6 shadow-panel">
               <h2 id="assessment-heading" className="text-lg font-bold text-ink">
-                Assessment
+                Pre/Post test
               </h2>
               <p className="text-sm leading-relaxed text-ink-muted">
-                Your facilitator will sit this assessment with you. The result is recorded on the training, not here.
+                Your facilitator runs this test with you, in the room. The library keeps the paper, not the answers.
               </p>
             </section>
           )}
@@ -153,7 +153,7 @@ export default async function MaterialPage({
             />
           )}
           <p className="text-xs leading-relaxed text-ink-muted">
-            Opens and downloads are counted against your staff record for programme statistics. Nothing is graded, and nothing is awarded.
+            Opens and downloads are counted against your staff record for programme statistics.
           </p>
         </aside>
       </div>

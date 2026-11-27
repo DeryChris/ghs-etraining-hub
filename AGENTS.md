@@ -129,20 +129,20 @@ Northern, Oti, Savannah, Upper East, Upper West, Volta, Western, Western North),
 
 ### 4.0 What exists today vs. what you will build
 
-The learner-facing platform is live: sign-in (password + signed cookie), dashboard, catalogue →
-areas → material viewer, library search with pagination, progress (start / acknowledge /
-complete) with certificate issuance, personal CPD analytics, staff messaging, notifications,
-public certificate verification, the marketing site, and the material authoring pipeline
-(draft → signed upload → review → publish → supersede → archive, ADR‑0008). Schema, RLS
-migration, CI and Drizzle migrations are versioned in this repository.
+The learner-facing platform is live: sign-in by employee number (password + signed cookie),
+dashboard, trainings register, catalogue → areas → material viewer, library search with pagination,
+opens and downloads recorded per person and per version, acknowledgement signatures, personal
+activity, staff messaging, notifications, the marketing site, and the material authoring pipeline
+(draft → signed upload → review → publish → supersede → archive, ADR‑0008). Schema and Drizzle
+migrations are versioned in this repository.
 
 | Present and working | Not built yet (next milestones) |
 | --- | --- |
 | `src/app/(auth)/**`, `(dash)/**`, `(marketing)/**` | Remaining admin surfaces: the audit-log viewer |
-| `(dash)/authoring/**`, `(dash)/review/**`, `(dash)/notices/**`, `(award)/certificates/**` — draft, upload, review, publish, archive, targeted notices, printable award | Comments/discussion threads; assessments and grading; message reporting |
+| `(dash)/authoring/**`, `(dash)/review/**`, `(dash)/notices/**` — draft, upload, review, publish, archive, targeted notices | Comments/discussion threads; message reporting |
 | `src/db/schema.ts` + `drizzle/**` migrations | Virus-scanning worker (versions sit at `scanStatus = PENDING`) |
-| `src/lib/server/{session,rbac,audit,file-storage,authoring-queries,*-queries,rate-limit,certificates}.ts`, `src/lib/material-workflow.ts` | Category/space CRUD actions |
-| Capability matrix, hash-chained audit, cohort visibility, CPD certificates, cohort-targeted notices | MFA enforcement, account lockout (needs an ICT policy decision) |
+| `src/lib/server/{session,rbac,audit,file-storage,authoring-queries,*-queries,rate-limit}.ts`, `src/lib/material-workflow.ts` | Category/space CRUD actions |
+| Capability matrix, hash-chained audit, cohort visibility, acknowledgements, cohort-targeted notices | MFA enforcement, account lockout (needs an ICT policy decision) |
 | `tests/e2e/**` (public + optional credentialled smoke), CI workflow | Per-request CSP nonce (see docs/decisions/0007) |
 
 Do not re-implement what is here: extend it. When you add a mutation, follow the shape in §6
@@ -443,9 +443,10 @@ The client's PRD v1 is a good brief but it shipped **gaps**; `docs/PRD.md` is th
 this repo implements. The material differences (all intentional, all recorded as ADRs) are:
 
 1. **Prisma → Drizzle** (this repo's runtime and edge portability).
-2. **Learning loop added**: enrollment/assignment, progress tracking, assessments with pass marks
-   and attempts, certificates with CPD credits, recertification cycles, competency coverage per
-   region. v1 had content but no learning outcome.
+2. **Reading record added**: opens and downloads per person and per material, acknowledgements signed
+   against a version, and coverage per region. Certificates, marks and recertification cycles were
+   built and then retired (ADR‑0011, ADR‑0026): the library is an information service, not a
+   credential.
 3. **Content lifecycle added**: draft → in review → published → superseded/archived, with a
    facilitator‑plus‑reviewer approval step (clinical content cannot be self‑published), immutable
    version history and a 7‑year retention path.

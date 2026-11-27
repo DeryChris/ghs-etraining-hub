@@ -30,7 +30,7 @@ export default async function ProgrammesPage() {
               Learning owned by the fields that set the standards.
             </h1>
             <p className="max-w-2xl text-lg leading-relaxed text-ink-muted">
-              Each field publishes its own protocols, programmeAreas and assessments. Sign in to open them and record what you have read.
+              Each field publishes its own protocols and material. Sign in to open them.
             </p>
           </Reveal>
         </div>

@@ -38,6 +38,7 @@ export const MIGRATIONS: readonly MigrationEntry[] = [
   { tag: "0017_library_without_marks", when: 1796000000000 },
   { tag: "0018_review_requests", when: 1796100000000 },
   { tag: "0019_complaint_training_and_document_issues", when: 1796400000000 },
+  { tag: "0020_retire_the_marks", when: 1796500000000 },
 ];
 
 export const EXPECTED_MIGRATIONS = MIGRATIONS.length;

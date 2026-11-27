@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/index";
+import { summarise } from "@/lib/complaint-subject";
 import { complaintMessages, complaints, directMessages, trainingSessions, users } from "@/db/schema";
 import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
@@ -82,7 +83,12 @@ const submitInput = z
       .uuid()
       .optional()
       .or(z.literal("").transform(() => undefined)),
-    subject: z.string().trim().min(5, "Say in a few words what the problem is.").max(140),
+    /**
+     * Not asked for any more: the form has one narrative field, "What happened?".
+     * A subject is still useful in the desk's list, so it is cut from the first
+     * sentence of the description rather than demanded twice from the reporter.
+     */
+    subject: z.string().trim().max(140).optional(),
     description: z
       .string()
       .trim()
@@ -129,6 +135,7 @@ export async function submitComplaintAction(
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Check the form and try again." };
   }
   const input = parsed.data;
+  const subject = input.subject?.trim() || summarise(input.description);
 
   /*
    * A complaint about a document has to say which training, or the desk cannot
@@ -186,7 +193,7 @@ export async function submitComplaintAction(
       issueType: input.issueType,
       trainingId,
       trainingTitle,
-      subject: input.subject,
+      subject,
       description: input.description,
     });
     log.info({
