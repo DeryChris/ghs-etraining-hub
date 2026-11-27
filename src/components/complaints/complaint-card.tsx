@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { CheckCircle2, Copy, KeyRound, Loader2, MessageSquareReply, Phone, Mail } from "lucide-react";
+import { CheckCircle2, Copy, KeyRound, Loader2, MessageSquareReply, Paperclip, Phone, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { inputClass, labelClass } from "@/components/ui/input";
@@ -29,6 +29,8 @@ export interface ComplaintCardData {
   region: string | null;
   facility: string | null;
   issueType: ComplaintIssue;
+  /** The training a document complaint is about, if it named one. */
+  trainingTitle: string | null;
   subject: string;
   description: string;
   status: ComplaintStatus;
@@ -95,6 +97,12 @@ export function ComplaintCard({ complaint }: { complaint: ComplaintCardData }) {
             {complaint.region || complaint.facility ? " · " : ""}
             {formatWhen(complaint.createdAt)}
           </p>
+          {complaint.trainingTitle && (
+            <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/[0.07] px-2.5 py-1 text-[11px] font-semibold text-primary">
+              <Paperclip className="h-3 w-3" aria-hidden />
+              {complaint.trainingTitle}
+            </p>
+          )}
         </div>
         <div className="flex flex-col items-end gap-2">
           <Badge variant={closed ? "success" : complaint.status === "IN_PROGRESS" ? "default" : "warn"}>

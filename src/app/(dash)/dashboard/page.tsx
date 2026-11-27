@@ -1,14 +1,14 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  BadgeCheck,
-  BookOpen,
   Bell,
+  CalendarCheck2,
   ClipboardCheck,
   Download,
   Eye,
-  GraduationCap,
+  History,
   Layers,
+  PenLine,
 } from "lucide-react";
 import { AreaChart } from "@/components/charts/area-chart";
 import { ChartCard, EmptyChart, chartColor } from "@/components/charts/chart-card";
@@ -17,15 +17,15 @@ import { KpiCard, KpiGrid } from "@/components/charts/kpi-card";
 import { RankBars } from "@/components/charts/rank-bars";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { safeAppLink } from "@/lib/links";
 import {
   MATERIAL_TYPE_LABELS,
-  ROLE_LABELS,
+  STAFF_ROLE_LABELS,
   notificationTypeLabel,
 } from "@/lib/labels";
 import { firstNameOf } from "@/lib/names";
+import { staffRoleOf } from "@/lib/rbac/capabilities";
 import {
   getInsights,
   getProgrammeTraffic,
@@ -35,6 +35,7 @@ import {
   getTypeMix,
   periodDelta,
 } from "@/lib/server/insights-queries";
+import { classifyLoadFailure } from "@/lib/load-failure";
 import { DeadlineError, within, withinOr } from "@/lib/server/deadline";
 import { log } from "@/lib/server/logger";
 import { getLearnerDashboard } from "@/lib/server/learning-queries";
@@ -66,20 +67,36 @@ function greetingFor(now: Date): string {
  * real page, not a spinner: the visitor can act on it, and it says what to do
  * next instead of leaving the skeleton up.
  */
-function DashboardRetry() {
+function DashboardRetry({ hint }: { hint?: "drift" | "database" | "timeout" }) {
   return (
     <div className="space-y-6">
       <div className="surface-card p-7 sm:p-10">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-warn">
-          Taking too long
+          {hint === "drift" ? "This page and the database disagree" : "Taking too long"}
         </p>
         <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
           The dashboard could not load its data.
         </h1>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-muted">
-          Nothing was changed. The training library is busy or the connection
-          dropped — try again in a moment. If it keeps happening, quote the time
-          in your message to the ICT helpdesk.
+          {hint === "drift" ? (
+            <>
+              Nothing was changed. The database has been updated but this deployment has not — the
+              site and its database are out of step, so the queries this page makes no longer
+              match. Open{" "}
+              <a href="/api/health" className="font-semibold text-primary underline underline-offset-4">
+                /api/health
+              </a>{" "}
+              to see which side is behind, then redeploy the site (or run{" "}
+              <code className="font-mono text-xs">npm run db:migrate</code> if the database is the
+              side that is behind).
+            </>
+          ) : (
+            <>
+              Nothing was changed. The training library is busy or the connection dropped — try
+              again in a moment. If it keeps happening, quote the time in your message to the ICT
+              helpdesk.
+            </>
+          )}
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
@@ -89,7 +106,7 @@ function DashboardRetry() {
             Try again
           </Link>
           <Link
-            href="/library"
+            href="/catalogue"
             className={buttonClass({
               variant: "secondary",
               className: "h-11 px-5",
@@ -120,29 +137,27 @@ export default async function DashboardPage({
    * optional, so a slow one drops out and the rest of the page still renders.
    * Without this a stalled query left the skeleton on screen indefinitely.
    */
-  let essential: [
-    Awaited<ReturnType<typeof getLearnerDashboard>>,
-    Awaited<ReturnType<typeof listNotifications>>,
-  ];
+  let dashboard: Awaited<ReturnType<typeof getLearnerDashboard>>;
   try {
-    essential = await Promise.all([
-      within("dashboard.learner", getLearnerDashboard(session)),
-      within("dashboard.notifications", listNotifications(session, 4)),
-    ]);
+    dashboard = await within("dashboard.learner", getLearnerDashboard(session), 6_000);
   } catch (error) {
+    const failure = classifyLoadFailure(error);
     log.error({
       event: "dashboard.essential_failed",
       userId: session.sub,
       label: error instanceof DeadlineError ? error.label : undefined,
+      failure: failure.kind,
+      code: failure.code,
       error,
     });
-    return <DashboardRetry />;
+    return <DashboardRetry hint={failure.hint} />;
   }
 
-  const [dashboard, announcements, insights, traffic, sessionRecord, trainings, typeMix, programmeTraffic] =
+  // The notices are a sidebar of the page, not the page: a slow bell falls back
+  // to an empty list rather than taking the greeting down with it.
+  const [announcements, insights, traffic, sessionRecord, trainings, typeMix, programmeTraffic] =
     await Promise.all([
-      essential[0],
-      essential[1],
+      withinOr("dashboard.notifications", listNotifications(session, 4), []),
       staff ? withinOr("dashboard.insights", getInsights(session), null) : null,
       staff ? withinOr("dashboard.traffic", getTrafficSeries(session, 12), null) : null,
       staff ? withinOr("dashboard.training_counts", getTrainingCounts(session), null) : null,
@@ -152,7 +167,7 @@ export default async function DashboardPage({
     ]);
 
   const noticeText = notice ? NOTICES[notice] : undefined;
-  const nextUp = dashboard.continueLearning[0] ?? null;
+  const nextUp = dashboard.recentlyOpened[0] ?? null;
 
   return (
     <div className="space-y-10">
@@ -173,7 +188,7 @@ export default async function DashboardPage({
         <div className="grid items-center gap-10 lg:grid-cols-[1fr_auto]">
           <div className="space-y-6">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-              {ROLE_LABELS[session.role]} · {formatDate(now)}
+              {STAFF_ROLE_LABELS[staffRoleOf({ role: session.role, unitHead: session.unitHead })]} · {formatDate(now)}
             </p>
             <h1
               id="dash-title"
@@ -182,9 +197,9 @@ export default async function DashboardPage({
               {greetingFor(now)}, {firstNameOf(session.name)}.
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
-              {dashboard.inProgressCount > 0
-                ? `${dashboard.inProgressCount} ${dashboard.inProgressCount === 1 ? "material is" : "materials are"} open where you left off, and ${dashboard.completedCount} ${dashboard.completedCount === 1 ? "is" : "are"} on your record.`
-                : `${dashboard.completedCount} ${dashboard.completedCount === 1 ? "material is" : "materials are"} on your record. Open the library to start the next one.`}
+              {dashboard.mandatoryOutstanding.length > 0
+                ? `${dashboard.mandatoryOutstanding.length} ${dashboard.mandatoryOutstanding.length === 1 ? "protocol is" : "protocols are"} still waiting for your signature. Everything else is in the library whenever you need it.`
+                : "Everything GHS has published for your programmes is in the library, filed under the field and area it belongs to."}
             </p>
             <div className="flex flex-wrap items-center gap-3">
               {nextUp ? (
@@ -194,12 +209,12 @@ export default async function DashboardPage({
                     className: "h-12 rounded-[var(--radius-pill)] px-6",
                   })}
                 >
-                  Continue learning
+                  Pick up where you left off
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               ) : null}
               <Link
-                href="/library"
+                href="/catalogue"
                 className={buttonClass({
                   variant: "secondary",
                   className: "h-12 rounded-[var(--radius-pill)] px-6",
@@ -235,7 +250,7 @@ export default async function DashboardPage({
               color="var(--chart-1)"
             />
             <KpiCard
-              icon={GraduationCap}
+              icon={CalendarCheck2}
               label="Trainings · 90 days"
               value={sessionRecord.last90Days}
               hint={`${sessionRecord.total} on the register`}
@@ -337,17 +352,21 @@ export default async function DashboardPage({
       ) : (
         <KpiGrid>
           <KpiCard
-            icon={BookOpen}
-            label="In progress"
-            value={dashboard.inProgressCount}
-            hint="Materials you have started"
+            icon={PenLine}
+            label="Protocols to sign"
+            value={dashboard.mandatoryOutstanding.length}
+            hint={
+              dashboard.mandatoryTotal > 0
+                ? `of ${dashboard.mandatoryTotal} that ask for a signature`
+                : "Nothing published asks for one"
+            }
             color="var(--chart-4)"
           />
           <KpiCard
-            icon={BadgeCheck}
-            label="Completed"
-            value={dashboard.completedCount}
-            hint="Recorded on your record"
+            icon={History}
+            label="Opened recently"
+            value={dashboard.recentlyOpened.length}
+            hint="Pick one up again below"
             color="var(--chart-1)"
           />
           <KpiCard
@@ -369,21 +388,21 @@ export default async function DashboardPage({
 
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="space-y-10 lg:col-span-2">
-          <section aria-labelledby="continue-heading" className="space-y-4">
-            <h2 id="continue-heading" className="text-lg font-bold text-ink">
-              Continue where you left off
+          <section aria-labelledby="recent-heading" className="space-y-4">
+            <h2 id="recent-heading" className="text-lg font-bold text-ink">
+              Recently opened
             </h2>
-            {dashboard.continueLearning.length === 0 ? (
+            {dashboard.recentlyOpened.length === 0 ? (
               <ListEmptyState
                 art="search"
-                title="Nothing in progress"
-                description="Open the library to start a material. Your progress is saved as you go."
+                title="Nothing opened yet"
+                description="Everything published for your programmes is in the library. What you open shows up here."
                 actionText="Browse the library"
-                actionHref="/library"
+                actionHref="/catalogue"
               />
             ) : (
               <ul className="surface-card divide-y divide-hairline overflow-hidden">
-                {dashboard.continueLearning.map((item) => (
+                {dashboard.recentlyOpened.map((item) => (
                   <li key={item.id}>
                     <Link
                       href={`/materials/${item.id}`}
@@ -395,15 +414,15 @@ export default async function DashboardPage({
                       <p className="mt-1 font-semibold text-ink">
                         {item.title}
                       </p>
-                      <div className="mt-3">
-                        <ProgressBar
-                          value={item.watchedPercent}
-                          label={`Progress on ${item.title}`}
-                        />
-                      </div>
+                      <p className="mt-1 text-xs text-ink-muted">Last opened {formatDateTime(item.lastViewedAt)}</p>
                     </Link>
                   </li>
                 ))}
+                <li className="p-4">
+                  <Link href="/analytics" className="text-sm font-semibold text-primary hover:underline">
+                    See all of your activity
+                  </Link>
+                </li>
               </ul>
             )}
           </section>

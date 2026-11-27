@@ -1,8 +1,8 @@
 import "server-only";
 import { and, count, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { auditLogs, programmeFields, certificates, materialProgress, materialVersions, materialViews, materials, programmeAreas, trainingSessions, users } from "@/db/schema";
-import { scopeFor } from "@/lib/server/scope";
+import { auditLogs, programmeFields, materialProgress, materialVersions, materialViews, materials, programmeAreas, trainingSessions, users } from "@/db/schema";
+import { scopeFor, scopeForTraining } from "@/lib/server/scope";
 import { isStaffRole, type Viewer } from "@/lib/viewer";
 
 /*
@@ -30,7 +30,11 @@ export interface Insights {
   scope: "all" | "assigned";
   people: { learners: number; facilitators: number; admins: number; total: number } | null;
   catalogue: { programmes: number; programmeAreas: number; published: number; inReview: number; draft: number; archived: number };
-  learning: { completionsInWindow: number; certificatesInWindow: number; certificatesTotal: number; verifications: number | null };
+  /**
+   * Activity only. There is no award column here on purpose: finishing something
+   * is a data point about the service, not a qualification the system hands out.
+   */
+  learning: { openedInWindow: number; acknowledgementsInWindow: number };
   /** Every programme in scope, busiest first, capped for the page. */
   programmes: ProgrammeInsight[];
   /** Programmes in scope with nothing published — the coverage gap. */
@@ -81,25 +85,24 @@ export async function getInsights(viewer: Viewer): Promise<Insights> {
     .leftJoin(materials, eq(materials.programmeAreaId, programmeAreas.id))
     .where(scopedCategories);
 
-  const [completionsRow] = await db
+  // Acknowledgements of a protocol, not "completions": somebody signed that they
+  // had read the current version. It is a compliance figure, not a grade.
+  const [acknowledgedRow] = await db
     .select({ n: count() })
     .from(materialProgress)
     .innerJoin(materials, eq(materials.id, materialProgress.materialId))
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
     .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(and(scope, gte(materialProgress.completedAt, since), isNotNull(materialProgress.completedAt)));
+    .where(and(scope, gte(materialProgress.acknowledgedAt, since), isNotNull(materialProgress.acknowledgedAt)));
 
-  const [certificatesRow] = await db
-    .select({
-      recent: sql<number>`count(*) filter (where ${certificates.issuedAt} >= ${since.toISOString()})::int`,
-      total: count(),
-      verifications: sql<number>`coalesce(sum(${certificates.verificationCount}), 0)::int`,
-    })
-    .from(certificates)
-    .innerJoin(materials, eq(materials.id, certificates.materialId))
+  // Opens: how much of the catalogue is being read at all.
+  const [openedRow] = await db
+    .select({ n: sql<number>`coalesce(sum(${materialViews.viewCount}), 0)::int` })
+    .from(materialViews)
+    .innerJoin(materials, eq(materials.id, materialViews.materialId))
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
     .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(scope);
+    .where(and(scope, gte(materialViews.viewedOn, sql`${since.toISOString()}::date`)));
 
   // Staff headcount is directory data, so only an administrator sees it.
   const people =
@@ -132,10 +135,8 @@ export async function getInsights(viewer: Viewer): Promise<Insights> {
       archived: catalogueRow?.archived ?? 0,
     },
     learning: {
-      completionsInWindow: completionsRow?.n ?? 0,
-      certificatesInWindow: certificatesRow?.recent ?? 0,
-      certificatesTotal: certificatesRow?.total ?? 0,
-      verifications: viewer.role === "SYSTEM_ADMIN" ? (certificatesRow?.verifications ?? 0) : null,
+      openedInWindow: openedRow?.n ?? 0,
+      acknowledgementsInWindow: acknowledgedRow?.n ?? 0,
     },
     programmes,
     gaps: programmeRows.filter((row) => row.published === 0).map(({ id, name }) => ({ id, name })),
@@ -318,7 +319,7 @@ export async function getTrainingCounts(viewer: Viewer): Promise<TrainingCounts>
       attendees: sql<number>`coalesce(sum(${trainingSessions.attendeeCount}), 0)::int`,
     })
     .from(trainingSessions)
-    .where(and(scopeFor(viewer), eq(trainingSessions.isArchived, false)));
+    .where(and(scopeForTraining(viewer), eq(trainingSessions.isArchived, false)));
 
   return { total: row?.total ?? 0, last90Days: row?.last90Days ?? 0, attendees: row?.attendees ?? 0 };
 }
@@ -338,7 +339,7 @@ export async function getTrainingSeries(viewer: Viewer, months = 12): Promise<Tr
     })
     .from(trainingSessions)
     .innerJoin(programmeFields, eq(programmeFields.id, trainingSessions.programmeFieldId))
-    .where(and(scopeFor(viewer), eq(trainingSessions.isArchived, false), gte(trainingSessions.organisedOn, sinceDate)))
+    .where(and(scopeForTraining(viewer), eq(trainingSessions.isArchived, false), gte(trainingSessions.organisedOn, sinceDate)))
     .groupBy(sql`date_trunc('month', ${trainingSessions.organisedOn})`, programmeFields.name);
 
   const byProgramme = new Map<string, number>();

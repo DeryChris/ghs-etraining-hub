@@ -3,14 +3,12 @@
  *
  * A connection failure is the one error a developer cannot debug from the UI:
  * the password must never reach the browser, but the host and port are the two
- * facts that say "wrong pooler region" or "IPv6-only host on an IPv4 network".
+ * facts that say "wrong region" or "the pooled endpoint is down".
  * This strips the userinfo and query string so it is safe to print.
  */
 export interface DatabaseTarget {
   host: string;
   port: string;
-  /** The Supabase direct host (`db.<ref>.supabase.co`), which is IPv6-only. */
-  // isSupabaseDirect removed — Neon uses a standard connection string
 }
 
 export function databaseTarget(url: string | undefined): DatabaseTarget | null {

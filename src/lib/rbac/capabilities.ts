@@ -1,5 +1,34 @@
 export type Role = "SYSTEM_ADMIN" | "FACILITATOR" | "LEARNER";
 
+/**
+ * What an administrator picks in a role field.
+ *
+ * Unit head is offered beside the three stored roles because that is how the
+ * service talks about the post: a facilitator who also signs off the material
+ * filed under their fields. In the database it stays a facilitator carrying the
+ * `is_unit_head` duty — handing it its own enum value would mean re-checking
+ * every area assignment, training and material query for a fourth role, and the
+ * only extra permission it grants is deciding on the review queue.
+ */
+export type StaffRole = Role | "UNIT_HEAD";
+
+/** Ordered by how much authority the choice carries. */
+export const STAFF_ROLE_VALUES = ["LEARNER", "FACILITATOR", "UNIT_HEAD", "SYSTEM_ADMIN"] as const;
+
+export function isStaffRole(value: string | null | undefined): value is StaffRole {
+  return STAFF_ROLE_VALUES.includes(value as StaffRole);
+}
+
+/** The row a StaffRole writes: the stored role, plus the unit-head duty. */
+export function roleForStaffRole(staffRole: StaffRole): { role: Role; unitHead: boolean } {
+  return staffRole === "UNIT_HEAD" ? { role: "FACILITATOR", unitHead: true } : { role: staffRole, unitHead: false };
+}
+
+/** The choice a stored row corresponds to — the inverse of roleForStaffRole. */
+export function staffRoleOf(user: { role: Role; unitHead?: boolean | null }): StaffRole {
+  return user.role === "FACILITATOR" && user.unitHead === true ? "UNIT_HEAD" : user.role;
+}
+
 export type Action =
   | "user.create"
   | "user.bulk_import"
@@ -39,8 +68,6 @@ export type Action =
   | "analytics.export"
   | "audit_log.read"
   | "maintenance_banner.manage"
-  | "certificate.verify"
-  | "certificate.revoke";
 
 export type Scope = {
   areaId?: string;
@@ -93,8 +120,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "analytics.export": true,
     "audit_log.read": true,
     "maintenance_banner.manage": true,
-    "certificate.verify": true,
-    "certificate.revoke": true,
   },
   FACILITATOR: {
     "user.create": false,
@@ -135,8 +160,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "analytics.export": true,
     "audit_log.read": false,
     "maintenance_banner.manage": false,
-    "certificate.verify": true,
-    "certificate.revoke": false,
   },
   LEARNER: {
     "user.create": false,
@@ -177,17 +200,18 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "analytics.export": false,
     "audit_log.read": false,
     "maintenance_banner.manage": false,
-    "certificate.verify": true,
-    "certificate.revoke": false,
   },
 };
 
 /**
- * Actions that need no session at all. `certificate.verify` is served by a public
- * page, so it is allowed for anonymous visitors by definition — keeping it in the
- * matrix (for every role) documents that, and this set keeps `can(null, …)` honest.
+ * Actions that need no session at all.
+ *
+ * Empty on purpose: certificate verification was the only public action, and it
+ * is gone with the awarding model. The set stays because `can(null, …)` and the
+ * matrix are written against it — anything added here becomes anonymous-accessible
+ * by definition, so it should stay empty unless there is a real reason.
  */
-export const PUBLIC_ACTIONS: ReadonlySet<Action> = new Set<Action>(["certificate.verify"]);
+export const PUBLIC_ACTIONS: ReadonlySet<Action> = new Set<Action>([]);
 
 /**
  * Self-service and messaging actions a facilitator may perform outside their
@@ -205,7 +229,6 @@ export const FACILITATOR_GLOBAL_ACTIONS: readonly Action[] = [
   "message.send",
   "notification.view",
   "analytics.view_personal",
-  "certificate.verify",
 ];
 
 export function isGlobalForFacilitators(action: Action): boolean {

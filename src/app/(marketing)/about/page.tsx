@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BookOpenCheck, Eye, HeartHandshake, Lock, ShieldCheck, Target, Users } from "lucide-react";
+import { ArrowRight, ClipboardPen, Eye, HeartHandshake, Lock, ShieldCheck, Target, Users } from "lucide-react";
 import { RegionMap } from "@/components/brand/illustrations";
 import { Reveal } from "@/components/marketing/reveal";
 import { SectionHeading } from "@/components/marketing/section-heading";
@@ -28,7 +28,7 @@ const ROLES = [
     body: "Find the material for every programme attended, read or download it, and acknowledge the protocols that require it.",
   },
   {
-    icon: BookOpenCheck,
+    icon: ClipboardPen,
     name: "Facilitators",
     who: "Directorate subject experts",
     body: "Upload and version material for the directorates they are assigned to, review a colleague's upload before it goes live, and archive what is retired.",
@@ -50,7 +50,7 @@ const ROADMAP = [
   {
     phase: "Next",
     status: "next" as const,
-    items: ["Assessments with scoring and retakes", "Discussion on each material", "Attendance records for sessions", "Server-rendered certificate PDFs and e-mail delivery"],
+    items: ["Assessments with scoring and retakes", "Discussion on each material", "Attendance records for sessions", "Server-rendered PDFs of the material index and e-mail delivery"],
   },
   {
     phase: "Later",

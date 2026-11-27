@@ -127,7 +127,7 @@ export function PublishVersionForm({
         </div>
       )}
       <Feedback state={state} />
-      <SubmitButton pendingLabel="Publishing…">Publish to learners</SubmitButton>
+      <SubmitButton pendingLabel="Publishing…">Publish to staff</SubmitButton>
     </form>
   );
 }

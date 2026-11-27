@@ -20,10 +20,15 @@ export interface Session {
   name: string;
   staffId: string;
   email: string;
-  region?: string;
-  directorate?: string;
-  cadre?: string;
+  /** Cohort attributes. `null` means "not recorded", which is what the row holds. */
+  region: string | null;
+  directorate: string | null;
+  cadre: string | null;
   unitHead?: boolean;
+  /** Set while the account still carries the password ICT issued. */
+  mustChange?: boolean;
+  /** Epoch milliseconds. Written by createSessionToken, checked by verifySessionToken. */
+  exp?: number;
 }
 
 export type AccountState =
@@ -42,24 +47,59 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export function createSessionToken(session: Session): string {
-  const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
+export const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * The signing key. It must be present and long enough, because the alternative
+ * is worse than a crash: `sha256(payload + undefined)` is a constant everybody
+ * can reproduce, so every cookie would be forgeable by anyone who read this file.
+ * Better to fail loudly on the first sign-in than to hand out admin sessions.
+ */
+const SHIPPED_PLACEHOLDERS = ["replace-with-32-char-min-secret", "change-me", "changeme", "secret"];
+
+export function sessionSecretProblem(): string | null {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) return "SESSION_SECRET is not set";
+  if (SHIPPED_PLACEHOLDERS.includes(secret.trim().toLowerCase())) {
+    return "SESSION_SECRET is still the example value from .env.example";
+  }
+  if (secret.length < 32) return `SESSION_SECRET is ${secret.length} characters; 32 is the minimum`;
+  return null;
+}
+
+function signingSecret(): string {
+  const problem = sessionSecretProblem();
+  if (problem) {
+    throw new Error(
+      `${problem}. Generate one and put it in .env (and in Vercel): ` +
+        "`openssl rand -base64 48`, or on Windows " +
+        "`node -e \"console.log(require('crypto').randomBytes(48).toString('base64'))\"`.",
+    );
+  }
+  return process.env.SESSION_SECRET as string;
+}
+
+export function createSessionToken(session: Session, ttlMs = SESSION_TTL_MS): string {
+  const payload = Buffer.from(JSON.stringify({ ...session, exp: Date.now() + ttlMs })).toString("base64url");
   const sig = createHash("sha256")
-    .update(`${payload}.${process.env.SESSION_SECRET}`)
+    .update(`${payload}.${signingSecret()}`)
     .digest("hex");
   return `${payload}.${sig}`;
 }
 
 export function verifySessionToken(token: string): Session | null {
   try {
+    // A missing secret surfaces here as "no session", which sends people to
+    // sign-in instead of accepting a token signed with a guessable constant.
+    const secret = signingSecret();
     const [payload, sig] = token.split(".");
     if (!payload || !sig) return null;
     const expected = createHash("sha256")
-      .update(`${payload}.${process.env.SESSION_SECRET}`)
+      .update(`${payload}.${secret}`)
       .digest("hex");
     if (sig !== expected) return null;
     const session: Session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    if (session.exp < Date.now()) return null;
+    if (!session.exp || session.exp < Date.now()) return null;
     return session;
   } catch {
     return null;
@@ -80,11 +120,12 @@ export async function createDbSession(userId: string, ip?: string, userAgent?: s
     role: user.role,
     name: user.fullName,
     staffId: user.ghsStaffId,
-    email: user.email,
+    email: user.email ?? "",
     region: user.region,
     directorate: user.directorate,
     cadre: user.cadre,
     unitHead: user.isUnitHead,
+    mustChange: user.mustChangePassword,
   };
 
   const token = createSessionToken(session);
@@ -129,7 +170,7 @@ export const resolveAccount = cache(async (): Promise<AccountState> => {
   const [user] = await db.select().from(users).where(eq(users.id, sessionRow.userId)).limit(1);
 
   if (!user) return { state: "anonymous" };
-  if (!user.isActive) return { state: "inactive", email: user.email };
+  if (!user.isActive) return { state: "inactive", email: user.email ?? "" };
 
   return {
     state: "active",
@@ -139,11 +180,12 @@ export const resolveAccount = cache(async (): Promise<AccountState> => {
       role: user.role,
       name: user.fullName,
       staffId: user.ghsStaffId,
-      email: user.email,
+      email: user.email ?? "",
       region: user.region,
       directorate: user.directorate,
       cadre: user.cadre,
       unitHead: user.isUnitHead,
+      mustChange: user.mustChangePassword,
     },
   };
 });
@@ -165,13 +207,20 @@ export async function setSessionCookie(session: Session, maxAgeSeconds: number) 
     path: "/",
   });
 
+  // Separate from the signing failure above: a reachable-but-wrong database is a
+  // different problem from a missing key, and blaming the key sends people to
+  // the wrong place.
   const tokenHash = hashToken(token);
   const exp = new Date(Date.now() + maxAgeSeconds * 1000);
-  await db.insert(sessions).values({
-    userId: session.sub,
-    tokenHash,
-    expiresAt: exp,
-  });
+  try {
+    await db.insert(sessions).values({
+      userId: session.sub,
+      tokenHash,
+      expiresAt: exp,
+    });
+  } catch (cause) {
+    throw new Error(`session-row-not-recorded: ${cause instanceof Error ? cause.message : String(cause)}`);
+  }
 }
 
 /** Clear the session cookie + revoke the DB row. */

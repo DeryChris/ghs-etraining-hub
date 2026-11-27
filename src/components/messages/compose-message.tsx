@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { inputClass, labelClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { sendMessageAction, type MessageActionState } from "@/lib/server/actions/messages";
 import { ROLE_LABELS } from "@/lib/labels";
 import type { Role } from "@/lib/rbac/capabilities";
@@ -44,17 +45,19 @@ export function ComposeMessage({
           <label htmlFor="compose-recipient" className={labelClass}>
             To
           </label>
-          <select id="compose-recipient" name="recipientId" required defaultValue="" className={inputClass}>
-            <option value="" disabled>
-              Choose a colleague
-            </option>
-            {recipients?.map((person) => (
-              <option key={person.id} value={person.id}>
-                {person.name} · {ROLE_LABELS[person.role]}
-                {person.facility ? ` · ${person.facility}` : ""}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="compose-recipient"
+            name="recipientId"
+            required
+            searchable
+            defaultValue=""
+            placeholder="Choose a colleague"
+            options={(recipients ?? []).map((person) => ({
+              value: person.id,
+              label: person.name,
+              hint: `${ROLE_LABELS[person.role]}${person.facility ? ` · ${person.facility}` : ""}`,
+            }))}
+          />
         </div>
       )}
 

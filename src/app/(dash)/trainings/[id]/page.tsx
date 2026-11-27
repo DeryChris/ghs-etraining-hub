@@ -2,6 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Archive, CalendarDays, MapPin, Users } from "lucide-react";
 import { TrainingForm, type TrainingFormValues } from "@/components/trainings/training-form";
+import { ReviewPanel } from "@/components/trainings/review-panel";
+import { TrainingResources } from "@/components/trainings/resources-panel";
+import { TrainingCover } from "@/components/trainings/training-cover";
+import { ResourceChips } from "@/components/trainings/resource-chips";
+import { Discussion } from "@/components/trainings/discussion";
+import { createMaterialSignedUrl, storageCeiling } from "@/lib/server/file-storage";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
@@ -10,9 +16,9 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { TRAINING_STATUS_LABELS } from "@/lib/labels";
 import { can } from "@/lib/rbac/capabilities";
 import { archiveTrainingAction } from "@/lib/server/actions/trainings";
-import { requireSession } from "@/lib/server/rbac";
+import { mayReviewField, requireSession } from "@/lib/server/rbac";
 import { listGeography, listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
-import { getTraining } from "@/lib/server/training-queries";
+import { getTraining, listTrainingComments } from "@/lib/server/training-queries";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 
 export const dynamic = "force-dynamic";
@@ -30,14 +36,87 @@ export default async function TrainingDetailPage({
   const { id } = await params;
   if (!UUID.test(id)) notFound();
 
-  const training = await getTraining(id);
+  /*
+   * Read through the deadline wrapper rather than straight from the query, so a
+   * database that is a migration behind says so. This page reads the newest
+   * columns in the schema (the cover key, the comment table), which makes it the
+   * first page to break when the deployed build and the database drift apart —
+   * and a thrown query used to land on the generic "Something went wrong" card,
+   * which tells nobody which side is stale. `withDeadline` classifies the error,
+   * and the card below names the migration.
+   */
+  const loaded = await withDeadline("trainings.detail", () => getTraining(id));
+  if (!loaded.ok) {
+    return (
+      <DataUnavailable
+        title="This training did not open"
+        description="The record could not be read. Nothing was changed."
+        requestId={loaded.requestId}
+        hint={loaded.hint}
+      />
+    );
+  }
+  const training = loaded.data;
   if (!training) notFound();
 
   const query = await searchParams;
   const notice = typeof query.notice === "string" ? query.notice : null;
   const error = typeof query.error === "string" ? query.error : null;
 
-  const mayManage = can(session.role, "training.manage");
+  /*
+   * Where the reader came from decides what this page is.
+   *
+   * Opened from the library, a training is something to read: the write-up, the
+   * files, the discussion. Editing the register, uploading versions and archiving
+   * belong to the register, and showing those controls here turned a reading page
+   * into an admin page the moment an administrator clicked a library card — which
+   * is not what a library is for. Same page, same record, one fewer set of levers:
+   * the register (/trainings) keeps every one of them.
+   */
+  const fromLibrary = query.from === "library" || query.from === "catalogue";
+  const mayManage = can(session.role, "training.manage") && !fromLibrary;
+  // Only a unit head holding this field, or an administrator, sees the decision
+  // buttons — but everybody who can open the row sees its review state.
+  const canReview = await mayReviewField(session, training.programmeFieldId);
+  // A row still in review is a private draft between its author and the unit
+  // head. Anyone else who types the URL gets the same answer as a bad id.
+  if (training.reviewState !== "PUBLISHED" && training.createdById !== session.sub && !canReview) notFound();
+
+  const loadedComments = await withDeadline("trainings.comments", () => listTrainingComments(training.id));
+  if (!loadedComments.ok) {
+    return (
+      <DataUnavailable
+        title="This training's discussion did not open"
+        description="The training itself loaded, but its comments could not be read. Nothing was changed."
+        requestId={loadedComments.requestId}
+        hint={loadedComments.hint}
+      />
+    );
+  }
+  const comments = loadedComments.data;
+
+  /*
+   * The picture and every attachment get a short-lived link here rather than in
+   * the browser. With a bucket configured that link is presigned; without one it
+   * points at this application, which streams the bytes from the database. Either
+   * way the session and role checks have already happened by the time a URL exists.
+   */
+  const cover = training.imageStorageKey
+    ? await createMaterialSignedUrl(training.imageStorageKey)
+    : null;
+  const coverSrc = cover?.ok ? cover.url : null;
+
+  /*
+   * The attachments are listed, not pre-signed: each one is read or downloaded
+   * through its own route when somebody asks for it, so opening this page does
+   * not mint six links nobody clicked.
+   */
+  const chips = training.resources.map((resource) => ({
+    id: resource.id,
+    title: resource.title,
+    mimeType: resource.mimeType,
+    sizeBytes: resource.sizeBytes,
+  }));
   let fields: Awaited<ReturnType<typeof listProgrammeFieldOptions>> = [];
   let geography: Awaited<ReturnType<typeof listGeography>> = [];
   if (mayManage) {
@@ -86,16 +165,52 @@ export default async function TrainingDetailPage({
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        eyebrow={training.fieldName ? `${training.fieldName}${training.areaName ? ` · ${training.areaName}` : ""}` : "Training register"}
+      <TrainingCover
+        trainingId={training.id}
         title={training.title}
-        description={training.targetGroup ? `For ${training.targetGroup}.` : undefined}
-        actions={
-          <Link href="/trainings" className={buttonClass({ variant: "ghost" })}>
-            Back to trainings
-          </Link>
-        }
+        imageSrc={coverSrc}
+        canEdit={mayManage && (session.role === "SYSTEM_ADMIN" || training.createdById === session.sub || canReview)}
       />
+
+      <div className="space-y-4">
+        <PageHeader
+          eyebrow={
+            training.fieldName
+              ? `${training.fieldName}${training.areaName ? ` · ${training.areaName}` : ""}`
+              : "Training register"
+          }
+          title={training.title}
+          description={training.targetGroup ? `For ${training.targetGroup}.` : undefined}
+          actions={
+            fromLibrary ? (
+              <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
+                Back to the library
+              </Link>
+            ) : (
+              <Link href="/trainings" className={buttonClass({ variant: "ghost" })}>
+                Back to trainings
+              </Link>
+            )
+          }
+        />
+
+        {training.notes ? (
+          <p className="max-w-[75ch] whitespace-pre-line text-base leading-relaxed text-ink-muted">{training.notes}</p>
+        ) : (
+          <p className="max-w-[75ch] text-base leading-relaxed text-ink-muted">
+            What this training covered, who ran it, and the material that went with it.
+          </p>
+        )}
+
+        <ResourceChips
+          trainingId={training.id}
+          trainingTitle={training.title}
+          resources={chips}
+          canEdit={
+            !fromLibrary && mayManage && (session.role === "SYSTEM_ADMIN" || training.createdById === session.sub || canReview)
+          }
+        />
+      </div>
 
       {(notice || error) && (
         <p
@@ -148,14 +263,40 @@ export default async function TrainingDetailPage({
         </div>
       </section>
 
-      {training.notes && (
-        <section aria-labelledby="training-notes-heading" className="rounded-card border border-hairline bg-surface p-6 shadow-panel">
-          <h2 id="training-notes-heading" className="text-sm font-bold text-ink">
-            Notes
-          </h2>
-          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-muted">{training.notes}</p>
-        </section>
+      {/* The decision panel is a management surface: hidden when reading from the library. */}
+      {!fromLibrary && (
+      <ReviewPanel
+        trainingId={training.id}
+        title={training.title}
+        reviewState={training.reviewState}
+        reviewNote={training.reviewNote}
+        reviewedByName={training.reviewedByName}
+        canReview={canReview}
+      />
       )}
+
+      <TrainingResources
+        trainingId={training.id}
+        resources={training.resources}
+        ceiling={storageCeiling()}
+        canEdit={
+          !fromLibrary &&
+          mayManage &&
+          (session.role === "SYSTEM_ADMIN" || training.createdById === session.sub || canReview)
+        }
+      />
+
+      <Discussion
+        trainingId={training.id}
+        comments={comments.map((comment) => ({
+          id: comment.id,
+          body: comment.body,
+          authorName: comment.authorName,
+          authorRole: comment.authorRole,
+          createdAtLabel: formatDateTime(comment.createdAt),
+          canDelete: comment.authorId === session.sub || session.role === "SYSTEM_ADMIN",
+        }))}
+      />
 
       {mayManage ? (
         <>
@@ -178,12 +319,7 @@ export default async function TrainingDetailPage({
             </form>
           </section>
         </>
-      ) : (
-        <p className="rounded-card border border-hairline bg-surface p-5 text-sm text-ink-muted shadow-panel">
-          You can read this training but not change it. Editing the register needs an administrator or a
-          facilitator account.
-        </p>
-      )}
+      ) : null}
     </div>
   );
 }

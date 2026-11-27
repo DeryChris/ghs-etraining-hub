@@ -2,9 +2,31 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/index";
-import { districts, facilities, programmeAreas, subDistricts, trainingSessions } from "@/db/schema";
+import {
+  districts,
+  facilities,
+  programmeAreas,
+  programmeFields,
+  subDistricts,
+  trainingComments,
+  trainingResources,
+  trainingSessions,
+} from "@/db/schema";
+import { checkUpload } from "@/lib/material-workflow";
+import {
+  createMaterialUploadTarget,
+  inspectMaterialObject,
+  putMaterialObject,
+  removeMaterialObject,
+  storageCeiling,
+} from "@/lib/server/file-storage";
+import { mayReviewField } from "@/lib/server/rbac";
+import { getSession } from "@/lib/server/session";
+import { notifyReviewRequest, notifyTrainingPublished, notifyTrainingReturned } from "@/lib/server/notify";
+import { unitHeadsForField } from "@/lib/server/review-scope";
 import { field } from "@/lib/schemas/authoring";
 import { trainingInput, trainingUpdateInput } from "@/lib/schemas/training";
 import { durationLabel, planYearOf } from "@/lib/training-dates";
@@ -154,6 +176,7 @@ function readForm(formData: FormData) {
 
 function revalidateTrainings(id?: string) {
   revalidatePath("/trainings");
+  revalidatePath("/review");
   revalidatePath("/insights");
   revalidatePath("/sessions");
   if (id) revalidatePath(`/trainings/${id}`);
@@ -163,14 +186,24 @@ export async function createTrainingAction(
   _previous: TrainingActionState,
   formData: FormData,
 ): Promise<TrainingActionState> {
-  const guard = await checkCapability("training.manage");
+  const parsedInput = trainingInput.safeParse(readForm(formData));
+  // The area is checked against the caller's grants, so a facilitator cannot
+  // file a training under a field they do not hold by editing the option list.
+  const guard = await checkCapability(
+    "training.manage",
+    parsedInput.success ? { areaId: parsedInput.data.programmeAreaId } : {},
+  );
   if (!guard.ok) return { ok: false, message: guard.message };
   const { session } = guard;
 
-  const parsed = trainingInput.safeParse(readForm(formData));
+  const parsed = parsedInput;
   if (!parsed.success) {
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Check the details and try again." };
   }
+
+  // An administrator's entry is the record of something that happened, so it is
+  // live. A facilitator's goes to the unit head who holds the field.
+  const reviewState = session.role === "SYSTEM_ADMIN" ? "PUBLISHED" : "PENDING";
 
   const resolved = await resolveReferences(parsed.data);
   if (!resolved.ok) return { ok: false, message: resolved.message };
@@ -197,6 +230,7 @@ export async function createTrainingAction(
           facilityId: resolved.refs.facilityId,
           attendeeCount: parsed.data.attendeeCount ?? null,
           notes: parsed.data.notes ?? null,
+          reviewState,
           createdById: session.sub,
         })
         .returning({ id: trainingSessions.id });
@@ -214,6 +248,7 @@ export async function createTrainingAction(
             programmeAreaId: resolved.refs.programmeAreaId,
             startsOn: parsed.data.startsOn,
             status: parsed.data.status,
+            reviewState,
           },
         },
         tx,
@@ -225,21 +260,58 @@ export async function createTrainingAction(
   }
 
   revalidateTrainings(createdId ?? undefined);
-  redirect(`/trainings/${createdId}?notice=${encodeURIComponent(`“${parsed.data.title}” is on the register.`)}`);
+
+  /*
+   * A training waiting for a decision is one somebody has to be told about. The
+   * recipients are resolved from the assignment that exists at this instant, not
+   * from a reviewer list captured here: if a unit head is appointed tomorrow,
+   * tomorrow's queue query picks the row up anyway (see review-scope.ts) — this
+   * notice is only the tap on the shoulder for the people already in post.
+   */
+  if (reviewState === "PENDING" && createdId) {
+    const heads = await unitHeadsForField(resolved.refs.programmeFieldId ?? null);
+    await notifyReviewRequest({
+      reviewerIds: heads,
+      title: "A training needs your decision",
+      body: `“${parsed.data.title}” is waiting in the review queue`,
+      linkUrl: `/trainings/${createdId}`,
+      actorId: session.sub,
+      actorName: session.name,
+    });
+  }
+
+  const message =
+    reviewState === "PENDING"
+      ? `“${parsed.data.title}” was saved and sent to the unit head for review.`
+      : `“${parsed.data.title}” is on the register.`;
+  redirect(`/trainings/${createdId}?notice=${encodeURIComponent(message)}`);
 }
 
 export async function updateTrainingAction(
   _previous: TrainingActionState,
   formData: FormData,
 ): Promise<TrainingActionState> {
-  const guard = await checkCapability("training.manage");
+  const parsedUpdate = trainingUpdateInput.safeParse({ ...readForm(formData), trainingId: field(formData, "trainingId") });
+  const guard = await checkCapability(
+    "training.manage",
+    parsedUpdate.success ? { areaId: parsedUpdate.data.programmeAreaId } : {},
+  );
   if (!guard.ok) return { ok: false, message: guard.message };
   const { session } = guard;
 
-  const parsed = trainingUpdateInput.safeParse({ ...readForm(formData), trainingId: field(formData, "trainingId") });
+  const parsed = parsedUpdate;
   if (!parsed.success) {
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Check the details and try again." };
   }
+
+  const [existing] = await db
+    .select({ reviewState: trainingSessions.reviewState })
+    .from(trainingSessions)
+    .where(eq(trainingSessions.id, parsed.data.trainingId))
+    .limit(1);
+  // A rejected entry that is edited is a resubmission, not a silent edit: the
+  // unit head sees it again rather than a changed record they already refused.
+  const resubmit = existing?.reviewState === "REJECTED";
 
   const resolved = await resolveReferences(parsed.data);
   if (!resolved.ok) return { ok: false, message: resolved.message };
@@ -265,6 +337,7 @@ export async function updateTrainingAction(
           facilityId: resolved.refs.facilityId,
           attendeeCount: parsed.data.attendeeCount ?? null,
           notes: parsed.data.notes ?? null,
+          ...(resubmit ? { reviewState: "PENDING" as const, reviewedById: null, reviewedAt: null, reviewNote: null } : {}),
           updatedAt: new Date(),
         })
         .where(and(eq(trainingSessions.id, parsed.data.trainingId), eq(trainingSessions.isArchived, false)));
@@ -286,7 +359,23 @@ export async function updateTrainingAction(
   }
 
   revalidateTrainings(parsed.data.trainingId);
-  redirect(`/trainings/${parsed.data.trainingId}?notice=${encodeURIComponent("Changes saved.")}`);
+
+  if (resubmit) {
+    const heads = await unitHeadsForField(resolved.refs.programmeFieldId ?? null);
+    await notifyReviewRequest({
+      reviewerIds: heads,
+      title: "A training was resubmitted",
+      body: `“${parsed.data.title}” is back in the review queue`,
+      linkUrl: `/trainings/${parsed.data.trainingId}`,
+      actorId: session.sub,
+      actorName: session.name,
+    });
+  }
+  redirect(
+    `/trainings/${parsed.data.trainingId}?notice=${encodeURIComponent(
+      resubmit ? "Changes saved and sent back for review." : "Changes saved.",
+    )}`,
+  );
 }
 
 /** Withdraw a training from the register. The row stays: history is not deleted. */
@@ -321,4 +410,510 @@ export async function archiveTrainingAction(formData: FormData): Promise<void> {
 
   revalidateTrainings(id);
   redirect(`/trainings?notice=${encodeURIComponent("Training archived. It is out of the register; the row and its audit trail remain.")}`);
+}
+
+/* ── Review ───────────────────────────────────────────────────────────────────
+ * A facilitator's training is visible to them and to the unit head of its field
+ * until it is approved. Rejection keeps the row: the facilitator edits it, and
+ * saving a rejected entry puts it back in the queue.
+ */
+
+export interface ReviewActionState {
+  ok: boolean;
+  message: string | null;
+}
+
+/**
+ * Approve or reject one training. Authority is `mayReviewField`, which asks the
+ * database whether this person is a unit head and holds that field — not the
+ * role alone, and never the request payload.
+ */
+export async function reviewTrainingAction(
+  _previous: ReviewActionState,
+  formData: FormData,
+): Promise<ReviewActionState> {
+  const trainingId = field(formData, "trainingId");
+  const decision = field(formData, "decision");
+  const note = field(formData, "note")?.trim() || null;
+
+  if (!trainingId || (decision !== "approve" && decision !== "reject")) {
+    return { ok: false, message: "That review could not be read. Reload the page." };
+  }
+  if (decision === "reject" && !note) {
+    return { ok: false, message: "Say why it was sent back, so the facilitator knows what to change." };
+  }
+
+  const guard = await checkCapability("training.manage");
+  if (!guard.ok) return { ok: false, message: guard.message };
+  const { session } = guard;
+
+  const [training] = await db
+    .select({
+      id: trainingSessions.id,
+      title: trainingSessions.title,
+      fieldId: trainingSessions.programmeFieldId,
+      reviewState: trainingSessions.reviewState,
+      createdById: trainingSessions.createdById,
+      fieldName: programmeFields.name,
+    })
+    .from(trainingSessions)
+    .leftJoin(programmeFields, eq(programmeFields.id, trainingSessions.programmeFieldId))
+    .where(and(eq(trainingSessions.id, trainingId), eq(trainingSessions.isArchived, false)))
+    .limit(1);
+  if (!training) return { ok: false, message: "That training no longer exists." };
+
+  if (!(await mayReviewField(session, training.fieldId))) {
+    return { ok: false, message: "Only a unit head of that programme field can review it." };
+  }
+  if (training.reviewState !== "PENDING") {
+    return { ok: false, message: "That training has already been reviewed." };
+  }
+
+  const nextState = decision === "approve" ? "PUBLISHED" : "REJECTED";
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(trainingSessions)
+        .set({ reviewState: nextState, reviewedById: session.sub, reviewedAt: new Date(), reviewNote: note, updatedAt: new Date() })
+        .where(eq(trainingSessions.id, trainingId));
+      await logAudit(
+        {
+          actor: { sub: session.sub, role: session.role, name: session.name, staffId: session.staffId },
+          action: decision === "approve" ? "TRAINING_PUBLISHED" : "TRAINING_REJECTED",
+          entity: "training",
+          entityId: trainingId,
+          metadata: { title: training.title, note },
+        },
+        tx,
+      );
+    });
+  } catch (error) {
+    log.error({ event: "training.review_failed", id: trainingId, err: String(error) });
+    return { ok: false, message: "The review was not saved. Try again." };
+  }
+
+  revalidateTrainings(trainingId);
+
+  // Telling people is part of the decision, not an afterthought: a published
+  // training is only useful if the people it is for hear about it.
+  if (decision === "approve") {
+    await notifyTrainingPublished({
+      trainingId,
+      title: training.title,
+      fieldName: training.fieldName ?? null,
+      actorId: session.sub,
+    });
+  } else {
+    await notifyTrainingReturned({
+      trainingId,
+      title: training.title,
+      authorId: training.createdById,
+      note: note ?? "Check the details and resubmit.",
+      actorId: session.sub,
+    });
+  }
+
+  return {
+    ok: true,
+    message:
+      decision === "approve"
+        ? `“${training.title}” is live, and the people it is for have been notified.`
+        : `“${training.title}” was sent back to the facilitator, who has been notified.`,
+  };
+}
+
+/* ── Resources ────────────────────────────────────────────────────────────────
+ * The deck, the attendance sheet, the report. Files never pass through this
+ * server: the browser PUTs to a presigned URL, then a second call records it.
+ */
+
+export interface ResourceTargetResult {
+  ok: boolean;
+  message: string | null;
+  uploadUrl?: string;
+  storageKey?: string;
+  resourceId?: string;
+}
+
+export async function requestTrainingResourceAction(input: {
+  trainingId: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  title: string;
+}): Promise<ResourceTargetResult> {
+  const training = await loadReviewableTraining(input.trainingId);
+  if (!training.ok) return { ok: false, message: training.message };
+
+  const check = checkUpload(input.mimeType, input.sizeBytes);
+  if (!check.ok) return { ok: false, message: check.message };
+
+  const ceiling = storageCeiling();
+  if (input.sizeBytes > ceiling.bytes) return { ok: false, message: ceiling.detail };
+
+  const resourceId = randomUUID();
+  const storageKey = `trainings/${input.trainingId}/${resourceId}.${check.extension}`;
+  const target = await createMaterialUploadTarget(storageKey);
+  if (!target.ok) {
+    log.error({ event: "training.resource_target_failed", storageKey, reason: target.reason });
+    // Uploads do not fail for want of a bucket any more — the file goes into the
+    // database instead. This is either a server secret problem or a genuine fault.
+    return {
+      ok: false,
+      message: /SESSION_SECRET/i.test(target.reason)
+        ? "Uploads are disabled until the server secret is set. The ICT administrator needs to check SESSION_SECRET."
+        : "Storage is not available right now. Try again in a moment.",
+    };
+  }
+
+  return { ok: true, message: null, uploadUrl: target.target.signedUrl, storageKey, resourceId };
+}
+
+export async function finaliseTrainingResourceAction(
+  _previous: TrainingActionState,
+  formData: FormData,
+): Promise<TrainingActionState> {
+  const trainingId = field(formData, "trainingId");
+  const storageKey = field(formData, "storageKey");
+  const title = field(formData, "title")?.trim();
+  const mimeType = field(formData, "mimeType") || null;
+  if (!trainingId || !storageKey || !title) {
+    return { ok: false, message: "That upload could not be read. Try again." };
+  }
+  // The key was issued for this training; refuse anything else.
+  if (!storageKey.startsWith(`trainings/${trainingId}/`)) {
+    return { ok: false, message: "That upload does not belong to this training." };
+  }
+
+  const training = await loadReviewableTraining(trainingId);
+  if (!training.ok) return { ok: false, message: training.message };
+
+  const inspected = await inspectMaterialObject(storageKey);
+  if (!inspected.ok) {
+    return { ok: false, message: "The file did not arrive. Nothing has been saved." };
+  }
+
+  try {
+    await db.insert(trainingResources).values({
+      trainingId,
+      title,
+      storageKey,
+      mimeType: inspected.object.contentType ?? mimeType,
+      sizeBytes: inspected.object.sizeBytes,
+      uploadedById: training.sessionId,
+    });
+  } catch (error) {
+    log.error({ event: "training.resource_record_failed", trainingId, err: String(error) });
+    await removeMaterialObject(storageKey);
+    return { ok: false, message: "The file was uploaded but not recorded. Try again." };
+  }
+
+  revalidateTrainings(trainingId);
+  return { ok: true, message: `“${title}” is attached to this training.` };
+}
+
+/**
+ * Swap the bytes behind an attachment that was uploaded wrongly.
+ *
+ * The usual case is not a change of mind about the file's name but a deck that
+ * turns out to be last year's, or a sheet attached to the wrong training. Deleting
+ * and re-adding would lose the place in the list and the record of when it was
+ * first attached, so the row keeps its identity and only the object changes; the
+ * old object is removed once the new one has been inspected and recorded.
+ */
+export async function replaceTrainingResourceAction(input: {
+  trainingId: string;
+  resourceId: string;
+  storageKey: string;
+  mimeType: string;
+  title?: string;
+}): Promise<TrainingActionState> {
+  const training = await loadReviewableTraining(input.trainingId);
+  if (!training.ok) return { ok: false, message: training.message };
+
+  if (!input.storageKey.startsWith(`trainings/${input.trainingId}/`)) {
+    return { ok: false, message: "That upload does not belong to this training." };
+  }
+
+  const [existing] = await db
+    .select({ id: trainingResources.id, storageKey: trainingResources.storageKey, title: trainingResources.title })
+    .from(trainingResources)
+    .where(and(eq(trainingResources.id, input.resourceId), eq(trainingResources.trainingId, input.trainingId)))
+    .limit(1);
+  if (!existing) return { ok: false, message: "That attachment no longer exists. Reload the page." };
+
+  const inspected = await inspectMaterialObject(input.storageKey);
+  if (!inspected.ok) return { ok: false, message: "The file did not arrive. Nothing has been changed." };
+
+  const title = input.title?.trim() || existing.title;
+
+  try {
+    await db
+      .update(trainingResources)
+      .set({
+        storageKey: input.storageKey,
+        title,
+        mimeType: inspected.object.contentType ?? input.mimeType,
+        sizeBytes: inspected.object.sizeBytes,
+        uploadedById: training.sessionId,
+      })
+      .where(eq(trainingResources.id, input.resourceId));
+  } catch (error) {
+    log.error({ event: "training.resource_replace_failed", id: input.resourceId, err: String(error) });
+    await removeMaterialObject(input.storageKey);
+    return { ok: false, message: "The file arrived but the change was not recorded. Nothing was replaced." };
+  }
+
+  // The old bytes go only after the new row is in place: a failed delete leaves
+  // an orphan object, which is invisible; the other order loses the file.
+  const removed = await removeMaterialObject(existing.storageKey);
+  if (!removed.ok) log.warn({ event: "training.resource_object_orphaned", storageKey: existing.storageKey });
+
+  log.info({ event: "training.resource_replaced", trainingId: input.trainingId, resourceId: input.resourceId });
+  revalidateTrainings(input.trainingId);
+  return { ok: true, message: `“${title}” now holds the new file.` };
+}
+
+export async function removeTrainingResourceAction(formData: FormData): Promise<void> {
+  const trainingId = field(formData, "trainingId");
+  const resourceId = field(formData, "resourceId");
+  if (!trainingId || !resourceId) redirect("/trainings?error=That+attachment+could+not+be+found");
+
+  const training = await loadReviewableTraining(trainingId);
+  if (!training.ok) redirect(`/trainings/${trainingId}?error=${encodeURIComponent(training.message)}`);
+
+  const [resource] = await db
+    .select({ storageKey: trainingResources.storageKey, title: trainingResources.title })
+    .from(trainingResources)
+    .where(and(eq(trainingResources.id, resourceId), eq(trainingResources.trainingId, trainingId)))
+    .limit(1);
+  if (!resource) redirect(`/trainings/${trainingId}?error=That+attachment+no+longer+exists`);
+
+  try {
+    await db.delete(trainingResources).where(eq(trainingResources.id, resourceId));
+    const removed = await removeMaterialObject(resource.storageKey);
+    if (!removed.ok) log.warn({ event: "training.resource_object_orphaned", storageKey: resource.storageKey });
+  } catch (error) {
+    log.error({ event: "training.resource_remove_failed", id: resourceId, err: String(error) });
+    redirect(`/trainings/${trainingId}?error=The+attachment+was+not+removed`);
+  }
+
+  revalidateTrainings(trainingId);
+  redirect(`/trainings/${trainingId}?notice=${encodeURIComponent(`“${resource.title}” was removed.`)}`);
+}
+
+/**
+ * Whoever may edit the training may attach to it: its creator, an administrator,
+ * or a unit head of its field. Returns the session id for the uploader column.
+ */
+async function loadReviewableTraining(
+  trainingId: string,
+): Promise<{ ok: true; sessionId: string } | { ok: false; message: string }> {
+  const guard = await checkCapability("training.manage");
+  if (!guard.ok) return { ok: false, message: guard.message };
+  const { session } = guard;
+
+  const [training] = await db
+    .select({ fieldId: trainingSessions.programmeFieldId, createdById: trainingSessions.createdById })
+    .from(trainingSessions)
+    .where(and(eq(trainingSessions.id, trainingId), eq(trainingSessions.isArchived, false)))
+    .limit(1);
+  if (!training) return { ok: false, message: "That training no longer exists." };
+
+  if (session.role === "SYSTEM_ADMIN") return { ok: true, sessionId: session.sub };
+  if (training.createdById === session.sub) return { ok: true, sessionId: session.sub };
+  if (await mayReviewField(session, training.fieldId)) return { ok: true, sessionId: session.sub };
+
+  return { ok: false, message: "That training is not yours to change." };
+}
+
+/* -------------------------------------------------------------------------- */
+/* 5. The page under the training: cover picture and discussion                */
+/* -------------------------------------------------------------------------- */
+
+const COMMENT_MAX = 2000;
+
+export interface CommentActionState {
+  ok: boolean;
+  message: string | null;
+}
+
+/**
+ * Who may read a training's page.
+ *
+ * A published training is readable by everyone signed in; an unpublished one is a
+ * draft between its author and the unit head, exactly as on the detail page. Both
+ * the composer and the picture upload apply the same rule, so neither can be used
+ * to reach a row the reader may not see.
+ */
+async function loadReadableTraining(trainingId: string): Promise<{ ok: true; userId: string } | { ok: false; message: string }> {
+  // Reading a training does not need any capability — it needs an account. The
+  // conversation is open to every signed-in member of staff, which is the point.
+  const session = await getSession();
+  if (!session) return { ok: false, message: "Sign in again to take part in this training." };
+
+  const [row] = await db
+    .select({ reviewState: trainingSessions.reviewState, createdById: trainingSessions.createdById, fieldId: trainingSessions.programmeFieldId })
+    .from(trainingSessions)
+    .where(eq(trainingSessions.id, trainingId))
+    .limit(1);
+  if (!row) return { ok: false, message: "That training no longer exists." };
+
+  if (row.reviewState !== "PUBLISHED" && row.createdById !== session.sub) {
+    const mayReview = await mayReviewField(session, row.fieldId);
+    if (!mayReview) return { ok: false, message: "That training is still in review." };
+  }
+  return { ok: true, userId: session.sub };
+}
+
+/** Post one message under a training. */
+export async function addTrainingCommentAction(
+  _previous: CommentActionState,
+  formData: FormData,
+): Promise<CommentActionState> {
+  const trainingId = field(formData, "trainingId");
+  const body = field(formData, "body")?.trim() ?? "";
+  if (!trainingId) return { ok: false, message: "That training could not be found." };
+
+  const readable = await loadReadableTraining(trainingId);
+  if (!readable.ok) return { ok: false, message: readable.message };
+
+  if (body.length === 0) return { ok: false, message: "Write a message first." };
+  if (body.length > COMMENT_MAX) {
+    return { ok: false, message: `That is ${body.length} characters. Keep a message under ${COMMENT_MAX}.` };
+  }
+
+  try {
+    await db.insert(trainingComments).values({ trainingId, authorId: readable.userId, body });
+  } catch (error) {
+    log.error({ event: "training.comment_failed", trainingId, err: String(error) });
+    return { ok: false, message: "The message was not saved. Try again." };
+  }
+
+  revalidatePath(`/trainings/${trainingId}`);
+  return { ok: true, message: "Posted." };
+}
+
+/** Withdraw a message. The author may always remove their own; an administrator may remove any. */
+export async function deleteTrainingCommentAction(formData: FormData): Promise<void> {
+  const trainingId = field(formData, "trainingId");
+  const commentId = field(formData, "commentId");
+  if (!trainingId || !commentId) redirect("/trainings?error=That+message+could+not+be+found");
+
+  const guard = await checkCapability("training.manage");
+  if (!guard.ok) redirect(`/trainings/${trainingId}?error=${encodeURIComponent(guard.message)}`);
+  const { session } = guard;
+
+  const [comment] = await db
+    .select({ authorId: trainingComments.authorId })
+    .from(trainingComments)
+    .where(and(eq(trainingComments.id, commentId), eq(trainingComments.trainingId, trainingId)))
+    .limit(1);
+  if (!comment) redirect(`/trainings/${trainingId}?error=That+message+no+longer+exists`);
+
+  if (comment.authorId !== session.sub && session.role !== "SYSTEM_ADMIN") {
+    redirect(`/trainings/${trainingId}?error=Only+the+author+or+an+administrator+can+remove+that+message`);
+  }
+
+  try {
+    await db.delete(trainingComments).where(eq(trainingComments.id, commentId));
+  } catch (error) {
+    log.error({ event: "training.comment_delete_failed", commentId, err: String(error) });
+    redirect(`/trainings/${trainingId}?error=The+message+was+not+removed`);
+  }
+  revalidatePath(`/trainings/${trainingId}`);
+}
+
+/** The cover picture is an image, full stop — this is not a second file shelf. */
+const COVER_MAX_BYTES = 4 * 1024 * 1024;
+const COVER_TYPES: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+/**
+ * Upload the picture at the top of a training page.
+ *
+ * Facultative, one image, and it goes through this server rather than a presigned
+ * slot: at a few megabytes there is nothing to gain from a direct upload, and a
+ * plain form means the page works with no JavaScript. The old picture is removed
+ * after the row points at the new one, so a failure never leaves the page with no
+ * image at all.
+ */
+export async function uploadTrainingImageAction(
+  _previous: CommentActionState,
+  formData: FormData,
+): Promise<CommentActionState> {
+  const trainingId = field(formData, "trainingId");
+  if (!trainingId) return { ok: false, message: "That training could not be found." };
+
+  const training = await loadReviewableTraining(trainingId);
+  if (!training.ok) return { ok: false, message: training.message };
+
+  const file = formData.get("image");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, message: "Choose a picture first." };
+  }
+  const extension = COVER_TYPES[file.type];
+  if (!extension) return { ok: false, message: "A cover picture must be a PNG, JPEG, WebP or GIF image." };
+  if (file.size > COVER_MAX_BYTES) {
+    return { ok: false, message: "A cover picture has to be under 4 MB." };
+  }
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const storageKey = `trainings/${trainingId}/cover-${randomUUID()}.${extension}`;
+  const written = await putMaterialObject(storageKey, bytes, file.type);
+  if (!written.ok) {
+    log.error({ event: "training.image_write_failed", trainingId, reason: written.reason });
+    return { ok: false, message: "The picture could not be stored. Try again in a moment." };
+  }
+
+  const [previous] = await db
+    .select({ imageStorageKey: trainingSessions.imageStorageKey })
+    .from(trainingSessions)
+    .where(eq(trainingSessions.id, trainingId))
+    .limit(1);
+
+  try {
+    await db.update(trainingSessions).set({ imageStorageKey: storageKey, updatedAt: new Date() }).where(eq(trainingSessions.id, trainingId));
+  } catch (error) {
+    log.error({ event: "training.image_record_failed", trainingId, err: String(error) });
+    await removeMaterialObject(storageKey);
+    return { ok: false, message: "The picture was uploaded but not saved. Try again." };
+  }
+
+  if (previous?.imageStorageKey && previous.imageStorageKey !== storageKey) {
+    const removed = await removeMaterialObject(previous.imageStorageKey);
+    if (!removed.ok) log.warn({ event: "training.image_orphaned", storageKey: previous.imageStorageKey });
+  }
+
+  revalidatePath(`/trainings/${trainingId}`);
+  revalidatePath("/trainings");
+  return { ok: true, message: "The cover picture has been updated." };
+}
+
+/** Take the picture away and put the placeholder back. */
+export async function removeTrainingImageAction(formData: FormData): Promise<void> {
+  const trainingId = field(formData, "trainingId");
+  if (!trainingId) redirect("/trainings?error=That+training+could+not+be+found");
+
+  const training = await loadReviewableTraining(trainingId);
+  if (!training.ok) redirect(`/trainings/${trainingId}?error=${encodeURIComponent(training.message)}`);
+
+  const [row] = await db
+    .select({ imageStorageKey: trainingSessions.imageStorageKey })
+    .from(trainingSessions)
+    .where(eq(trainingSessions.id, trainingId))
+    .limit(1);
+
+  await db.update(trainingSessions).set({ imageStorageKey: null, updatedAt: new Date() }).where(eq(trainingSessions.id, trainingId));
+  if (row?.imageStorageKey) {
+    const removed = await removeMaterialObject(row.imageStorageKey);
+    if (!removed.ok) log.warn({ event: "training.image_orphaned", storageKey: row.imageStorageKey });
+  }
+
+  revalidatePath(`/trainings/${trainingId}`);
+  revalidatePath("/trainings");
 }

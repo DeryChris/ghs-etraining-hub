@@ -2,8 +2,17 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { programmeFields, certificates, materialProgress, materialVersions, materials, programmeAreas, users } from "@/db/schema";
-import { PRIORITY_RANK, type MaterialType, type PriorityLevel, type ProgressStatus } from "@/lib/labels";
+import {
+  programmeFields,
+  materialProgress,
+  materialVersions,
+  materialViews,
+  materials,
+  programmeAreas,
+  trainingSessions,
+  users,
+} from "@/db/schema";
+import { PRIORITY_RANK, type MaterialType, type PriorityLevel } from "@/lib/labels";
 import { log } from "@/lib/server/logger";
 import { audienceFor, fieldFor, liveField, liveArea, publishedMaterial } from "@/lib/server/visibility";
 import type { Viewer } from "@/lib/viewer";
@@ -21,6 +30,7 @@ export interface FieldCard {
   description: string | null;
   areaCount: number;
   materialCount: number;
+  trainingCount: number;
 }
 
 export async function listFields(viewer: Viewer | null): Promise<FieldCard[]> {
@@ -35,6 +45,17 @@ export async function listFields(viewer: Viewer | null): Promise<FieldCard[]> {
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
     .where(and(eq(programmeAreas.fieldId, programmeFields.id), liveArea, publishedMaterial, audienceFor(viewer)));
 
+  const trainingTotal = db
+    .select({ n: count() })
+    .from(trainingSessions)
+    .where(
+      and(
+        eq(trainingSessions.programmeFieldId, programmeFields.id),
+        eq(trainingSessions.reviewState, "PUBLISHED"),
+        eq(trainingSessions.isArchived, false),
+      ),
+    );
+
   return db
     .select({
       id: programmeFields.id,
@@ -43,6 +64,7 @@ export async function listFields(viewer: Viewer | null): Promise<FieldCard[]> {
       description: programmeFields.description,
       areaCount: sql<number>`coalesce((${areaTotal}), 0)::int`,
       materialCount: sql<number>`coalesce((${materialTotal}), 0)::int`,
+      trainingCount: sql<number>`coalesce((${trainingTotal}), 0)::int`,
     })
     .from(programmeFields)
     .where(and(liveField, fieldFor(viewer)))
@@ -78,10 +100,16 @@ export async function getField(id: string, viewer: Viewer | null) {
 
 /** A field by its stable code (`PF-PH`), which is what the catalogue URLs use. */
 export async function getFieldByCode(code: string, viewer: Viewer | null) {
+  /*
+   * Case-insensitive on purpose. The catalogue builds its links from the stored
+   * code, but this used to upper-case the incoming one before comparing — so a
+   * field whose code happened to contain lower case (an import, a code with a
+   * hex suffix) was listed in the catalogue and 404'd when opened.
+   */
   const [row] = await db
     .select()
     .from(programmeFields)
-    .where(and(eq(programmeFields.code, code.toUpperCase()), liveField, fieldFor(viewer)))
+    .where(and(sql`lower(${programmeFields.code}) = lower(${code})`, liveField, fieldFor(viewer)))
     .limit(1);
   return row ?? null;
 }
@@ -92,7 +120,8 @@ export interface AreaCard {
   name: string;
   description: string | null;
   materialCount: number;
-  completedCount: number;
+  /** How many trainings are filed under this area — the catalogue's own count. */
+  trainingCount: number;
 }
 
 export async function listAreasInField(fieldId: string, viewer: Viewer): Promise<AreaCard[]> {
@@ -101,18 +130,10 @@ export async function listAreasInField(fieldId: string, viewer: Viewer): Promise
     .from(materials)
     .where(and(eq(materials.programmeAreaId, programmeAreas.id), publishedMaterial));
 
-  const completedTotal = db
+  const trainingTotal = db
     .select({ n: count() })
-    .from(materialProgress)
-    .innerJoin(materials, eq(materials.id, materialProgress.materialId))
-    .where(
-      and(
-        eq(materials.programmeAreaId, programmeAreas.id),
-        eq(materialProgress.userId, viewer.id),
-        eq(materialProgress.status, "COMPLETED"),
-        publishedMaterial,
-      ),
-    );
+    .from(trainingSessions)
+    .where(and(eq(trainingSessions.programmeAreaId, programmeAreas.id), eq(trainingSessions.reviewState, "PUBLISHED")));
 
   return db
     .select({
@@ -121,7 +142,7 @@ export async function listAreasInField(fieldId: string, viewer: Viewer): Promise
       name: programmeAreas.name,
       description: programmeAreas.description,
       materialCount: sql<number>`coalesce((${materialTotal}), 0)::int`,
-      completedCount: sql<number>`coalesce((${completedTotal}), 0)::int`,
+      trainingCount: sql<number>`coalesce((${trainingTotal}), 0)::int`,
     })
     .from(programmeAreas)
     .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
@@ -144,7 +165,7 @@ export async function getAreaByCode(code: string, viewer: Viewer | null) {
     .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(
       and(
-        eq(programmeAreas.code, code.toUpperCase()),
+        sql`lower(${programmeAreas.code}) = lower(${code})`,
         liveArea,
         liveField,
         fieldFor(viewer),
@@ -165,10 +186,7 @@ export interface MaterialListItem {
   priority: PriorityLevel;
   requiresAcknowledgement: boolean;
   estimatedMinutes: number | null;
-  cpdCreditsX10: number;
   authorName: string;
-  status: ProgressStatus;
-  watchedPercent: number;
   acknowledgedAt: Date | null;
 }
 
@@ -182,10 +200,7 @@ export async function listMaterialsInArea(programmeAreaId: string, viewer: Viewe
       priority: materials.priority,
       requiresAcknowledgement: materials.requiresAcknowledgement,
       estimatedMinutes: materials.estimatedMinutes,
-      cpdCreditsX10: materials.cpdCreditsX10,
       authorName: users.fullName,
-      status: sql<ProgressStatus>`coalesce(${materialProgress.status}, 'NOT_STARTED')`,
-      watchedPercent: sql<number>`coalesce(${materialProgress.watchedPercent}, 0)`,
       acknowledgedAt: materialProgress.acknowledgedAt,
     })
     .from(materials)
@@ -269,10 +284,7 @@ export async function searchLibrary(input: {
       priority: materials.priority,
       requiresAcknowledgement: materials.requiresAcknowledgement,
       estimatedMinutes: materials.estimatedMinutes,
-      cpdCreditsX10: materials.cpdCreditsX10,
       authorName: users.fullName,
-      status: sql<ProgressStatus>`coalesce(${materialProgress.status}, 'NOT_STARTED')`,
-      watchedPercent: sql<number>`coalesce(${materialProgress.watchedPercent}, 0)`,
       acknowledgedAt: materialProgress.acknowledgedAt,
       areaCode: programmeAreas.code,
       areaName: programmeAreas.name,
@@ -334,22 +346,21 @@ export interface MandatoryItem {
   reacknowledgementRequired: boolean;
 }
 
-export interface ContinueItem {
+/** A material this person opened, most recent first. Activity, not a grade. */
+export interface RecentOpen {
   id: string;
   title: string;
   type: MaterialType;
-  watchedPercent: number;
   areaName: string;
   areaCode: string;
+  lastViewedAt: Date;
 }
 
 export interface LearnerDashboard {
-  creditsX10: number;
-  completedCount: number;
-  inProgressCount: number;
   mandatoryTotal: number;
   mandatoryOutstanding: MandatoryItem[];
-  continueLearning: ContinueItem[];
+  /** The last few things opened, so the dashboard can offer them again. */
+  recentlyOpened: RecentOpen[];
 }
 
 export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashboard> {
@@ -358,16 +369,6 @@ export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashbo
   // for every other tab the visitor opened. The totals query is the cheapest
   // and runs first so the page can show numbers quickly; mandatory and
   // continue-learning follow.
-  const totalsRows = await db
-    .select({
-      creditsX10: sql<number>`coalesce(sum(case when ${materialProgress.status} = 'COMPLETED' then ${materials.cpdCreditsX10} else 0 end), 0)::int`,
-      completedCount: sql<number>`(count(*) filter (where ${materialProgress.status} = 'COMPLETED'))::int`,
-      inProgressCount: sql<number>`(count(*) filter (where ${materialProgress.status} = 'IN_PROGRESS'))::int`,
-    })
-    .from(materialProgress)
-    .innerJoin(materials, eq(materials.id, materialProgress.materialId))
-    .where(eq(materialProgress.userId, viewer.id));
-
   const mandatoryRows = await db
     .select({
       id: materials.id,
@@ -395,34 +396,8 @@ export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashbo
       ),
     );
 
-  const continueRows = await db
-    .select({
-      id: materials.id,
-      title: materials.title,
-      type: materials.type,
-      watchedPercent: materialProgress.watchedPercent,
-      areaName: programmeAreas.name,
-      areaCode: programmeAreas.code,
-    })
-    .from(materialProgress)
-    .innerJoin(materials, eq(materials.id, materialProgress.materialId))
-    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(
-      and(
-        eq(materialProgress.userId, viewer.id),
-        eq(materialProgress.status, "IN_PROGRESS"),
-        publishedMaterial,
-        liveArea,
-        liveField,
-        fieldFor(viewer),
-        audienceFor(viewer),
-      ),
-    )
-    .orderBy(desc(materialProgress.updatedAt))
-    .limit(4);
+  const recentlyOpened = await listRecentOpens(viewer.id, 4);
 
-  const totals = totalsRows[0];
   const mandatoryOutstanding = mandatoryRows
     .filter((row) => !(row.acknowledgedAt !== null && row.acknowledgedVersionId === row.currentVersionId))
     .map((row) => ({
@@ -437,105 +412,37 @@ export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashbo
     .sort((a, b) => PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority] || a.title.localeCompare(b.title));
 
   return {
-    creditsX10: totals?.creditsX10 ?? 0,
-    completedCount: totals?.completedCount ?? 0,
-    inProgressCount: totals?.inProgressCount ?? 0,
     mandatoryTotal: mandatoryRows.length,
     mandatoryOutstanding,
-    continueLearning: continueRows,
+    recentlyOpened,
   };
 }
 
-/* ── Personal analytics & transcript ───────────────────────────────────── */
-
-export interface CompletionRecord {
-  materialId: string;
-  title: string;
-  type: MaterialType;
-  creditsX10: number;
-  completedAt: Date | null;
-  areaName: string;
-  /** Null when the material earned no CPD points, so nothing was issued. */
-  certificateCode: string | null;
-}
-
-/*
- * The transcript is a record of what the learner actually completed, so it is not
- * filtered by today's audience rules: revoking a cohort must never erase history.
- */
-export async function listCompletions(userId: string, limit = 500): Promise<CompletionRecord[]> {
-  return db
-    .select({
-      materialId: materials.id,
-      title: materials.title,
-      type: materials.type,
-      creditsX10: materials.cpdCreditsX10,
-      completedAt: materialProgress.completedAt,
-      areaName: programmeAreas.name,
-      // The certificate for the version that was actually completed, if one was issued.
-      certificateCode: certificates.code,
-    })
-    .from(materialProgress)
-    .innerJoin(materials, eq(materials.id, materialProgress.materialId))
-    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .leftJoin(
-      certificates,
-      and(
-        eq(certificates.userId, materialProgress.userId),
-        eq(certificates.materialVersionId, materialProgress.materialVersionId),
-      ),
-    )
-    .where(and(eq(materialProgress.userId, userId), eq(materialProgress.status, "COMPLETED")))
-    .orderBy(desc(materialProgress.completedAt))
-    .limit(limit);
-}
-
-/* ── Printable award ────────────────────────────────────────────────────── */
-
-export interface CertificateAward {
-  id: string;
-  code: string;
-  userId: string;
-  holderName: string;
-  staffId: string;
-  title: string;
-  areaName: string;
-  fieldName: string;
-  creditsX10: number;
-  issuedAt: Date;
-  expiresAt: Date | null;
-  /** Decided here so the page stays a pure render. */
-  expired: boolean;
-}
+/* ── Personal activity ─────────────────────────────────────────────────── */
 
 /**
- * Loads a certificate for the printable award. The caller decides who may print
- * it: the holder, or staff supporting them. The public `/verify` page keeps using
- * the masked name — printing a full name needs a session.
+ * What this person has opened, newest first.
+ *
+ * This is the activity record the library keeps for statistics: which material,
+ * when it was last opened, how many times. It is not a transcript — nothing is
+ * "finished" here, and nothing is awarded for it.
  */
-export async function getCertificateAward(code: string): Promise<CertificateAward | null> {
-  const [row] = await db
+export async function listRecentOpens(userId: string, limit = 20): Promise<RecentOpen[]> {
+  const rows = await db
     .select({
-      id: certificates.id,
-      code: certificates.code,
-      userId: certificates.userId,
-      holderName: users.fullName,
-      staffId: users.ghsStaffId,
+      id: materials.id,
       title: materials.title,
+      type: materials.type,
       areaName: programmeAreas.name,
-      fieldName: programmeFields.name,
-      creditsX10: certificates.cpdCreditsX10,
-      issuedAt: certificates.issuedAt,
-      expiresAt: certificates.expiresAt,
+      areaCode: programmeAreas.code,
+      lastViewedAt: sql<Date>`max(${materialViews.lastViewedAt})`,
     })
-    .from(certificates)
-    .innerJoin(users, eq(users.id, certificates.userId))
-    .innerJoin(materials, eq(materials.id, certificates.materialId))
+    .from(materialViews)
+    .innerJoin(materials, eq(materials.id, materialViews.materialId))
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(eq(certificates.code, code))
-    .limit(1);
-
-  if (!row) return null;
-  return { ...row, expired: row.expiresAt !== null && row.expiresAt.getTime() < Date.now() };
+    .where(eq(materialViews.userId, userId))
+    .groupBy(materials.id, materials.title, materials.type, programmeAreas.name, programmeAreas.code)
+    .orderBy(desc(sql`max(${materialViews.lastViewedAt})`))
+    .limit(limit);
+  return rows.map((row) => ({ ...row, lastViewedAt: new Date(row.lastViewedAt) }));
 }

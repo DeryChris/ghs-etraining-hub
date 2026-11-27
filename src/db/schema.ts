@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  customType,
   pgTable,
   uuid,
   varchar,
@@ -17,18 +18,49 @@ import {
 
 export const userRoleEnum = pgEnum("user_role", ["SYSTEM_ADMIN", "FACILITATOR", "LEARNER"]);
 export const materialStateEnum = pgEnum("material_state", ["DRAFT", "IN_REVIEW", "PUBLISHED", "SUPERSEDED", "ARCHIVED"]);
+/** Postgres `bytea`, for deployments that keep files in the database. */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
+
 export const materialTypeEnum = pgEnum("material_type", ["DOCUMENT", "VIDEO", "LAB", "ASSESSMENT_LINK"]);
 export const materialPriorityEnum = pgEnum("material_priority", ["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
 export const scanStatusEnum = pgEnum("scan_status", ["PENDING", "CLEAN", "INFECTED"]);
-export const progressStatusEnum = pgEnum("progress_status", ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"]);
 export const enrollmentSourceEnum = pgEnum("enrollment_source", ["SELF", "ASSIGNED"]);
-export const notificationTypeEnum = pgEnum("notification_type", ["SYSTEM_MAINTENANCE", "MATERIAL_UPDATE", "SPACE_ANNOUNCEMENT", "COMMENT_REPLY", "DIRECT_MESSAGE", "ASSIGNMENT_DUE", "CERTIFICATE_ISSUED", "RECERTIFICATION_DUE"]);
+/**
+ * What a notice is about. The first six are the events this service actually
+ * produces; the inherited prototype values after them are kept because Postgres
+ * enum values cannot be dropped without rebuilding the type, and nothing writes
+ * them any more.
+ */
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "TRAINING_PUBLISHED",
+  "TRAINING_RETURNED",
+  "MATERIAL_PUBLISHED",
+  "DIRECT_MESSAGE",
+  "COMPLAINT_UPDATE",
+  "ACCOUNT",
+  "SYSTEM_MAINTENANCE",
+  "MATERIAL_UPDATE",
+  "COMMENT_REPLY",
+  "ASSIGNMENT_DUE",
+  "REVIEW_REQUEST",
+]);
 export const notificationPriorityEnum = pgEnum("notification_priority", ["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
+  /**
+   * The employee number off the payroll — six digits, printed on the payslip. It is what every member
+   * of staff knows by heart, so it is what they sign in with — the e-mail is
+   * optional because more than a third of the Upper West sheet has none.
+   */
   ghsStaffId: varchar("ghs_staff_id", { length: 16 }).notNull().unique(),
-  email: text("email").notNull().unique().$default(() => ""),
+  email: text("email").unique(),
+  /** True until somebody changes the password ICT handed them. */
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
   passwordHash: text("password_hash"),
   passwordResetToken: text("password_reset_token"),
   passwordResetExpiresAt: timestamp("password_reset_expires_at", { withTimezone: true }),
@@ -38,7 +70,10 @@ export const users = pgTable("users", {
   cadre: text("cadre"),
   directorate: text("directorate"),
   region: text("region"),
+  district: text("district"),
+  subDistrict: text("sub_district"),
   facility: text("facility"),
+  gender: text("gender"),
   isActive: boolean("is_active").notNull().default(true),
   /**
    * A unit head is a facilitator who also signs off the material filed under
@@ -58,6 +93,7 @@ export const users = pgTable("users", {
 }, (t) => [
   index("users_region_role_idx").on(t.region, t.role),
   index("users_directorate_idx").on(t.directorate),
+  index("users_district_idx").on(t.district),
   index("users_facility_idx").on(t.facility),
   index("users_email_lower_idx").on(sql`lower(${t.email})`),
 ]);
@@ -81,8 +117,6 @@ export const materials = pgTable("materials", {
   priority: materialPriorityEnum("priority").notNull().default("LOW"),
   requiresAcknowledgement: boolean("requires_acknowledgement").notNull().default(false),
   estimatedMinutes: integer("estimated_minutes"),
-  cpdCreditsX10: integer("cpd_credits_x10").notNull().default(0),
-  recertificationMonths: integer("recertification_months"),
   programmeAreaId: uuid("programme_area_id").notNull().references(() => programmeAreas.id, { onDelete: "cascade" }),
   authorId: uuid("author_id").notNull().references(() => users.id),
   currentVersionId: uuid("current_version_id"),
@@ -117,6 +151,26 @@ export const materialVersions = pgTable("material_versions", {
   unique("material_versions_material_version_key").on(t.materialId, t.version),
 ]);
 
+/**
+ * Files kept in the database, for a deployment with no object storage.
+ *
+ * The deployment target is Neon plus Vercel, and Neon is a database: it has no
+ * file service. Rather than leave uploads broken until somebody buys a bucket,
+ * the same storage interface falls back to this table — bytes, MIME type and the
+ * key the rest of the system already uses. The ceiling is Vercel's request body
+ * limit (about 4.5 MB), not Postgres: a single `bytea` value may be far larger.
+ * Configure S3_ENDPOINT/S3_BUCKET and the interface switches back to direct
+ * browser-to-bucket uploads, which is where decks and videos belong.
+ */
+export const fileBlobs = pgTable("file_blobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  storageKey: text("storage_key").notNull().unique(),
+  mimeType: text("mime_type"),
+  sizeBytes: integer("size_bytes").notNull(),
+  bytes: bytea("bytes").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const enrollments = pgTable("enrollments", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -128,19 +182,26 @@ export const enrollments = pgTable("enrollments", {
   lastRemindedAt: timestamp("last_reminded_at", { withTimezone: true }),
 }, (t) => [unique().on(t.userId, t.programmeAreaId), index("enrollments_area_idx").on(t.programmeAreaId)]);
 
+/**
+ * Who has signed for which protocol, and against which version.
+ *
+ * This table used to carry a learning path — not started, in progress, completed,
+ * watched percent. That is gone: this is a library, not a course, and "0 of 0
+ * materials completed" told nobody anything. What remains is the only fact worth
+ * keeping: a person acknowledged a version of a protocol, and when. A newer
+ * version means the acknowledgement is stale, not that they have to "redo" a
+ * course.
+ */
 export const materialProgress = pgTable("material_progress", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   materialId: uuid("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
   materialVersionId: uuid("material_version_id").notNull().references(() => materialVersions.id),
-  status: progressStatusEnum("status").notNull().default("NOT_STARTED"),
-  watchedPercent: integer("watched_percent").notNull().default(0),
   acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   unique().on(t.userId, t.materialId),
-  index("material_progress_user_status_idx").on(t.userId, t.status, t.updatedAt),
+  index("material_progress_user_idx").on(t.userId, t.updatedAt),
 ]);
 
 export const assessments = pgTable("assessments", {
@@ -177,25 +238,6 @@ export const assessmentAttempts = pgTable("assessment_attempts", {
   gradedById: uuid("graded_by_id").references(() => users.id),
   overrideReason: text("override_reason"),
 });
-
-export const certificates = pgTable("certificates", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  code: varchar("code", { length: 50 }).notNull().unique(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  materialId: uuid("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
-  materialVersionId: uuid("material_version_id").notNull().references(() => materialVersions.id),
-  cpdCreditsX10: integer("cpd_credits_x10").notNull(),
-  issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }),
-  verificationCount: integer("verification_count").notNull().default(0),
-  lastVerifiedAt: timestamp("last_verified_at", { withTimezone: true }),
-}, (t) => [
-  index("certificates_user_idx").on(t.userId),
-  index("certificates_material_idx").on(t.materialId),
-  // One certificate per learner, material and published version: re-completing a
-  // superseded version must not mint a second serial.
-  unique("certificates_user_material_version_key").on(t.userId, t.materialId, t.materialVersionId),
-]);
 
 export const comments = pgTable("comments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -337,8 +379,12 @@ export const facilityTypeEnum = pgEnum("facility_type", [
   "DISTRICT_HOSPITAL",
   "POLYCLINIC",
   "HEALTH_CENTRE",
+  /** A CHPS compound: where most of the region's staff actually work. */
+  "CHPS_COMPOUND",
   "CLINIC",
   "DIRECTORATE",
+  /** Regional stores, workshop, port health, RCH — units that are not clinical sites. */
+  "SERVICE_UNIT",
   "OTHER",
 ]);
 export const facilityOwnershipEnum = pgEnum("facility_ownership", ["GHS", "CHAG", "PRIVATE", "OTHER"]);
@@ -427,6 +473,12 @@ export const areaFacilitators = pgTable("area_facilitators", {
 
 export const trainingStatusEnum = pgEnum("training_status", ["PLANNED", "COMPLETED", "CANCELLED"]);
 
+/**
+ * Whether the rest of GHS may see this training yet. Separate from
+ * `training_status`, which answers whether the event happened.
+ */
+export const trainingReviewStateEnum = pgEnum("training_review_state", ["PENDING", "PUBLISHED", "REJECTED"]);
+
 export const trainingSessions = pgTable("training_sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
@@ -447,6 +499,14 @@ export const trainingSessions = pgTable("training_sessions", {
   facilitatorId: uuid("facilitator_id").references(() => users.id, { onDelete: "set null" }),
   attendeeCount: integer("attendee_count"),
   notes: text("notes"),
+  /** Optional picture the facilitator uploads for the training page. */
+  imageStorageKey: text("image_storage_key"),
+  /** Facilitator-created rows start PENDING; an administrator's row is live. */
+  reviewState: trainingReviewStateEnum("review_state").notNull().default("PUBLISHED"),
+  reviewedById: uuid("reviewed_by_id").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  /** Why it was rejected — shown to the facilitator who submitted it. */
+  reviewNote: text("review_note"),
   isArchived: boolean("is_archived").notNull().default(false),
   createdById: uuid("created_by_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -455,6 +515,55 @@ export const trainingSessions = pgTable("training_sessions", {
   index("training_sessions_organised_idx").on(t.organisedOn),
   index("training_sessions_year_idx").on(t.year, t.organisedOn),
   index("training_sessions_area_idx").on(t.programmeAreaId),
+]);
+
+/**
+ * Files attached to one training: the slide deck, the attendance sheet, the
+ * report. Not `materials` — those are versioned teaching objects filed under an
+ * area; these belong to a single event and are deleted with it.
+ */
+export const trainingResources = pgTable("training_resources", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  trainingId: uuid("training_id").notNull().references(() => trainingSessions.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  storageKey: text("storage_key").notNull().unique(),
+  mimeType: text("mime_type"),
+  sizeBytes: integer("size_bytes"),
+  uploadedById: uuid("uploaded_by_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("training_resources_training_idx").on(t.trainingId, t.createdAt)]);
+
+/**
+ * The conversation under a training.
+ *
+ * Staff who attended — or who are thinking about the next cohort — ask questions
+ * here, in the open, rather than in a WhatsApp group that nobody else can read.
+ * Flat on purpose: a training page holds a few dozen messages, and a thread tree
+ * would cost more to read on a phone than it is worth.
+ */
+export const trainingComments = pgTable("training_comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  trainingId: uuid("training_id").notNull().references(() => trainingSessions.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("training_comments_training_idx").on(t.trainingId, t.createdAt)]);
+
+/**
+ * "May work anywhere in this programme field."
+ *
+ * `area_facilitators` grants one area at a time; this grants the field, so a
+ * facilitator appointed to Malaria keeps working as areas are added. Unit heads
+ * are appointed this way.
+ */
+export const fieldFacilitators = pgTable("field_facilitators", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fieldId: uuid("field_id").notNull().references(() => programmeFields.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("field_facilitators_unique_idx").on(t.fieldId, t.userId),
+  index("field_facilitators_user_idx").on(t.userId),
 ]);
 
 /* ── Views ──────────────────────────────────────────────────────────────────
@@ -490,6 +599,13 @@ export const complaintIssueEnum = pgEnum("complaint_issue", [
   "PERSONAL_DETAILS",
   "COURSE_RELATED",
   "LOGIN_ACCESS",
+  /**
+   * A file on a training is the wrong one, or will not open at all. They are
+   * separate answers because the remedies differ: one is a replacement upload,
+   * the other is a broken object the desk has to fetch and inspect.
+   */
+  "WRONG_DOCUMENT",
+  "DOC_INACCESSIBLE",
   "OTHERS",
 ]);
 
@@ -509,6 +625,14 @@ export const complaints = pgTable("complaints", {
   region: text("region"),
   facility: text("facility"),
   issueType: complaintIssueEnum("issue_type").notNull(),
+  /**
+   * Which training the complaint is about, when the issue is one of its files.
+   * Null for everything else. The title is copied as well as the id: a complaint
+   * is a record of what somebody said, and it has to keep reading that way if the
+   * training is later withdrawn.
+   */
+  trainingId: uuid("training_id").references(() => trainingSessions.id, { onDelete: "set null" }),
+  trainingTitle: text("training_title"),
   subject: text("subject").notNull(),
   description: text("description").notNull(),
   status: complaintStatusEnum("status").notNull().default("SUBMITTED"),

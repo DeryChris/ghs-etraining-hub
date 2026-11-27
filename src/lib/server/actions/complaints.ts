@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/index";
-import { complaintMessages, complaints, directMessages, users } from "@/db/schema";
-import { displayOrigin } from "@/lib/app-url";
+import { complaintMessages, complaints, directMessages, trainingSessions, users } from "@/db/schema";
 import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
+import { notifyComplaintUpdate } from "@/lib/server/notify";
 import { complaintsForStaffId } from "@/lib/server/complaint-queries";
 import { log } from "@/lib/server/logger";
 import { hashPassword } from "@/lib/server/auth";
@@ -34,7 +34,14 @@ export interface ComplaintState {
   credentials?: { email: string; password: string } | null;
 }
 
-const ISSUE_TYPES = ["PERSONAL_DETAILS", "COURSE_RELATED", "LOGIN_ACCESS", "OTHERS"] as const;
+const ISSUE_TYPES = [
+  "PERSONAL_DETAILS",
+  "COURSE_RELATED",
+  "LOGIN_ACCESS",
+  "WRONG_DOCUMENT",
+  "DOC_INACCESSIBLE",
+  "OTHERS",
+] as const;
 
 const REFERENCE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
@@ -68,6 +75,13 @@ const submitInput = z
       .optional()
       .transform((value) => (value ? value : null)),
     issueType: z.enum(ISSUE_TYPES),
+    /** Only for a complaint about a file: which training it is attached to. */
+    trainingId: z
+      .string()
+      .trim()
+      .uuid()
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
     subject: z.string().trim().min(5, "Say in a few words what the problem is.").max(140),
     description: z
       .string()
@@ -107,6 +121,7 @@ export async function submitComplaintAction(
     email: field(formData, "email"),
     phone: field(formData, "phone") ?? undefined,
     issueType: field(formData, "issueType") ?? "OTHERS",
+    trainingId: field(formData, "trainingId") ?? undefined,
     subject: field(formData, "subject"),
     description: field(formData, "description"),
   });
@@ -114,6 +129,30 @@ export async function submitComplaintAction(
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Check the form and try again." };
   }
   const input = parsed.data;
+
+  /*
+   * A complaint about a document has to say which training, or the desk cannot
+   * open the file it is about. Only a published training is accepted, and the
+   * title is copied onto the complaint so the record survives the training being
+   * withdrawn.
+   */
+  let trainingId: string | null = null;
+  let trainingTitle: string | null = null;
+  if (input.issueType === "WRONG_DOCUMENT" || input.issueType === "DOC_INACCESSIBLE") {
+    if (!input.trainingId) {
+      return { ok: false, message: "Choose the training the document belongs to, so the desk knows which file to look at." };
+    }
+    const [training] = await db
+      .select({ id: trainingSessions.id, title: trainingSessions.title })
+      .from(trainingSessions)
+      .where(and(eq(trainingSessions.id, input.trainingId), eq(trainingSessions.reviewState, "PUBLISHED")))
+      .limit(1);
+    if (!training) {
+      return { ok: false, message: "That training could not be found. Search for it again, or choose Another training." };
+    }
+    trainingId = training.id;
+    trainingTitle = training.title;
+  }
 
   // A matching directory row links the complaint to the account, which is what
   // makes "reset my access" a one-click answer instead of a search.
@@ -145,10 +184,17 @@ export async function submitComplaintAction(
       region,
       facility,
       issueType: input.issueType,
+      trainingId,
+      trainingTitle,
       subject: input.subject,
       description: input.description,
     });
-    log.info({ event: "complaint.lodged", issueType: input.issueType, matched: matchedUserId !== null });
+    log.info({
+      event: "complaint.lodged",
+      issueType: input.issueType,
+      matched: matchedUserId !== null,
+      trainingId,
+    });
     revalidatePath("/complaints");
     return {
       ok: true,
@@ -196,6 +242,59 @@ export async function lookupStaffAction(_previous: StaffLookupState, formData: F
     };
   }
   return { ok: true, message: "Found you. Check the name below, then fill in the rest.", person: row };
+}
+
+/**
+ * The training picker on the public complaint form.
+ *
+ * A complaint about a file is unanswerable without the training it belongs to,
+ * and the person filing it may not be signed in — so this is public, and says
+ * only what the catalogue would show anyway: a title and a date. It is
+ * rate-limited and capped, and it searches rather than listing everything.
+ */
+export interface TrainingLookupState {
+  ok: boolean;
+  message: string | null;
+  trainings?: { id: string; title: string; organisedOn: string }[];
+}
+
+export async function lookupTrainingsAction(
+  _previous: TrainingLookupState,
+  formData: FormData,
+): Promise<TrainingLookupState> {
+  const query = (field(formData, "query") ?? "").trim();
+  if (query.length < 3) {
+    return { ok: false, message: "Type at least three letters of the training name.", trainings: [] };
+  }
+
+  const limiter = await consumeRateLimit(rateLimitKey("training-lookup", await clientAddress()), 40, 10 * 60).catch(
+    () => null,
+  );
+  if (limiter && !limiter.allowed) {
+    return { ok: false, message: "Too many searches. Wait a moment, then try again.", trainings: [] };
+  }
+
+  const rows = await db
+    .select({ id: trainingSessions.id, title: trainingSessions.title, organisedOn: trainingSessions.organisedOn })
+    .from(trainingSessions)
+    .where(
+      and(
+        eq(trainingSessions.reviewState, "PUBLISHED"),
+        eq(trainingSessions.isArchived, false),
+        sql`${trainingSessions.title} ilike ${`%${query}%`}`,
+      ),
+    )
+    .orderBy(desc(trainingSessions.organisedOn))
+    .limit(15);
+
+  return {
+    ok: true,
+    message:
+      rows.length === 0
+        ? "No published training matches that. Try fewer words, or the year it ran."
+        : null,
+    trainings: rows.map((row) => ({ id: row.id, title: row.title, organisedOn: String(row.organisedOn) })),
+  };
 }
 
 /** Administrators answer a complaint. The answer is the record; the status follows it. */
@@ -249,6 +348,12 @@ export async function respondToComplaintAction(
         senderId: session.sub,
         recipientId: target.userId,
         body: `About your complaint ${target.reference} (${target.subject}):\n\n${response}`,
+      });
+      await notifyComplaintUpdate({
+        userId: target.userId,
+        complaintId,
+        reference: target.reference,
+        actorId: session.sub,
       });
     }
 
@@ -333,7 +438,7 @@ export async function resetAccessAction(_previous: ComplaintState, formData: For
     action: "ACCESS_RESET",
     entity: "user",
     entityId: person.id,
-    metadata: { complaintId, emailChanged: email.data !== person.email.toLowerCase() },
+    metadata: { complaintId, emailChanged: email.data !== (person.email ?? "").toLowerCase() },
   });
 
   return {

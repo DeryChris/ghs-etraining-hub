@@ -1,4 +1,3 @@
-import { SITE } from "@/lib/site";
 import { REQUEST_ID_COOKIE } from "@/lib/request-id";
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySessionToken } from "@/lib/server/session";
@@ -10,7 +9,7 @@ import { cookies } from "next/headers";
  * layouts, pages and actions against public.users.
  */
 
-// Public surface: the marketing site, the sign-in pages, certificate verification and the health probe.
+// Public surface: the marketing site, the sign-in pages and the health probe.
 // Everything else (the signed-in workspace) requires a session.
 const PUBLIC_PATHS = [
   "/",
@@ -19,14 +18,22 @@ const PUBLIC_PATHS = [
   "/contact",
   // The Complaint Hub must work for somebody who cannot sign in at all.
   "/help",
-  "/verify",
   "/privacy",
   "/terms",
   "/accessibility",
   "/login",
   "/forgot-password",
-  "/auth/callback",
+  // A one-time reset link is opened by somebody who cannot sign in yet.
+  "/reset-password",
   "/api/health",
+  /*
+   * Signed file links carry their own authority. The paths below are reachable
+   * without a cookie on purpose: the token names one object, one purpose and an
+   * expiry, and is signed with the session secret. They are minted only after the
+   * session and role checks, so a visitor without a link gets a 403, not a file.
+   */
+  "/api/storage/upload",
+  "/api/storage/file",
 ];
 const STATIC_FILE = /\.(?:svg|png|jpe?g|gif|webp|ico|css|js|map|txt|woff2?)$/i;
 
@@ -52,7 +59,7 @@ export async function proxy(request: NextRequest) {
   const requestId = crypto.randomUUID();
   request.headers.set("x-request-id", requestId);
 
-  let response = NextResponse.next({ request });
+  const response = NextResponse.next({ request });
 
   // Check for our own session cookie
   const cookieStore = await cookies();
@@ -65,6 +72,14 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = `?next=${encodeURIComponent(`${pathname}${search}`)}`;
+    return withRequestId(NextResponse.redirect(url), requestId);
+  }
+
+  // A password ICT issued opens exactly one door: choosing your own.
+  if (session?.mustChange && pathname !== "/change-password" && pathname !== "/api/health") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/change-password";
+    url.search = "";
     return withRequestId(NextResponse.redirect(url), requestId);
   }
 

@@ -9,8 +9,16 @@ import { checkUpload, canTransition, materialStorageKey, nextVersionNumber, publ
 import type { MaterialState, ReviewDecision } from "@/lib/material-workflow";
 import type { Action, Role, Scope } from "@/lib/rbac/capabilities";
 import { areaIdForMaterial } from "@/lib/server/authoring-queries";
+import { compactAudience } from "@/lib/notification-audience";
 import { logAudit } from "@/lib/server/audit";
-import { createMaterialUploadTarget, inspectMaterialObject, removeMaterialObject } from "@/lib/server/file-storage";
+import { notifyMaterialPublished, notifyReviewRequest } from "@/lib/server/notify";
+import { unitHeadsForField } from "@/lib/server/review-scope";
+import {
+  createMaterialUploadTarget,
+  inspectMaterialObject,
+  removeMaterialObject,
+  storageCeiling,
+} from "@/lib/server/file-storage";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
 import { getSession } from "@/lib/server/session";
@@ -32,6 +40,23 @@ import {
  * session, the category scope, the audit chain and the transaction.
  */
 
+/**
+ * Storage that was never configured is a deployment problem, and the person
+ * uploading cannot fix it. Say who can, instead of "try again" — the retry will
+ * fail identically until the S3 variables exist.
+ */
+/**
+ * Uploads no longer fail for want of a bucket: with no S3 settings the file is
+ * stored in the database instead (`file-storage.ts`). What can still fail is the
+ * platform's request body limit, and the message has to say which limit it is.
+ */
+function storageMessage(reason: string | undefined, fallback: string): string {
+  if (reason && /SESSION_SECRET/i.test(reason)) {
+    return "Uploads are disabled until the server secret is set. The ICT administrator needs to check SESSION_SECRET.";
+  }
+  return fallback;
+}
+
 export interface AuthoringActionState {
   ok: boolean;
   message: string | null;
@@ -42,7 +67,7 @@ export interface AuthoringActionState {
 const GENERIC_FAILURE = "We could not save that. Refresh the page and try again.";
 
 function revalidateAuthoring(materialId?: string): void {
-  revalidatePath("/library");
+  revalidatePath("/catalogue");
   revalidatePath("/review");
   if (materialId) revalidatePath(`/authoring/${materialId}`);
 }
@@ -66,11 +91,23 @@ type LoadedVersion =
       material: typeof materials.$inferSelect;
       version: typeof materialVersions.$inferSelect;
       areaCode: string;
+      areaName: string;
+      areaRegion: string | null;
+      areaDirectorate: string | null;
+      areaCadre: string | null;
     };
 
 async function loadVersion(materialId: string, versionId: string): Promise<LoadedVersion> {
   const [row] = await db
-    .select({ material: materials, version: materialVersions, areaCode: programmeAreas.code })
+    .select({
+      material: materials,
+      version: materialVersions,
+      areaCode: programmeAreas.code,
+      areaName: programmeAreas.name,
+      areaRegion: programmeAreas.audienceRegion,
+      areaDirectorate: programmeAreas.audienceDirectorate,
+      areaCadre: programmeAreas.audienceCadre,
+    })
     .from(materialVersions)
     .innerJoin(materials, eq(materials.id, materialVersions.materialId))
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
@@ -172,13 +209,16 @@ export async function requestUploadAction(input: {
   const check = checkUpload(parsed.data.mimeType, parsed.data.sizeBytes);
   if (!check.ok) return { ok: false, message: check.message };
 
+  const ceiling = storageCeiling();
+  if (parsed.data.sizeBytes > ceiling.bytes) return { ok: false, message: ceiling.detail };
+
   const versionId = randomUUID();
   const storageKey = materialStorageKey(parsed.data.materialId, check.extension, versionId);
 
   const target = await createMaterialUploadTarget(storageKey);
   if (!target.ok) {
     log.error({ event: "material.upload_target_failed", storageKey, reason: target.reason });
-    return { ok: false, message: "Storage is not available right now. Try again in a moment." };
+    return { ok: false, message: storageMessage(target.reason, "Storage is not available right now. Try again in a moment.") };
   }
 
   return { ok: true, uploadUrl: target.target.signedUrl, path: target.target.path, storageKey, versionId };
@@ -321,6 +361,29 @@ export async function submitForReviewAction(
   });
 
   revalidateAuthoring(parsed.data.materialId);
+
+  /*
+   * Tell the people who now have to decide. The field comes from the material's
+   * area, and the recipients are whoever holds that field at this moment — the
+   * queue itself is read live, so this is only the notification.
+   */
+  const [material] = await db
+    .select({ title: materials.title, fieldId: programmeAreas.fieldId })
+    .from(materials)
+    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+    .where(eq(materials.id, parsed.data.materialId))
+    .limit(1);
+  if (material) {
+    await notifyReviewRequest({
+      reviewerIds: await unitHeadsForField(material.fieldId),
+      title: "A material needs your decision",
+      body: `“${material.title}” was sent for review`,
+      linkUrl: "/review",
+      actorId: session.sub,
+      actorName: session.name,
+    });
+  }
+
   return { ok: true, message: "Sent for review. A colleague who did not upload it must approve it." };
 }
 
@@ -493,7 +556,23 @@ export async function publishVersionAction(
 
   revalidateAuthoring(parsed.data.materialId);
   revalidatePath(`/programmeAreas/${loaded.areaCode}`);
-  return { ok: true, message: "Published. Learners in the audience can see it now." };
+
+  // Only the cohort the material was targeted at hears about it. `materials`
+  // carries its own audience columns, so a district-specific protocol does not
+  // ring a bell in every region.
+  await notifyMaterialPublished({
+    materialId: parsed.data.materialId,
+    title: loaded.material.title,
+    areaName: loaded.areaName,
+    actorId: session.sub,
+    audienceFilter: compactAudience({
+      region: loaded.areaRegion,
+      directorate: loaded.areaDirectorate,
+      cadre: loaded.areaCadre,
+    }),
+  });
+
+  return { ok: true, message: "Published. Staff in the audience can see it now." };
 }
 
 export async function archiveMaterialAction(
@@ -545,5 +624,5 @@ export async function archiveMaterialAction(
   });
 
   revalidateAuthoring(material.id);
-  return { ok: true, message: "Archived. It no longer appears to learners, and the audit trail keeps the history." };
+  return { ok: true, message: "Archived. It no longer appears to staff, and the audit trail keeps the history." };
 }

@@ -47,3 +47,35 @@ export async function markAllNotificationsReadAction(): Promise<void> {
   revalidatePath("/", "layout");
   revalidatePath("/notifications");
 }
+
+/**
+ * Mark one notice read, when it is actually opened.
+ *
+ * The drawer needs this: "mark all read" is a deliberate sweep, but a notice you
+ * clicked has been read whether or not you press anything.
+ */
+export async function markNotificationReadAction(notificationId: string): Promise<void> {
+  const session = await getSession();
+  if (!session) return;
+
+  await db.execute(sql`
+    insert into notification_read_cursors (user_id, notification_id)
+    select ${session.sub}::uuid, n.id
+    from notifications n
+    where n.id = ${notificationId}::uuid
+    on conflict (user_id, notification_id) do nothing
+  `);
+
+  await db
+    .update(notificationRecipients)
+    .set({ isRead: true, readAt: new Date() })
+    .where(
+      and(
+        eq(notificationRecipients.userId, session.sub),
+        eq(notificationRecipients.notificationId, notificationId),
+        eq(notificationRecipients.isRead, false),
+      ),
+    );
+
+  revalidatePath("/", "layout");
+}

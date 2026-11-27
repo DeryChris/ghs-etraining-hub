@@ -1,55 +1,10 @@
 import "server-only";
-import { and, count, desc, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
+import { and, count, desc, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { notificationReadCursors, notificationRecipients, notifications } from "@/db/schema";
+import { notifications } from "@/db/schema";
+import { readByUser, visibleNotifications } from "@/lib/server/notification-filter";
 import { describeAudience, isAudienceFilter, type AudienceFilter } from "@/lib/notification-audience";
 import type { Viewer } from "@/lib/viewer";
-
-/*
- * Correlated subqueries are built with the query builder (eq/and/exists), never with
- * raw column references inside sql``. Raw references render unqualified in some
- * contexts, so `id` would silently bind to the subquery's own table.
- */
-function addressedToUser(userId: string) {
-  return db
-    .select({ one: sql`1` })
-    .from(notificationRecipients)
-    .where(
-      and(eq(notificationRecipients.notificationId, notifications.id), eq(notificationRecipients.userId, userId)),
-    );
-}
-
-function readByUser(userId: string) {
-  return db
-    .select({ one: sql`1` })
-    .from(notificationReadCursors)
-    .where(and(eq(notificationReadCursors.notificationId, notifications.id), eq(notificationReadCursors.userId, userId)));
-}
-
-/**
- * `audience_filter` narrows a broadcast to a cohort. Each dimension is optional:
- * absent → any; present → the viewer's own value must equal it, and a viewer with
- * no value for that dimension does not match (no leakage by omission).
- */
-function audienceMatches(viewer: Viewer) {
-  const filter = notifications.audienceFilter;
-  return or(
-    isNull(filter),
-    and(
-      sql`(${filter}->>'region' is null or ${filter}->>'region' = ${viewer.region})`,
-      sql`(${filter}->>'directorate' is null or ${filter}->>'directorate' = ${viewer.directorate})`,
-      sql`(${filter}->>'cadre' is null or ${filter}->>'cadre' = ${viewer.cadre})`,
-    ),
-  );
-}
-
-/** Notices visible to a viewer: unexpired, addressed to them, or broadcast to their cohort. */
-export function visibleNotifications(viewer: Viewer) {
-  return and(
-    or(isNull(notifications.expiresAt), gt(notifications.expiresAt, sql`now()`)),
-    or(exists(addressedToUser(viewer.id)), and(eq(notifications.audience, "ALL"), audienceMatches(viewer))),
-  );
-}
 
 export async function listNotifications(viewer: Viewer, limit = 50) {
   return db

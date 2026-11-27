@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { ProgressBar } from "@/components/ui/progress-bar";
+import { ProgrammeAreaTile } from "@/components/programme/programme-tile";
+import { FieldTileIcon } from "@/components/ui/field-tile-icon";
 import { areaHref } from "@/lib/links";
 import { getFieldByCode, listAreasInField } from "@/lib/server/learning-queries";
 import { requireSession } from "@/lib/server/rbac";
@@ -34,7 +35,12 @@ export default async function FieldPage({ params }: { params: Promise<{ fieldCod
         </ol>
       </nav>
 
-      <PageHeader eyebrow={field.code} title={field.name} description={field.description ?? undefined} />
+      <PageHeader
+        eyebrow={field.code}
+        title={field.name}
+        description={field.description ?? undefined}
+        icon={<FieldTileIcon code={field.code} size={54} />}
+      />
 
       <section aria-labelledby="areas-heading" className="space-y-4">
         <h2 id="areas-heading" className="text-lg font-bold text-ink">
@@ -47,29 +53,20 @@ export default async function FieldPage({ params }: { params: Promise<{ fieldCod
           />
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">
-            {areas.map((area) => {
-              const percent = area.materialCount > 0 ? (area.completedCount / area.materialCount) * 100 : 0;
-              return (
-                <li key={area.id}>
-                  <Link
-                    href={areaHref(field.code, area.code)}
-                    className="group flex h-full flex-col gap-4 rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                  >
-                    <div>
-                      <span className="font-mono text-[11px] font-semibold tracking-wide text-ink-muted">{area.code}</span>
-                      <h3 className="mt-1 text-base font-semibold text-ink group-hover:text-primary">{area.name}</h3>
-                      {area.description && <p className="mt-1.5 line-clamp-2 text-sm text-ink-muted">{area.description}</p>}
-                    </div>
-                    <div className="mt-auto space-y-2">
-                      <ProgressBar value={percent} label={`Completion in ${area.name}`} />
-                      <p className="text-xs font-semibold text-ink-muted">
-                        {area.completedCount} of {area.materialCount} {area.materialCount === 1 ? "material" : "materials"} completed
-                      </p>
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
+            {areas.map((area) => (
+              <li key={area.id} className="h-full">
+                <ProgrammeAreaTile
+                  area={area}
+                  href={areaHref(field.code, area.code)}
+                  meta={
+                    <>
+                      {area.trainingCount} {area.trainingCount === 1 ? "training" : "trainings"} ·{" "}
+                      {area.materialCount} {area.materialCount === 1 ? "material" : "materials"}
+                    </>
+                  }
+                />
+              </li>
+            ))}
           </ul>
         )}
       </section>

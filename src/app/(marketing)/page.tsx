@@ -4,12 +4,11 @@ import Link from "next/link";
 import {
   ArrowRight,
   BadgeCheck,
-  BookOpenCheck,
+  FolderOpen,
   FileCheck2,
   FolderKanban,
   History,
   FlaskConical,
-  GraduationCap,
   HeartPulse,
   Pill,
   Search,
@@ -18,11 +17,12 @@ import {
   Stethoscope,
   type LucideIcon,
 } from "lucide-react";
-import { CertificateSeal, EmptyArt, RegionMap } from "@/components/brand/illustrations";
+import { EmptyArt, HealthMark, RegionMap } from "@/components/brand/illustrations";
 import { CtaArt, HeroArt, MapArt } from "@/components/marketing/landing-art";
 import { CountUp } from "@/components/marketing/count-up";
 import { Faq } from "@/components/marketing/faq";
 import { Reveal } from "@/components/marketing/reveal";
+import { ProgrammeFieldTile } from "@/components/programme/programme-tile";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { buttonClass } from "@/components/ui/button";
 import { SITE } from "@/lib/site";
@@ -81,7 +81,7 @@ const STEPS = [
     body: "Use your GHS staff account. Your facility administrator issues it — there is no public sign-up.",
   },
   {
-    icon: BookOpenCheck,
+    icon: FolderOpen,
     title: "Open the programme",
     body: "Find the programme field and the area that ran the training you attended.",
   },
@@ -102,7 +102,7 @@ const CADRES: { icon: LucideIcon; title: string; body: string }[] = [
   { icon: Stethoscope, title: "Medical officers", body: "Clinical guidelines and case definitions, with the version that was current at the time." },
   { icon: Pill, title: "Pharmacists", body: "Medicines safety, dispensing standards and the national formulary as taught." },
   { icon: FlaskConical, title: "Laboratory staff", body: "Specimen handling, quality control and result reporting, by programme." },
-  { icon: GraduationCap, title: "Facilitators and managers", body: "Upload, version, review and archive the material for the programmes you run." },
+  { icon: Stethoscope, title: "Facilitators and managers", body: "Upload, version, review and archive the material for the programmes you run." },
 ];
 
 const FAQ = [
@@ -133,7 +133,7 @@ const FAQ = [
   {
     question: "Is my learning record official?",
     answer:
-      "The library records which material you opened, downloaded and marked as finished, always against the version you saw. Certificates issued before the CPD award was retired remain checkable on the verification page."
+      "The library records which material you opened, downloaded and marked as finished, always against the version you saw. Nothing is scored and nothing is awarded: the record exists so programme teams can see what is being read and what is being missed."
   },
   {
     question: "I forgot my password. What now?",
@@ -245,7 +245,7 @@ export default async function LandingPage() {
                 {/* Product cards: illustrative, decorative, and never the only source of information. */}
                 <div aria-hidden className="glass drift absolute -left-4 top-10 hidden w-56 rounded-card border border-hairline p-4 shadow-lift sm:block">
                   <div className="flex items-center gap-3">
-                    <CertificateSeal className="h-11 w-11 shrink-0" />
+                    <HealthMark className="h-11 w-11 shrink-0" />
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Version history</p>
                       <p className="text-sm font-bold text-ink">Every revision kept</p>
@@ -422,19 +422,8 @@ export default async function LandingPage() {
             <ul className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {previewFields.map((item, index) => (
                 <Reveal key={item.id} delay={(index % 3) * 0.06}>
-                  <li className="list-none">
-                    <Link
-                      href="/programmes"
-                      className="group flex h-full flex-col gap-4 rounded-card border border-hairline bg-canvas p-6 transition-[transform,border-color] duration-base ease-out-quint hover:-translate-y-1 hover:border-primary/40"
-                    >
-                      <span className="w-fit rounded-md bg-surface-2 px-2 py-1 font-mono text-[11px] font-semibold tracking-wide text-ink-muted">{item.code}</span>
-                      <h3 className="text-lg font-bold leading-snug text-ink">{item.name}</h3>
-                      {item.description && <p className="line-clamp-2 text-sm leading-relaxed text-ink-muted">{item.description}</p>}
-                      <span className="mt-auto inline-flex items-center gap-1.5 pt-2 text-sm font-semibold text-primary">
-                        {item.areaCount} {item.areaCount === 1 ? "programme area" : "programme areas"}
-                        <ArrowRight className="h-4 w-4 transition-transform duration-base group-hover:translate-x-1" aria-hidden />
-                      </span>
-                    </Link>
+                  <li className="h-full list-none">
+                    <ProgrammeFieldTile field={item} href="/programmes" />
                   </li>
                 </Reveal>
               ))}

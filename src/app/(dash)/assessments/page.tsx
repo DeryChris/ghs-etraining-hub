@@ -60,8 +60,6 @@ function TestRow({ item }: { item: AssessmentCard }) {
 }
 
 function LabRow({ item }: { item: AssessmentCard }) {
-  const label =
-    item.progress === "COMPLETED" ? "Completed" : item.progress === "IN_PROGRESS" ? "In progress" : "Not started";
   return (
     <li>
       <Link
@@ -80,8 +78,8 @@ function LabRow({ item }: { item: AssessmentCard }) {
             Hands-on practical{item.estimatedMinutes ? ` · about ${formatMinutes(item.estimatedMinutes)}` : ""}
           </p>
         </div>
-        <Badge variant={item.progress === "COMPLETED" ? "success" : item.progress === "IN_PROGRESS" ? "warn" : "outline"}>
-          {label}
+        <Badge variant={item.acknowledgedAt ? "success" : "outline"}>
+          {item.acknowledgedAt ? "Acknowledged" : "Open"}
         </Badge>
       </Link>
     </li>
@@ -181,7 +179,7 @@ export default async function AssessmentsPage() {
       {staff && (
         <p className="rounded-card border border-hairline bg-surface-2 p-5 text-sm leading-relaxed text-ink-muted">
           Editing a question bank is not built yet. Until it is, assessments are configured in the database by an
-          administrator, and the material page tells a learner what to expect.
+          administrator, and the material page tells staff what to expect.
         </p>
       )}
     </div>

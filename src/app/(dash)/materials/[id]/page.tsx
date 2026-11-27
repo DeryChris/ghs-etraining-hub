@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MaterialProgressPanel } from "@/components/materials/material-progress-panel";
+import { AcknowledgementPanel } from "@/components/materials/acknowledgement-panel";
+import { MaterialViewer } from "@/components/materials/material-viewer";
 import { areaHref, fieldHref } from "@/lib/links";
 import { ViewBeacon } from "@/components/materials/view-beacon";
 import { PriorityChip } from "@/components/ui/priority-chip";
 import { PageHeader } from "@/components/ui/page-header";
-import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
-import { formatBytes, formatDate, formatMimeType, formatMinutes } from "@/lib/format";
+import { formatDate, formatMinutes } from "@/lib/format";
 import { isUuid } from "@/lib/ids";
-import { MATERIAL_TYPE_LABELS, type ProgressStatus } from "@/lib/labels";
+import { MATERIAL_TYPE_LABELS } from "@/lib/labels";
 import { getMaterialDetail } from "@/lib/server/learning-queries";
 import { requireSession } from "@/lib/server/rbac";
 
@@ -35,8 +35,9 @@ export default async function MaterialPage({
   if (!detail) notFound();
 
   const { material, area, field, authorName, version, progress } = detail;
-  const status: ProgressStatus = progress?.status ?? "NOT_STARTED";
-  const acknowledged = progress?.acknowledgedAt != null && progress.materialVersionId === material.currentVersionId;
+  const signedVersion = progress?.materialVersionId ?? null;
+  const acknowledged = progress?.acknowledgedAt != null && signedVersion === material.currentVersionId;
+  const versionChanged = progress?.acknowledgedAt != null && signedVersion !== null && !acknowledged;
   const hasFile = Boolean(version?.storageKey);
   const noticeText = notice ? NOTICES[notice] : undefined;
 
@@ -100,54 +101,22 @@ export default async function MaterialPage({
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          {material.type === "DOCUMENT" && (
-            <section aria-labelledby="document-heading" className="space-y-4 rounded-card border border-hairline bg-surface p-6 shadow-panel">
-              <h2 id="document-heading" className="text-lg font-bold text-ink">
-                Controlled document
+          {hasFile ? (
+            <MaterialViewer
+              materialId={material.id}
+              title={material.title}
+              mimeType={version?.mimeType ?? null}
+              sizeBytes={version?.sizeBytes ?? null}
+            />
+          ) : (
+            <section aria-labelledby="file-heading" className="rounded-card border border-hairline bg-surface p-6 shadow-panel">
+              <h2 id="file-heading" className="text-lg font-bold text-ink">
+                No file attached to this version
               </h2>
-              {hasFile ? (
-                <>
-                  <p className="text-sm text-ink-muted">
-                    {formatMimeType(version?.mimeType)}
-                    {version?.sizeBytes ? ` · ${formatBytes(version.sizeBytes)}` : ""}
-                    {version?.publishedAt ? ` · Published ${formatDate(version.publishedAt)}` : ""}. Opening and downloading are recorded in the audit trail.
-                  </p>
-                  <div className="flex flex-wrap gap-3">
-                    <a href={`/api/materials/${material.id}/file`} target="_blank" rel="noopener noreferrer" className={buttonClass()}>
-                      Open document
-                    </a>
-                    <a href={`/api/materials/${material.id}/file?download=1`} className={buttonClass({ variant: "secondary" })}>
-                      Download
-                    </a>
-                  </div>
-                </>
-              ) : (
-                <ListEmptyState title="No file attached to this version" description="Your facilitator will attach the controlled document for this version." />
-              )}
-            </section>
-          )}
-
-          {material.type === "VIDEO" && (
-            <section aria-labelledby="video-heading" className="space-y-4 rounded-card border border-hairline bg-surface p-6 shadow-panel">
-              <h2 id="video-heading" className="text-lg font-bold text-ink">
-                Video
-              </h2>
-              {hasFile ? (
-                <>
-                  <video
-                    controls
-                    preload="none"
-                    src={`/api/materials/${material.id}/file`}
-                    aria-describedby="video-note"
-                    className="aspect-video w-full rounded-card bg-black"
-                  />
-                  <p id="video-note" className="text-sm text-ink-muted">
-                    The video does not start on its own. Captions are not yet available for this material.
-                  </p>
-                </>
-              ) : (
-                <ListEmptyState title="No video attached to this version" description="Your facilitator will attach the video for this version." />
-              )}
+              <ListEmptyState
+                title="Nothing uploaded yet"
+                description="Your facilitator will attach the document, slides, video or spreadsheet for this version. Marking it complete is still possible, and the record says which version you saw."
+              />
             </section>
           )}
 
@@ -169,21 +138,22 @@ export default async function MaterialPage({
                 Assessment
               </h2>
               <p className="text-sm leading-relaxed text-ink-muted">
-                Your facilitator will sit this assessment with you. Mark the material complete once you have passed.
+                Your facilitator will sit this assessment with you. The result is recorded on the training, not here.
               </p>
             </section>
           )}
         </div>
 
         <aside className="space-y-4 lg:col-span-1">
-          <MaterialProgressPanel
-            materialId={material.id}
-            status={status}
-            requiresAcknowledgement={material.requiresAcknowledgement}
-            acknowledged={acknowledged}
-          />
+          {material.requiresAcknowledgement && (
+            <AcknowledgementPanel
+              materialId={material.id}
+              acknowledged={acknowledged}
+              versionChanged={versionChanged}
+            />
+          )}
           <p className="text-xs leading-relaxed text-ink-muted">
-            Your read-state and progress are recorded against your staff record, so you can pick up where you left off and see what you have finished.
+            Opens and downloads are counted against your staff record for programme statistics. Nothing is graded, and nothing is awarded.
           </p>
         </aside>
       </div>

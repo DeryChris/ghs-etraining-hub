@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UploadCloud } from "lucide-react";
 import { buttonClass } from "@/components/ui/button";
-import { hintClass, inputClass, labelClass } from "@/components/ui/input";
+import { FileDrop } from "@/components/ui/file-drop";
+import { inputClass, labelClass } from "@/components/ui/input";
 import { MAX_UPLOAD_BYTES, MIME_ALLOWLIST } from "@/lib/ghs-constants";
 import { formatBytes } from "@/lib/format";
 import { finaliseUploadAction, requestUploadAction } from "@/lib/server/actions/authoring";
@@ -24,19 +25,30 @@ const ACCEPT = MIME_ALLOWLIST.join(",");
  * passes through this application's server, so a 250 MB video is no different
  * from a 1 MB memo.
  */
-export function UploadVersionForm({ materialId }: { materialId: string }) {
+export function UploadVersionForm({
+  materialId,
+  ceiling,
+}: {
+  materialId: string;
+  /** What this deployment can accept: a bucket takes 250 MB, a database-backed one far less. */
+  ceiling: { bytes: number; detail: string };
+}) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "uploading" | "saving">("idle");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const largest = Math.max(...Object.values(MAX_UPLOAD_BYTES));
+  const largest = Math.min(Math.max(...Object.values(MAX_UPLOAD_BYTES)), ceiling.bytes);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) {
       setMessage({ ok: false, text: "Choose a file first." });
+      return;
+    }
+    if (file.size > ceiling.bytes) {
+      setMessage({ ok: false, text: ceiling.detail });
       return;
     }
 
@@ -62,7 +74,9 @@ export function UploadVersionForm({ materialId }: { materialId: string }) {
       checksum = await sha256Hex(file);
       const response = await fetch(target.uploadUrl, {
         method: "PUT",
-        headers: { "content-type": file.type || "application/octet-stream", "x-upsert": "false" },
+        // S3 rejects a PUT whose content-type differs from the one the signature
+        // covers; x-upsert was a Supabase Storage convention and is gone.
+        headers: { "content-type": file.type || "application/octet-stream" },
         body: file,
       });
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
@@ -94,25 +108,22 @@ export function UploadVersionForm({ materialId }: { materialId: string }) {
 
   return (
     <form ref={formRef} onSubmit={submit} className="space-y-4">
-      <div>
-        <label htmlFor="upload-file" className={labelClass}>
-          File
-        </label>
-        <input
-          id="upload-file"
-          name="file"
-          type="file"
-          accept={ACCEPT}
-          required
-          disabled={busy}
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          className={`${inputClass} file:mr-3 file:rounded-control file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink`}
-        />
-        <p className={hintClass}>
-          Accepted: {MIME_ALLOWLIST.join(", ")}. Up to {formatBytes(largest)} depending on the type. Files are scanned
-          before a learner can open them.
-        </p>
-      </div>
+      <FileDrop
+        id="upload-file"
+        name="file"
+        label="File"
+        accept={ACCEPT}
+        required
+        disabled={busy}
+        onFile={setFile}
+        hint={
+          <>
+            PDF, Word, PowerPoint, Excel, video, audio, image, Markdown or CSV. Up to {formatBytes(largest)} per file on
+            this deployment: {ceiling.detail} It opens in the library for the reader — no app needed — and the original
+            stays downloadable.
+          </>
+        }
+      />
 
       <div>
         <label htmlFor="upload-note" className={labelClass}>

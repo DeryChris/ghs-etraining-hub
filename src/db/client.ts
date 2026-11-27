@@ -41,7 +41,8 @@ export const poolMaxSource: "env" | "default" = configuredPoolMax > 0 ? "env" : 
 
 function createClient(url: string) {
   return postgres(url, {
-    // Supabase's pooler cannot use prepared statements across connections.
+    // The pooled endpoint (Neon's `-pooler` host, PgBouncer) cannot hold
+    // prepared statements across connections, so keep them off.
     prepare: false,
     max: poolMax,
     // Short-lived: an idle connection here is a slot another instance cannot

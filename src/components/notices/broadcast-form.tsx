@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { broadcastNoticeAction, type NoticeActionState } from "@/lib/server/actions/notices";
 import type { AuthoringArea } from "@/lib/server/authoring-queries";
@@ -10,9 +11,9 @@ import type { AuthoringArea } from "@/lib/server/authoring-queries";
 const INITIAL: NoticeActionState = { ok: false, message: null };
 
 const TYPES = [
-  { value: "SPACE_ANNOUNCEMENT", label: "Announcement" },
   { value: "MATERIAL_UPDATE", label: "Protocol update" },
-  { value: "SYSTEM_MAINTENANCE", label: "System maintenance" },
+  { value: "SYSTEM_MAINTENANCE", label: "Service notice" },
+  { value: "TRAINING_PUBLISHED", label: "Training announcement" },
 ];
 
 const PRIORITIES = [
@@ -62,16 +63,19 @@ export function BroadcastForm({ areas, canAddressEveryone }: { areas: AuthoringA
           <label htmlFor="notice-area" className={labelClass}>
             Programme area
           </label>
-          <select id="notice-area" name="areaId" required className={inputClass} defaultValue="">
-            <option value="" disabled>
-              Choose a programme area
-            </option>
-            {areas.map((area) => (
-              <option key={area.id} value={area.id}>
-                {area.fieldName} · {area.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="notice-area"
+            name="areaId"
+            required
+            searchable
+            defaultValue=""
+            placeholder="Choose a programme area"
+            options={areas.map((area) => ({
+              value: area.id,
+              label: area.name,
+              hint: area.fieldName,
+            }))}
+          />
           <p className={hintClass}>The notice inherits that area&apos;s region, directorate and cadre audience.</p>
         </div>
       )}
@@ -96,25 +100,23 @@ export function BroadcastForm({ areas, canAddressEveryone }: { areas: AuthoringA
           <label htmlFor="notice-type" className={labelClass}>
             Type
           </label>
-          <select id="notice-type" name="type" className={inputClass} defaultValue="SPACE_ANNOUNCEMENT">
-            {TYPES.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="notice-type"
+            name="type"
+            defaultValue="MATERIAL_UPDATE"
+            options={TYPES.map((type) => ({ value: type.value, label: type.label }))}
+          />
         </div>
         <div>
           <label htmlFor="notice-priority" className={labelClass}>
             Priority
           </label>
-          <select id="notice-priority" name="priority" className={inputClass} defaultValue="MEDIUM">
-            {PRIORITIES.map((priority) => (
-              <option key={priority.value} value={priority.value}>
-                {priority.label}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="notice-priority"
+            name="priority"
+            defaultValue="MEDIUM"
+            options={PRIORITIES.map((priority) => ({ value: priority.value, label: priority.label }))}
+          />
         </div>
         <div>
           <label htmlFor="notice-expiry" className={labelClass}>

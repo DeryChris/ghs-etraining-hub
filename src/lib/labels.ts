@@ -2,7 +2,7 @@
  * Display vocabulary and closed sets shared by server and client code.
  * Pure module: no database or server-only imports.
  */
-import type { Role } from "@/lib/rbac/capabilities";
+import type { Role, StaffRole } from "@/lib/rbac/capabilities";
 
 export const MATERIAL_TYPES = ["DOCUMENT", "VIDEO", "LAB", "ASSESSMENT_LINK"] as const;
 export type MaterialType = (typeof MATERIAL_TYPES)[number];
@@ -13,8 +13,10 @@ export const FACILITY_TYPES = [
   "DISTRICT_HOSPITAL",
   "POLYCLINIC",
   "HEALTH_CENTRE",
+  "CHPS_COMPOUND",
   "CLINIC",
   "DIRECTORATE",
+  "SERVICE_UNIT",
   "OTHER",
 ] as const;
 export type FacilityType = (typeof FACILITY_TYPES)[number];
@@ -25,8 +27,10 @@ export const FACILITY_TYPE_LABELS: Record<FacilityType, string> = {
   DISTRICT_HOSPITAL: "District hospital",
   POLYCLINIC: "Polyclinic",
   HEALTH_CENTRE: "Health centre",
+  CHPS_COMPOUND: "CHPS compound",
   CLINIC: "Clinic",
   DIRECTORATE: "Directorate",
+  SERVICE_UNIT: "Regional service unit",
   OTHER: "Other",
 };
 
@@ -35,12 +39,29 @@ export type PriorityLevel = (typeof PRIORITY_LEVELS)[number];
 
 export const PRIORITY_RANK: Record<PriorityLevel, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
 
-export type ProgressStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
-
 export const ROLE_LABELS: Record<Role, string> = {
   SYSTEM_ADMIN: "System administrator",
   FACILITATOR: "Facilitator",
-  LEARNER: "Learner",
+  /*
+   * The role key is still LEARNER in the database — renaming an enum value would
+   * rewrite every grant, every audit row and every RLS rule for a word on a
+   * screen. What people read is Staff, which is what they are.
+   */
+  LEARNER: "Staff",
+};
+
+/** Includes the unit head, which is chosen like a role but stored as a duty. */
+export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
+  ...ROLE_LABELS,
+  UNIT_HEAD: "Unit head",
+};
+
+/** One line under each choice in a role field, in the same order. */
+export const STAFF_ROLE_HINTS: Record<StaffRole, string> = {
+  LEARNER: "Signs in, reads and downloads what has been published for staff.",
+  FACILITATOR: "Files material and trains, inside the programme areas they are given.",
+  UNIT_HEAD: "A facilitator who also signs off the review queue for their fields.",
+  SYSTEM_ADMIN: "Runs the directory, the taxonomy and every programme area.",
 };
 
 export const MATERIAL_TYPE_LABELS: Record<MaterialType, string> = {
@@ -57,21 +78,18 @@ export const PRIORITY_LABELS: Record<PriorityLevel, string> = {
   CRITICAL: "Critical",
 };
 
-export const PROGRESS_LABELS: Record<ProgressStatus, string> = {
-  NOT_STARTED: "Not started",
-  IN_PROGRESS: "In progress",
-  COMPLETED: "Completed",
-};
-
 const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
+  TRAINING_PUBLISHED: "New training",
+  TRAINING_RETURNED: "Training review",
+  MATERIAL_PUBLISHED: "New material",
+  DIRECT_MESSAGE: "Message",
+  COMPLAINT_UPDATE: "Complaint update",
+  ACCOUNT: "Account",
   SYSTEM_MAINTENANCE: "System maintenance",
   MATERIAL_UPDATE: "Protocol update",
-  SPACE_ANNOUNCEMENT: "Announcement",
   COMMENT_REPLY: "Discussion reply",
-  DIRECT_MESSAGE: "Message",
   ASSIGNMENT_DUE: "Assignment due",
-  CERTIFICATE_ISSUED: "Certificate issued",
-  RECERTIFICATION_DUE: "Recertification due",
+  REVIEW_REQUEST: "Waiting for you",
 };
 
 export function notificationTypeLabel(type: string): string {
@@ -135,22 +153,44 @@ export function isFacilityOwnership(value: string | null | undefined): value is 
  * aloud on the phone.
  */
 
-export const COMPLAINT_ISSUES = ["PERSONAL_DETAILS", "COURSE_RELATED", "LOGIN_ACCESS", "OTHERS"] as const;
+export const COMPLAINT_ISSUES = [
+  "LOGIN_ACCESS",
+  "WRONG_DOCUMENT",
+  "DOC_INACCESSIBLE",
+  "COURSE_RELATED",
+  "PERSONAL_DETAILS",
+  "OTHERS",
+] as const;
 export type ComplaintIssue = (typeof COMPLAINT_ISSUES)[number];
 
 export const COMPLAINT_ISSUE_LABELS: Record<ComplaintIssue, string> = {
   PERSONAL_DETAILS: "Changing of personal details",
   COURSE_RELATED: "Course related",
   LOGIN_ACCESS: "Login access",
-  OTHERS: "Others",
+  WRONG_DOCUMENT: "Wrong document uploaded",
+  DOC_INACCESSIBLE: "Document cannot be opened",
+  OTHERS: "Something else",
 };
 
 export const COMPLAINT_ISSUE_HELP: Record<ComplaintIssue, string> = {
   PERSONAL_DETAILS: "A wrong name, staff ID, facility or posting.",
-  COURSE_RELATED: "A material that will not open, or a training you were not credited for.",
+  COURSE_RELATED: "A training you were not credited for, or a session that was not what was advertised.",
   LOGIN_ACCESS: "Forgotten password, no account yet, or a locked account.",
-  OTHERS: "Anything that does not fit the three above.",
+  WRONG_DOCUMENT: "The file attached to a training is not the one it should be — the wrong deck, an old version, somebody else's sheet.",
+  DOC_INACCESSIBLE: "The file is there but will not open, will not download, or opens to an error.",
+  OTHERS: "Anything that does not fit the list above.",
 };
+
+/**
+ * The issues that are about a particular file. They ask which training, because
+ * "the document will not open" is unanswerable without it, and asking later costs
+ * a round trip through email.
+ */
+export const COMPLAINT_ISSUES_ABOUT_A_FILE: readonly ComplaintIssue[] = ["WRONG_DOCUMENT", "DOC_INACCESSIBLE"];
+
+export function complaintIsAboutAFile(issue: string | null | undefined): boolean {
+  return issue === "WRONG_DOCUMENT" || issue === "DOC_INACCESSIBLE";
+}
 
 export const COMPLAINT_STATUSES = ["SUBMITTED", "IN_PROGRESS", "RESOLVED"] as const;
 export type ComplaintStatus = (typeof COMPLAINT_STATUSES)[number];

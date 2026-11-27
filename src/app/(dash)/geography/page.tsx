@@ -1,11 +1,14 @@
 import Link from "next/link";
-import { Building2, MapPin, Plus } from "lucide-react";
+import { Building2, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
+import { ActionDialog } from "@/components/ui/action-dialog";
+import { ConfirmAction } from "@/components/ui/confirm-action";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { Stat } from "@/components/ui/stat";
@@ -99,12 +102,13 @@ export default async function GeographyPage({
             </h2>
             <p className="text-sm text-ink-muted">Choose a region to work on its districts and facilities.</p>
           </div>
-          <details className="rounded-card border border-hairline bg-surface px-4 py-2 shadow-panel">
-            <summary className="flex min-h-9 cursor-pointer items-center gap-1.5 text-xs font-semibold text-ink">
-              <Plus className="h-3.5 w-3.5 text-primary" aria-hidden />
-              Add a region
-            </summary>
-            <form action={createRegionAction} className="mt-3 flex flex-wrap items-end gap-2">
+          <ActionDialog
+              label="Add a region"
+              title="Add a region"
+              description="Regions sit above districts in the posting data every person and training carries."
+              variant="primary"
+            >
+            <form action={createRegionAction} className="flex flex-wrap items-end gap-2">
               <div>
                 <label htmlFor="new-region-name" className={labelClass}>
                   Name <span className="text-danger">*</span>
@@ -127,7 +131,7 @@ export default async function GeographyPage({
                 Add region
               </button>
             </form>
-          </details>
+          </ActionDialog>
         </div>
 
         <ul className="flex flex-wrap gap-2">
@@ -192,7 +196,7 @@ export default async function GeographyPage({
           title={geography.length === 0 ? "No regions recorded" : "Choose a region"}
           description={
             geography.length === 0
-              ? "Add the first region above. The seeder loads all sixteen, with Upper West's districts and facilities."
+              ? "Add the first region with the button above. The seeder loads all sixteen, with Upper West's districts and facilities."
               : "Pick a region above to see and edit its districts, sub-districts and facilities."
           }
           art="folder"
@@ -211,19 +215,18 @@ export default async function GeographyPage({
                 {region.districts.reduce((total, row) => total + row.facilities.length, 0)} facilities
               </p>
             </div>
-            <form action={deleteRegionAction}>
-              <input type="hidden" name="id" value={region.id} />
-              <button type="submit" className={buttonClass({ variant: "danger", size: "sm" })}>
-                Delete region
-              </button>
-            </form>
+            <ConfirmAction
+              label="Delete region"
+              title={`Delete ${region.name}?`}
+              description="A region can only be deleted once it holds no districts. The audit trail keeps who removed it and when."
+              confirmLabel="Delete this region"
+              action={deleteRegionAction}
+              fields={{ id: region.id }}
+            />
           </div>
 
-          <details className="border-t border-hairline pt-3">
-            <summary className="flex min-h-9 cursor-pointer items-center text-xs font-semibold uppercase tracking-wider text-ink-muted">
-              Edit region name and code
-            </summary>
-            <form action={updateRegionAction} className="mt-3 flex flex-wrap items-end gap-2">
+          <ActionDialog label="Edit" title="Edit region name and code" size="sm">
+            <form action={updateRegionAction} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="id" value={region.id} />
               <div>
                 <label htmlFor="region-name" className={labelClass}>
@@ -255,7 +258,7 @@ export default async function GeographyPage({
                 Save region
               </button>
             </form>
-          </details>
+          </ActionDialog>
 
           <div className="border-t border-hairline pt-4">
             <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
@@ -263,12 +266,13 @@ export default async function GeographyPage({
               Districts
             </h3>
 
-            <details className="mt-2">
-              <summary className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-control border border-dashed border-hairline px-3 text-xs font-semibold text-ink-muted">
-                <Plus className="h-3.5 w-3.5" aria-hidden />
-                Add a district
-              </summary>
-              <form action={createDistrictAction} className="mt-3 grid gap-3 md:grid-cols-[1fr_170px_1fr_auto] md:items-end">
+            <ActionDialog
+                  label="Add a district"
+                  title={`Add a district to ${region.name}`}
+                  variant="ghost"
+                  className="border border-dashed border-hairline text-ink-muted"
+                >
+              <form action={createDistrictAction} className="grid gap-3">
                 <input type="hidden" name="regionId" value={region.id} />
                 <div>
                   <label htmlFor="new-district-name" className={labelClass}>
@@ -280,13 +284,12 @@ export default async function GeographyPage({
                   <label htmlFor="new-district-kind" className={labelClass}>
                     Kind
                   </label>
-                  <select id="new-district-kind" name="kind" defaultValue="DISTRICT" className={inputClass}>
-                    {DISTRICT_KINDS.map((kind) => (
-                      <option key={kind} value={kind}>
-                        {DISTRICT_KIND_LABELS[kind]}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    id="new-district-kind"
+                    name="kind"
+                    defaultValue="DISTRICT"
+                    options={DISTRICT_KINDS.map((kind) => ({ value: kind, label: DISTRICT_KIND_LABELS[kind] }))}
+                  />
                 </div>
                 <div>
                   <label htmlFor="new-district-capital" className={labelClass}>
@@ -298,11 +301,11 @@ export default async function GeographyPage({
                   Add district
                 </button>
               </form>
-            </details>
+            </ActionDialog>
 
             {region.districts.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">
-                No districts recorded for {region.name} yet. Add the first one above — a training can still be
+                No districts recorded for {region.name} yet. Add the first one with the button above — a training can still be
                 filed at region level until you do.
               </p>
             ) : (
@@ -335,19 +338,19 @@ export default async function GeographyPage({
                           >
                             Open
                           </Link>
-                          <form action={deleteDistrictAction}>
-                            <input type="hidden" name="id" value={row.id} />
-                            <input type="hidden" name="regionId" value={region.id} />
-                            <button type="submit" className={buttonClass({ variant: "danger", size: "sm" })}>
-                              Delete
-                            </button>
-                          </form>
+                          <ConfirmAction
+                            label="Delete"
+                            title={`Delete ${row.name}?`}
+                            description={`Its ${row.subDistricts.length} sub-district${row.subDistricts.length === 1 ? "" : "s"} and ${row.facilities.length} facilit${row.facilities.length === 1 ? "y" : "ies"} go with it. A district with facilities recorded against it cannot be deleted — deactivate those facilities first, so the history of who was trained where stays intact.`}
+                            confirmLabel="Delete this district"
+                            action={deleteDistrictAction}
+                            fields={{ id: row.id, regionId: region.id }}
+                          />
                         </div>
                       </div>
 
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-xs font-semibold text-ink-muted">Edit</summary>
-                        <form action={updateDistrictAction} className="mt-2 grid gap-2 sm:grid-cols-[1fr_150px_1fr_auto] sm:items-end">
+                      <ActionDialog label="Edit" title="Edit" size="sm">
+                        <form action={updateDistrictAction} data-draft={`district-${row.id}`} className="grid gap-3">
                           <input type="hidden" name="id" value={row.id} />
                           <input type="hidden" name="regionId" value={region.id} />
                           <div>
@@ -368,18 +371,12 @@ export default async function GeographyPage({
                             <label htmlFor={`district-kind-${row.id}`} className={labelClass}>
                               Kind
                             </label>
-                            <select
+                            <Select
                               id={`district-kind-${row.id}`}
                               name="kind"
                               defaultValue={row.kind}
-                              className={inputClass}
-                            >
-                              {DISTRICT_KINDS.map((kind) => (
-                                <option key={kind} value={kind}>
-                                  {DISTRICT_KIND_LABELS[kind]}
-                                </option>
-                              ))}
-                            </select>
+                              options={DISTRICT_KINDS.map((kind) => ({ value: kind, label: DISTRICT_KIND_LABELS[kind] }))}
+                            />
                           </div>
                           <div>
                             <label htmlFor={`district-capital-${row.id}`} className={labelClass}>
@@ -397,7 +394,7 @@ export default async function GeographyPage({
                             Save
                           </button>
                         </form>
-                      </details>
+                      </ActionDialog>
                     </li>
                   );
                 })}
@@ -416,12 +413,13 @@ export default async function GeographyPage({
 
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Sub-districts</h4>
-                <details className="mt-2">
-                  <summary className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-control border border-dashed border-hairline px-3 text-xs font-semibold text-ink-muted">
-                    <Plus className="h-3.5 w-3.5" aria-hidden />
-                    Add a sub-district
-                  </summary>
-                  <form action={createSubDistrictAction} className="mt-3 flex flex-wrap items-end gap-2">
+                <ActionDialog
+                    label="Add a sub-district"
+                    title={`Add a sub-district to ${district.name}`}
+                    variant="ghost"
+                    className="border border-dashed border-hairline text-ink-muted"
+                  >
+                  <form action={createSubDistrictAction} className="flex flex-wrap items-end gap-2">
                     <input type="hidden" name="districtId" value={district.id} />
                     <input type="hidden" name="regionId" value={region.id} />
                     <div>
@@ -441,7 +439,7 @@ export default async function GeographyPage({
                       Add sub-district
                     </button>
                   </form>
-                </details>
+                </ActionDialog>
 
                 {district.subDistricts.length === 0 ? (
                   <p className="mt-2 text-sm text-ink-muted">None recorded. They are optional on a training.</p>
@@ -453,18 +451,15 @@ export default async function GeographyPage({
                         className="inline-flex items-center gap-2 rounded-control border border-hairline bg-surface-2/40 px-3 py-1.5"
                       >
                         <span className="text-sm text-ink">{sub.name}</span>
-                        <form action={deleteSubDistrictAction}>
-                          <input type="hidden" name="id" value={sub.id} />
-                          <input type="hidden" name="districtId" value={district.id} />
-                          <input type="hidden" name="regionId" value={region.id} />
-                          <button
-                            type="submit"
-                            className="text-xs font-semibold text-danger hover:underline"
-                            aria-label={`Delete ${sub.name}`}
-                          >
-                            Remove
-                          </button>
-                        </form>
+                        <ConfirmAction
+                          label="Remove"
+                          title={`Remove ${sub.name}?`}
+                          description="Sub-districts are optional. Removing one leaves any facility already filed under it in the district, without a sub-district."
+                          confirmLabel="Remove this sub-district"
+                          action={deleteSubDistrictAction}
+                          fields={{ id: sub.id, districtId: district.id, regionId: region.id }}
+                          className="text-xs font-semibold text-danger hover:underline"
+                        />
                       </li>
                     ))}
                   </ul>
@@ -473,14 +468,15 @@ export default async function GeographyPage({
 
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Facilities</h4>
-                <details className="mt-2">
-                  <summary className="inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-control border border-dashed border-hairline px-3 text-xs font-semibold text-ink-muted">
-                    <Plus className="h-3.5 w-3.5" aria-hidden />
-                    Add a facility
-                  </summary>
+                <ActionDialog
+                    label="Add a facility"
+                    title={`Add a facility to ${district.name}`}
+                    variant="ghost"
+                    className="border border-dashed border-hairline text-ink-muted"
+                  >
                   <form
                     action={createFacilityAction}
-                    className="mt-3 grid gap-3 md:grid-cols-[1fr_180px_150px_170px_auto] md:items-end"
+                    className="grid gap-3"
                   >
                     <input type="hidden" name="districtId" value={district.id} />
                     <input type="hidden" name="regionId" value={region.id} />
@@ -501,44 +497,47 @@ export default async function GeographyPage({
                       <label htmlFor="new-facility-type" className={labelClass}>
                         Type
                       </label>
-                      <select id="new-facility-type" name="type" defaultValue="HEALTH_CENTRE" className={inputClass}>
-                        {FACILITY_TYPES.map((type) => (
-                          <option key={type} value={type}>
-                            {FACILITY_TYPE_LABELS[type]}
-                          </option>
-                        ))}
-                      </select>
+                      <Select
+                        id="new-facility-type"
+                        name="type"
+                        defaultValue="HEALTH_CENTRE"
+                        options={FACILITY_TYPES.map((type) => ({ value: type, label: FACILITY_TYPE_LABELS[type] }))}
+                      />
                     </div>
                     <div>
                       <label htmlFor="new-facility-ownership" className={labelClass}>
                         Ownership
                       </label>
-                      <select id="new-facility-ownership" name="ownership" defaultValue="GHS" className={inputClass}>
-                        {FACILITY_OWNERSHIPS.map((ownership) => (
-                          <option key={ownership} value={ownership}>
-                            {FACILITY_OWNERSHIP_LABELS[ownership]}
-                          </option>
-                        ))}
-                      </select>
+                      <Select
+                        id="new-facility-ownership"
+                        name="ownership"
+                        defaultValue="GHS"
+                        options={FACILITY_OWNERSHIPS.map((ownership) => ({
+                          value: ownership,
+                          label: FACILITY_OWNERSHIP_LABELS[ownership],
+                        }))}
+                      />
                     </div>
                     <div>
                       <label htmlFor="new-facility-subdistrict" className={labelClass}>
                         Sub-district
                       </label>
-                      <select id="new-facility-subdistrict" name="subDistrictId" defaultValue="" className={inputClass}>
-                        <option value="">— optional —</option>
-                        {district.subDistricts.map((sub) => (
-                          <option key={sub.id} value={sub.id}>
-                            {sub.name}
-                          </option>
-                        ))}
-                      </select>
+                      <Select
+                        id="new-facility-subdistrict"
+                        name="subDistrictId"
+                        defaultValue=""
+                        placeholder="— optional —"
+                        options={[
+                          { value: "", label: "— optional —" },
+                          ...district.subDistricts.map((sub) => ({ value: sub.id, label: sub.name })),
+                        ]}
+                      />
                     </div>
                     <button type="submit" className={buttonClass()}>
                       Add facility
                     </button>
                   </form>
-                </details>
+                </ActionDialog>
 
                 {district.facilities.length === 0 ? (
                   <p className="mt-2 text-sm text-ink-muted">
@@ -562,31 +561,41 @@ export default async function GeographyPage({
                             </p>
                           </div>
                           <div className="flex shrink-0 flex-wrap items-center gap-2">
-                            <form action={setFacilityActiveAction}>
-                              <input type="hidden" name="id" value={facility.id} />
-                              <input type="hidden" name="regionId" value={region.id} />
-                              <input type="hidden" name="districtId" value={district.id} />
-                              <input type="hidden" name="isActive" value={facility.isActive ? "false" : "true"} />
-                              <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
-                                {facility.isActive ? "Deactivate" : "Reactivate"}
-                              </button>
-                            </form>
-                            <form action={deleteFacilityAction}>
-                              <input type="hidden" name="id" value={facility.id} />
-                              <input type="hidden" name="regionId" value={region.id} />
-                              <input type="hidden" name="districtId" value={district.id} />
-                              <button type="submit" className={buttonClass({ variant: "danger", size: "sm" })}>
-                                Delete
-                              </button>
-                            </form>
+                            <ConfirmAction
+                              label={facility.isActive ? "Deactivate" : "Reactivate"}
+                              title={facility.isActive ? `Deactivate ${facility.name}?` : `Reactivate ${facility.name}?`}
+                              description={
+                                facility.isActive
+                                  ? "A deactivated facility disappears from the picker on new trainings. Everything already filed against it keeps its place, and you can reactivate it at any time."
+                                  : "Reactivating puts this facility back in the picker on new trainings."
+                              }
+                              confirmLabel={facility.isActive ? "Deactivate it" : "Reactivate it"}
+                              action={setFacilityActiveAction}
+                              variant="secondary"
+                              fields={{ id: facility.id, regionId: region.id, districtId: district.id, isActive: facility.isActive ? "false" : "true" }}
+                            >
+                              <p className="text-sm text-ink-muted">
+                                {facility.isActive
+                                  ? "Nothing is deleted. Trainings already recorded here stay exactly as they are."
+                                  : "It will be selectable again straight away."}
+                              </p>
+                            </ConfirmAction>
+                            <ConfirmAction
+                              label="Delete"
+                              title={`Delete ${facility.name}?`}
+                              description="A facility can be deleted only when nothing has been filed against it. Deactivating is the usual answer — it keeps the record readable."
+                              confirmLabel="Delete this facility"
+                              action={deleteFacilityAction}
+                              fields={{ id: facility.id, regionId: region.id, districtId: district.id }}
+                            />
                           </div>
                         </div>
 
-                        <details className="mt-2">
-                          <summary className="cursor-pointer text-xs font-semibold text-ink-muted">Edit</summary>
+                        <ActionDialog label="Edit" title="Edit" size="sm">
                           <form
                             action={updateFacilityAction}
-                            className="mt-2 grid gap-2 sm:grid-cols-[1fr_160px_140px_160px_auto] sm:items-end"
+                            data-draft={`facility-${facility.id}`}
+                            className="grid gap-3"
                           >
                             <input type="hidden" name="id" value={facility.id} />
                             <input type="hidden" name="districtId" value={district.id} />
@@ -609,60 +618,48 @@ export default async function GeographyPage({
                               <label htmlFor={`facility-type-${facility.id}`} className={labelClass}>
                                 Type
                               </label>
-                              <select
+                              <Select
                                 id={`facility-type-${facility.id}`}
                                 name="type"
                                 defaultValue={facility.type}
-                                className={inputClass}
-                              >
-                                {FACILITY_TYPES.map((type) => (
-                                  <option key={type} value={type}>
-                                    {FACILITY_TYPE_LABELS[type]}
-                                  </option>
-                                ))}
-                              </select>
+                                options={FACILITY_TYPES.map((type) => ({ value: type, label: FACILITY_TYPE_LABELS[type] }))}
+                              />
                             </div>
                             <div>
                               <label htmlFor={`facility-ownership-${facility.id}`} className={labelClass}>
                                 Ownership
                               </label>
-                              <select
+                              <Select
                                 id={`facility-ownership-${facility.id}`}
                                 name="ownership"
                                 defaultValue={facility.ownership}
-                                className={inputClass}
-                              >
-                                {FACILITY_OWNERSHIPS.map((ownership) => (
-                                  <option key={ownership} value={ownership}>
-                                    {FACILITY_OWNERSHIP_LABELS[ownership]}
-                                  </option>
-                                ))}
-                              </select>
+                                options={FACILITY_OWNERSHIPS.map((ownership) => ({
+                                  value: ownership,
+                                  label: FACILITY_OWNERSHIP_LABELS[ownership],
+                                }))}
+                              />
                             </div>
                             <div>
                               <label htmlFor={`facility-subdistrict-${facility.id}`} className={labelClass}>
                                 Sub-district
                               </label>
-                              <select
+                              <Select
                                 id={`facility-subdistrict-${facility.id}`}
                                 name="subDistrictId"
                                 defaultValue={facility.subDistrictId ?? ""}
-                                className={inputClass}
-                              >
-                                <option value="">— none —</option>
-                                {district.subDistricts.map((sub) => (
-                                  <option key={sub.id} value={sub.id}>
-                                    {sub.name}
-                                  </option>
-                                ))}
-                              </select>
+                                placeholder="— none —"
+                                options={[
+                                  { value: "", label: "— none —" },
+                                  ...district.subDistricts.map((sub) => ({ value: sub.id, label: sub.name })),
+                                ]}
+                              />
                             </div>
                             <input type="hidden" name="isActive" value={String(facility.isActive)} />
                             <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
                               Save
                             </button>
                           </form>
-                        </details>
+                        </ActionDialog>
                       </li>
                     ))}
                   </ul>

@@ -290,6 +290,19 @@
   overscroll-behavior: contain;
 }
 
+/* Collapsed rail: no scrollbar at all. A reserved gutter — on either edge — is
+   layout the icons cannot see, and it kept pulling them off centre. The rail still
+   scrolls; it just does it without a bar, which is what a 76px column wants. */
+.nav-scroll-rail {
+  scrollbar-width: none;
+}
+
+.nav-scroll-rail::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
 .nav-scroll::-webkit-scrollbar {
   width: 10px;
 }
@@ -301,6 +314,53 @@
 
 .nav-scroll:hover::-webkit-scrollbar-thumb {
   background-color: rgb(252 209 22 / 0.5);
+}
+
+/* A panel told to go full screen sheds its own frame: no radius, no margin, no
+   width cap, and the whole viewport becomes the file. The header and the
+   `.overlay-scroll` body keep their layout, so a long document still scrolls
+   inside the screen rather than the page. */
+.overlay-panel:fullscreen,
+.overlay-panel:-webkit-full-screen {
+  max-width: none;
+  max-height: none;
+  width: 100vw;
+  height: 100dvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+}
+
+/* Overlay panels (dialogs, drawers) get their own bar: a thin track inset from
+   the rounded corner, a stable gutter so opening a panel does not shift the
+   content sideways when the bar appears, and a thumb that goes primary on hover
+   so it reads as something you can drag. Long forms live in these panels, so this
+   is the scrollbar people actually meet. */
+.overlay-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--ink-muted) 35%, transparent) transparent;
+  scrollbar-gutter: stable;
+}
+
+.overlay-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.overlay-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 8px;
+}
+
+.overlay-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-color: color-mix(in oklab, var(--ink-muted) 38%, transparent);
+  background-clip: content-box;
+}
+
+.overlay-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklab, var(--primary) 60%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

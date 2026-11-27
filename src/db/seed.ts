@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { eq, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   users,
@@ -124,7 +125,6 @@ async function main() {
       priority: "CRITICAL" as const,
       requiresAcknowledgement: true,
       estimatedMinutes: 45,
-      cpdCreditsX10: 50,
     },
     {
       areaCode: "PF-PH-01",
@@ -135,7 +135,6 @@ async function main() {
       priority: "HIGH" as const,
       requiresAcknowledgement: false,
       estimatedMinutes: 25,
-      cpdCreditsX10: 20,
     },
     {
       areaCode: "PF-PH-06",
@@ -146,7 +145,6 @@ async function main() {
       priority: "HIGH" as const,
       requiresAcknowledgement: true,
       estimatedMinutes: 30,
-      cpdCreditsX10: 30,
     },
   ];
 
@@ -165,7 +163,6 @@ async function main() {
         priority: starter.priority,
         requiresAcknowledgement: starter.requiresAcknowledgement,
         estimatedMinutes: starter.estimatedMinutes,
-        cpdCreditsX10: starter.cpdCreditsX10,
         authorId: admin.id,
         state: "PUBLISHED",
         isPublished: true,
@@ -207,8 +204,31 @@ async function main() {
       `${geography.subDistricts} sub-districts, ${geography.facilities} facilities`,
   );
 
+  /*
+   * Say what was NOT created, out loud.
+   *
+   * "I ran the seed and the staff are not there" is the expected reading of this
+   * script's name: it seeds geography, the taxonomy and one administrator, and
+   * people come from the GHS staff sheet, which is personal data and is never
+   * committed. Printing the next command here is cheaper than the support call.
+   */
+  const [{ people }] = await db
+    .select({ people: sql<number>`count(*)::int` })
+    .from(users)
+    .where(eq(users.role, "LEARNER"));
+
   console.log("✅ Seed complete");
   console.log(`   Admin: ${ADMIN_EMAIL} (GHS-000001)`);
+  if (people === 0) {
+    console.log("");
+    console.log("   Staff accounts: none. This seed writes reference data only — people come from");
+    console.log("   the GHS staff sheet, which is not in this repository. Import it next:");
+    console.log('     npm run staff:import -- --file "<path to Staff Data.csv>" --dry-run');
+    console.log('     npm run staff:import -- --file "<path to Staff Data.csv>"');
+    console.log("   Then check the result with: npm run staff:status");
+  } else {
+    console.log(`   Staff accounts already in the directory: ${people} (npm run staff:status for the breakdown)`);
+  }
 }
 
 main().catch((e) => {

@@ -4,16 +4,18 @@ import { motion } from "framer-motion";
 import {
   BarChart3,
   Bell,
-  BookOpen,
+  CalendarCheck2,
+  FolderOpen,
   FolderTree,
   ClipboardCheck,
   ClipboardList,
-  GraduationCap,
   LayoutGrid,
   MapPinned,
   Megaphone,
   MessageSquare,
   MessageSquareWarning,
+  PanelLeftClose,
+  PanelLeftOpen,
   PenLine,
   Settings,
   TrendingUp,
@@ -26,17 +28,18 @@ import { usePathname } from "next/navigation";
 import { useId } from "react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { NavLinkPending } from "@/components/layout/nav-link-pending";
-import { SidebarFlagLine, SidebarStar, SidebarWeave } from "@/components/layout/sidebar-art";
+import { SidebarFlagLine, SidebarSeal, SidebarTrace } from "@/components/layout/sidebar-art";
 import type { ShellUser } from "@/components/layout/types";
-import { ROLE_LABELS } from "@/lib/labels";
+import { STAFF_ROLE_LABELS } from "@/lib/labels";
+import { staffRoleOf } from "@/lib/rbac/capabilities";
 import { isActiveHref, navFor, type NavCount, type NavIcon } from "@/lib/nav";
 import { SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<NavIcon, LucideIcon> = {
   dashboard: LayoutGrid,
-  training: GraduationCap,
-  library: BookOpen,
+  training: CalendarCheck2,
+  library: FolderOpen,
   assessment: ClipboardList,
   messages: MessageSquare,
   notifications: Bell,
@@ -61,6 +64,9 @@ export interface SidebarCounts {
 interface SidebarProps {
   user: ShellUser;
   counts: SidebarCounts;
+  /** Desktop rail: icons only, labels hidden. Ignored in the mobile drawer. */
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
   onNavigate?: () => void;
   onClose?: () => void;
 }
@@ -74,31 +80,61 @@ interface SidebarProps {
  * with near-black ink — 12:1 contrast — and the decorative weave and star are
  * `aria-hidden` at under 10% so the text keeps 7:1.
  */
-export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
+export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onNavigate, onClose }: SidebarProps) {
   const pathname = usePathname();
   const indicatorId = `${useId()}-sidebar-indicator`;
   const groups = navFor(user.role, { unitHead: user.unitHead });
 
   return (
     <div className="nav-surface relative flex h-full flex-col overflow-hidden">
-      <SidebarWeave className="text-white" />
-      <SidebarStar className="-bottom-10 -right-10 h-56 w-56 text-[var(--nav-active)]" />
+      <SidebarTrace className="text-white" />
+      <SidebarSeal className="-bottom-12 -right-12 h-52 w-52 text-[var(--nav-active)]" />
 
-      <div className="relative z-10 flex h-16 items-center justify-between px-5">
-        <Link
-          href="/dashboard"
-          onClick={onNavigate}
-          className="flex items-center gap-2.5 rounded-control focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--nav-active)]"
-          aria-label={`${SITE.name} dashboard`}
-        >
-          <BrandMark size={34} />
-          <span className="flex min-w-0 flex-col leading-none">
-            <span className="text-[15px] font-extrabold tracking-tight text-[var(--nav-ink)]">{SITE.code}</span>
-            <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--nav-muted)]">
-              {SITE.tagline}
+      <div className={cn("relative z-10 flex h-16 items-center gap-2", collapsed ? "justify-center px-2" : "justify-between px-5")}>
+        {/*
+         * Collapsed, the toggle stands where the crest was: the rail has room for
+         * one thing at the top, and the way back to the full menu is worth more to
+         * somebody who has just narrowed it than a mark they already recognise.
+         */}
+        {collapsed && onToggleCollapse ? (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label="Expand the menu"
+            aria-expanded={false}
+            title="Expand the menu"
+            className="mx-auto hidden h-11 w-11 items-center justify-center rounded-control bg-[var(--nav-wash)] text-[var(--nav-ink)] transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)] md:inline-flex"
+          >
+            <PanelLeftOpen className="h-5 w-5" aria-hidden />
+          </button>
+        ) : (
+          <Link
+            href="/dashboard"
+            onClick={onNavigate}
+            className="flex items-center gap-2.5 rounded-control focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--nav-active)]"
+            aria-label={`${SITE.name} dashboard`}
+          >
+            <BrandMark size={34} />
+            <span className="flex min-w-0 flex-col leading-none">
+              <span className="text-[15px] font-extrabold tracking-tight text-[var(--nav-ink)]">{SITE.code}</span>
+              <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--nav-muted)]">
+                {SITE.tagline}
+              </span>
             </span>
-          </span>
-        </Link>
+          </Link>
+        )}
+        {!collapsed && onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label="Collapse the menu"
+            aria-expanded
+            title="Collapse the menu"
+            className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-control text-[var(--nav-muted)] transition-colors hover:bg-[var(--nav-wash)] hover:text-[var(--nav-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)] md:inline-flex"
+          >
+            <PanelLeftClose className="h-4 w-4" aria-hidden />
+          </button>
+        )}
         {onClose && (
           <button
             type="button"
@@ -115,12 +151,21 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
         <SidebarFlagLine />
       </div>
 
-      <nav aria-label="Primary" className="nav-scroll relative z-10 flex-1 space-y-6 overflow-y-auto px-3 py-6">
+      <nav
+        aria-label="Primary"
+        className={cn(
+          "nav-scroll relative z-10 flex-1 space-y-6 overflow-y-auto py-6",
+          collapsed ? "nav-scroll-rail px-0" : "px-3",
+        )}
+      >
         {groups.map((group) => (
           <div key={group.id} className="space-y-1">
             <p
               id={`nav-section-${group.id}`}
-              className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--nav-active)]"
+              className={cn(
+                "px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--nav-active)]",
+                collapsed && "sr-only",
+              )}
             >
               {group.label}
             </p>
@@ -146,7 +191,15 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
                       title={item.hint}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "group relative flex min-h-11 items-center gap-3 rounded-control px-3 text-sm font-semibold transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)]",
+                        /* The rail centres with `place-items-center` on a fixed
+                           44px box rather than with flex alignment: a grid centres
+                           its single in-flow child on both axes, so nothing else in
+                           the link — a badge, a spinner, a screen-reader label — can
+                           drag the glyph off centre. */
+                        "group relative rounded-control text-sm font-semibold transition-colors duration-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--nav-active)]",
+                        collapsed
+                          ? "mx-auto grid h-11 w-11 place-items-center"
+                          : "flex min-h-11 items-center gap-3 px-3",
                         active
                           ? "text-[var(--nav-active-ink)]"
                           : "text-[var(--nav-muted)] hover:bg-white/10 hover:text-[var(--nav-ink)]",
@@ -163,25 +216,40 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
                       <Icon
                         className={cn(
                           "relative h-[18px] w-[18px] shrink-0 transition-transform duration-fast",
-                          !active && "group-hover:translate-x-0.5",
+                          /* The nudge belongs to the expanded list; in the rail it
+                             would shift an otherwise centred icon by 2px. */
+                          !active && !collapsed && "group-hover:translate-x-0.5",
                         )}
                         aria-hidden
                       />
-                      <span className="relative flex-1">{item.label}</span>
+                      <span className={cn("relative flex-1", collapsed && "sr-only")}>{item.label}</span>
                       <NavLinkPending />
-                      {count > 0 && (
-                        <span
-                          className={cn(
-                            "relative rounded-[var(--radius-pill)] px-2 py-0.5 text-[11px] font-bold",
-                            active
-                              ? "bg-black/10 text-[var(--nav-active-ink)]"
-                              : "bg-[var(--nav-active)] text-[var(--nav-active-ink)]",
-                          )}
-                          aria-label={`${count} ${item.count === "reviews" ? "waiting for review" : "unread"}`}
-                        >
-                          {count > 99 ? "99+" : count}
-                        </span>
-                      )}
+                      {count > 0 &&
+                        (collapsed ? (
+                          // In the rail there is no room for a number: the dot says
+                          // "something is waiting here", the label below says how much.
+                          <>
+                            <span
+                              aria-hidden
+                              className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-[var(--nav-active)]"
+                            />
+                            <span className="sr-only">
+                              {count} {item.count === "reviews" ? "waiting for review" : "unread"}
+                            </span>
+                          </>
+                        ) : (
+                          <span
+                            className={cn(
+                              "relative rounded-[var(--radius-pill)] px-2 py-0.5 text-[11px] font-bold",
+                              active
+                                ? "bg-black/10 text-[var(--nav-active-ink)]"
+                                : "bg-[var(--nav-active)] text-[var(--nav-active-ink)]",
+                            )}
+                            aria-label={`${count} ${item.count === "reviews" ? "waiting for review" : "unread"}`}
+                          >
+                            {count > 99 ? "99+" : count}
+                          </span>
+                        ))}
                     </Link>
                   </li>
                 );
@@ -191,13 +259,18 @@ export function Sidebar({ user, counts, onNavigate, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="nav-divider relative z-10 border-t p-4">
-        <div className="nav-wash flex items-center gap-3 rounded-control p-3">
+      <div className={cn("nav-divider relative z-10 border-t", collapsed ? "p-2" : "p-4")}>
+        <div
+          className={cn(
+            "nav-wash rounded-control",
+            collapsed ? "mx-auto grid h-11 w-11 place-items-center" : "flex items-center gap-3 p-3",
+          )}
+        >
           <BrandMark size={32} />
-          <div className="min-w-0">
+          <div className={cn("min-w-0", collapsed && "sr-only")}>
             <p className="truncate text-sm font-semibold text-[var(--nav-ink)]">{user.name}</p>
             <p className="truncate text-xs text-[var(--nav-muted)]">
-              {user.unitHead && user.role === "FACILITATOR" ? "Unit head" : ROLE_LABELS[user.role]} · {user.staffId}
+              {STAFF_ROLE_LABELS[staffRoleOf({ role: user.role, unitHead: user.unitHead })]} · {user.staffId}
             </p>
           </div>
         </div>

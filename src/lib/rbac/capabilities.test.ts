@@ -45,7 +45,9 @@ describe("capability matrix", () => {
   // capabilities.ts appears in the vectors file" — this is that assertion,
   // expressed as a self-consistency sweep so a new action cannot ship untested.
   it("answers for every documented action and every role", () => {
-    expect(ACTIONS.length).toBeGreaterThanOrEqual(40);
+    // Was 40 before the award model was retired with its two actions; the floor
+    // exists to catch a vocabulary that silently shrinks, not to pin a number.
+    expect(ACTIONS.length).toBeGreaterThanOrEqual(38);
     for (const role of ROLES) {
       for (const action of ACTIONS) {
         expect(CAPABILITY_MATRIX[role][action], `${role} → ${action}`).toBeTypeOf("boolean");
@@ -54,13 +56,9 @@ describe("capability matrix", () => {
     }
   });
 
-  it("treats certificate verification as public, as the matrix documents", () => {
-    expect(PUBLIC_ACTIONS.has("certificate.verify")).toBe(true);
-    expect(can(null, "certificate.verify")).toBe(true);
-    expect(can("LEARNER", "certificate.verify")).toBe(true);
-    // …and nothing else is public.
+  it("exposes no action to anonymous visitors", () => {
+    expect(PUBLIC_ACTIONS.size).toBe(0);
     for (const action of ACTIONS) {
-      if (action === "certificate.verify") continue;
       expect(can(null, action), action).toBe(false);
     }
   });

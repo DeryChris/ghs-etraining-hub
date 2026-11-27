@@ -9,9 +9,11 @@ import {
   programmeFields,
   regions,
   subDistricts,
+  trainingResources,
   trainingSessions,
   users,
 } from "@/db/schema";
+import { trainingComments } from "@/db/schema";
 import type { TrainingStatus } from "@/lib/labels";
 import { yearRange } from "@/lib/training-dates";
 
@@ -35,14 +37,25 @@ export interface TrainingFilters {
   regionId?: string;
   districtId?: string;
   status?: TrainingStatus;
+  /** Review queue: `PENDING` is what a unit head acts on. */
+  review?: TrainingReviewState;
+  /**
+   * Who is asking. Anything not yet approved is a draft between its author and
+   * the unit head, so it must not leak into a learner's register — but the
+   * author still needs to see their own row to fix and resubmit it.
+   */
+  viewer?: { userId: string; seeAll: boolean };
   page?: number;
 }
+
+export type TrainingReviewState = "PENDING" | "PUBLISHED" | "REJECTED";
 
 export interface TrainingListRow {
   id: string;
   title: string;
   year: number;
   status: TrainingStatus;
+  reviewState: TrainingReviewState;
   fieldName: string | null;
   areaName: string | null;
   targetGroup: string | null;
@@ -83,6 +96,13 @@ function whereFor(filters: TrainingFilters): SQL | undefined {
   if (filters.regionId) clauses.push(eq(trainingSessions.regionId, filters.regionId));
   if (filters.districtId) clauses.push(eq(trainingSessions.districtId, filters.districtId));
   if (filters.status) clauses.push(eq(trainingSessions.status, filters.status));
+  if (filters.review) clauses.push(eq(trainingSessions.reviewState, filters.review));
+
+  if (filters.viewer && !filters.viewer.seeAll) {
+    clauses.push(
+      or(eq(trainingSessions.reviewState, "PUBLISHED"), eq(trainingSessions.createdById, filters.viewer.userId)),
+    );
+  }
 
   return and(...clauses);
 }
@@ -103,6 +123,7 @@ export async function listTrainings(filters: TrainingFilters): Promise<{
         title: trainingSessions.title,
         year: trainingSessions.year,
         status: trainingSessions.status,
+        reviewState: trainingSessions.reviewState,
         fieldName: programmeFields.name,
         areaName: programmeAreas.name,
         targetGroup: trainingSessions.targetGroup,
@@ -213,7 +234,22 @@ export const getTrainingFilterOptions = unstable_cache(loadTrainingFilterOptions
   tags: ["taxonomy", "trainings"],
 });
 
+export interface TrainingResourceRow {
+  id: string;
+  title: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  uploadedByName: string | null;
+  createdAt: Date;
+  /** Where the bytes are. The page turns this into a short-lived link. */
+  storageKey: string;
+}
+
 export interface TrainingDetail extends TrainingListRow {
+  reviewNote: string | null;
+  reviewedAt: Date | null;
+  reviewedByName: string | null;
+  resources: TrainingResourceRow[];
   programmeFieldId: string | null;
   programmeAreaId: string | null;
   regionId: string | null;
@@ -221,6 +257,8 @@ export interface TrainingDetail extends TrainingListRow {
   subDistrictId: string | null;
   facilityId: string | null;
   notes: string | null;
+  /** Optional cover picture: the storage key, or null. */
+  imageStorageKey: string | null;
   createdById: string;
   createdAt: Date;
   updatedAt: Date;
@@ -233,6 +271,7 @@ export async function getTraining(id: string): Promise<TrainingDetail | null> {
       title: trainingSessions.title,
       year: trainingSessions.year,
       status: trainingSessions.status,
+      reviewState: trainingSessions.reviewState,
       fieldName: programmeFields.name,
       areaName: programmeAreas.name,
       programmeFieldId: trainingSessions.programmeFieldId,
@@ -252,10 +291,14 @@ export async function getTraining(id: string): Promise<TrainingDetail | null> {
       venue: trainingSessions.venue,
       attendeeCount: trainingSessions.attendeeCount,
       notes: trainingSessions.notes,
+      imageStorageKey: trainingSessions.imageStorageKey,
       createdById: trainingSessions.createdById,
       createdByName: users.fullName,
       createdAt: trainingSessions.createdAt,
       updatedAt: trainingSessions.updatedAt,
+      reviewNote: trainingSessions.reviewNote,
+      reviewedAt: trainingSessions.reviewedAt,
+      reviewedById: trainingSessions.reviewedById,
     })
     .from(trainingSessions)
     .leftJoin(programmeFields, eq(programmeFields.id, trainingSessions.programmeFieldId))
@@ -268,7 +311,124 @@ export async function getTraining(id: string): Promise<TrainingDetail | null> {
     .where(and(eq(trainingSessions.id, id), eq(trainingSessions.isArchived, false)))
     .limit(1);
 
-  return row ?? null;
+  if (!row) return null;
+
+  // Two small reads rather than two more joins on the main query: the detail
+  // page needs the reviewer's name and the attachments, and neither is worth
+  // widening the list query that every row pays for.
+  const [reviewer, resources] = await Promise.all([
+    row.reviewedById
+      ? db
+          .select({ name: users.fullName })
+          .from(users)
+          .where(eq(users.id, row.reviewedById))
+          .limit(1)
+      : Promise.resolve([]),
+    db
+      .select({
+        id: trainingResources.id,
+        title: trainingResources.title,
+        mimeType: trainingResources.mimeType,
+        sizeBytes: trainingResources.sizeBytes,
+        uploadedByName: users.fullName,
+        createdAt: trainingResources.createdAt,
+        storageKey: trainingResources.storageKey,
+      })
+      .from(trainingResources)
+      .leftJoin(users, eq(users.id, trainingResources.uploadedById))
+      .where(eq(trainingResources.trainingId, id))
+      .orderBy(asc(trainingResources.createdAt)),
+  ]);
+
+  // `reviewedById` is not part of TrainingDetail: the page needs the name.
+  const { reviewedById, ...rest } = row;
+  void reviewedById;
+  return {
+    ...rest,
+    reviewedByName: reviewer[0]?.name ?? null,
+    resources,
+  };
+}
+
+export interface TrainingCommentRow {
+  id: string;
+  body: string;
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  createdAt: Date;
+}
+
+/**
+ * The conversation under one training, oldest first — a page reads like a
+ * conversation, so the newest message is at the bottom where the reply box is.
+ */
+export async function listTrainingComments(trainingId: string, limit = 200): Promise<TrainingCommentRow[]> {
+  return db
+    .select({
+      id: trainingComments.id,
+      body: trainingComments.body,
+      authorId: trainingComments.authorId,
+      authorName: users.fullName,
+      authorRole: users.role,
+      createdAt: trainingComments.createdAt,
+    })
+    .from(trainingComments)
+    .innerJoin(users, eq(users.id, trainingComments.authorId))
+    .where(eq(trainingComments.trainingId, trainingId))
+    .orderBy(asc(trainingComments.createdAt))
+    .limit(limit);
+}
+
+/**
+ * Every published training filed under one programme area, newest first.
+ *
+ * This is what the catalogue's area page shows: the trainings held for that area,
+ * so a member of staff can find the one they attended and the material that went
+ * with it. Unreviewed rows are excluded — a facilitator's draft is not the
+ * catalogue.
+ */
+export interface AreaTrainingRow {
+  id: string;
+  title: string;
+  year: number;
+  status: TrainingStatus;
+  startsOn: string;
+  endsOn: string | null;
+  venue: string | null;
+  facilityName: string | null;
+  regionName: string | null;
+  attendeeCount: number | null;
+  targetGroup: string | null;
+}
+
+export async function listTrainingsInArea(programmeAreaId: string, limit = 50): Promise<AreaTrainingRow[]> {
+  return db
+    .select({
+      id: trainingSessions.id,
+      title: trainingSessions.title,
+      year: trainingSessions.year,
+      status: trainingSessions.status,
+      startsOn: trainingSessions.organisedOn,
+      endsOn: trainingSessions.endsOn,
+      venue: trainingSessions.venue,
+      facilityName: facilities.name,
+      regionName: regions.name,
+      attendeeCount: trainingSessions.attendeeCount,
+      targetGroup: trainingSessions.targetGroup,
+    })
+    .from(trainingSessions)
+    .leftJoin(regions, eq(regions.id, trainingSessions.regionId))
+    .leftJoin(facilities, eq(facilities.id, trainingSessions.facilityId))
+    .where(
+      and(
+        eq(trainingSessions.programmeAreaId, programmeAreaId),
+        eq(trainingSessions.reviewState, "PUBLISHED"),
+        eq(trainingSessions.isArchived, false),
+      ),
+    )
+    .orderBy(desc(trainingSessions.organisedOn))
+    .limit(limit);
 }
 
 /**
@@ -296,6 +456,7 @@ export async function upcomingTrainings(limit = 4): Promise<TrainingListRow[]> {
       title: trainingSessions.title,
       year: trainingSessions.year,
       status: trainingSessions.status,
+      reviewState: trainingSessions.reviewState,
       fieldName: programmeFields.name,
       areaName: programmeAreas.name,
       targetGroup: trainingSessions.targetGroup,

@@ -1,8 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Header } from "@/components/layout/header";
+import { PageTransition } from "@/components/layout/page-transition";
+import type { DrawerNotice } from "@/components/layout/notification-drawer";
 import { Sidebar, type SidebarCounts } from "@/components/layout/sidebar";
 import type { ShellUser } from "@/components/layout/types";
 import { SITE } from "@/lib/site";
@@ -10,13 +12,50 @@ import { SITE } from "@/lib/site";
 export function AppShell({
   user,
   counts,
+  notifications,
   children,
 }: {
   user: ShellUser;
   counts: SidebarCounts;
+  /** The newest few notices, for the drawer under the bell. */
+  notifications: DrawerNotice[];
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
+  /**
+   * Desktop rail width, remembered between visits.
+   *
+   * Facilitators work through lists with the menu open; administrators on a
+   * laptop spend the day in tables and want the width. Starting from "expanded"
+   * means a first-time visitor still sees what the menu contains — the memory
+   * only takes over once somebody has made the choice.
+   */
+  const [collapsed, setCollapsed] = useState(false);
+
+  // The server cannot know what this browser chose, so the rail always renders
+  // expanded first and adopts the stored width after hydration — reading it
+  // during render would be a hydration mismatch.
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("ghs.nav.collapsed");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing from localStorage, which only exists on the client
+      if (stored === "1") setCollapsed(true);
+    } catch {
+      // Private mode, or storage disabled: the default stands.
+    }
+  }, []);
+
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((value) => {
+      const next = !value;
+      try {
+        window.localStorage.setItem("ghs.nav.collapsed", next ? "1" : "0");
+      } catch {
+        // Nothing to do: the choice simply will not be remembered.
+      }
+      return next;
+    });
+  }, []);
 
   // Escape closes the mobile drawer. The listener only exists while the drawer is open.
   useEffect(() => {
@@ -29,7 +68,8 @@ export function AppShell({
   }, [navOpen]);
 
   const closeNav = () => setNavOpen(false);
-  const sidebarProps = { user, counts };
+  const sidebarProps = { user, counts, collapsed, onToggleCollapse: toggleCollapsed };
+  const railWidth = collapsed ? "md:pl-[76px]" : "md:pl-64";
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
@@ -40,7 +80,11 @@ export function AppShell({
         Skip to main content
       </a>
 
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 border-r border-ghs-green/30 shadow-panel md:block">
+      <aside
+        className={`fixed inset-y-0 left-0 z-20 hidden border-r border-ghs-green/30 shadow-panel transition-[width] duration-200 md:block ${
+          collapsed ? "w-[76px]" : "w-64"
+        }`}
+      >
         <Sidebar {...sidebarProps} />
       </aside>
 
@@ -70,10 +114,15 @@ export function AppShell({
         <Sidebar {...sidebarProps} onNavigate={closeNav} onClose={closeNav} />
       </motion.aside>
 
-      <div className="md:pl-64">
-        <Header user={user} unreadNotifications={counts.notifications} onOpenNav={() => setNavOpen(true)} />
+      <div className={`transition-[padding] duration-200 ${railWidth}`}>
+        <Header
+          user={user}
+          unreadNotifications={counts.notifications}
+          notifications={notifications}
+          onOpenNav={() => setNavOpen(true)}
+        />
         <main id="main" tabIndex={-1} className="mx-auto w-full max-w-[1200px] px-4 py-6 focus:outline-none md:px-8 md:py-10">
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
         <footer className="mx-auto max-w-[1200px] px-4 pb-10 text-xs text-ink-muted md:px-8">
           {SITE.name} · Internal platform. Access is monitored and recorded.

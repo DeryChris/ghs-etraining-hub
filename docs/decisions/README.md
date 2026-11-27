@@ -206,3 +206,97 @@ sub‑district → facility (Upper West seeded, CHPS excluded, programme taxonom
 upload). Traffic is open‑counts (`material_views`, one row per person per day, fire‑and‑forget beacon that
 honours DNT) plus downloads from the existing audit trail, drawn as server‑rendered SVG charts on `/insights`.
 
+---
+
+## ADR‑0016 — Files do not wait for a bucket
+
+**Status:** accepted · **Date:** 2026‑11‑17 · **Detail:** [`0016-files-without-a-bucket.md`](./0016-files-without-a-bucket.md)
+
+**Decision.** When no S3-compatible bucket is configured, uploads are stored in Postgres (`file_blobs`)
+and served through signed links, so the app works on a bare Neon + Vercel deployment. The ceiling is the
+platform's request body limit (~4.5 MB), not Postgres. Configure a bucket and the same interface returns
+to direct browser-to-bucket uploads with the 250 MB family limits.
+
+---
+
+## ADR‑0017 — One library door
+
+**Status:** accepted · **Date:** 2026‑11
+
+The Library tab and the catalogue were two doors to the same material. There is now one: the tab is
+called **Library**, its route is `/catalogue`, and search happens on it. `/library` redirects. See
+`0017-one-library-door.md`, which also carries ADR‑0018 (unit head as a role choice) and ADR‑0019
+(employee numbers are digits).
+
+---
+
+## ADR‑0020 — Queues are derived, not assigned; forms keep what was typed
+
+**Status:** accepted · **Date:** 2026‑11
+
+Review access is computed from the assignments that exist when the queue is read,
+so a unit head appointed today inherits everything already waiting in their
+fields; arrivals and appointments notify; queue pages refresh themselves; and
+every form keeps its values across a failed submission or a reload. See
+`0020-live-queues-and-kept-drafts.md`.
+
+---
+
+## ADR‑0021 — The library is a reading surface
+
+**Status:** accepted · **Date:** 2026‑11
+
+A training opened from the library opens read-only — no uploads, no editing, the
+same page a learner sees; the register keeps the management surfaces. Tiles are
+one link over the whole card, painted above the content. See
+`0021-library-is-a-reading-surface.md`.
+
+---
+
+## ADR‑0022 — Short forms, visible answers, and reading in place
+
+**Status:** accepted · **Date:** 2026‑11
+
+Long forms are stepped (all panels stay mounted so nothing is lost), every submit
+answers next to the button, a training opened from the library opens in an overlay
+over the catalogue, overlays keep a fixed title and a properly scrolling body,
+destructive geography actions are confirmed, and the role people read is **Staff**
+(key stays `LEARNER`). See `0022-short-forms-and-reading-in-place.md`.
+
+---
+
+## ADR‑0023 — An attachment opens; only Download saves it
+
+**Status:** accepted · **Date:** 2026‑11
+
+Clicking a resource opens it in a wide overlay with a full-screen control; only
+the overlay's Download button saves a file. `FilePreview` is the single renderer
+for every format, the browser draws PDF/image/video/audio while the server reads
+Word/PowerPoint/Excel/text, and attachments inside the library panel are compact
+tiles instead of full-width rows. See
+`0023-attachments-open-before-they-save.md`.
+
+---
+
+## ADR‑0024 — The file is drawn, not described
+
+**Status:** accepted · **Date:** 2026‑11 · **Supersedes** the reading-view part of ADR‑0023
+
+A .pptx is drawn slide by slide at the author's coordinates, a .docx as Word's own
+pages, an .xlsx as a grid with its own widths, merges, fills and number formats,
+and a PDF through the browser's own engine. The readers run in the browser and are
+unit-tested; what cannot be drawn is stated. A wrong upload can be replaced from
+the viewer it was discovered in. See `0024-the-file-is-drawn-not-described.md`.
+
+---
+
+## ADR‑0025 — Complaints about files, and menus that match the product
+
+**Status:** accepted · **Date:** 2026‑11
+
+"Wrong document uploaded" and "document cannot be opened" are their own complaint
+types, and either one asks which training — stored with a copy of its title. The
+complaint form becomes three steps with issue cards. One listbox replaces every
+native `<select>` in the product, posting through a real hidden select so forms
+submit exactly what they did before. See
+`0025-complaints-about-files-and-menus-that-match.md`.

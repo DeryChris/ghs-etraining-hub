@@ -26,9 +26,9 @@ Ship a hardened policy that keeps `'unsafe-inline'` **only** where Next requires
 
 ```
 default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none';
-form-action 'self'; img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com;
+form-action 'self'; img-src 'self' data: blob: https://images.unsplash.com <S3_ENDPOINT origin>;
 script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;
-connect-src 'self' https://*.supabase.co wss://*.supabase.co; media-src 'self' https://*.supabase.co;
+connect-src 'self' <S3_ENDPOINT origin>; media-src 'self' <S3_ENDPOINT origin>;
 manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests
 ```
 
@@ -43,7 +43,7 @@ do not depend on `fonts.googleapis.com`.
 ## Consequences
 
 * Markup injection cannot load plugins, rewrite the base URL, submit forms off-origin, or be framed.
-* Data exfiltration is limited to `'self'` and the Supabase project.
+* Data exfiltration is limited to `'self'` and the storage endpoint (ADR‑0015: any S3 bucket, read from `S3_ENDPOINT` at build time).
 * `script-src` still permits inline script, so this is **not** equivalent to a nonce-based policy:
   an HTML-injection bug would still execute script. Every user-supplied string is therefore
   rendered as text (React default) and `dangerouslySetInnerHTML` is limited to the one static theme

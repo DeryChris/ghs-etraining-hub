@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, ClipboardCheck, Clock, FileText, FlaskConical, PlayCircle, type LucideIcon } from "lucide-react";
-import { ProgressStatusChip } from "@/components/materials/progress-status-chip";
 import { PriorityChip } from "@/components/ui/priority-chip";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import { formatMinutes } from "@/lib/format";
-import { MATERIAL_TYPE_LABELS, type MaterialType, type PriorityLevel, type ProgressStatus } from "@/lib/labels";
+import { MATERIAL_TYPE_LABELS, type MaterialType, type PriorityLevel } from "@/lib/labels";
 
 export interface MaterialSummary {
   id: string;
@@ -14,8 +12,8 @@ export interface MaterialSummary {
   priority: PriorityLevel;
   requiresAcknowledgement: boolean;
   estimatedMinutes: number | null;
-  status: ProgressStatus;
-  watchedPercent: number;
+  /** Signed for the current version. Only meaningful where acknowledgement is required. */
+  acknowledgedAt?: Date | null;
 }
 
 const TYPE_ICON: Record<MaterialType, LucideIcon> = {
@@ -36,7 +34,11 @@ export function MaterialCard({ material, context }: { material: MaterialSummary;
         <span className="flex h-10 w-10 items-center justify-center rounded-control border border-hairline bg-surface-2 text-primary">
           <Icon className="h-5 w-5" aria-hidden />
         </span>
-        <ProgressStatusChip status={material.status} />
+        {material.acknowledgedAt && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+            Acknowledged
+          </span>
+        )}
       </div>
 
       <div className="min-w-0 flex-1">
@@ -47,8 +49,6 @@ export function MaterialCard({ material, context }: { material: MaterialSummary;
         <h3 className="mt-1 text-base font-semibold leading-snug text-ink group-hover:text-primary">{material.title}</h3>
         {material.summary && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-muted">{material.summary}</p>}
       </div>
-
-      {material.status === "IN_PROGRESS" && <ProgressBar value={material.watchedPercent} label={`Progress on ${material.title}`} />}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-ink-muted">
         <PriorityChip priority={material.priority} />

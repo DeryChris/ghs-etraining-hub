@@ -19,8 +19,8 @@ Browser ──▶ Edge Middleware (cheap session signature check, redirect, secu
 1. Server Components fetch. Client Components receive serialisable DTOs and own only
    interaction state. A client component must never contain a query path.
 2. `export const revalidate` / `cache tags`: dashboard and library data are user‑scoped, so they
-   are `dynamic = "force-dynamic"` by default. Only truly public artefacts (certificate
-   verification, published SOP *metadata*) may be cached — and then tagged
+   are `dynamic = "force-dynamic"` by default. Only truly public artefacts (the landing page's
+   published SOP *metadata*, the statistics on it) may be cached — and then tagged
    `["material", material.id]` so publishing can `revalidateTag`.
 3. Parallelise independent awaits with `Promise.all`; sequential awaits only when a value feeds the
    next query.
@@ -80,7 +80,7 @@ carries the full id plus Next's digest. No stack trace is ever sent to the brows
   pattern are redacted by `redactMetadata()` before the line is written, so message bodies,
   e-mails and staff PINs never reach stdout.
 * Correlated events: `material.file_issued`, `message.sent`, `progress.recorded`,
-  `progress.rate_limited`, `certificate.verify_rate_limited`.
+  `progress.rate_limited`, `notification.delivered`, `notification.failed`.
 * Alert thresholds (to wire in the hosting platform): p95 > 1.5 s for 10 min, error rate > 1 %,
   `*.rate_limited` spikes, and any `db:verify-chain` failure.
 
@@ -104,46 +104,96 @@ carries the full id plus Next's digest. No stack trace is ever sent to the brows
 | Published material metadata | tagged `material:{id}` | `revalidateTag` on publish |
 | Public directorate list + counters | `unstable_cache` 5 min, tag `taxonomy` | `revalidateTag("taxonomy")` on category/material write |
 | Signed-in directorate/space/material views | none (dynamic, per-viewer cohort) | n/a |
-| Certificate lookup | `unstable_cache` 1 h | `revalidateTag("certificate:{code}")` on verification |
 | Static assets / media | CDN, immutable keys (version‑prefixed) | never — new version = new key |
 
 ## 7a. Schema migrations
 
 Two streams, applied in order: `drizzle/` (generated from `src/db/schema.ts`) then
-`supabase/migrations/` (RLS, grants). Operational detail lives in `docs/migrations.md`.
+all in one stream, because there is no second database service to lock down (ADR‑0015). Operational
+detail lives in `docs/migrations.md`.
 `drizzle-kit push` is a sandbox convenience and must never run against a real environment.
 
-## 8. File storage layout
+## 8. Files: what can be uploaded, and how it is read
+
+An accepted file is one that can be **read in the library**, not merely stored.
+The allowlist (`MIME_ALLOWLIST` in `src/lib/ghs-constants.ts`) is therefore a
+promise about the viewer:
+
+| Family | Types | Limit | In the page |
+| --- | --- | --- | --- |
+| PDF | `application/pdf` | 25 MB | Browser's PDF viewer, framed |
+| Word | `.docx` | 25 MB | Drawn as pages in the browser (`docx-preview`) — margins, tables, images |
+| PowerPoint | `.pptx` | 25 MB | Every slide drawn on its canvas: shapes, text, pictures, fills |
+| Excel | `.xlsx` | 25 MB | Drawn as a grid with its own widths, merges, fills and number formats |
+| Video | mp4, webm, mkv, mov | 250 MB | Native player, served by range |
+| Audio | mp3, m4a | 60 MB | Native player |
+| Image | png, jpeg, webp, gif | 10 MB | Inline, full width |
+| Text | md, txt, csv | 2 MB | Shown as text |
+| JSON | `application/json` | 1 MB | Shown as text |
+
+The older binary formats (`.doc`, `.ppt`, `.xls`) are deliberately **not**
+accepted: nothing in a browser can read them, and accepting a file the viewer
+cannot open is a promise broken at the moment of upload.
+
+### Two backends, one interface
+
+`src/lib/server/file-storage.ts` decides where bytes go, and nothing outside it
+knows which was chosen:
+
+| Backend | When | Upload path | Ceiling |
+| --- | --- | --- | --- |
+| S3-compatible bucket | `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` set | Browser PUTs to a presigned URL | The family limits above |
+| The database | otherwise | Browser PUTs to `/api/storage/upload/<token>`, bytes stored in `file_blobs` | ~4.5 MB (the platform's request body limit; `STORAGE_DB_MAX_MB`, default 4) |
+
+The database backend exists because the reference deployment is Neon plus
+Vercel: Neon is a database with no file service, and leaving uploads broken until
+somebody buys a bucket is not a deployment state. It is not a media server — the
+bytes pass through the function, so the request limit is the real ceiling, and a
+database filling with video is slow for everybody. Configure a bucket and the
+interface returns to direct uploads with the full 250 MB.
+
+Both paths hand the browser a short-lived link, so reads never depend on the
+cookie being forwarded: with a bucket that link is presigned; without one it is a
+signed token (`src/lib/server/file-token.ts`, HMAC over key, purpose and expiry)
+that `/api/storage/file/<token>` exchanges for the bytes.
+
+### Storage layout
 
 ```
-private bucket: ghs-materials
-  materials/<materialId>/<uuid>.<ext>               # immutable; version number assigned at finalise
-  certificates/<certificateId>.pdf
-  avatars/<userId>/<uuid>.<ext>
+private bucket (S3-compatible: Neon Object Storage, R2, AWS S3, MinIO)
+  materials/<materialId>/<uuid>.<ext>   # immutable; version number assigned at finalise
+  trainings/<trainingId>/<uuid>.<ext>   # training attachments
+  trainings/<trainingId>/cover-<uuid>.* # the optional picture at the top of a training
 ```
 
-Keys are never derived from user input. Signed URLs are minted per request with a 15‑minute TTL,
-`Content-Disposition: attachment` for downloads and `inline` only for the in‑app viewer.
+Keys are never derived from user input. The browser PUTs to a presigned URL and
+the server re-reads the object's metadata before recording the version, so the
+stored size and content type are the source of truth (ADR-0008). Reads are a
+15-minute presigned GET; the audit trail records every issue.
 
-Uploads use a signed **write** slot rather than a proxy: `POST`‑style Server Action mints the target,
-the browser `PUT`s the file, then a second Action re‑reads the object metadata and records the
-version (ADR‑0008). The key holds no version number because the version is assigned when the object
-is finalised.
+### Drawing office files
 
-## 8a. Certificates
+The viewer draws the file; it does not quote it (ADR‑0024). Nothing is extracted
+on the server any more, so opening a 25 MB deck no longer costs the page a
+25 MB read before the first pixel:
 
-Issued in the same transaction as completion (random Crockford serial, unique per user/material/
-version). Three surfaces, deliberately different:
-
-| Surface | Who | What it shows |
+| Format | Reader | What is drawn |
 | --- | --- | --- |
-| `/verify?code=…` | anyone, rate-limited | Yes/no, masked holder name, material, points, dates |
-| `/certificates/<code>` | holder or staff only | The printable award: full name, staff id, serial, verification URL |
-| `/analytics` transcript | the learner | Every completion with its certificate serial (or "Not issued") |
+| `.docx` | `docx-preview` (`src/components/materials/office-file.tsx`) | Word's own page layout — margins, headings, tables, images, headers and footers |
+| `.pptx` | `src/lib/office/pptx.ts` | Each slide's canvas: every shape at its EMU position, text with its size, weight and colour, pictures from the archive, fills and table frames |
+| `.xlsx` | `src/lib/office/xlsx.ts` | The grid: column widths, row heights, merged cells, fonts, fills, number formats and sheet tabs |
+| `.pdf` | the browser | The browser's PDF engine — the same class of renderer as Acrobat |
 
-The award is HTML with `print:` styles rather than a generated PDF, so "save as PDF" is the
-browser's print dialogue: no server-side renderer, no font hunt, and the same page prints on A4.
-Server-side PDF generation and e-mail delivery are still open (see `REPO_ANALYSIS.md`).
+The bytes come from the same file route the download uses, so a reader sees only
+what they were already allowed to open. `jszip` inflates the OOXML and
+`DOMParser` reads the XML, so both readers are browser-safe and, because the
+model they produce is plain data, they are unit-tested in Node (`pptx.test.ts`,
+`xlsx.test.ts`) rather than only eyeballed.
+
+What is deliberately not attempted: animation, SmartArt, gradients, charts and
+the more exotic effects in a deck. The viewers say so where they notice one, and
+the original stays one click away. A file the readers cannot open says so
+plainly with the download beside it instead of showing an empty frame.
 
 ## 9. Material authoring pipeline
 

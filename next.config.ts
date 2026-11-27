@@ -11,22 +11,46 @@ import type { NextConfig } from "next";
  *    docs/decisions/0007-csp-and-headers.md; it costs a dynamic render on every
  *    route, so it is a deliberate, documented trade-off rather than an oversight.
  *  - `img-src` is limited to the hosts actually allowed in `images.remotePatterns`.
+ *  - Material files live in an S3-compatible bucket (Neon Object Storage by
+ *    default) and the browser talks to it directly for uploads and downloads,
+ *    so that one origin is allowed in `connect-src`, `img-src` and `media-src`.
+ *    It is read from S3_ENDPOINT at build time; with no endpoint set, the
+ *    policy stays closed.
  *  - `object-src`, `base-uri`, `form-action` and `frame-ancestors` are locked to
  *    'none'/'self' so injected markup cannot pivot to plugins, base-tag or
  *    off-site form submission.
  */
+/**
+ * The storage origin the browser is allowed to reach. Presigned URLs point at
+ * S3_ENDPOINT, so a policy written against the old Supabase host would block
+ * every upload with an opaque CORS error that looks like a network fault.
+ */
+function storageOrigin(): { origin: string | null; hostname: string | null } {
+  const endpoint = process.env.S3_ENDPOINT;
+  if (!endpoint) return { origin: null, hostname: null };
+  try {
+    const url = new URL(endpoint);
+    return { origin: url.origin, hostname: url.hostname };
+  } catch {
+    return { origin: null, hostname: null };
+  }
+}
+
+const storage = storageOrigin();
+const storageSrc = storage.origin ? ` ${storage.origin}` : "";
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'none'",
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  "img-src 'self' data: blob: https://*.supabase.co https://images.unsplash.com",
+  `img-src 'self' data: blob: https://images.unsplash.com${storageSrc}`,
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-  "media-src 'self' https://*.supabase.co",
+  `connect-src 'self'${storageSrc}`,
+  `media-src 'self'${storageSrc}`,
   "manifest-src 'self'",
   "worker-src 'self' blob:",
   "upgrade-insecure-requests",
@@ -53,7 +77,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "*.supabase.co" },
+      ...(storage.hostname ? [{ protocol: "https" as const, hostname: storage.hostname }] : []),
     ],
   },
   async headers() {

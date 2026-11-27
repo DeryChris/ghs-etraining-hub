@@ -7,9 +7,8 @@ import postgres from "postgres";
  * reach the database, and what to change.
  *
  * It exists because the two failures that cost the most time are invisible in
- * the raw errors: a Supabase hostname that no longer resolves on IPv4 (the
- * direct `db.<ref>.supabase.co` host is IPv6-only now) and a transaction
- * pooler URL handed to drizzle-kit, which cannot run DDL. Both look like
+ * the raw errors: a hostname that resolves to IPv6 only, a `-pooler` host used
+ * for migrations, and a pooler URL handed to drizzle-kit, which cannot run DDL. Both look like
  * "connection failed" until you read the docs.
  *
  * Read-only: it connects, counts, and disconnects. It never migrates or writes.
@@ -74,28 +73,33 @@ function checkUrlShape(
 
   const host = url.hostname;
   const port = url.port || "5432";
-  const isDirectHost = /^db\.[a-z0-9]+\.supabase\.co$/i.test(host);
-  const isPooler = /\.pooler\.supabase\.com$/i.test(host);
+  // Neon hands out two hosts for the same database: `ep-…-pooler.<region>.aws.neon.tech`
+  // (PgBouncer) and `ep-….<region>.aws.neon.tech` (direct). The app wants the
+  // first because every serverless instance is its own client; migrations want
+  // the second because DDL and advisory locks do not survive a transaction-mode
+  // pooler.
+  const isPooled = /-pooler\./i.test(host);
+  const isNeon = /\.neon\.tech$/i.test(host);
   const hasSsl = url.searchParams.get("sslmode") !== null;
 
   record("ok", `${name} host`, `${host}:${port}`);
 
-  if (isDirectHost) {
+  if (isNeon && role === "migrations" && isPooled) {
     record(
-      "fail",
-      `${name} uses the retired direct host`,
-      `db.<ref>.supabase.co is IPv6-only now, so on an IPv4 network it fails with "getaddrinfo ENOTFOUND". ` +
-        `Use the session pooler instead:\n` +
-        `    postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require\n` +
-        `    (Supabase dashboard → Connect → Session pooler gives you the exact string.)`,
+      "warn",
+      `${name} uses the pooled host for migrations`,
+      `DDL can wait on an advisory lock that the pooler never releases. Use the direct host instead:\n` +
+        `    postgresql://<user>:<password>@ep-<name>-<id>.<region>.aws.neon.tech/<db>?sslmode=require\n` +
+        `    (Neon console → Connect → uncheck "Connection pooling".)`,
     );
   }
 
-  if (isPooler && port === "6543" && role === "migrations") {
+  if (isNeon && role === "runtime" && !isPooled && host !== "localhost") {
     record(
-      "fail",
-      `${name} points at the transaction pooler`,
-      "DDL cannot run through port 6543. Use the session pooler on 5432 for DIRECT_URL; keep the 6543 URL for the app.",
+      "warn",
+      `${name} bypasses the connection pooler`,
+      "Each Vercel instance would open its own Postgres connection. Use the `-pooler` host for DATABASE_URL " +
+        "and keep the direct host for migrations.",
     );
   }
 
@@ -103,16 +107,7 @@ function checkUrlShape(
     record(
       "warn",
       `${name} has no sslmode`,
-      "Supabase requires TLS. Add ?sslmode=require (or &sslmode=require).",
-    );
-  }
-
-  const user = decodeURIComponent(url.username);
-  if (isPooler && !/^postgres\.[a-z0-9]+$/i.test(user) && user !== "postgres") {
-    record(
-      "warn",
-      `${name} username looks wrong for the pooler`,
-      `Supavisor expects postgres.<project-ref>, not ${user}.`,
+      "Neon and most managed Postgres require TLS. Add ?sslmode=require (or &sslmode=require).",
     );
   }
 }
@@ -136,7 +131,7 @@ async function checkDns(name: string, raw: string | undefined) {
       record(
         "warn",
         `${name} resolves to IPv6 only`,
-        "Most home and office networks in Ghana are IPv4-only, so this will fail on them. Prefer the session pooler URL.",
+        "Most home and office networks in Ghana are IPv4-only, so this will fail on them. Check the host against Neon → Connect.",
       );
     }
   } catch (error) {
@@ -145,7 +140,7 @@ async function checkDns(name: string, raw: string | undefined) {
       "fail",
       `${name} does not resolve`,
       code === "ENOTFOUND"
-        ? "DNS has no record for this host. Check the hostname against Supabase → Connect, or switch to the session pooler."
+        ? "DNS has no record for this host. Copy the connection string again from Neon → Connect; a suspended project keeps its hostname."
         : `DNS lookup failed (${code}). Check your connection, VPN or proxy.`,
     );
   }
@@ -236,8 +231,8 @@ async function checkDatabase(
       `${label} cannot connect`,
       `${message.split("\n")[0] ?? message}` +
         (code === "CONNECT_TIMEOUT"
-          ? "\nThis is the URL the application uses on every page. Copy the host, port and username from " +
-            "Supabase → Connect → Session pooler, and keep DIRECT_URL on the same host."
+          ? "\nThis is the URL the application uses on every page. Copy host, port and user again from the " +
+            "Neon console → Connect, and check that the endpoint is not suspended."
           : ""),
     );
   } finally {

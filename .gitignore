@@ -66,3 +66,11 @@ scripts/test-*.ts
 scripts/reset-*.ts
 scripts/create-missing-tables.ts
 scripts/create-programme-tables.ts
+
+# Staffing sheets: real people's data, imported by script and never committed.
+Staff Data.csv
+staff-data*.csv
+/data/staff*/
+
+# Commands
+commands.md

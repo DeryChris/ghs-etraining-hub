@@ -14,7 +14,7 @@ export interface AuditActor {
 
 export interface AuditInput {
   actor: AuditActor;
-  action: string; // SCREAMING_SNAKE, past tense: "MATERIAL_COMPLETED"
+  action: string; // SCREAMING_SNAKE, past tense: "MATERIAL_ACKNOWLEDGED"
   entity: string;
   entityId: string;
   metadata?: Record<string, unknown>;

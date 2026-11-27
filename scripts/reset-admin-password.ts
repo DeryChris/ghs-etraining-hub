@@ -1,54 +1,69 @@
 import "dotenv/config";
-import { createClient } from "@supabase/supabase-js";
-import { requireEnv } from "./lib/env";
+import { createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
+import { eq, sql } from "drizzle-orm";
+import { client, db } from "../src/db/client";
+import { users } from "../src/db/schema";
 
 /**
- * Resets one staff member's password through the Supabase admin API, for the
- * "locked out before e-mail delivery works" case.
+ * Issue a one-time password reset link, for the "locked out and there is no
+ * e-mail delivery yet" case.
  *
- *   SEED_ADMIN_PASSWORD='…' npx tsx scripts/reset-admin-password.ts you@ghs.gov.gh
+ *   npx tsx scripts/reset-admin-password.ts you@ghs.gov.gh
+ *
+ * Before the Neon migration this called the Supabase admin API to set a password
+ * directly. Now it mints a token that only a hash of is stored — with a one-hour
+ * expiry — and prints the URL an administrator can hand over in person or over
+ * WhatsApp. Opening it lands on /reset-password, where the person chooses their
+ * own password. Nothing is e-mailed; nothing about the old password is exposed.
  */
-const supabase = createClient(requireEnv("NEXT_PUBLIC_SUPABASE_URL"), requireEnv("SUPABASE_SERVICE_ROLE_KEY"), {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
-
-async function main() {
-  const email = (process.argv[2] ?? process.env.SEED_ADMIN_EMAIL)?.toLowerCase();
-  const password = process.env.SEED_ADMIN_PASSWORD;
-
+async function main(): Promise<void> {
+  const email = (process.argv[2] ?? process.env.SEED_ADMIN_EMAIL)?.trim().toLowerCase();
   if (!email) {
     console.error("Usage: npx tsx scripts/reset-admin-password.ts <email>");
     process.exit(1);
   }
-  if (!password) {
-    console.error("Set SEED_ADMIN_PASSWORD for this command (it is never stored in the repository).");
+
+  const [row] = await db
+    .select({ id: users.id, fullName: users.fullName, role: users.role, isActive: users.isActive })
+    .from(users)
+    .where(eq(sql`lower(${users.email})`, email))
+    .limit(1);
+
+  if (!row) {
+    console.error(`✖ No directory row for ${email}.`);
+    process.exit(1);
+  }
+  if (!row.isActive) {
+    console.error(`✖ ${row.fullName} is deactivated. Reactivate them before issuing a reset.`);
     process.exit(1);
   }
 
-  console.log(`Resetting the password for: ${email}`);
+  const token = `${randomUUID()}${randomUUID()}`.replace(/-/g, "");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-  const { data: list, error: listError } = await supabase.auth.admin.listUsers();
-  if (listError) {
-    console.error("✗ Failed to list users:", listError.message);
-    process.exit(1);
-  }
+  await db
+    .update(users)
+    .set({ passwordResetToken: tokenHash, passwordResetExpiresAt: expiresAt })
+    .where(eq(users.id, row.id));
 
-  const user = list.users.find((candidate) => candidate.email?.toLowerCase() === email);
-  if (!user) {
-    console.error("✗ No auth user with that e-mail:", email);
-    process.exit(1);
-  }
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/+$/, "");
+  const url = `${base}/reset-password?token=${token}`;
 
-  const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, { password });
-  if (updateError) {
-    console.error("✗ Failed to update the password:", updateError.message);
-    process.exit(1);
-  }
-
-  console.log("✓ Password reset. Tell the user to change it after signing in.");
+  console.log(`✔ Reset link issued for ${row.fullName} <${email}> (role ${row.role})`);
+  console.log("");
+  console.log(`  ${url}`);
+  console.log("");
+  console.log("  Works once, expires in one hour, and is stored only as a SHA-256 hash.");
+  console.log("  Hand it to the person directly — it is not e-mailed by this pilot.");
 }
 
-main().catch((error: unknown) => {
-  console.error("✗ Script failed:", error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+main()
+  .catch((error: unknown) => {
+    console.error("✖ Failed:", error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await client.end({ timeout: 5 });
+  });

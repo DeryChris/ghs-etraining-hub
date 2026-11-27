@@ -63,7 +63,7 @@ describe("upload checks", () => {
   });
 
   it("enforces the per-type size limits", () => {
-    const tooBigPdf = checkUpload("application/pdf", 16 * 1024 * 1024);
+    const tooBigPdf = checkUpload("application/pdf", 26 * 1024 * 1024);
     expect(tooBigPdf.ok).toBe(false);
     if (!tooBigPdf.ok) expect(tooBigPdf.message).toMatch(/limit/i);
 

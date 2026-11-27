@@ -1,21 +1,22 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, Plus, Users } from "lucide-react";
+import { CalendarDays, MapPin, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { inputClass, labelClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { LiveRefresh } from "@/components/layout/live-refresh";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
+import { NewTrainingDialog } from "@/components/trainings/new-training-dialog";
 import { Stat } from "@/components/ui/stat";
 import { formatDate } from "@/lib/format";
 import { TRAINING_STATUSES, TRAINING_STATUS_LABELS, isTrainingStatus } from "@/lib/labels";
 import { can } from "@/lib/rbac/capabilities";
-import { fieldHref } from "@/lib/links";
-import { listFields } from "@/lib/server/learning-queries";
 import { requireSession } from "@/lib/server/rbac";
-import { listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
+import { listGeography, listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
 import {
   TRAININGS_PAGE_SIZE,
   getTrainingFilterOptions,
@@ -47,6 +48,7 @@ interface Query {
   region: string | null;
   district: string | null;
   status: string | null;
+  review: string | null;
   page: number;
 }
 
@@ -59,10 +61,27 @@ function pageHref(params: Query, page: number): string {
   if (params.region) search.set("region", params.region);
   if (params.district) search.set("district", params.district);
   if (params.status) search.set("status", params.status);
+  if (params.review) search.set("review", params.review);
   if (page > 1) search.set("page", String(page));
   const suffix = search.toString();
   return suffix ? `/trainings?${suffix}` : "/trainings";
 }
+
+const REVIEW_STATES = ["PENDING", "PUBLISHED", "REJECTED"];
+
+/** Chips above the register: the review queue is one click, not a filter hunt. */
+const REVIEW_CHIPS = [
+  { key: "", label: "Everything" },
+  { key: "PENDING", label: "Pending review" },
+  { key: "PUBLISHED", label: "Live" },
+  { key: "REJECTED", label: "Sent back" },
+] as const;
+
+const REVIEW_BADGE = {
+  PENDING: { label: "Pending review", variant: "outline" },
+  PUBLISHED: { label: "Live", variant: "success" },
+  REJECTED: { label: "Sent back", variant: "danger" },
+} as const;
 
 const STATUS_BADGE = {
   PLANNED: "success",
@@ -91,9 +110,15 @@ export default async function TrainingsPage({
     region: uuidOrNull(single("region")),
     district: uuidOrNull(single("district")),
     status: isTrainingStatus(single("status")) ? (single("status") as string) : null,
+    review: REVIEW_STATES.includes(single("review") ?? "") ? (single("review") as string) : null,
     page: Math.max(1, Number.parseInt(single("page") ?? "1", 10) || 1),
   };
 
+  // Administrators and the unit head for a field see the whole queue; everybody
+  // else sees published rows plus whatever they wrote themselves.
+  // A unit head needs the queue to work it; the per-row guard below still stops
+  // them acting outside the fields they hold.
+  const canSeeUnpublished = session.role === "SYSTEM_ADMIN" || session.unitHead === true;
   const loaded = await withDeadline("trainings", () =>
     mapLimit([
       () =>
@@ -105,24 +130,26 @@ export default async function TrainingsPage({
           regionId: query.region ?? undefined,
           districtId: query.district ?? undefined,
           status: isTrainingStatus(query.status) ? query.status : undefined,
+          review: (query.review as "PENDING" | "PUBLISHED" | "REJECTED" | null) ?? undefined,
+          viewer: { userId: session.sub, seeAll: canSeeUnpublished },
           page: query.page,
         }),
       getTrainingSummary,
       getTrainingFilterOptions,
       listProgrammeFieldOptions,
-      () => listFields(session),
+      listGeography,
     ]),
   );
   if (!loaded.ok) {
     return (
       <DataUnavailable
         title="The training register did not load"
-        description="The register and the programme catalogue could not be read in time. Nothing was changed."
+        description="The register and its filters could not be read in time. Nothing was changed."
         requestId={loaded.requestId}
       />
     );
   }
-  const [list, summary, options, fields, catalogue] = loaded.data;
+  const [list, summary, options, fields, geography] = loaded.data;
 
   const filtered =
     query.q.length > 0 ||
@@ -141,76 +168,66 @@ export default async function TrainingsPage({
 
   return (
     <div className="space-y-8">
+      <LiveRefresh label="trainings" />
+
       <PageHeader
         eyebrow="Training register"
         title="Trainings"
-        description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme field and the area inside it, so coverage can be counted by programme rather than by memory."
+        description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme field and the area inside it, so coverage can be counted by programme rather than by memory. To browse by subject instead of by year, open the catalogue."
         actions={
-          mayManage ? (
-            <Link href="/trainings/new" className={buttonClass({ className: "h-12 rounded-[var(--radius-pill)] px-6" })}>
-              <Plus className="h-4 w-4" aria-hidden />
-              Create new training
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
+              Browse the catalogue
             </Link>
-          ) : undefined
+            {mayManage ? (
+              <NewTrainingDialog fields={fields} geography={geography} label="Create new training" />
+            ) : null}
+          </div>
         }
       />
 
       <Notice notice={notice} error={error} />
 
-      {/* The programme catalogue, on the same screen as the register it files into. */}
-      <section id="catalogue" aria-labelledby="catalogue-heading" className="space-y-4 scroll-mt-24">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 id="catalogue-heading" className="text-lg font-bold text-ink">
-              Programme catalogue
-            </h2>
-            <p className="text-sm text-ink-muted">
-              Every programme field GHS trains in, with the areas inside it. Pick one to see its materials and the
-              trainings recorded against it.
-            </p>
-          </div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-            {catalogue.length} {catalogue.length === 1 ? "programme field" : "programme fields"}
-          </span>
-        </div>
-
-        {catalogue.length === 0 ? (
-          <ListEmptyState
-            title="The programme taxonomy is empty"
-            description="An administrator maintains the fields and areas at Programme fields. They appear here as soon as they are published."
-          />
-        ) : (
-          <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {catalogue.map((field) => (
-              <li key={field.id}>
-                <Link
-                  href={fieldHref(field.code)}
-                  className="group flex h-full flex-col rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                >
-                  <span className="font-mono text-xs font-semibold tracking-wide text-ink-muted">{field.code}</span>
-                  <h3 className="mt-2 text-base font-semibold leading-snug text-ink group-hover:text-primary">{field.name}</h3>
-                  {field.description && <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-ink-muted">{field.description}</p>}
-                  <p className="mt-auto pt-4 text-xs font-semibold text-ink-muted">
-                    {field.areaCount} {field.areaCount === 1 ? "programme area" : "programme areas"} · {field.materialCount}{" "}
-                    {field.materialCount === 1 ? "material" : "materials"}
-                  </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-
       <section
+        id="register"
         aria-label="Register totals"
-        className="grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-4"
+        className="scroll-mt-24 grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-4"
       >
         <Stat value={summary.total} label="Trainings on the register" />
         <Stat value={summary.planned} label="Planned or upcoming" />
         <Stat value={summary.thisYear} label={`Filed under ${new Date().getFullYear()}`} />
         <Stat value={summary.attendees.toLocaleString("en-GB")} label="People trained (recorded)" />
       </section>
+
+      <nav aria-label="Review queue" className="flex flex-wrap items-center gap-2">
+        {REVIEW_CHIPS.map((chip) => {
+          const active = (query.review ?? "") === chip.key;
+          const href = (() => {
+            const search = new URLSearchParams();
+            if (chip.key) search.set("review", chip.key);
+            if (query.q) search.set("q", query.q);
+            if (query.year) search.set("year", String(query.year));
+            if (query.field) search.set("field", query.field);
+            if (query.status) search.set("status", query.status);
+            const suffix = search.toString();
+            return suffix ? `/trainings?${suffix}` : "/trainings";
+          })();
+          return (
+            <Link
+              key={chip.key || "all"}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={`inline-flex min-h-9 items-center rounded-full border px-3.5 text-xs font-semibold transition-colors ${
+                active
+                  ? "border-primary bg-primary text-primary-ink"
+                  : "border-hairline bg-surface text-ink-muted hover:border-primary/40 hover:text-ink"
+              }`}
+            >
+              {chip.label}
+            </Link>
+          );
+        })}
+      </nav>
 
       <form
         action="/trainings"
@@ -237,96 +254,98 @@ export default async function TrainingsPage({
           <label htmlFor="filter-year" className={labelClass}>
             Year
           </label>
-          <select id="filter-year" name="year" defaultValue={query.year ? String(query.year) : ""} className={inputClass}>
-            <option value="">All years</option>
-            {options.years.map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="filter-year"
+            name="year"
+            defaultValue={query.year ? String(query.year) : ""}
+            options={[
+              { value: "", label: "All years" },
+              ...options.years.map((year) => ({ value: String(year), label: String(year) })),
+            ]}
+          />
         </div>
 
         <div>
           <label htmlFor="filter-status" className={labelClass}>
             Status
           </label>
-          <select id="filter-status" name="status" defaultValue={query.status ?? ""} className={inputClass}>
-            <option value="">Any status</option>
-            {TRAINING_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {TRAINING_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="filter-status"
+            name="status"
+            defaultValue={query.status ?? ""}
+            options={[
+              { value: "", label: "Any status" },
+              ...TRAINING_STATUSES.map((status) => ({ value: status, label: TRAINING_STATUS_LABELS[status] })),
+            ]}
+          />
         </div>
 
         <div>
           <label htmlFor="filter-field" className={labelClass}>
             Programme field
           </label>
-          <select id="filter-field" name="field" defaultValue={query.field ?? ""} className={inputClass}>
-            <option value="">All fields</option>
-            {fields.map((field) => (
-              <option key={field.id} value={field.id}>
-                {field.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="filter-field"
+            name="field"
+            defaultValue={query.field ?? ""}
+            options={[
+              { value: "", label: "All fields" },
+              ...fields.map((field) => ({ value: field.id, label: field.name })),
+            ]}
+          />
         </div>
 
         <div>
           <label htmlFor="filter-area" className={labelClass}>
             Programme area
           </label>
-          <select id="filter-area" name="area" defaultValue={query.area ?? ""} className={inputClass}>
-            <option value="">All areas</option>
-            {fields.map((field) => (
-              <optgroup key={field.id} label={field.name}>
-                {field.areas.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+          <Select
+            id="filter-area"
+            name="area"
+            searchable
+            defaultValue={query.area ?? ""}
+            options={[
+              { value: "", label: "All areas" },
+              ...fields.flatMap((field) =>
+                field.areas.map((area) => ({ value: area.id, label: area.name, group: field.name })),
+              ),
+            ]}
+          />
         </div>
 
         <div>
           <label htmlFor="filter-region" className={labelClass}>
             Region
           </label>
-          <select id="filter-region" name="region" defaultValue={query.region ?? ""} className={inputClass}>
-            <option value="">All regions</option>
-            {options.regions.map((region) => (
-              <option key={region.id} value={region.id}>
-                {region.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="filter-region"
+            name="region"
+            defaultValue={query.region ?? ""}
+            options={[
+              { value: "", label: "All regions" },
+              ...options.regions.map((region) => ({ value: region.id, label: region.name })),
+            ]}
+          />
         </div>
 
         <div>
           <label htmlFor="filter-district" className={labelClass}>
             District
           </label>
-          <select id="filter-district" name="district" defaultValue={query.district ?? ""} className={inputClass}>
-            <option value="">All districts</option>
-            {options.regions.map((region) => {
-              const districts = options.districts.filter((district) => district.regionId === region.id);
-              if (districts.length === 0) return null;
-              return (
-                <optgroup key={region.id} label={region.name}>
-                  {districts.map((district) => (
-                    <option key={district.id} value={district.id}>
-                      {district.name}
-                    </option>
-                  ))}
-                </optgroup>
-              );
-            })}
-          </select>
+          <Select
+            id="filter-district"
+            name="district"
+            searchable
+            defaultValue={query.district ?? ""}
+            options={[
+              { value: "", label: "All districts" },
+              ...options.regions.flatMap((region) =>
+                options.districts
+                  .filter((district) => district.regionId === region.id)
+                  .map((district) => ({ value: district.id, label: district.name, group: region.name })),
+              ),
+            ]}
+          />
         </div>
 
         <div className="flex items-center gap-2 md:col-span-2 xl:col-span-4">
@@ -372,18 +391,27 @@ export default async function TrainingsPage({
                 : formatDate(training.startsOn);
 
             return (
-              <li key={training.id} className="rounded-card border border-hairline bg-surface p-5 shadow-panel">
+              <li
+                key={training.id}
+                className="group relative rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40 focus-within:border-primary/60"
+              >
+                {/*
+                 * One link per row, laid over the whole card and *above* the text:
+                 * a row where only the title responded was a target the size of a
+                 * sentence. The title keeps its own emphasis but is not a link.
+                 */}
+                <Link
+                  href={`/trainings/${training.id}`}
+                  aria-label={`Open ${training.title}`}
+                  className="absolute inset-0 z-10 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                />
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 space-y-1.5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
                       {training.fieldName ?? "Programme field not recorded"}
                       {training.areaName ? ` · ${training.areaName}` : ""}
                     </p>
-                    <h2 className="text-base font-bold text-ink">
-                      <Link href={`/trainings/${training.id}`} className="hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-                        {training.title}
-                      </Link>
-                    </h2>
+                    <h2 className="text-base font-bold text-ink transition-colors group-hover:text-primary">{training.title}</h2>
                     {training.targetGroup && <p className="text-sm text-ink-muted">For {training.targetGroup}</p>}
                     <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
                       <span className="inline-flex items-center gap-1.5">
@@ -408,6 +436,11 @@ export default async function TrainingsPage({
                   <div className="flex shrink-0 flex-wrap items-center gap-2">
                     <Badge variant="outline">{training.year}</Badge>
                     <Badge variant={STATUS_BADGE[training.status]}>{TRAINING_STATUS_LABELS[training.status]}</Badge>
+                    {training.reviewState !== "PUBLISHED" && (
+                      <Badge variant={REVIEW_BADGE[training.reviewState].variant}>
+                        {REVIEW_BADGE[training.reviewState].label}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </li>

@@ -13,9 +13,15 @@
  * it — which is why the administrator sees "Author" holding only the review
  * queue, while a facilitator sees their materials and notices there too.
  *
- * "Trainings" is the register (ADR-0013); "Catalogue" is the way into the
- * programme taxonomy it is filed under (ADR-0014). There is no longer a Sessions
- * tab: a session is a training, and it is recorded on the register.
+ * "Trainings" is the register: a flat, filterable list of events (ADR-0013).
+ * "Library" is the way in by subject — programme field, then programme area, then
+ * the trainings and material filed under it (ADR-0014). They were briefly one
+ * screen, which left the register sharing space with the taxonomy; they are two
+ * doors again because people arrive with one of two questions — "what ran this
+ * year?" or "what exists for malaria?".
+ *
+ * There is no separate "Catalogue" item and no separate "Library" item: the
+ * catalogue route is the library, and searching it is what the header box does.
  */
 import type { Role } from "@/lib/rbac/capabilities";
 
@@ -77,13 +83,19 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     items: [
       { href: "/dashboard", label: "Dashboard", icon: "dashboard", roles: EVERYONE },
       {
+        href: "/catalogue",
+        label: "Library",
+        icon: "library",
+        roles: EVERYONE,
+        hint: "Programme fields and areas, with the trainings and material filed under each",
+      },
+      {
         href: "/trainings",
         label: "Trainings",
         icon: "training",
         roles: EVERYONE,
         hint: "Every training GHS has planned or run, by programme field and area",
       },
-      { href: "/library", label: "Library", icon: "library", roles: EVERYONE },
       {
         href: "/assessments",
         label: "Pre/Post Test",
@@ -117,7 +129,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         label: "Insights",
         icon: "insights",
         roles: STAFF,
-        hint: "Coverage, review backlog and completion across the programmes you run",
+        hint: "Coverage, review backlog and how much of it is being read",
       },
     ],
   },

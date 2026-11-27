@@ -8,13 +8,23 @@
  */
 const EXTENSION_BY_MIME: Record<string, string> = {
   "application/pdf": "pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
   "text/markdown": "md",
   "text/plain": "txt",
+  "text/csv": "csv",
+  "application/json": "json",
   "video/mp4": "mp4",
   "video/webm": "webm",
+  "video/x-matroska": "mkv",
+  "video/quicktime": "mov",
   "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
   "image/png": "png",
   "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
   "application/zip": "zip",
 };
 

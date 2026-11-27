@@ -1,88 +1,115 @@
-# Deploying GHS-TL to Vercel
+# Deploying GHS-TL to Vercel (Neon Postgres + S3-compatible storage)
 
-A first deployment, start to finish, against the live Supabase project `cnrbtodbgiczblwvfvzq`
-(region `eu-west-3`). Every value below is a real one for this project except the database
-password and the Supabase keys, which only you have.
-
-**Why Vercel is a fair test of the local connection problem.** Vercel functions run on IPv4-only
-networks and reach Supabase through the **transaction pooler on 6543** — the same URL your
-`DATABASE_URL` already holds. If pages load there and not on your Windows machine, the fault is
-the local network (firewall, antivirus TLS inspection, VPN) rather than the connection string.
+Start to finish: a Neon project, a private bucket, a Vercel project, and a staff account that can
+actually sign in. The application no longer uses Supabase for anything — not the database, not the
+auth, not the files — so every value below comes from Neon or from this repository's own scripts.
 
 ---
 
-## Why the signed-in tabs feel slow, and what actually fixes it
+## 1. Choose the region first (both halves of it)
 
-Measured against the live database, the data is not the problem: 7 sub-districts, 24 facilities,
-10 materials, 24 audit rows. A page that takes two seconds is not doing two seconds of work — it is
-waiting. In order of how much it costs:
+Two independent latencies decide whether a signed-in tab feels instant or stuck:
 
-1. **Region mismatch (the big one).** Supabase is in `eu-west-3` (Paris). Vercel functions default
-   to `iad1` (Washington). Every query then pays ~90–150 ms of round trip, and a page makes several.
-   Set the project's *Function Region* to **Paris (`cdg1`)** — Project → Settings → Functions — and
-   the same page drops most of that. It is a dashboard setting, not a code change, and on the Hobby
-   plan it is the one region you are allowed to choose.
-2. **Direct port instead of the pooler.** `DATABASE_URL` must point at the **transaction pooler,
-   port 6543** (`...pooler.supabase.com:6543/postgres`), with `?pgbouncer=true&sslmode=require`.
-   Port 5432 opens a fresh Postgres connection per cold start.
-3. **Two auth round trips per navigation.** The edge proxy calls `supabase.auth.getUser()` and the
-   dashboard layout resolves the same user again. That is unavoidable without moving identity into a
-   signed cookie; it is roughly one RTT, and it disappears from perceived time once (1) is fixed.
-4. **Everything is `force-dynamic`.** The sidebar counts and page data cannot be cached across
-   requests, by design — a stale unread badge is a bug. The loading skeletons and the in-menu spinner
-   exist so that waiting is visible rather than looking like a dead tab.
-
-The indexes added in `drizzle/0007` (`materials(programme_area_id,state)`,
-`material_views(user_id,viewed_on)`) matter once the library has thousands of rows, not at today's
-size; they cost nothing to have in place now.
-
----
-
-## 0. Before you start
-
-| Thing | Where | Why |
+| Hop | What it costs | Where you control it |
 | --- | --- | --- |
-| Repo on GitHub | `DeryChris/ghs-etraining-hub` | Vercel builds from Git |
-| The code to deploy | `main` | Vercel's production branch is `main`; this work is on a feature branch, so merge it first |
-| Supabase DB password | Supabase → Project Settings → Database | goes in the two connection strings |
-| `sb_publishable_…` key | Supabase → Project Settings → API keys | browser-safe anon key |
-| `sb_secret_…` key | same page | server-only, signs storage URLs |
+| Accra → Vercel function | first byte of every request | Vercel Project → Settings → Functions → **Function Region** |
+| Function → Postgres | every query, and a page makes several | the Neon project's region, fixed at creation |
 
-Merging first matters: `main` is five commits behind the programme-areas work, so deploying it
-today would ship the old taxonomy against the migrated database — the `relation "spaces" does not
-exist` errors from earlier.
+They must be in the **same city**, or the second hop is paid on every query and no amount of
+caching hides it. Neon's regions that also have a Vercel region in the same metro:
+
+| Neon region | Vercel region | Same metro | Roughly Accra → function |
+| --- | --- | --- | --- |
+| `eu-central-1` (Frankfurt) | `fra1` | ✅ | 100–130 ms |
+| `us-east-1` (N. Virginia) | `iad1` | ✅ | 190–230 ms |
+| `us-east-2` (Ohio) | `cle1` | ✅ (Cleveland↔Ohio) | 200–240 ms |
+| `ap-southeast-1` (Singapore) | `sin1` | ✅ | 230–280 ms |
+
+**Recommendation: Neon `eu-central-1` + Vercel `fra1`.** There is no West-Africa region on either
+side, so Frankfurt is the shortest hop that exists for Ghana, and it keeps the function→database leg
+at well under a millisecond of network time — that is the leg that repeats several times per page.
+
+Pick `eu-central-1` even if you plan to add object storage later: Neon's object storage offers
+`eu-central-1`, `us-east-1`, `us-east-2` and `ap-southeast-1`, and `eu-central-1` is in that list.
+(`cpt1` Cape Town is closer to Accra for the *first* hop — about 40–60 ms — but Neon has no African
+region, so every query would pay ~150 ms to Europe. Net loss on any page that reads more than one
+table, which is all of them.)
 
 ---
 
-## 1. Merge the work into `main`
+## 2. Create the Neon project
 
-A pull request is open from `arena/69624470-ghs-etraining-hub`. Merge it on GitHub, then locally:
+Neon console → **New project**:
+
+| Field | Value |
+| --- | --- |
+| Region | **AWS eu-central-1 (Frankfurt)** |
+| Postgres version | 17 (16+ required by `drizzle/0000_baseline.sql`) |
+| Database name | `neondb` (any name; use it consistently below) |
+
+From **Connect**, copy **two** strings — the difference is not cosmetic:
+
+| Purpose | Host | Used for |
+| --- | --- | --- |
+| App runtime | `ep-<name>-<id>-pooler.eu-central-1.aws.neon.tech` | `DATABASE_URL` |
+| Migrations & scripts | `ep-<name>-<id>.eu-central-1.aws.neon.tech` | `DIRECT_URL` |
+
+The pooled host is PgBouncer in transaction mode: every Vercel instance is its own client, and
+without it a handful of cold starts exhausts the project's connection limit. DDL does not survive a
+transaction-mode pooler, so migrations take the direct host.
+
+Both strings need `?sslmode=require`.
+
+---
+
+## 3. Apply the migrations, then seed
+
+Run these from your machine, with `DIRECT_URL` set to the **direct** host:
 
 ```bash
-git switch main
-git pull
-npm ci --legacy-peer-deps
-npm run typecheck && npm test && npm run build   # the same gates CI runs
+npm run db:check-chain   # proves all 11 migrations apply to an empty database, no server needed
+npm run db:migrate       # against DIRECT_URL
+npm run db:seed          # taxonomy + the 7 staff rows (refuses production unless ALLOW_PROD_SEED=true)
 ```
 
-If you would rather not merge yet, Vercel can deploy the branch itself — every branch gets a
-preview URL — but then production stays on the old taxonomy and the two will drift.
+`db:check-chain` runs the whole `drizzle/meta/_journal.json` order against an in-process Postgres.
+It is the check that catches a migration file that exists on disk but is missing from the journal —
+`0009_users_password_hash` was exactly that for a while, and `db:migrate` silently skipped it.
+
+Then confirm the two columns the login path needs actually exist:
+
+```sql
+select column_name from information_schema.columns
+where table_name = 'users' and column_name like 'password%';
+-- password_hash, password_reset_token, password_reset_expires_at
+```
 
 ---
 
-## 2. Import the project
+## 4. Create the storage bucket
+
+Neon console → **Object storage** → create a bucket named **`ghs-materials`**, private, in the same
+region. Then create an access key and note the **endpoint**, the **key id** and the **secret**.
+
+The browser talks to the bucket directly through short-lived presigned URLs (15 minutes), because
+Vercel caps function request bodies far below the 15 MB a PDF may legitimately be. Two consequences
+that are easy to miss:
+
+1. **CORS must allow the deployment origin.** Allow `PUT` and `GET` from `https://<your-domain>`
+   with the `content-type` header. Without it the upload fails with an opaque network error and
+   nothing appears in the server logs.
+2. **The endpoint is compiled into the Content-Security-Policy** at build time (`next.config.ts`
+   reads `S3_ENDPOINT`). Change the endpoint and you must redeploy, or the browser blocks the
+   upload that the server just signed.
+
+If you would rather use AWS S3 or Cloudflare R2, nothing in the code changes: set `S3_ENDPOINT`,
+`S3_REGION`, `S3_BUCKET` and the two keys, and `S3_FORCE_PATH_STYLE=false` for AWS.
+
+---
+
+## 5. Import the Vercel project
 
 **Dashboard:** Vercel → **Add New → Project** → import `ghs-etraining-hub`.
-
-**CLI equivalent** (from the repo root):
-
-```bash
-npm i -g vercel
-vercel login
-vercel link          # creates .vercel/ (already gitignored)
-```
-
-Settings to confirm on the import screen:
 
 | Setting | Value |
 | --- | --- |
@@ -91,53 +118,55 @@ Settings to confirm on the import screen:
 | Build command | `npm run build` (from `vercel.json`) |
 | Install command | `npm ci` (from `vercel.json`) |
 | Node version | 22.x (from `package.json` `engines`) |
+| **Function Region** | **`fra1`** (Settings → Functions) |
 
-`vercel.json` carries one literal: `NEXT_TURBOPACK=0`, which keeps the production build on
-webpack. Never put a **secret** there — a `@name` reference that does not exist in the project
-fails the build outright, which is what broke the first attempt.
+Set the function region *before* the first production deploy. Changing it later is a redeploy of
+every function, and in the meantime every query pays the round trip twice.
+
+`vercel.json` carries one literal: `NEXT_TURBOPACK=0`, which keeps the production build on webpack.
+Never put a secret there.
 
 ---
 
-## 3. Environment variables
+## 6. Environment variables
 
-Project → **Settings → Environment Variables**. Add each one to **Production _and_ Preview**.
-`NEXT_PUBLIC_*` values are compiled into the bundle at build time, so they must exist **before**
-the first build.
+Project → **Settings → Environment Variables**. Add each to **Production _and_ Preview**.
+`NEXT_PUBLIC_*` values are inlined at build time, so they must exist **before** the first build.
 
 | Name | Value | Notes |
 | --- | --- | --- |
-| `DATABASE_URL` | `postgresql://postgres.cnrbtodbgiczblwvfvzq:<PASSWORD>@aws-0-eu-west-3.pooler.supabase.com:6543/postgres?sslmode=require&uselibpqcompat=true` | runtime pool, transaction mode |
-| `DIRECT_URL` | `…@aws-0-eu-west-3.pooler.supabase.com:5432/postgres?sslmode=require&uselibpqcompat=true` | migrations only; harmless at runtime |
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://cnrbtodbgiczblwvfvzq.supabase.co` | |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `sb_publishable_…` | |
-| `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_…` | **never** prefix with `NEXT_PUBLIC_` |
-| `NEXT_PUBLIC_APP_URL` | `https://<your-domain>` | no trailing slash; used in emails and links |
+| `DATABASE_URL` | `postgresql://<user>:<pw>@ep-…-pooler.eu-central-1.aws.neon.tech/neondb?sslmode=require` | runtime pool — the **`-pooler`** host |
+| `DIRECT_URL` | `postgresql://<user>:<pw>@ep-….eu-central-1.aws.neon.tech/neondb?sslmode=require` | migrations only; harmless at runtime |
+| `SESSION_SECRET` | 32+ random bytes, e.g. `openssl rand -base64 48` | signs the `ghs_session` cookie; changing it signs everybody out |
+| `S3_ENDPOINT` | `https://<bucket-endpoint>` | also feeds the CSP at build time |
+| `S3_REGION` | `eu-central-1` | must match the bucket |
+| `S3_BUCKET` | `ghs-materials` | private |
+| `S3_ACCESS_KEY_ID` | from Neon object storage | server only |
+| `S3_SECRET_ACCESS_KEY` | from Neon object storage | **never** prefix with `NEXT_PUBLIC_` |
+| `NEXT_PUBLIC_APP_URL` | `https://ghstl.vercel.app` | no trailing slash; feeds canonical links and reset links |
 | `DB_POOL_MAX` | `3` | each warm function holds its own pool |
 
-Leave out `SEED_ADMIN_EMAIL` and `ALLOW_PROD_SEED`: those belong to local seeding, and setting
-`ALLOW_PROD_SEED` in Vercel removes the seeder's own guard.
+Deliberately **not** set on Vercel: `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `ALLOW_PROD_SEED`.
+Setting `ALLOW_PROD_SEED` removes the seeder's own guard against writing to production.
 
-`NEXT_PUBLIC_SUPPORT_EMAIL` / `NEXT_PUBLIC_SUPPORT_PHONE` are optional — unset, the contact page
-tells visitors how to reach ICT instead of inventing details.
+There are no `SUPABASE_*` variables any more. If any are still in the project, delete them — nothing
+reads them, and leaving them implies an integration that is no longer there.
 
 ---
 
-## 4. Deploy
+## 7. Deploy
 
 ```bash
-vercel --prod        # CLI
+vercel --prod
 ```
 
-or press **Deploy** in the dashboard. The first build takes 2–4 minutes: Next 16, Turbopack off
-for the build, ~40 routes.
-
-The build does not need a reachable database — every data-backed page is dynamic. If the build
-fails, read the first error rather than the last: a missing `NEXT_PUBLIC_*` shows up as a
-prerender failure on `/`, and a bad `DATABASE_URL` does *not* fail the build.
+The build does not need a reachable database: every data-backed page is dynamic. A missing
+`NEXT_PUBLIC_*` shows up as a prerender failure on `/`; a bad `DATABASE_URL` does **not** fail the
+build.
 
 ---
 
-## 5. Verify, in this order
+## 8. Verify, in this order
 
 ```bash
 curl -s https://<your-domain>/api/health | jq
@@ -145,64 +174,62 @@ curl -s https://<your-domain>/api/health | jq
 
 Expected: `{"ok":true,"checks":{"db":"up","schema":"current"},"latencyMs":…}`.
 
-- **`checks.db = "down"`** → `DATABASE_URL` is wrong or the pooler is unreachable. The site still
-  renders; only data-backed queries fail. Compare against the URL `npm run db:doctor` proved
-  works locally — it is the same pooler host.
-- **`checks.schema = "outdated"`** → migrations are behind. They are already applied to this
-  database, so seeing this means the deployment points somewhere else.
-
-Then, in a browser:
-
-1. `https://<your-domain>/` renders the marketing page.
-2. `/login` accepts a staff account (see step 7 if nobody can sign in).
-3. `/dashboard` shows the greeting, numbers and the staff panels.
-4. `/catalogue` lists 10 programme fields; Clinical Care → Clinical Service Development shows 1
-   material; `/library` shows 10.
-5. `/programme-fields` shows 10 fields, 41 areas, and People counts summing to 21.
-
----
-
-## 6. Point Supabase at the deployment
-
-Supabase → **Authentication → URL configuration**:
-
-- **Site URL:** `https://<your-domain>`
-- **Redirect URLs:** add `https://<your-domain>/auth/callback`
-
-Without this, password-reset links bounce to `localhost:3000`. Also add the domain to
-**Authentication → Providers → Email** if you later restrict sign-ups.
-
-Storage → **New bucket** → `ghs-materials`, **public off**. The app signs URLs server-side with
-the service-role key.
-
----
-
-## 7. Staff accounts
-
-The live directory already has 7 users. If one of them cannot sign in, the Auth side is missing
-rather than the directory row:
+Then the deeper probe, which runs the page data functions themselves rather than stand-ins:
 
 ```bash
-npm run user:create-auth -- someone@ghs.gov.gh    # creates the Auth user if absent
-npm run user:provision -- someone@ghs.gov.gh      # prints a one-time temporary password
+curl -s 'https://<your-domain>/api/health?deep=pages' | jq '.probes[] | {label, ms, detail}'
 ```
 
-Run these from your machine with `DIRECT_URL` set — they talk to the same database. Nothing
-creates a password in the repository.
+`session (cookie + sessions table)` and the five `page:` lines must be milliseconds, not timeouts.
+That list is the difference between "the database answers" and "the tab loads".
+
+In a browser:
+
+1. `/` renders the marketing page.
+2. `/login` accepts a staff account (step 9 if nobody can sign in).
+3. `/dashboard` shows the greeting, numbers and staff panels.
+4. `/catalogue` lists the programme fields; `/library` lists the materials.
+5. `/trainings`, `/complaints`, `/users` open without sitting on skeletons.
 
 ---
 
-## 8. After the first deploy
+## 9. Staff accounts
 
-- **Redeploy after changing any `NEXT_PUBLIC_*` variable.** They are inlined into the bundle; editing
-  them in the dashboard does nothing until the next build.
-- **Migrations** stay a deliberate step: `npm run db:migrate` locally against `DIRECT_URL`, then
-  redeploy. Do not run `0004`/`0005` again — they are recorded in `drizzle.__drizzle_migrations`.
-- **Preview deployments** share the production database by default. If a reviewer should not write
-  to live data, add a second Supabase project for previews and set the variables per environment.
+The directory rows come from the seeder; the **password** is a bcrypt hash on that row, written by
+these scripts. Nothing is created in any third-party service.
+
+```bash
+SEED_ADMIN_PASSWORD='…' npm run user:create-auth -- you@ghs.gov.gh   # set a known password
+npm run user:provision -- someone@ghs.gov.gh                        # print a one-time temp password
+npm run user:provision -- someone@ghs.gov.gh --reset                # replace it
+npm run user:reset-password -- locked.out@ghs.gov.gh                # print a one-time reset link
+npm run user:password -- --email someone@ghs.gov.gh --password='…'  # set a password you choose
+npm run user:password -- --id GHS-000042 --password='…'             # …by employee number
+```
+
+`user:password` resolves the account by e-mail, employee number (`GHS-000042`, `000042` or `42`) or
+UUID, hashes with the same bcrypt cost the application uses, clears the failed-attempt counters and
+the lockout, and never prints the secret. `--must-change` forces a change at next sign-in; `--dry-run`
+shows which account matched without changing anything.
+
+`user:reset-password` writes only a SHA-256 hash of the token, with a one-hour expiry, and prints a
+`/reset-password?token=…` URL. Hand it over in person or over WhatsApp: the pilot sends no e-mail,
+and `/forgot-password` says so rather than promising a mail that never arrives.
+
+---
+
+## 10. After the first deploy
+
+- **Redeploy after changing any `NEXT_PUBLIC_*` value or `S3_ENDPOINT`.** They are compiled into the
+  bundle; editing them in the dashboard does nothing until the next build.
+- **Migrations stay a deliberate step:** `npm run db:migrate` against `DIRECT_URL`, then redeploy.
+- **Preview deployments** share the production database by default. If a reviewer must not write to
+  live data, branch the Neon project (Neon supports copy-on-write branches) and point Preview at it.
 - **Logs:** Vercel → Deployments → Functions. Every line is one JSON object with an `event` name;
-  `query.deadline_exceeded` names the section that stalled, and `shell.session_unavailable` means
-  the app could not reach Postgres at all.
+  `query.deadline_exceeded` names the section that stalled, `shell.session_unavailable` means the
+  app could not reach Postgres at all.
+- **Neon autosuspend:** a free plan project suspends after inactivity. The first request after that
+  pays a wake-up of a second or two. `/api/health` is a cheap way to warm it before a demo.
 
 ---
 
@@ -210,11 +237,14 @@ creates a password in the repository.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Build fails on `/_not-found` at "Collecting page data" | `NEXT_PUBLIC_APP_URL` is not a URL — usually one character short, e.g. `https//ghstl.vercel.app` | set it to `https://<domain>`. A typo is repaired and logged now, but fix the value: it feeds canonical links and password-reset redirects |
-| Build fails on `/` prerender | `NEXT_PUBLIC_SUPABASE_URL` or `ANON_KEY` missing | add both, redeploy |
-| `/api/health` → `db: "down"` | wrong password, or `db.<ref>.supabase.co` (IPv6-only) | use the 6543 pooler URL |
-| `prepared statement already exists` | `prepare: true` on a pooler | already `prepare: false`; check nobody re-enabled it |
-| Pages load but every table is empty | pointed at a different database | compare `/api/health` with `db:doctor` |
-| Reset email links to localhost | Supabase Site URL not updated | step 6 |
-| `too many connections` after traffic | `DB_POOL_MAX` too high for the instance count | lower it to 1–2 |
-| Login loops back to `/login` | cookie domain mismatch | `NEXT_PUBLIC_APP_URL` must match the deployed origin exactly |
+| `/api/health` → `db: "down"` | wrong password, or the endpoint is suspended | `npm run db:doctor` prints the host, port and the exact errno |
+| `db: "down"` and host shows no `-pooler` | direct host in `DATABASE_URL` | each instance opens its own connection; use the pooled host |
+| Migrations hang or deadlock | `DIRECT_URL` points at the pooled host | use the direct host for `db:migrate` |
+| `password authentication failed` after a Neon reset | password rotated in the console | update both URLs in Vercel, redeploy |
+| Upload fails with no server log line | bucket CORS, or `S3_ENDPOINT` changed without a redeploy | allow `PUT`/`GET` from the deployment origin; redeploy |
+| Upload 403 from the bucket | signed URL expired (15 min) or the key was rotated | retry; keys are server-side only |
+| Tabs sit on skeletons while `/api/health` is green | function region ≠ database region | pair `fra1` with `eu-central-1` (step 1) |
+| `too many connections` under load | `DB_POOL_MAX` too high for the instance count | 3 or lower; the pooler fans out behind it |
+| Login loops back to `/login` | cookie not accepted | `NEXT_PUBLIC_APP_URL` must match the deployed origin exactly, and `SESSION_SECRET` must be stable across deploys |
+| Login says the server could not reach the directory | Postgres unreachable from the function | check the region pairing and `DB_POOL_MAX` |
+| Reset link says "expired" immediately | token already used, or `NEXT_PUBLIC_APP_URL` points at another host | issue a new one; links are single-use |

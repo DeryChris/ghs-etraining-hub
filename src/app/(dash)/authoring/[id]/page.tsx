@@ -10,6 +10,7 @@ import {
 } from "@/components/authoring/version-actions";
 import { materialStateBadge } from "@/components/authoring/state-badge";
 import { UploadVersionForm } from "@/components/authoring/upload-version-form";
+import { storageCeiling } from "@/lib/server/file-storage";
 import { formatBytes, formatDateTime } from "@/lib/format";
 import { isUuid } from "@/lib/ids";
 import { MATERIAL_TYPE_LABELS, PRIORITY_LABELS } from "@/lib/labels";
@@ -59,14 +60,14 @@ export default async function AuthoringMaterialPage({ params }: { params: Promis
         <span className="text-xs text-ink-muted">Author: {material.authorName}</span>
         {material.state === "PUBLISHED" && (
           <Link href={`/programmeAreas/${material.areaCode}`} className="text-xs font-semibold text-primary hover:underline">
-            View in learner library
+            View in the library
           </Link>
         )}
       </div>
 
       {archived ? (
         <p className="rounded-card border border-danger/30 bg-danger/5 p-5 text-sm text-ink-muted">
-          This material is archived. It no longer appears to learners, and its history is kept for audit.
+          This material is archived. It no longer appears to staff, and its history is kept for audit.
         </p>
       ) : (
         <section aria-labelledby="upload-heading" className="rounded-card border border-hairline bg-surface p-5 shadow-panel">
@@ -74,10 +75,10 @@ export default async function AuthoringMaterialPage({ params }: { params: Promis
             Upload a new version
           </h2>
           <p className="mt-1 mb-4 text-sm text-ink-muted">
-            A new version starts as a draft. It becomes visible to learners only after a colleague approves it and someone
+            A new version starts as a draft. It becomes visible to staff only after a colleague approves it and someone
             publishes it.
           </p>
-          <UploadVersionForm materialId={material.id} />
+          <UploadVersionForm materialId={material.id} ceiling={storageCeiling()} />
         </section>
       )}
 
@@ -169,7 +170,7 @@ export default async function AuthoringMaterialPage({ params }: { params: Promis
             Archive this material
           </h2>
           <p className="mt-1 mb-4 text-sm text-ink-muted">
-            Archiving withdraws it from learners. The versions and audit entries stay for inspection.
+            Archiving withdraws it from staff. The versions and audit entries stay for inspection.
           </p>
           <ArchiveMaterialForm materialId={material.id} />
         </section>

@@ -8,21 +8,28 @@ indexes so an agent does not have to reverse‑engineer them. Naming/style rules
 
 1. Every row has `id uuid defaultRandom` and `createdAt timestamptz defaultNow()`.
 2. Rows that participate in audit history are never hard‑deleted: `users`, `materials`,
-   `material_versions`, `certificates`, `audit_logs`.
+   `material_versions`, `audit_logs`.
 3. Every FK is indexed. Every unique constraint exists because the domain says so, not for convenience.
 4. Enum values are `SCREAMING_SNAKE`; adding a value requires a migration + a UI label mapping in
    `src/lib/labels.ts` (never a raw enum string in JSX).
-5. Monetary/credit values are integers (`cpd_credits_x10`) — never floats.
+5. Counters and durations are integers (`count`, `seconds`) — never floats.
 6. PII columns are listed in `src/lib/pii-inventory.ts` and that file drives SAR/erasure tooling.
 
 ## 2. Tables
 
 ### users
-`ghsStaffId` (unique, `^GHS-\d{6}$`), `email` (unique, lowercase), `fullName`, `phone` (E.164),
+`ghsStaffId` (unique — the employee number as the payroll list prints it, plain digits such as
+`2681763`; the older `GHS-000123` spelling is still read, and both resolve to the same person via
+`src/lib/staff-id.ts`), `email` (unique, lowercase), `fullName`, `phone` (E.164),
 `role`, `cadre` (nurse / midwife / medical officer / pharmacy / laboratory / records / administration), `directorate`, `region`,
 `facility`, `isActive`, `deactivatedAt`, `mfaEnabled`, `lastLoginAt`, `failedLoginCount`,
 `lockedUntil`, `createdAt`, `updatedAt`.
 Indexes: `users_region_role_idx (region, role)`, `users_directorate_idx`, `users_facility_idx`.
+`isUnitHead` is a duty carried by a facilitator, not a fourth role: it grants the review queue for
+their fields and nothing else, which is why it does not disturb their area assignments. The Users
+screen offers it as a fourth choice in the role field (`UNIT_HEAD`) and writes `role = FACILITATOR,
+is_unit_head = true`; see `roleForStaffRole` in `src/lib/rbac/capabilities.ts`.
+
 Soft‑delete only. Deactivation preserves history and anonymises the display name in discussions.
 
 ### sessions
@@ -59,11 +66,31 @@ Immutable once `PUBLISHED`. Superseding inserts a new row and marks the old one,
 `userId`, `programmeAreaId`, `source` (`SELF | ASSIGNED`), `assignedById`, `dueAt`, `completedAt`,
 `lastRemindedAt`, unique on (`userId`, `programmeAreaId`).
 
-### material_progress
-`userId`, `materialId`, `materialVersionId`, `status` (`NOT_STARTED | IN_PROGRESS | COMPLETED`),
-`watchedPercent`, `acknowledgedAt`, `completedAt`, `updatedAt`, unique on (`userId`, `materialId`).
-`materialVersionId` proves *which version* the staff member was trained on — required for audit
-evidence (PRD §9.4).
+### material_progress (acknowledgements)
+`userId`, `materialId`, `materialVersionId`, `acknowledgedAt`, `updatedAt`, unique on
+(`userId`, `materialId`). `materialVersionId` proves *which version* the staff member read and signed
+for — required for audit evidence (PRD §9.4).
+
+The learning path that used to live here — `status`, `watchedPercent`, `completedAt` — was dropped in
+`drizzle/0017_library_without_marks.sql`. A library does not have a completion state: "0 of 0
+materials completed" was arithmetic about a course nobody had enrolled in. What remains is the one
+fact a directorate can be asked about, and it is not a grade.
+
+### file_blobs
+`storageKey`, `mimeType`, `sizeBytes`, `bytes` (`bytea`), `createdAt`, unique on `storageKey`.
+
+The fallback file store, used when no S3-compatible bucket is configured (`src/lib/server/blob-store.ts`).
+Neon is a database and has no file service, so uploads would otherwise be broken on the reference
+deployment. Bytes pass through the app, which caps a file at the platform's request-body limit
+(~4.5 MB on Vercel; `STORAGE_DB_MAX_MB`, default 4). With `S3_ENDPOINT`/`S3_BUCKET` set, the same
+storage interface switches to direct browser-to-bucket uploads and the table stays empty.
+
+### training_comments
+`trainingId`, `authorId`, `body`, `createdAt`, index on (`trainingId`, `createdAt`).
+
+The discussion under a training page. Flat and chronological; the author or an administrator may
+remove a message. `training_sessions.image_storage_key` holds the optional cover picture, written
+through the same storage interface.
 
 ### assessments, assessment_items, assessment_attempts
 `assessments`: `materialId`, `passMarkPercent`, `questionCount`, `maxAttempts`, `cooldownHours`,
@@ -73,10 +100,10 @@ evidence (PRD §9.4).
 `assessment_attempts`: `assessmentId`, `userId`, `startedAt`, `submittedAt`, `answers jsonb`,
 `scorePercent`, `passed`, `attemptNumber`, `gradedById` (null unless overridden), `overrideReason`.
 
-### certificates
-`code` (unique, `GHS-CPD-<year>-<base32>`), `userId`, `materialId`, `materialVersionId`,
-`cpdCreditsX10`, `issuedAt`, `expiresAt`, `verificationCount`, `lastVerifiedAt`.
-Public verification endpoint reveals name, masked PIN, title, issue/expiry, credits — nothing else.
+### activity only, no awards
+Completion and open records (`material_progress`, `material_views`) exist so programme teams can see what
+is being read; nothing is scored, issued or verified. The `certificates` table was dropped in
+`drizzle/0013_retire_the_award.sql` and the awarding model is retired (ADR‑0011).
 
 ### comments
 `materialId`, `authorId`, `parentId`, `body`, `isRemoved`, `removedReason`, `removedById`,
@@ -139,6 +166,13 @@ re‑run, refuses to run in production unless `ALLOW_PROD_SEED=true`.
 
 * Schema change → edit `src/db/schema.ts` → `npx drizzle-kit generate` → commit SQL → apply with
   `npx drizzle-kit migrate` in staging/production. `drizzle-kit push` is a **local-only** tool.
+* **Journal stamps must be strictly increasing.** `migrate` applies a file only when its `when` is
+  newer than the newest row in `drizzle.__drizzle_migrations`; equal stamps are skipped in silence
+  (this is how `0017_library_without_marks` went unapplied while `db:migrate` printed success).
+  `src/lib/migrations.ts` mirrors the journal, `src/lib/migrations.test.ts` fails if the two
+  disagree or the stamps stop increasing, and `npm run db:check-chain` asserts the ordering too.
+* `npm run db:repair` applies the files the journal still has pending and records them — the escape
+  hatch for a database that was skipped once. `db:migrate` remains the normal path.
 * Any migration that drops or rewrites a column with PII must be paired with a retention note in
   the PR and, where data leaves the system, a DPO sign-off comment.
 * Every migration is reversible in principle: additive first, destructive in a later release after
