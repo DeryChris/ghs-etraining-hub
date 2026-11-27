@@ -105,7 +105,7 @@ export async function notifyTrainingPublished(input: {
   });
 }
 
-/** The unit head sent a training back: only its author needs to know. */
+/** The unit head returned a training for correction: only its author needs to know. */
 export async function notifyTrainingReturned(input: {
   trainingId: string;
   title: string;
@@ -115,7 +115,7 @@ export async function notifyTrainingReturned(input: {
 }): Promise<void> {
   if (input.authorId === input.actorId) return;
   await deliver({
-    title: "Your training was sent back",
+    title: "A training of yours was returned for correction",
     body: `${input.title}: ${input.note}`,
     type: "TRAINING_RETURNED",
     linkUrl: `/trainings/${input.trainingId}`,

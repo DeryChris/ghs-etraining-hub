@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { getSession } from "@/lib/server/session";
+import { AuthCard } from "../auth-card";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export default async function ChangePasswordPage() {
   if (!session) redirect("/login");
 
   return (
-    <>
+    <AuthCard>
       <div className="space-y-3">
         <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-primary">
           <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
@@ -48,6 +49,6 @@ export default async function ChangePasswordPage() {
           <li>Nobody at GHS will ever ask you for it — not ICT, not your unit head.</li>
         </ul>
       </details>
-    </>
+    </AuthCard>
   );
 }

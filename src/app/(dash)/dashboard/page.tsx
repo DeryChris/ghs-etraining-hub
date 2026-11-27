@@ -8,6 +8,7 @@ import {
   Eye,
   History,
   Layers,
+  Undo2,
 } from "lucide-react";
 import { AreaChart } from "@/components/charts/area-chart";
 import { ChartCard, EmptyChart, chartColor } from "@/components/charts/chart-card";
@@ -35,6 +36,7 @@ import {
 } from "@/lib/server/insights-queries";
 import { withinOr } from "@/lib/server/deadline";
 import { listRecentOpens } from "@/lib/server/learning-queries";
+import { listReturnedTrainings } from "@/lib/server/training-queries";
 import { LearnerHome, greetingFor } from "./learner-home";
 import { listNotifications } from "@/lib/server/notification-queries";
 import { requireSession } from "@/lib/server/rbac";
@@ -70,10 +72,22 @@ export default async function DashboardPage({
    */
   // The notices are a sidebar of the page, not the page: a slow bell falls back
   // to an empty list rather than taking the greeting down with it.
-  const [announcements, recent, insights, traffic, sessionRecord, trainings, typeMix, programmeTraffic] =
-    await Promise.all([
+  const [
+    announcements,
+    recent,
+    returned,
+    insights,
+    traffic,
+    sessionRecord,
+    trainings,
+    typeMix,
+    programmeTraffic,
+  ] = await Promise.all([
       withinOr("dashboard.notifications", listNotifications(session, 4), []),
       withinOr("dashboard.recent", listRecentOpens(session.sub, 12), []),
+      // A returned training is a task with somebody's name on it, not a row in a
+      // list: it gets its own read and its own card.
+      session.role === "FACILITATOR" ? withinOr("dashboard.returned", listReturnedTrainings(session.sub), []) : [],
       staff ? withinOr("dashboard.insights", getInsights(session), null) : null,
       staff ? withinOr("dashboard.traffic", getTrafficSeries(session, 12), null) : null,
       staff ? withinOr("dashboard.training_counts", getTrainingCounts(session), null) : null,
@@ -153,6 +167,59 @@ export default async function DashboardPage({
           </div>
         </div>
       </section>
+
+      {/*
+       * The one thing on this page that is a task rather than a statistic. A unit
+       * head can return a training for correction; until now the author found out
+       * only by opening the training and reading the banner, so corrections waited.
+       */}
+      {returned.length > 0 && (
+        <section
+          aria-labelledby="returned-heading"
+          className="rounded-card border border-danger/40 bg-danger/[0.05] p-5 shadow-panel sm:p-6"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <h2 id="returned-heading" className="flex items-center gap-2 text-base font-bold text-ink">
+                <Undo2 className="h-4 w-4 text-danger" aria-hidden />
+                Returned for correction
+              </h2>
+              <p className="max-w-[70ch] text-sm leading-relaxed text-ink-muted">
+                A unit head read {returned.length === 1 ? "this training" : "these trainings"} and needs a change before
+                it can go live. Correct it, save, and it goes straight back to them.
+              </p>
+            </div>
+            <Link href="/trainings?review=REJECTED" className={buttonClass({ variant: "secondary", size: "sm" })}>
+              See all returned
+            </Link>
+          </div>
+
+          <ul className="mt-4 space-y-2">
+            {returned.map((training) => (
+              <li key={training.id}>
+                <Link
+                  href={`/trainings/${training.id}`}
+                  className="group flex flex-col gap-1.5 rounded-control border border-danger/25 bg-surface px-4 py-3 transition-colors hover:border-danger/50"
+                >
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-sm font-semibold text-ink group-hover:text-danger">{training.title}</span>
+                    {training.areaName && <span className="text-xs text-ink-muted">· {training.areaName}</span>}
+                  </span>
+                  {training.reviewNote && (
+                    <span className="text-[13px] leading-relaxed text-ink-muted">
+                      <span className="font-semibold text-ink">What to correct: </span>
+                      {training.reviewNote}
+                    </span>
+                  )}
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-danger">
+                    Open and correct →
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Overview analytics: the numbers, then the shapes behind them. */}
       {staff && traffic && insights && sessionRecord ? (

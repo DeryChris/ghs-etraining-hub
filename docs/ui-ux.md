@@ -92,6 +92,14 @@ Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard opera
   page: charts are staff equipment.
 * **Space page** — sticky sub‑header with progress, materials as cards grouped by type, discussion
   at the bottom, "Download all for offline" action with total size shown.
+* **Signed-out screens** — the sign-in card is two halves: getting started and what the platform is
+  for on the left, the form on the right (`lg` and above; a phone sees the form first). Under the
+  Sign in button, *Create an account* and then the Complaint Hub, in that order, because that is the
+  order they are reached for. `/register` is one column: staff ID, then the HRIMS facts read-only,
+  then e-mail, phone and password (ADR‑0030).
+* **Search bars collapse** — one search box, always visible; the rest of the filters behind a
+  native `<details>` that says how many are set (`components/ui/filter-bar.tsx`). The fields are
+  still submitted while it is shut, because they stay in the DOM.
 * **Material viewer** — breadcrumb, title, one wrapped line of metadata (author, updated, est.
   minutes, priority), then the file. The frame around the file is a single 44 px strip: what it is on
   the left, and three icon buttons on the right — new tab, download, full screen. Nothing else, because

@@ -163,6 +163,52 @@ export async function listTrainings(filters: TrainingFilters): Promise<{
   };
 }
 
+/**
+ * What a facilitator has to act on: their own trainings that a unit head
+ * returned for correction.
+ *
+ * The review banner on the training page already explains the state, but nothing
+ * told the author to go and look — a returned training sat in the list exactly
+ * like a live one, so a correction could wait weeks. This is the read the
+ * dashboard's "needs your attention" card makes, and it is scoped to the author:
+ * a returned training is nobody else's task.
+ */
+export interface ReturnedTraining {
+  id: string;
+  title: string;
+  areaName: string | null;
+  fieldName: string | null;
+  reviewNote: string | null;
+  reviewedByName: string | null;
+  reviewedAt: Date | null;
+}
+
+export async function listReturnedTrainings(userId: string): Promise<ReturnedTraining[]> {
+  return db
+    .select({
+      id: trainingSessions.id,
+      title: trainingSessions.title,
+      areaName: programmeAreas.name,
+      fieldName: programmeFields.name,
+      reviewNote: trainingSessions.reviewNote,
+      reviewedByName: users.fullName,
+      reviewedAt: trainingSessions.reviewedAt,
+    })
+    .from(trainingSessions)
+    .leftJoin(programmeFields, eq(programmeFields.id, trainingSessions.programmeFieldId))
+    .leftJoin(programmeAreas, eq(programmeAreas.id, trainingSessions.programmeAreaId))
+    .leftJoin(users, eq(users.id, trainingSessions.reviewedById))
+    .where(
+      and(
+        eq(trainingSessions.createdById, userId),
+        eq(trainingSessions.reviewState, "REJECTED"),
+        eq(trainingSessions.isArchived, false),
+      ),
+    )
+    .orderBy(desc(trainingSessions.reviewedAt))
+    .limit(5);
+}
+
 export interface TrainingSummary {
   total: number;
   planned: number;

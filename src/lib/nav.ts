@@ -104,7 +104,14 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     id: "community",
     label: "Community",
     items: [
-      { href: "/messages", label: "Messages", icon: "messages", roles: EVERYONE, count: "messages" },
+      {
+        href: "/messages",
+        label: "Messages & complaints",
+        icon: "messages",
+        roles: EVERYONE,
+        count: "messages",
+        hint: "Conversations with colleagues and what staff have reported, in one list",
+      },
       {
         href: "/notifications",
         label: "Notifications",
@@ -162,13 +169,6 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         icon: "taxonomy",
         roles: ADMIN_ONLY,
         hint: "The programme areas and fields a training plan is filed under",
-      },
-      {
-        href: "/complaints",
-        label: "Complaints",
-        icon: "complaint",
-        roles: STAFF,
-        hint: "What staff have reported, to answer or reset access from",
       },
       { href: "/settings", label: "Settings", icon: "settings", roles: ADMIN_ONLY },
     ],

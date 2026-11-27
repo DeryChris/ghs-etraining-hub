@@ -21,7 +21,7 @@ indexes so an agent does not have to reverse‑engineer them. Naming/style rules
 `ghsStaffId` (unique — the employee number as the payroll list prints it, plain digits such as
 `2681763`; the older `GHS-000123` spelling is still read, and both resolve to the same person via
 `src/lib/staff-id.ts`), `email` (unique, lowercase), `fullName`, `phone` (E.164),
-`role`, `cadre` (nurse / midwife / medical officer / pharmacy / laboratory / records / administration), `directorate`, `region`,
+`role`, `grade` (nurse / midwife / medical officer / pharmacy / laboratory / records / administration), `directorate`, `region`,
 `facility`, `isActive`, `deactivatedAt`, `mfaEnabled`, `lastLoginAt`, `failedLoginCount`,
 `lockedUntil`, `createdAt`, `updatedAt`.
 Indexes: `users_region_role_idx (region, role)`, `users_directorate_idx`, `users_facility_idx`.
@@ -129,7 +129,7 @@ The vocabulary a training plan is written in: `programme_fields` (`code` unique,
 `code` unique, `name`, `description`, `sortOrder`, `isArchived`; unique on (`fieldId`, `name`)).
 Seeded from the GHS list in `src/db/data/programme-taxonomy.ts` (10 fields, 41 areas) and maintained
 at `/programme-fields`. They carry the whole taxonomy since ADR‑0014: `programme_fields.is_restricted`
-marks staff-only programmes, `programme_areas.audience_region|directorate|cadre` targets a cohort (null
+marks staff-only programmes, `programme_areas.audience_region|directorate|grade` targets a cohort (null
 means everyone), and `area_facilitators` (`area_id`, `user_id`, unique together) grants a facilitator
 the right to author and review in that area. Directorates and spaces — the earlier `categories` →
 `spaces` pair — are gone; the migration that removed them left a JSON snapshot in

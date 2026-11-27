@@ -22,6 +22,8 @@ const PUBLIC_PATHS = [
   "/terms",
   "/accessibility",
   "/login",
+  // Creating an account is for somebody who has never signed in.
+  "/register",
   "/forgot-password",
   // A one-time reset link is opened by somebody who cannot sign in yet.
   "/reset-password",
@@ -83,7 +85,8 @@ export async function proxy(request: NextRequest) {
     return withRequestId(NextResponse.redirect(url), requestId);
   }
 
-  if (session && pathname === "/login") {
+  // A signed-in visitor has no business on the sign-in or registration pages.
+  if (session && (pathname === "/login" || pathname === "/register")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.search = "";

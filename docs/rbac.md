@@ -65,7 +65,7 @@ only a hint, never proof of assignment.
   every other form offers.
 * Material scope is its programme area; a facilitator may only act on an area they are assigned to.
 * Audience match for learners = `audienceRegion IS NULL OR audienceRegion = user.region` (and the
-  same for directorate/cadre). This is enforced in SQL by `audienceFor()` in
+  same for directorate/grade). This is enforced in SQL by `audienceFor()` in
   `src/lib/server/learning-queries.ts`, not in the UI: staff are exempt, a viewer with no cohort
   attribute matches untargeted content only, and `programme_fields.isRestricted` hides the programme
   from learners entirely.

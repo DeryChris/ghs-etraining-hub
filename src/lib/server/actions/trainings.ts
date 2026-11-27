@@ -373,7 +373,7 @@ export async function updateTrainingAction(
   }
   redirect(
     `/trainings/${parsed.data.trainingId}?notice=${encodeURIComponent(
-      resubmit ? "Changes saved and sent back for review." : "Changes saved.",
+      resubmit ? "Corrections saved and sent back to the unit head for review." : "Changes saved.",
     )}`,
   );
 }
@@ -440,7 +440,7 @@ export async function reviewTrainingAction(
     return { ok: false, message: "That review could not be read. Reload the page." };
   }
   if (decision === "reject" && !note) {
-    return { ok: false, message: "Say why it was sent back, so the facilitator knows what to change." };
+    return { ok: false, message: "Say what needs correcting, so the facilitator knows what to change." };
   }
 
   const guard = await checkCapability("training.manage");
@@ -518,7 +518,7 @@ export async function reviewTrainingAction(
     message:
       decision === "approve"
         ? `“${training.title}” is live, and the people it is for have been notified.`
-        : `“${training.title}” was sent back to the facilitator, who has been notified.`,
+        : `“${training.title}” was returned to the facilitator for correction, and they have been notified.`,
   };
 }
 

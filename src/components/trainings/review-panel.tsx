@@ -22,9 +22,10 @@ const COPY: Record<ReviewState, { label: string; variant: "success" | "outline" 
     sentence: "Waiting for the unit head of this programme area. Only you and the reviewers can see it.",
   },
   REJECTED: {
-    label: "Sent back",
+    label: "Returned for correction",
     variant: "danger",
-    sentence: "A unit head sent this back. Edit it below and save — saving puts it back in the queue.",
+    sentence:
+      "A unit head returned this for correction. Correct what the note asks for and save — saving sends it back to them for review.",
   },
 };
 

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
-import { inputClass, labelClass } from "@/components/ui/input";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { labelClass } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
@@ -184,15 +185,18 @@ npm run staff:status`}
         </section>
       )}
 
-      <form action="/users" method="get" role="search" className="grid gap-3 rounded-card border border-hairline bg-surface p-4 md:grid-cols-[1fr_200px_180px_auto] md:items-end">
+      <FilterBar
+        action="/users"
+        label="Filter the staff directory"
+        searchName="q"
+        searchValue={query}
+        searchPlaceholder="Search by name, e-mail or staff ID"
+        activeCount={[role, status].filter(Boolean).length}
+        clearHref="/users"
+        summary={directory.total === 0 ? "No matches" : `${directory.total} ${directory.total === 1 ? "person" : "people"}`}
+      >
         {/* Searching inside a group keeps you inside it. */}
         {group && <input type="hidden" name="group" value={group} />}
-        <div>
-          <label htmlFor="user-q" className={labelClass}>
-            Search
-          </label>
-          <input id="user-q" name="q" type="search" defaultValue={query} placeholder="Name, e-mail or staff ID" className={inputClass} />
-        </div>
         <div>
           <label htmlFor="user-role" className={labelClass}>
             Role
@@ -222,17 +226,7 @@ npm run staff:status`}
             ]}
           />
         </div>
-        <div className="flex items-center gap-2">
-          <button type="submit" className={buttonClass({ variant: "secondary" })}>
-            Filter
-          </button>
-          {filtered && (
-            <Link href="/users" className={buttonClass({ variant: "ghost" })}>
-              Clear
-            </Link>
-          )}
-        </div>
-      </form>
+      </FilterBar>
 
       {directory.items.length === 0 ? (
         <ListEmptyState

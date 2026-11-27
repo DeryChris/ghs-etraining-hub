@@ -202,7 +202,7 @@ export async function submitComplaintAction(
       matched: matchedUserId !== null,
       trainingId,
     });
-    revalidatePath("/complaints");
+    revalidatePath("/messages");
     return {
       ok: true,
       reference,
@@ -376,7 +376,7 @@ export async function respondToComplaintAction(
     return { ok: false, message: "The answer was not saved. Try again in a moment." };
   }
 
-  revalidatePath("/complaints");
+  revalidatePath("/messages");
   return { ok: true, message: resolve ? "Answered and closed. The person can read it with their Staff ID." : "Answer saved." };
 }
 
@@ -437,7 +437,7 @@ export async function resetAccessAction(_previous: ComplaintState, formData: For
         updatedAt: new Date(),
       })
       .where(eq(complaints.id, complaintId));
-    revalidatePath("/complaints");
+    revalidatePath("/messages");
   }
 
   await logAudit({
@@ -581,6 +581,6 @@ export async function staffReplyAction(_previous: ComplaintState, formData: Form
     .set({ status: "IN_PROGRESS", resolvedAt: null, updatedAt: new Date() })
     .where(eq(complaints.id, complaint.id));
 
-  revalidatePath("/complaints");
+  revalidatePath("/messages");
   return { ok: true, message: "Your message is with the desk. You will see the answer here." };
 }

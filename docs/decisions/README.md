@@ -323,3 +323,19 @@ flag, the panel, the dashboard section, `material_progress`, `enrollments` and t
 when stays. Same release: one name per surface — the material area is the
 **Library** (still `/catalogue`), the trainings area is **Trainings** (never "the
 register"). See `0028-no-signature.md`.
+
+## ADR‑0029 — One inbox, and work that comes back
+
+Messages and complaints are one list with a chip on each thread and three
+buttons above it (All / Messages / Complaints); `/complaints` redirects into it.
+A training a unit head sends back is shown as **Returned for correction**, opens
+as a task card at the top of the author's dashboard, and goes straight back to
+that unit head when saved. See `0029-one-inbox-and-returned-work.md`.
+
+## ADR‑0030 — Accounts are claimed, not created
+
+`/register` verifies the employee number against the imported staff sheet and
+then asks only for what the sheet cannot know. Name, region, district, facility
+and grade are read-only facts; an account that already has a password cannot be
+claimed. Sign-in is a split card again: getting started beside the form. See
+`0030-accounts-are-claimed.md`.

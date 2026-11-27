@@ -25,9 +25,10 @@ describe("navFor", () => {
     expect(facilitator).toEqual(expect.arrayContaining(["/authoring", "/notices"]));
     // The review queue is a sign-off duty: administrators and unit heads only.
     expect(facilitator).not.toContain("/review");
-    // The desk, not the public help pages: the Complaint Hub is for people who
-    // cannot sign in, so it is not a signed-in destination.
-    expect(facilitator).toContain("/complaints");
+    // The desk lives inside messages now, and the public help pages are for
+    // people who cannot sign in at all: neither is a destination of its own.
+    expect(facilitator).toContain("/messages");
+    expect(facilitator).not.toContain("/complaints");
     expect(facilitator).not.toContain("/help");
     expect(facilitator).not.toContain("/users");
     expect(facilitator).not.toContain("/settings");
@@ -110,7 +111,6 @@ describe("navFor", () => {
       "Users",
       "Geography & facilities",
       "Programme areas",
-      "Complaints",
       "Settings",
     ]);
   });
@@ -132,7 +132,7 @@ describe("navFor", () => {
     expect(head.slice().sort()).toEqual([...plain, "/review"].sort());
     expect(head).not.toContain("/users");
     // The desk is open to every member of staff, head or not.
-    expect(head).toContain("/complaints");
+    expect(head).toContain("/messages");
   });
 });
 
