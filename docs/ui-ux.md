@@ -92,9 +92,19 @@ Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard opera
   page: charts are staff equipment.
 * **Space page** — sticky sub‑header with progress, materials as cards grouped by type, discussion
   at the bottom, "Download all for offline" action with total size shown.
-* **Material viewer** — title, version + "superseded" banner, metadata row (programme field and
-  area, version, published date, size, est. minutes), then the artefact. No unrelated sidebars, no
-  signature to collect, no marks (ADR‑0026, ADR‑0028).
+* **Material viewer** — breadcrumb, title, one wrapped line of metadata (author, updated, est.
+  minutes, priority), then the file. The frame around the file is a single 44 px strip: what it is on
+  the left, and three icon buttons on the right — new tab, download, full screen. Nothing else, because
+  every line of chrome above a document on a 375 px screen is a line of the document the reader loses.
+  No unrelated sidebars, no signature to collect, no marks (ADR‑0026, ADR‑0028).
+* **Full screen is ours, not the browser's.** The expand button puts the panel over the viewport with
+  CSS and *then* asks for `requestFullscreen` as a bonus: iOS Safari has no
+  `Element.requestFullscreen` for anything but `<video>`, so the browser-only version of this button
+  did nothing on exactly the device the product is used on (`components/ui/use-expand.ts`). Escape,
+  the system gesture and the browser's own exit all collapse it, and the page behind is scroll-locked.
+* **Slides are read, not indexed.** A deck shows one slide, `‹ 3 / 40 ›` and swipe. No grid of slide
+  numbers under the canvas, no speaker notes — a deck is read in order, and the digits were the
+  loudest thing in the panel on a phone.
 * **Data tables (admin)** — server‑side pagination with a page‑size selector (25/50/100), saved
   filters in the URL (shareable, back‑button safe), row actions in a kebab menu, count in the
   caption ("Showing 1–25 of 4,182 GHS staff"). `/users` is the reference implementation: 25 per page,

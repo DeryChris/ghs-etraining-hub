@@ -74,22 +74,29 @@ export default async function MaterialPage({
         </p>
       )}
 
-      <dl className="grid gap-4 rounded-card border border-hairline bg-surface p-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Author</dt>
-          <dd className="mt-1 text-ink">{authorName}</dd>
+      {/*
+        * One wrapped line, not a four-cell table. On a phone this used to be the
+        * tallest thing between the title and the document; the reader came here
+        * for the protocol, so the metadata keeps its facts and loses its rows.
+        */}
+      <dl className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-card border border-hairline bg-surface px-4 py-3 text-xs">
+        <div className="flex items-baseline gap-1.5">
+          <dt className="font-semibold uppercase tracking-wider text-ink-muted">Author</dt>
+          <dd className="font-medium text-ink">{authorName}</dd>
         </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Last updated</dt>
-          <dd className="mt-1 text-ink">{formatDate(material.updatedAt)}</dd>
+        <div className="flex items-baseline gap-1.5">
+          <dt className="font-semibold uppercase tracking-wider text-ink-muted">Updated</dt>
+          <dd className="font-medium text-ink">{formatDate(material.updatedAt)}</dd>
         </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Estimated time</dt>
-          <dd className="mt-1 text-ink">{material.estimatedMinutes !== null ? formatMinutes(material.estimatedMinutes) : "Not stated"}</dd>
+        <div className="flex items-baseline gap-1.5">
+          <dt className="font-semibold uppercase tracking-wider text-ink-muted">Time</dt>
+          <dd className="font-medium text-ink">
+            {material.estimatedMinutes !== null ? formatMinutes(material.estimatedMinutes) : "Not stated"}
+          </dd>
         </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Priority</dt>
-          <dd className="mt-1">
+        <div className="flex items-center gap-1.5">
+          <dt className="sr-only">Priority</dt>
+          <dd>
             <PriorityChip priority={material.priority} />
           </dd>
         </div>

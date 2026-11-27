@@ -113,6 +113,17 @@ mobile, and a 200 % zoom check for horizontal scrolling.
    database migrated past 0021, and `select requires_acknowledgement from materials` fails too.
 4. The staff dashboard's KPI row has no "Protocols to sign" card; its reading card says what was opened.
 
+## 6d. Reader drill (phone first)
+
+1. Open a material with a file on a real phone (or 375 px emulation). The strip above the file holds
+   three icon buttons — new tab, download, full screen — and no paragraph of instructions.
+2. Tap **Full screen** on iOS Safari, where `Element.requestFullscreen` does not exist for this
+   element: the panel must cover the viewport anyway. Escape (desktop) and the back gesture must
+   return to the page, and the page must be scrollable again afterwards.
+3. Open a deck: one slide, `‹ 3 / 40 ›`, and a swipe that moves one slide. No numbered grid of
+   slides, no speaker notes.
+4. Rotate to landscape with the panel open: the slide still fits, whole but not cropped.
+
 ## 7. Assessment tables are gone
 
 * `select * from assessments` → `relation does not exist` on a database migrated past 0020.

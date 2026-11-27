@@ -1,105 +1,124 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Deck, Slide, SlideParagraph, SlideShape } from "@/lib/office/pptx";
 
 /**
- * A slide, drawn at the author's coordinates.
+ * A deck, one slide at a time — the slide and two arrows.
  *
- * The deck is measured in pixels at its own reference size (1280 wide for a
- * 16:9 deck), and the whole canvas is scaled to whatever width it is given — so
- * the title stays where it was dragged to, the accent band keeps its height and
- * the picture keeps its place beside the bullet. Nothing here is a quotation of
- * the slide; it is the slide.
+ * The previous version put a numbered button for every slide under the canvas,
+ * which on a 40-slide deck was a wall of digits under a phone screen and the
+ * loudest thing in the reader. A deck is read in order, so the controls are
+ * *back*, *forward* and a quiet "3 / 40": no index, no speaker notes, no
+ * furniture competing with the slide. Swiping works, because this is a phone
+ * product and the canvas is the obvious thing to swipe.
  */
-export function PptxView({ deck }: { deck: Deck }) {
+export function PptxView({ deck, expanded = false }: { deck: Deck; expanded?: boolean }) {
   const [index, setIndex] = useState(0);
-  const slide = deck.slides[Math.min(index, deck.slides.length - 1)];
+  const total = deck.slides.length;
+  const slide = deck.slides[Math.min(index, total - 1)];
+  const touchStart = useRef<number | null>(null);
+
+  const go = (next: number) => setIndex(Math.min(total - 1, Math.max(0, next)));
 
   return (
-    <div className="space-y-3">
-      <SlideCanvas slide={slide} width={deck.width} height={deck.height} />
+    <div className={expanded ? "flex h-full flex-col justify-center gap-3 p-2" : "space-y-3"}>
+      <div
+        onTouchStart={(event) => {
+          touchStart.current = event.touches[0]?.clientX ?? null;
+        }}
+        onTouchEnd={(event) => {
+          const start = touchStart.current;
+          touchStart.current = null;
+          if (start === null) return;
+          const end = event.changedTouches[0]?.clientX ?? start;
+          const delta = end - start;
+          // A deliberate sideways drag, not the start of a page scroll.
+          if (Math.abs(delta) > 40) go(delta < 0 ? index + 1 : index - 1);
+        }}
+      >
+        <SlideCanvas slide={slide} width={deck.width} height={deck.height} fit={expanded} />
+      </div>
 
-      {deck.slides.length > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setIndex((current) => Math.max(0, current - 1))}
-              disabled={index === 0}
-              className="inline-flex h-8 items-center rounded-control border border-hairline px-2.5 text-xs font-semibold text-ink transition-colors hover:border-primary/40 disabled:opacity-40"
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              onClick={() => setIndex((current) => Math.min(deck.slides.length - 1, current + 1))}
-              disabled={index === deck.slides.length - 1}
-              className="inline-flex h-8 items-center rounded-control border border-hairline px-2.5 text-xs font-semibold text-ink transition-colors hover:border-primary/40 disabled:opacity-40"
-            >
-              Next
-            </button>
-          </div>
-          <p className="text-xs font-semibold text-ink-muted" aria-live="polite">
-            Slide {index + 1} of {deck.slides.length}
+      {total > 1 && (
+        <div className="flex items-center justify-center gap-1 px-1" aria-label="Slide controls">
+          <button
+            type="button"
+            onClick={() => go(index - 1)}
+            disabled={index === 0}
+            aria-label="Previous slide"
+            title="Previous slide"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <ChevronLeft className="h-5 w-5" aria-hidden />
+          </button>
+          <p className="min-w-12 text-center text-xs font-semibold tabular-nums text-ink-muted" aria-live="polite">
+            {index + 1} / {total}
           </p>
+          <button
+            type="button"
+            onClick={() => go(index + 1)}
+            disabled={index === total - 1}
+            aria-label="Next slide"
+            title="Next slide"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <ChevronRight className="h-5 w-5" aria-hidden />
+          </button>
         </div>
-      )}
-
-      {deck.slides.length > 1 && (
-        <ol className="flex flex-wrap gap-1.5 px-1" aria-label="Slides">
-          {deck.slides.map((entry, position) => (
-            <li key={entry.number}>
-              <button
-                type="button"
-                onClick={() => setIndex(position)}
-                aria-current={position === index ? "true" : undefined}
-                aria-label={`Slide ${entry.number}`}
-                className={`flex h-7 min-w-7 items-center justify-center rounded-control border px-2 text-[11px] font-bold transition-colors ${
-                  position === index
-                    ? "border-primary bg-primary text-primary-ink"
-                    : "border-hairline bg-surface text-ink-muted hover:border-primary/40 hover:text-ink"
-                }`}
-              >
-                {entry.number}
-              </button>
-            </li>
-          ))}
-        </ol>
-      )}
-
-      {deck.notes.length > 0 && (
-        <p className="px-1 text-[11px] leading-relaxed text-ink-muted">{deck.notes.join(" ")}</p>
       )}
     </div>
   );
 }
 
-function SlideCanvas({ slide, width, height }: { slide: Slide; width: number; height: number }) {
+function SlideCanvas({
+  slide,
+  width,
+  height,
+  fit = false,
+}: {
+  slide: Slide;
+  width: number;
+  height: number;
+  /** Scale to the height as well as the width — the canvas is given the screen. */
+  fit?: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
+  const [box, setBox] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
-    const measure = () => setScale(element.clientWidth / width || 1);
+    const measure = () => setBox({ width: element.clientWidth, height: element.clientHeight });
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [width]);
+  }, []);
+
+  /*
+   * The deck is measured at its own reference size, so it is drawn at that size
+   * and scaled down. On the page the width decides; given the whole screen, the
+   * shorter of width and height decides, so a 16:9 slide fits a portrait phone
+   * whole rather than running off the bottom of it.
+   */
+  const byWidth = box.width > 0 ? box.width / width : 1;
+  const scale = fit && box.height > 0 ? Math.min(byWidth, box.height / height) : byWidth;
+  const left = Math.max(0, (box.width - width * scale) / 2);
+  const top = Math.max(0, (box.height - height * scale) / 2);
 
   return (
     <div
       ref={ref}
-      className="relative w-full overflow-hidden rounded-control bg-surface-2"
-      style={{ aspectRatio: `${width} / ${height}` }}
+      className={`relative w-full overflow-hidden rounded-control bg-surface-2 ${fit ? "min-h-0 flex-1" : ""}`}
+      style={fit ? undefined : { aspectRatio: `${width} / ${height}` }}
     >
       <div
         style={{
           position: "absolute",
-          top: 0,
-          left: 0,
+          top,
+          left,
           width,
           height,
           transform: `scale(${scale})`,
