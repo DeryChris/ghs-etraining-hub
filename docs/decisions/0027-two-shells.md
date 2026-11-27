@@ -43,8 +43,9 @@ reading?* had to be found first.
    a link nobody can reach.
 5. **No charts on the learner's page.** The staff dashboard keeps its KPIs and
    charts — that is the job it does. What a member of staff needs on arrival is
-   the material they were reading, what is waiting for a signature, and what they
-   have read; anything else is one tap away in the library.
+   the material they were reading and what they have read; anything else is one
+   tap away in the library. (The "waiting for a signature" list this ADR mentions
+   was removed in ADR‑0028.)
 
 **Consequences.** The learner's page is wider (1280 px), so material cards sit
 three‑across on a laptop and one‑across on a phone without a rail taking 264 px.

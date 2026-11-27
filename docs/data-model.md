@@ -51,9 +51,10 @@ This table is the object‑level scope source for every facilitator capability c
 
 ### materials
 `title`, `summary`, `type` (`DOCUMENT | VIDEO | LAB | ASSESSMENT_LINK`), `priority`
-(`LOW | MEDIUM | HIGH | CRITICAL`), `requiresAcknowledgement`, `estimatedMinutes`, `cpdCreditsX10`,
-`recertificationMonths`, `programmeAreaId`, `authorId`, `currentVersionId`, `state`, `isPublished`,
-timestamps. `currentVersionId` is the single pointer learners read; it flips only on publish.
+(`LOW | MEDIUM | HIGH | CRITICAL`), `estimatedMinutes`, `programmeAreaId`, `authorId`,
+`currentVersionId`, `state`, `isPublished`, timestamps. There is no `requires_acknowledgement` and no
+CPD or recertification column: the library stores material and a record of what was read, not an
+obligation or a credit (ADR‑0026, ADR‑0028). `currentVersionId` is the single pointer learners read; it flips only on publish.
 
 ### material_versions
 `materialId`, `version` (monotonic per material), `storageKey`, `mimeType`, `sizeBytes`,
@@ -62,19 +63,21 @@ timestamps. `currentVersionId` is the single pointer learners read; it flips onl
 `reviewedById`, `publishedAt`, `supersededByVersionId`, `createdAt`.
 Immutable once `PUBLISHED`. Superseding inserts a new row and marks the old one, never updates bytes.
 
-### enrollments
-`userId`, `programmeAreaId`, `source` (`SELF | ASSIGNED`), `assignedById`, `dueAt`, `completedAt`,
-`lastRemindedAt`, unique on (`userId`, `programmeAreaId`).
+### ~~enrollments~~, ~~material_progress~~ (retired — see material_views)
 
-### material_progress (acknowledgements)
-`userId`, `materialId`, `materialVersionId`, `acknowledgedAt`, `updatedAt`, unique on
-(`userId`, `materialId`). `materialVersionId` proves *which version* the staff member read and signed
-for — required for audit evidence (PRD §9.4).
+Enrolment rows were written by exactly one thing: the "acknowledge this protocol" action, which
+enrolled the signer in the area as a side effect. No page listed an enrolment and no report counted
+one, so when the signature went, the table had no writer and no reader left. `material_progress` held
+one row per person per material — the version they had signed against — and went the same way in
+`drizzle/0021_retire_the_signature.sql` (ADR‑0028). The `enrollment.self` and `enrollment.assign`
+permissions went with them.
 
-The learning path that used to live here — `status`, `watchedPercent`, `completedAt` — was dropped in
-`drizzle/0017_library_without_marks.sql`. A library does not have a completion state: "0 of 0
-materials completed" was arithmetic about a course nobody had enrolled in. What remains is the one
-fact a directorate can be asked about, and it is not a grade.
+An earlier cut had already taken `status`, `watchedPercent` and `completedAt` out of `material_progress`
+(`drizzle/0017_library_without_marks.sql`): a library does not have a completion state, and "0 of 0
+materials completed" was arithmetic about a course nobody had enrolled in.
+
+What the service keeps is `material_views` — which material was opened, by whom, on which day, and how
+often. That is a record of reading, and it is the whole record.
 
 ### file_blobs
 `storageKey`, `mimeType`, `sizeBytes`, `bytes` (`bytea`), `createdAt`, unique on `storageKey`.
@@ -93,9 +96,10 @@ remove a message. `training_sessions.image_storage_key` holds the optional cover
 through the same storage interface.
 
 ### activity only, no marks
-Open and download records (`material_progress`, `material_views`) exist so programme teams can see what
-is being read, and `material_progress.acknowledged_at` records a signature against a material version
-where a protocol asks for one. Nothing is marked, scored, issued or verified.
+Open and download records (`material_views` plus the `MATERIAL_FILE_ISSUED` audit entries) exist so
+programme teams can see what is being read. Nothing is marked, scored, issued, verified — or signed.
+ADR‑0028 retired the acknowledgement, so there is no table in which one person certifies to another
+that they read a document.
 
 The `certificates` table was dropped in `drizzle/0013_retire_the_award.sql` (ADR‑0011), and the question
 banks, attempts and pass marks went in `drizzle/0020_retire_the_marks.sql` (ADR‑0026). A material may
@@ -131,13 +135,13 @@ the right to author and review in that area. Directorates and spaces — the ear
 `spaces` pair — are gone; the migration that removed them left a JSON snapshot in
 `legacy_taxonomy_backup`.
 
-### training_sessions (the Trainings register)
+### training_sessions (the Trainings list)
 `title`, `year` (defaults to the current year, corrected to the start date's year on backfill),
 `programmeFieldId`, `programmeAreaId`, `targetGroup`, `organisedOn` (start date), `endsOn`,
 `durationText`, `status` (`PLANNED | COMPLETED | CANCELLED`), `venue`, `regionId`, `districtId`,
 `subDistrictId`, `facilityId`, `attendeeCount`, `notes`, `isArchived`, `createdById`, timestamps.
 A training carries no category and no space since ADR‑0014: the field and the area are the whole
-classification. Indexes on (`year`, `organisedOn`) and `programmeAreaId` back the register's filters.
+classification. Indexes on (`year`, `organisedOn`) and `programmeAreaId` back the filters on `/trainings`.
 Rows are archived, never deleted.
 
 ### audit_logs
@@ -152,7 +156,7 @@ Support tables for abuse handling, the two‑person publish rule, and login/uplo
 The ten programme fields and forty-one areas GHS supplied (`PROGRAMME_FIELDS`), keyed on their
 codes so a revised list updates rather than duplicates. Three starter materials filed under real
 programme areas (standard precautions → Quality Assurance, cold chain → EPI, surveillance → Surveillance),
-one of them a `CRITICAL` SOP requiring acknowledgement; the sixteen regions; the eleven Upper West
+one of them a `CRITICAL` SOP and none asking to be signed for; the sixteen regions; the eleven Upper West
 districts with their Nadowli‑Kaleo sub-districts and hospitals; a facilitator assigned to two areas so
 the authoring and review queues are not empty; a demo roster of staff across all 16 regions with fake
 PINs (`GHS-000001`…); and one superadmin whose credentials come from

@@ -16,10 +16,10 @@
  * The learner does not use the sections at all: `LEARNER_NAV` below is the top bar
  * of the reading shell (ADR-0027), and a test keeps the two lists in step.
  *
- * "Trainings" is the register: a flat, filterable list of events (ADR-0013).
+ * "Trainings" is the flat, filterable list of events (ADR-0013).
  * "Library" is the way in by subject — programme field, then programme area, then
  * the trainings and material filed under it (ADR-0014). They were briefly one
- * screen, which left the register sharing space with the taxonomy; they are two
+ * screen, which left the trainings list sharing space with the taxonomy; they are two
  * doors again because people arrive with one of two questions — "what ran this
  * year?" or "what exists for malaria?".
  *

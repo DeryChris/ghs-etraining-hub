@@ -25,7 +25,7 @@ const ROLES = [
     icon: Users,
     name: "Learners",
     who: "Ghana Health Service staff",
-    body: "Find the material for every programme attended, read or download it, and acknowledge the protocols that require it.",
+    body: "Find the material for every programme attended, in the library, and read or download it whenever you need it.",
   },
   {
     icon: ClipboardPen,
@@ -45,7 +45,7 @@ const ROADMAP = [
   {
     phase: "Live now",
     status: "done" as const,
-    items: ["Programme catalogue with versioned material", "Reviewed uploads and two-person publishing", "A record of what you opened and downloaded", "Search, library and cohort-targeted notices", "Every administrative action audited"],
+    items: ["Library of versioned material by programme", "Reviewed uploads and two-person publishing", "A record of what you opened and downloaded", "Search, library and cohort-targeted notices", "Every administrative action audited"],
   },
   {
     phase: "Next",
@@ -76,7 +76,7 @@ export default function AboutPage() {
               Every training leaves material behind. This is where it lives.
             </h1>
             <p className="max-w-2xl text-lg leading-relaxed text-ink-muted">
-              The {SITE.fullName} is the catalogue for GHS training programmes. When a directorate runs a session, the slides,
+              The {SITE.fullName} is the library for GHS training programmes. When a directorate runs a session, the slides,
               protocols and recordings are filed here — under that programme, with a version and a date, and open to staff wherever
               they serve. Nothing is deleted, and nothing is edited without a record of who did it.
             </p>

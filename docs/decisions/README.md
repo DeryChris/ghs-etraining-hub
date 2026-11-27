@@ -314,3 +314,12 @@ reworded. The complaint form keeps one narrative field. See
 A rail for the people who run the library, a top bar (and a bottom bar on a
 phone) for the people who read it. "My activity" folds into the dashboard;
 `/analytics` redirects there. See `0027-two-shells.md`.
+
+## ADR‑0028 — No signature
+
+The library stops asking anybody to certify that they have read a document. The
+flag, the panel, the dashboard section, `material_progress`, `enrollments` and the
+`enrollment.*` capabilities are gone; the record of what was opened, by whom and
+when stays. Same release: one name per surface — the material area is the
+**Library** (still `/catalogue`), the trainings area is **Trainings** (never "the
+register"). See `0028-no-signature.md`.

@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { auditLogs, programmeFields, materialProgress, materialVersions, materialViews, materials, programmeAreas, trainingSessions, users } from "@/db/schema";
+import { auditLogs, programmeFields, materialVersions, materialViews, materials, programmeAreas, trainingSessions, users } from "@/db/schema";
 import { scopeFor, scopeForTraining } from "@/lib/server/scope";
 import { isStaffRole, type Viewer } from "@/lib/viewer";
 
@@ -29,12 +29,7 @@ export interface Insights {
   /** "all" for an administrator, "assigned" for a facilitator. */
   scope: "all" | "assigned";
   people: { learners: number; facilitators: number; admins: number; total: number } | null;
-  catalogue: { programmes: number; programmeAreas: number; published: number; inReview: number; draft: number; archived: number };
-  /**
-   * Activity only. There is no mark column here on purpose: opening something
-   * is a data point about the service, not a qualification the system hands out.
-   */
-  learning: { openedInWindow: number; acknowledgementsInWindow: number };
+  library: { programmes: number; programmeAreas: number; published: number; inReview: number; draft: number; archived: number };
   /** Every programme in scope, busiest first, capped for the page. */
   programmes: ProgrammeInsight[];
   /** Programmes in scope with nothing published — the coverage gap. */
@@ -42,16 +37,11 @@ export interface Insights {
   windowDays: number;
 }
 
-function windowStart(): Date {
-  return new Date(Date.now() - WINDOW_DAYS * 24 * 60 * 60 * 1000);
-}
-
 export async function getInsights(viewer: Viewer): Promise<Insights> {
   if (!isStaffRole(viewer.role)) {
-    throw new Error("Insights are a staff surface; learners read their own record on /analytics.");
+    throw new Error("Insights are a staff surface; a member of staff reads their own record on /dashboard.");
   }
 
-  const since = windowStart();
   const scope = scopeFor(viewer);
   const scopedCategories = and(scope, eq(programmeFields.isArchived, false));
 
@@ -71,7 +61,7 @@ export async function getInsights(viewer: Viewer): Promise<Insights> {
     .groupBy(programmeFields.id, programmeFields.name, programmeFields.code)
     .orderBy(desc(sql`count(distinct ${materials.id}) filter (where ${materials.state} = 'PUBLISHED')`), programmeFields.name);
 
-  const [catalogueRow] = await db
+  const [libraryRow] = await db
     .select({
       programmes: sql<number>`count(distinct ${programmeFields.id})::int`,
       programmeAreas: sql<number>`count(distinct ${programmeAreas.id})::int`,
@@ -84,25 +74,6 @@ export async function getInsights(viewer: Viewer): Promise<Insights> {
     .leftJoin(programmeAreas, and(eq(programmeAreas.fieldId, programmeFields.id), eq(programmeAreas.isArchived, false)))
     .leftJoin(materials, eq(materials.programmeAreaId, programmeAreas.id))
     .where(scopedCategories);
-
-  // Acknowledgements of a protocol, not a tick on a course: somebody signed that they
-  // had read the current version. It is a count of signatures, nothing more.
-  const [acknowledgedRow] = await db
-    .select({ n: count() })
-    .from(materialProgress)
-    .innerJoin(materials, eq(materials.id, materialProgress.materialId))
-    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(and(scope, gte(materialProgress.acknowledgedAt, since), isNotNull(materialProgress.acknowledgedAt)));
-
-  // Opens: how much of the catalogue is being read at all.
-  const [openedRow] = await db
-    .select({ n: sql<number>`coalesce(sum(${materialViews.viewCount}), 0)::int` })
-    .from(materialViews)
-    .innerJoin(materials, eq(materials.id, materialViews.materialId))
-    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(and(scope, gte(materialViews.viewedOn, sql`${since.toISOString()}::date`)));
 
   // Staff headcount is directory data, so only an administrator sees it.
   const people =
@@ -126,17 +97,13 @@ export async function getInsights(viewer: Viewer): Promise<Insights> {
   return {
     scope: viewer.role === "SYSTEM_ADMIN" ? "all" : "assigned",
     people,
-    catalogue: {
-      programmes: catalogueRow?.programmes ?? 0,
-      programmeAreas: catalogueRow?.programmeAreas ?? 0,
-      published: catalogueRow?.published ?? 0,
-      inReview: catalogueRow?.inReview ?? 0,
-      draft: catalogueRow?.draft ?? 0,
-      archived: catalogueRow?.archived ?? 0,
-    },
-    learning: {
-      openedInWindow: openedRow?.n ?? 0,
-      acknowledgementsInWindow: acknowledgedRow?.n ?? 0,
+    library: {
+      programmes: libraryRow?.programmes ?? 0,
+      programmeAreas: libraryRow?.programmeAreas ?? 0,
+      published: libraryRow?.published ?? 0,
+      inReview: libraryRow?.inReview ?? 0,
+      draft: libraryRow?.draft ?? 0,
+      archived: libraryRow?.archived ?? 0,
     },
     programmes,
     gaps: programmeRows.filter((row) => row.published === 0).map(({ id, name }) => ({ id, name })),

@@ -18,7 +18,7 @@ export interface Viewer {
 }
 
 /**
- * Administrators and facilitators see the whole published catalogue — including
+ * Administrators and facilitators see everything published — including
  * restricted directorates and content targeted at other cohorts — because they
  * author, review and support it. Learners see their own cohort only.
  */

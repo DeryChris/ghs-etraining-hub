@@ -603,7 +603,7 @@ export default async function ProgrammeFieldsPage({
           href="/trainings"
           className="font-semibold text-primary hover:underline"
         >
-          See the register
+          See Trainings
         </Link>
         .
       </p>

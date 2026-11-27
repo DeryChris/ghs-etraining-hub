@@ -9,8 +9,8 @@ import { log } from "@/lib/server/logger";
 /**
  * Everything a reader needs to read one training, without leaving the library.
  *
- * The library opens a training in a panel rather than navigating to the register's
- * page: a person browsing the catalogue is reading, and losing the page they were
+ * The library opens a training in a panel rather than navigating to the Trainings
+ * page: a person browsing the library is reading, and losing the page they were
  * on to read one item is the opposite of browsing. The panel needs the same
  * content the detail page has, so this action loads exactly that and nothing more
  * — no form data, no geography lists, no edit affordances.

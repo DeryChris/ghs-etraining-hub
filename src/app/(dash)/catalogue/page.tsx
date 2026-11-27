@@ -161,7 +161,7 @@ export default async function LibraryPage({
         icon={<BookOpen className="h-7 w-7 text-primary" aria-hidden />}
         actions={
           <Link href="/trainings" className={buttonClass({ variant: "ghost" })}>
-            Go to the register
+            Go to Trainings
           </Link>
         }
       />

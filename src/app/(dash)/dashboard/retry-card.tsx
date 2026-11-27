@@ -6,8 +6,9 @@ import { buttonClass } from "@/components/ui/button";
  * real page, not a spinner: the visitor can act on it, and it says what to do
  * next instead of leaving the skeleton up.
  *
- * Both dashboards use it, which is why it lives beside them rather than inside
- * one of them.
+ * The reading home uses it when its one substantive read (the record of opens)
+ * does not arrive: an empty list would be a claim about the person, not an
+ * apology for the database.
  */
 export function DashboardRetry({ hint }: { hint?: "drift" | "database" | "timeout" }) {
   return (

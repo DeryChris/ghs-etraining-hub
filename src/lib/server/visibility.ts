@@ -5,7 +5,7 @@ import { isStaffRole, type Viewer } from "@/lib/viewer";
 
 /*
  * The predicates that decide what a viewer may see. Extracted from the learner
- * queries so every catalogue surface (library, insights, the public
+ * queries so every surface that reads published material (the library, insights, the public
  * programme list) answers the question the same way — a difference between two
  * copies of this rule is an access-control bug, not a display quirk.
  *

@@ -57,7 +57,7 @@ export default async function ReviewQueuePage() {
           Back to my materials
         </Link>
         <Link href="/trainings?review=PENDING" className={buttonClass({ variant: "ghost" })}>
-          Open the register
+          Open Trainings
         </Link>
       </div>
 
@@ -77,7 +77,7 @@ export default async function ReviewQueuePage() {
             Trainings waiting
           </h2>
           <span className="text-sm text-ink-muted">
-            {trainings.length === 0 ? "nothing to decide" : `${trainings.length} on the register`}
+            {trainings.length === 0 ? "nothing to decide" : `${trainings.length} waiting`}
           </span>
         </div>
 

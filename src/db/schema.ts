@@ -28,7 +28,6 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 export const materialTypeEnum = pgEnum("material_type", ["DOCUMENT", "VIDEO", "LAB", "ASSESSMENT_LINK"]);
 export const materialPriorityEnum = pgEnum("material_priority", ["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
 export const scanStatusEnum = pgEnum("scan_status", ["PENDING", "CLEAN", "INFECTED"]);
-export const enrollmentSourceEnum = pgEnum("enrollment_source", ["SELF", "ASSIGNED"]);
 /**
  * What a notice is about. The first six are the events this service actually
  * produces; the inherited prototype values after them are kept because Postgres
@@ -115,7 +114,6 @@ export const materials = pgTable("materials", {
   summary: text("summary"),
   type: materialTypeEnum("type").notNull().default("DOCUMENT"),
   priority: materialPriorityEnum("priority").notNull().default("LOW"),
-  requiresAcknowledgement: boolean("requires_acknowledgement").notNull().default(false),
   estimatedMinutes: integer("estimated_minutes"),
   programmeAreaId: uuid("programme_area_id").notNull().references(() => programmeAreas.id, { onDelete: "cascade" }),
   authorId: uuid("author_id").notNull().references(() => users.id),
@@ -170,39 +168,6 @@ export const fileBlobs = pgTable("file_blobs", {
   bytes: bytea("bytes").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
-
-export const enrollments = pgTable("enrollments", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  programmeAreaId: uuid("programme_area_id").notNull().references(() => programmeAreas.id, { onDelete: "cascade" }),
-  source: enrollmentSourceEnum("source").notNull().default("SELF"),
-  assignedById: uuid("assigned_by_id").references(() => users.id),
-  dueAt: timestamp("due_at", { withTimezone: true }),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-  lastRemindedAt: timestamp("last_reminded_at", { withTimezone: true }),
-}, (t) => [unique().on(t.userId, t.programmeAreaId), index("enrollments_area_idx").on(t.programmeAreaId)]);
-
-/**
- * Who has signed for which protocol, and against which version.
- *
- * This table used to carry a learning path — not started, in progress, completed,
- * watched percent. That is gone: this is a library, not a course, and "0 of 0
- * materials completed" told nobody anything. What remains is the only fact worth
- * keeping: a person acknowledged a version of a protocol, and when. A newer
- * version means the acknowledgement is stale, not that they have to "redo" a
- * course.
- */
-export const materialProgress = pgTable("material_progress", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  materialId: uuid("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
-  materialVersionId: uuid("material_version_id").notNull().references(() => materialVersions.id),
-  acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [
-  unique().on(t.userId, t.materialId),
-  index("material_progress_user_idx").on(t.userId, t.updatedAt),
-]);
 
 export const comments = pgTable("comments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -433,7 +398,7 @@ export const areaFacilitators = pgTable("area_facilitators", {
  *
  * A training is classified by programme field and the area inside it — nothing
  * else. `organisedOn` is the start date, `endsOn` the last day, and `year` the
- * plan year the register is reported by.
+ * plan year trainings are reported by.
  */
 
 export const trainingStatusEnum = pgEnum("training_status", ["PLANNED", "COMPLETED", "CANCELLED"]);

@@ -131,7 +131,7 @@ async function pageProbes(mode: "mirror" | "burst" | "serial" = "mirror"): Promi
     () => probe("page: trainings summary", () => getTrainingSummary(), undefined, ms),
     () => probe("page: training filter options", () => getTrainingFilterOptions(), undefined, ms),
     () => probe("page: programme field options", () => listProgrammeFieldOptions(), undefined, ms),
-    () => probe("page: programme catalogue", () => listFields(null), undefined, ms),
+    () => probe("page: library", () => listFields(null), undefined, ms),
     () => sessionProbe(),
   ];
 

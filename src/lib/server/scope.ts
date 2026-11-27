@@ -11,7 +11,7 @@ import { isStaffRole, type Viewer } from "@/lib/viewer";
  * they are assigned to in `area_facilitators` — read from the database, never
  * from the request (docs/rbac.md §2). A learner gets `false`, because these
  * queries back staff surfaces; anything a learner may read goes through the
- * catalogue predicates in `visibility.ts` instead.
+ * library predicates in `visibility.ts` instead.
  *
  * Assignments used to be per directorate; ADR-0014 moved them to the area, which
  * is the unit content is filed under. The migration expanded every existing

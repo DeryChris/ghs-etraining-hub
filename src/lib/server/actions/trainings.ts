@@ -283,7 +283,7 @@ export async function createTrainingAction(
   const message =
     reviewState === "PENDING"
       ? `“${parsed.data.title}” was saved and sent to the unit head for review.`
-      : `“${parsed.data.title}” is on the register.`;
+      : `“${parsed.data.title}” is in Trainings.`;
   redirect(`/trainings/${createdId}?notice=${encodeURIComponent(message)}`);
 }
 
@@ -378,7 +378,7 @@ export async function updateTrainingAction(
   );
 }
 
-/** Withdraw a training from the register. The row stays: history is not deleted. */
+/** Withdraw a training from Trainings. The row stays: history is not deleted. */
 export async function archiveTrainingAction(formData: FormData): Promise<void> {
   const guard = await checkCapability("training.manage");
   if (!guard.ok) redirect(`/trainings?error=${encodeURIComponent(guard.message)}`);
@@ -409,7 +409,7 @@ export async function archiveTrainingAction(formData: FormData): Promise<void> {
   }
 
   revalidateTrainings(id);
-  redirect(`/trainings?notice=${encodeURIComponent("Training archived. It is out of the register; the row and its audit trail remain.")}`);
+  redirect(`/trainings?notice=${encodeURIComponent("Training archived. It no longer appears in Trainings; the record and its audit trail remain.")}`);
 }
 
 /* ── Review ───────────────────────────────────────────────────────────────────

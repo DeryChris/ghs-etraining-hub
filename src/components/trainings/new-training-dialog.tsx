@@ -8,7 +8,7 @@ import { TrainingForm } from "./training-form";
 /**
  * "Record a training" as an overlay rather than a trip to /trainings/new.
  *
- * The register is where somebody notices a missing record, so the form comes to
+ * The trainings list is where somebody notices a missing record, so the form comes to
  * them: closing it leaves the list, its filters and its scroll position exactly
  * where they were. `/trainings/new` stays as a fallback for a bare link.
  */

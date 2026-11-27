@@ -80,7 +80,7 @@ describe("navFor", () => {
     expect(admin[3]?.items.map((item) => item.href)).toEqual(["/review"]);
   });
 
-  it("gives every role both doors: the register and the library by subject", () => {
+  it("gives every role both doors: Trainings and the library by subject", () => {
     for (const role of ROLES) {
       expect(hrefs(role)).toContain("/trainings");
       // One library, filed by programme: field → area → trainings and material.

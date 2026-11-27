@@ -46,7 +46,7 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/catalogue" className="hover:text-ink">
-              Catalogue
+              Library
             </Link>
           </li>
           <li aria-hidden>/</li>
@@ -90,7 +90,7 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
               <li key={training.id}>
                 {/*
                  * Opens in an overlay over the library rather than navigating to the
-                 * register, and the overlay is read-only: no uploads, no editing,
+                 * Trainings page, and the overlay is read-only: no uploads, no editing,
                  * exactly what a staff member sees. `href` stays a real link for a
                  * new tab, a middle-click or an error page inside the panel.
                  */}

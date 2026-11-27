@@ -13,8 +13,11 @@ Somebody opening the product read about scores, transcripts and completions, and
 reasonably concluded the product was about them.
 
 The library is an information service: a member of GHS staff finds the material
-for a training they attended, reads or downloads it, and signs an acknowledgement
-where a protocol asks for one. That is the whole loop.
+for a training they attended and reads or downloads it. That is the whole loop.
+
+> **Superseded in part by ADR‑0028.** The acknowledgement this ADR left standing —
+> "signed against a version" — was itself retired: the library now records an open
+> and a download, and nothing asks a person to certify that they read.
 
 **Decision.** Nothing in the product describes, records or ranks learning
 outcomes.
@@ -29,10 +32,10 @@ outcomes.
    still be of type `ASSESSMENT_LINK` or `LAB` — a training can attach the paper
    a facilitator hands out — but what the library keeps is the paper.
 3. **The word "finished" leaves the interface.** A material is *opened* or
-   *downloaded*; an acknowledgement is *signed* against a version. No page asks
-   anybody to "mark it complete", and no page claims a completion was recorded.
+   *downloaded*. No page asks anybody to "mark it complete", and no page claims a
+   completion was recorded. (ADR‑0028 later removed the acknowledgement too.)
 4. **The disclaimers are deleted, not softened.** Terms, privacy and the FAQ now
-   state what is kept (opens, downloads, acknowledgements, against a version) and
+   state what is kept — opens and downloads, against the version opened — and
    stop there. Saying "this is not a certificate" keeps the subject on the page.
 5. **The complaint form asks one thing.** "In a few words" asked the reporter to
    summarise what they were about to describe. It is gone; `What happened?` is the

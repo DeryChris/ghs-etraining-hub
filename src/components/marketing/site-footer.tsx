@@ -36,7 +36,7 @@ export function SiteFooter() {
         <div className="space-y-5">
           <Wordmark size={40} />
           <p className="max-w-sm text-sm leading-relaxed text-ink-muted">
-            The material from every GHS training programme, catalogued by programme field and area, versioned, and open to
+            The material from every GHS training programme, filed by programme field and area, versioned, and open to
             staff in all {SITE.regionCount} regions.
           </p>
           <Link

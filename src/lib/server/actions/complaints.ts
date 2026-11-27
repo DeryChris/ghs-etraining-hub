@@ -256,7 +256,7 @@ export async function lookupStaffAction(_previous: StaffLookupState, formData: F
  *
  * A complaint about a file is unanswerable without the training it belongs to,
  * and the person filing it may not be signed in — so this is public, and says
- * only what the catalogue would show anyway: a title and a date. It is
+ * only what the library would show anyway: a title and a date. It is
  * rate-limited and capped, and it searches rather than listing everything.
  */
 export interface TrainingLookupState {

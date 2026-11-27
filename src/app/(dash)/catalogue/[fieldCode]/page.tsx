@@ -25,7 +25,7 @@ export default async function FieldPage({ params }: { params: Promise<{ fieldCod
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/catalogue" className="hover:text-ink">
-              Catalogue
+              Library
             </Link>
           </li>
           <li aria-hidden>/</li>

@@ -14,7 +14,7 @@ const COPY: Record<ReviewState, { label: string; variant: "success" | "outline" 
   PUBLISHED: {
     label: "Live",
     variant: "success",
-    sentence: "Approved for the whole service — it appears in the register for everyone.",
+    sentence: "Approved for the whole service — it appears in Trainings for everyone.",
   },
   PENDING: {
     label: "Pending review",
@@ -32,7 +32,7 @@ const COPY: Record<ReviewState, { label: string; variant: "success" | "outline" 
  * The review banner for one training.
  *
  * Shown to everybody who can see the row, because "why is my training missing
- * from the register" is the question this answers. The approve/reject controls
+ * from Trainings" is the question this answers. The approve/reject controls
  * appear only when the caller may actually review it.
  */
 export function ReviewPanel({
@@ -98,7 +98,7 @@ export function ReviewPanel({
               <Dialog
                 size="sm"
                 title="Approve this training?"
-                description={`“${title}” becomes visible to everyone in the register.`}
+                description={`“${title}” becomes visible to everyone in Trainings.`}
                 trigger={({ open }) => (
                   <Button
                     type="button"

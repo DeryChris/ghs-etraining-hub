@@ -88,7 +88,6 @@ export interface AuthoringMaterialDetail {
   state: MaterialState;
   type: MaterialType;
   priority: PriorityLevel;
-  requiresAcknowledgement: boolean;
   estimatedMinutes: number | null;
   programmeAreaId: string;
   areaName: string;
@@ -177,7 +176,6 @@ export async function getAuthoringMaterial(materialId: string, viewer: Viewer): 
     state: row.material.state,
     type: row.material.type,
     priority: row.material.priority,
-    requiresAcknowledgement: row.material.requiresAcknowledgement,
     estimatedMinutes: row.material.estimatedMinutes,
     programmeAreaId: row.material.programmeAreaId,
     areaName: row.areaName,
@@ -256,7 +254,7 @@ export interface ReviewQueueRow {
  */
 /**
  * What is waiting for this person: material versions in review, plus the
- * trainings in the register that are waiting for a decision.
+ * trainings in Trainings that are waiting for a decision.
  *
  * The badge on the Review tab counts both, because both are the same job — a
  * unit head opening the tab expects one queue, not a materials list that quietly
@@ -312,7 +310,7 @@ export interface PendingTrainingRow {
  * No `reviewer_id`, no assignment table, no date window: the rule is "waiting,
  * and in a field or area I hold". A training filed two years before the unit
  * head was appointed appears here on their first visit, which is the behaviour
- * the register used to lose.
+ * the trainings list used to lose.
  */
 export async function listPendingTrainings(viewer: Viewer): Promise<PendingTrainingRow[]> {
   const scope = await reviewScopeFor(viewer);

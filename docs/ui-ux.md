@@ -44,8 +44,7 @@ and use the utility it generates.
     five links are a fixed bottom bar within thumb reach, which is how most of this audience will
     meet the product.
 * The learner's dashboard is the whole record: the greeting, the material they were reading, the
-  protocols waiting for a signature, the reading totals, the list of opens, the announcements and the
-  programme fields. There is no separate "My activity" tab (ADR‑0027); `/analytics` redirects here so
+  reading totals, the list of opens, the announcements and the programme fields. There is no separate "My activity" tab (ADR‑0027); `/analytics` redirects here so
   old links keep working.
 * Tables collapse to stacked definition lists at `< 720 px` (never horizontal scroll for clinical data).
 * Content column max width 1200 px for staff, 1280 px for the learner shell; long‑form reading width 72 ch.
@@ -78,24 +77,24 @@ preserves width), `badge`, `card`, `stat`, `input`, `textarea`, `select`, `check
 `layout/`: `app-shell`, `learner-shell`, `sidebar`, `header`, `nav-icons`, `notification-center`,
 `search-command`.
 `materials/`: `material-card`, `pdf-viewer` (lazy), `video-player` (lazy, no autoplay, poster +
-duration + size before play), `acknowledge-button`, `discussion-thread`, `lab-environment` (Monaco
+duration + size before play), `view-beacon`, `discussion-thread`, `lab-environment` (Monaco
 behind a "Start lab" gesture so 400 KB of editor never loads by default).
-`analytics/`: `coverage-bar`, `score-distribution`, `completion-trend` — all client components
-loaded with `next/dynamic` and rendered only when `dataSaver === false`.
+`charts/`: `area-chart`, `donut-chart`, `rank-bars`, `kpi-card`, `chart-card` — client components,
+rendered on the staff surfaces only.
 
 Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard operable, and a
 `data-` hook for tests (`data-testid`).
 
 ## 4. Page recipes
 
-* **Dashboard (learner)** — three mandatory cards first (priority chips + due dates), then
-  "Continue where you left off", then announcements, then a compact CPD summary. Nothing below the
-  fold is a chart if `dataSaver` is on.
+* **Dashboard (learner)** — the greeting and the one button back to the material they were reading,
+  then the reading record, then announcements, then the programme fields. No chart appears on this
+  page: charts are staff equipment.
 * **Space page** — sticky sub‑header with progress, materials as cards grouped by type, discussion
   at the bottom, "Download all for offline" action with total size shown.
 * **Material viewer** — title, version + "superseded" banner, metadata row (programme field and
-  area, version, published date, size, est. minutes), the artefact, then the acknowledgement panel
-  where a protocol asks for a signature. No unrelated sidebars, no marks (ADR‑0026).
+  area, version, published date, size, est. minutes), then the artefact. No unrelated sidebars, no
+  signature to collect, no marks (ADR‑0026, ADR‑0028).
 * **Data tables (admin)** — server‑side pagination with a page‑size selector (25/50/100), saved
   filters in the URL (shareable, back‑button safe), row actions in a kebab menu, count in the
   caption ("Showing 1–25 of 4,182 GHS staff"). `/users` is the reference implementation: 25 per page,

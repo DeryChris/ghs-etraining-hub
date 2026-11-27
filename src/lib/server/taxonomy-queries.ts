@@ -229,7 +229,7 @@ async function loadProgrammeFieldOptions(): Promise<ProgrammeFieldOption[]> {
 }
 
 /**
- * Same reasoning as the register's filter options: fields and areas are
+ * Same reasoning as the filters on Trainings: fields and areas are
  * reference data nobody edits between two clicks, and the cache keeps them off
  * the pool for half a minute.
  */

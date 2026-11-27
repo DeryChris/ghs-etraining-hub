@@ -67,11 +67,11 @@ export default async function TrainingDetailPage({
    * Where the reader came from decides what this page is.
    *
    * Opened from the library, a training is something to read: the write-up, the
-   * files, the discussion. Editing the register, uploading versions and archiving
-   * belong to the register, and showing those controls here turned a reading page
+   * files, the discussion. Editing the record, uploading versions and archiving
+   * belong to Trainings, and showing those controls here turned a reading page
    * into an admin page the moment an administrator clicked a library card — which
    * is not what a library is for. Same page, same record, one fewer set of levers:
-   * the register (/trainings) keeps every one of them.
+   * the Trainings page (/trainings) keeps every one of them.
    */
   const fromLibrary = query.from === "library" || query.from === "catalogue";
   const mayManage = can(session.role, "training.manage") && !fromLibrary;
@@ -177,7 +177,7 @@ export default async function TrainingDetailPage({
           eyebrow={
             training.fieldName
               ? `${training.fieldName}${training.areaName ? ` · ${training.areaName}` : ""}`
-              : "Training register"
+              : "Trainings"
           }
           title={training.title}
           description={training.targetGroup ? `For ${training.targetGroup}.` : undefined}
@@ -307,7 +307,7 @@ export default async function TrainingDetailPage({
               Withdraw this training
             </h2>
             <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-ink-muted">
-              Archiving takes it out of the register and off the filters. The row, its audit entries and any
+              Archiving takes it out of Trainings and off the filters. The row, its audit entries and any
               attendance already recorded are kept — nothing is deleted.
             </p>
             <form action={archiveTrainingAction} className="mt-4">

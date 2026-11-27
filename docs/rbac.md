@@ -30,13 +30,11 @@ row.** Any change here is a `ROLE_CHANGE` audit event and requires an ADR.
 | `material.read_draft` | ✅ | ✅ (assigned area) | ❌ |
 | `material.read_published` | ✅ | ✅ | ✅ (audience match) |
 | `material.download` | ✅ | ✅ | ✅ (audience match) |
-| `enrollment.self` | ✅ | ✅ | ✅ (open areas) |
-| `enrollment.assign` | ✅ | ✅ (assigned area) | ❌ |
 | `comment.create` / `comment.edit_own` | ✅ | ✅ | ✅ |
 | `comment.moderate` | ✅ (any) | ✅ (assigned areas) | ❌ |
 | `message.send` | ✅ | ✅ (assigned learners, admins, peers in area) | ✅ (peers, facilitators, admins) |
 | `message.read_any_thread` | ✅ (only with DPO‑approved investigation, audited) | ❌ | ❌ |
-| `training.manage` | ✅ | ✅ (any training — field work, not catalogue governance) | ❌ |
+| `training.manage` | ✅ | ✅ (any training — field work, not library governance) | ❌ |
 | `area.update` | ✅ | ❌ | ❌ |
 | `area.assign_facilitator` | ✅ | ❌ | ❌ |
 | `taxonomy.manage` | ✅ | ❌ | ❌ |
@@ -59,7 +57,7 @@ this rule for facilitators by querying `area_facilitators`; the caller's `scope.
 only a hint, never proof of assignment.
 
 * Facilitator scope = `areaIds` from `area_facilitators` (+ `region` if regional).
-* `training.manage` is global for staff: the Trainings register is the GHS training calendar, not an
+* `training.manage` is global for staff: Trainings is the GHS training calendar, not an
   area's filing cabinet, so a facilitator may plan a training without being assigned to the area it
   is filed under. Reading and authoring material in an area stays area‑scoped, through
   `area_facilitators` (ADR‑0014).

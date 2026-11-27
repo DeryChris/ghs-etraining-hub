@@ -63,7 +63,7 @@ const FEATURES: { icon: LucideIcon; title: string; body: string; tone: string }[
   {
     icon: Search,
     title: "Find it by programme, area or title",
-    body: "Search the whole catalogue, open the current version, or check what was in force when a session ran.",
+    body: "Search the whole library, open the current version, or check what was in force when a session ran.",
     tone: "bg-accent/25 text-accent-ink dark:text-accent",
   },
   {
@@ -295,7 +295,7 @@ export default async function LandingPage() {
           <SectionHeading
             eyebrow={`Why ${SITE.code}`}
             title={<span id="features-title">Built to keep training material findable, not to lose it gracefully.</span> as unknown as string}
-            description="A catalogue with a memory: what was uploaded, for which programme, by whom, and which version was in force on the day you needed it."
+            description="A library with a memory: what was uploaded, for which programme, by whom, and which version was in force on the day you needed it."
           />
         </Reveal>
         <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

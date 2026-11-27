@@ -33,7 +33,7 @@ what CPD credit was issued.
 | Active learners / registered staff | ≥ 65 % |
 | Median time from SOP publication to 80 % facility coverage | ≤ 21 days |
 | Mandatory training completion rate | ≥ 90 % |
-| Critical‑priority material acknowledgement | ≥ 95 % within 14 days |
+| Published material opened by its audience | ≥ 60 % of staff within 30 days |
 | Learner route LCP (throttled 3G) | ≤ 2.5 s |
 | Support tickets per 1,000 users per month | ≤ 5 |
 | Certified completions with valid CPD credit | ≥ 40,000 |
@@ -72,7 +72,7 @@ her facility's coverage move.
 /directorates                  → all categories (facilitator-annoted "yours" badge)
 /directorates/[category]       → spaces in a directorate
 /directorates/[category]/[space] → materials, discussion, labs, progress
-/learn/[material]              → viewer: PDF / video / lab / assessment + acknowledge button
+/materials/[id]                → viewer: PDF / video / lab / assessment link; the open is recorded
 /library                       → searchable, filterable index of all published materials
 /messages                      → 1:1 direct messaging (moderated, notify-on-mention off by default)
 /notifications                 → notification centre with per-type read cursors
@@ -134,12 +134,12 @@ signed URLs with `Content-Disposition` set and range support for video. Progress
 with resumable chunks for video on flaky connections.
 
 ### 5.4 Learning loop (new in v2)
-* **Enrollment**: self‑enroll (open spaces) or assigned (mandatory / cohort / region‑wide) with a
-  due date and a reminder cadence.
-* **Progress**: per material — `NOT_STARTED | IN_PROGRESS | COMPLETED`; auto‑advance for videos at
-  90 % watched, manual completion for documents with an explicit "I have read and understood this
-  SOP" acknowledgement (critical‑priority materials *require* acknowledgement, timestamped, and the
-  acknowledgement is auditable).
+* **Enrollment — retired.** Nothing enrols anybody. The library is open to the staff it is published
+  for, and `enrollments` was dropped in ADR‑0028 because the only thing that ever wrote a row was the
+  acknowledgement button.
+* **Progress — retired as a status.** There is no `NOT_STARTED | IN_PROGRESS | COMPLETED`: what a
+  person opened, when and how often is recorded in `material_views`, and that is the whole record.
+  The "I have read and understood this SOP" signature went with it (ADR‑0028).
 * **Assessment**: item bank per material; n questions drawn at random with shuffled options;
   pass mark configurable (default 80 %); attempts (default 3) with a cooldown (default 24 h);
   server‑side scoring only — the client never receives the answer key; timer optional; results
@@ -206,7 +206,7 @@ defers charts, and a service worker caching the last‑visited material list for
 Full column‑level detail in [`docs/data-model.md`](data-model.md). Beyond the v1 tables, v2 adds:
 
 `Enrollment` (learner × space, due date, source `SELF|ASSIGNED`, assignedBy),
-`MaterialProgress` (learner × material version, status, watchedPercent, acknowledgedAt),
+`MaterialView` (person × material × day, view count — the reading record),
 `Assessment`, `AssessmentItem`, `AssessmentAttempt` (server‑scored),
 `Certificate` (code, credits, issuedAt, verifiedAt),
 `MaterialVersion` (immutable, storageKey, sizeBytes, mimeType, checksum, scanStatus, state,
@@ -229,7 +229,7 @@ Each phase ships something a user can do, and ends with the §10 gates green.
 | **P0 Foundations** | Schema, session, RBAC skeleton, audit logger, design tokens, shell, health endpoint | `/api/health` ok; capability matrix tested; audit writes hash‑chained |
 | **P1 Identity & roster** | Login, forced first‑login, profile, admin users, bulk import, lockout | Admin can import 500 rows; wrong PIN rejected with a readable report |
 | **P2 Content** | Categories, spaces, upload pipeline, versioning, review, publish | New version published by reviewer ≠ author; superseded banner shows |
-| **P3 Learning** | Acknowledgement of protocols, opens and downloads recorded against the version read — ~~certificates, verification link, assessments and marks~~ (retired, ADR‑0011 and ADR‑0026) | An acknowledgement names the version it was signed against; nothing is marked, scored or certified |
+| **P3 Learning** | Opens and downloads recorded against the version read — ~~acknowledgements, enrolments~~ (retired, ADR‑0028), ~~certificates, verification link, assessments and marks~~ (retired, ADR‑0011 and ADR‑0026) | A reading record names the version that was opened; nothing is marked, scored, certified or signed |
 | **P4 Social** | Discussions, messaging, notifications, moderation, abuse reports | Nested threads render; unread counts correct under polling and realtime |
 | **P5 Insight** | Analytics per role, exports, national coverage | p95 analytics query < 800 ms; export streams 50k rows |
 | **P6 Hardening** | Offline SW, data saver, a11y sweep, load test, DPIA sign‑off, DR drill | 3G smoke test passes; axe 0 critical; 5k concurrent users OK |

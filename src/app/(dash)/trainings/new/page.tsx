@@ -35,9 +35,9 @@ export default async function NewTrainingPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Training register"
+        eyebrow="Trainings"
         title="New training"
-        description="A training plan is filed under a programme field and one of its areas, then given a place and a date. It becomes the record the register counts against once it runs."
+        description="A training plan is filed under a programme field and one of its areas, then given a place and a date. It becomes one of the trainings recorded here once it runs."
         actions={
           <Link href="/trainings" className={buttonClass({ variant: "ghost" })}>
             Back to trainings

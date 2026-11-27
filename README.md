@@ -1,6 +1,6 @@
 # GHS-TL — Ghana Health Service Training Library
 
-The catalogue of record for Ghana Health Service training programmes. Material from a training
+The library of record for Ghana Health Service training programmes. Material from a training
 session — slides, protocols, videos, references — is filed under the directorate and module that ran
 it, as a numbered version that a second reviewer has to approve before staff see it. Nothing is
 deleted silently: material is archived, and a hash-chained audit trail records who uploaded,
@@ -28,10 +28,9 @@ reviewed, published, downloaded or withdrew it. Built on **Next.js 16**, **React
 
 ## What is implemented today
 
-**Shipped:** staff sign-in / password reset; dashboard with mandatory protocols; a **catalogue** of
-programme fields → areas → material viewer; library search with server-side pagination; progress
-(start · acknowledge · complete) with per-version re-acknowledgement; a personal record of what you
-opened, downloaded and finished; a **Trainings register** (the Learn section's "Trainings" tab) with a
+**Shipped:** staff sign-in / password reset; a role-aware dashboard; a **Library** of programme
+fields → areas → material viewer; library search with server-side pagination; a reading record of what
+you opened and downloaded, per version; a **Trainings** list with a
 filter bar, plan form — title, year, programme field and area, target group, region → district →
 sub-district → facility, start/end dates, duration, venue — and an audited archive; **training
 **trainings** recorded at region → district → sub-district → facility; **traffic insights** (opens, downloads, upload rate, trainings
@@ -76,8 +75,8 @@ src/
   app/
     (marketing)/               # public: home, programmes, about, verify, legal, contact
     (auth)/                    # login, forgot-password, reset-password
-    (dash)/                    # protected shell: dashboard, trainings, catalogue, library,
-                               # catalogue, geography, programme-fields, messages, analytics
+    (dash)/                    # protected shell: dashboard, library (/catalogue), trainings,
+                               # review, authoring, users, notices, geography, programme-fields
     api/health/                # liveness/readiness probe
     api/materials/[id]/file/   # audit-logged signed-URL redirect for controlled documents
     auth/callback/             # PKCE code exchange for reset links
@@ -99,7 +98,7 @@ src/
       audit.ts                 # hash-chained append + chain verifier
       certificates.ts          # frozen certificate serials (ADR-0011: no new issuance)
       rate-limit.ts            # fixed-window limiter over rate_limit_windows
-      learning-queries.ts      # catalogue, materials, dashboard, transcript + cohort filters
+      learning-queries.ts      # library, materials, reading record + cohort filters
       messaging-queries.ts     # conversations, paginated threads
       notification-queries.ts  # notices + unread counts
       public-queries.ts        # public stats + certificate verification

@@ -1,35 +1,20 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  Bell,
-  BookOpen,
-  Download,
-  Eye,
-  History,
-  PenLine,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, Bell, BookOpen, Download, Eye, History, Sparkles } from "lucide-react";
 import { KindLabel } from "@/components/ui/kind-label";
-import { PriorityChip } from "@/components/ui/priority-chip";
 import { ProgrammeFieldTile } from "@/components/programme/programme-tile";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { buttonClass } from "@/components/ui/button";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { MATERIAL_TYPE_LABELS, notificationTypeLabel } from "@/lib/labels";
 import { firstNameOf } from "@/lib/names";
+import { DashboardRetry } from "./retry-card";
 import { fieldHref, safeAppLink } from "@/lib/links";
-import { classifyLoadFailure } from "@/lib/load-failure";
-import { DeadlineError, within, withinOr } from "@/lib/server/deadline";
+import { withinOr } from "@/lib/server/deadline";
 import { log } from "@/lib/server/logger";
-import {
-  getLearnerDashboard,
-  listFields,
-  listRecentOpens,
-} from "@/lib/server/learning-queries";
+import { listFields, listRecentOpens } from "@/lib/server/learning-queries";
 import { getMyTraffic } from "@/lib/server/insights-queries";
 import { listNotifications } from "@/lib/server/notification-queries";
 import type { Session } from "@/lib/server/session";
-import { DashboardRetry } from "./retry-card";
 
 /**
  * What a member of staff lands on.
@@ -38,11 +23,12 @@ import { DashboardRetry } from "./retry-card";
  * the three questions people actually arrive with, in this order:
  *
  *   1. *What was I doing?* — the hero names it and offers it back as one button.
- *   2. *What is waiting for me?* — protocols that ask for a signature, with the
- *      priority chip and the area, so nothing mandatory hides in a list.
- *   3. *What did I read?* — the reading record, folded into the page rather than
+ *   2. *What did I read?* — the reading record, folded into the page rather than
  *      kept on a tab of its own (ADR‑0027). Totals sit in the hero strip; the
  *      list of opens sits beside the announcements.
+ *
+ * There is nothing to sign here. The library is for reading, and reading leaves
+ * a record of opens; it does not ask anyone to certify that they have read.
  *
  * Everything here is a link to material or to a training; there is no chart on
  * this page. Charts are for the people who run the programmes — they are on the
@@ -86,22 +72,6 @@ function HeroStat({ icon: Icon, value, label }: { icon: typeof Eye; value: numbe
 export async function LearnerHome({ session }: { session: Session }) {
   const now = new Date();
 
-  let dashboard: Awaited<ReturnType<typeof getLearnerDashboard>>;
-  try {
-    dashboard = await within("dashboard.learner", getLearnerDashboard(session), 6_000);
-  } catch (error) {
-    const failure = classifyLoadFailure(error);
-    log.error({
-      event: "dashboard.essential_failed",
-      userId: session.sub,
-      label: error instanceof DeadlineError ? error.label : undefined,
-      failure: failure.kind,
-      code: failure.code,
-      error,
-    });
-    return <DashboardRetry hint={failure.hint} />;
-  }
-
   /*
    * None of these is the page. A slow reading record must not take the greeting
    * down with it, so each has a deadline and an honest empty result.
@@ -113,10 +83,18 @@ export async function LearnerHome({ session }: { session: Session }) {
     withinOr("dashboard.fields", listFields(session), []),
   ]);
 
-  const outstanding = dashboard.mandatoryOutstanding;
+  /*
+   * The reading record is what this page is. If that read failed, the honest
+   * answer is a retry card — three empty lists would claim the person has read
+   * nothing, which is a different and untrue statement.
+   */
+  if (traffic === null) {
+    log.error({ event: "dashboard.reads_failed", userId: session.sub });
+    return <DashboardRetry hint="database" />;
+  }
+
   const continueWith = recent[0] ?? null;
   const pickUp = recent.slice(0, 3);
-  const signatures = outstanding.length;
 
   return (
     <div className="space-y-10">
@@ -135,12 +113,7 @@ export async function LearnerHome({ session }: { session: Session }) {
               {greetingFor(now)}, {firstNameOf(session.name)}.
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
-              {signatures > 0 ? (
-                <>
-                  {signatures === 1 ? "One protocol is" : `${signatures} protocols are`} waiting for your
-                  signature. Everything else is in the library whenever you need it.
-                </>
-              ) : continueWith ? (
+              {continueWith ? (
                 <>
                   You were reading <span className="font-semibold text-ink">{continueWith.title}</span> in{" "}
                   {continueWith.areaName}. It is still there — or open the library and start something new.
@@ -188,52 +161,6 @@ export async function LearnerHome({ session }: { session: Session }) {
           )}
         </div>
       </section>
-
-      {/* ── Waiting for a signature ──────────────────────────────────────── */}
-      {outstanding.length > 0 && (
-        <section aria-labelledby="sign-heading" className="space-y-4">
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2 id="sign-heading" className="flex items-center gap-2 text-xl font-extrabold tracking-tight text-ink">
-                <PenLine className="h-5 w-5 text-primary" aria-hidden />
-                Waiting for your signature
-              </h2>
-              <p className="mt-1 text-sm text-ink-muted">
-                These protocols ask you to confirm you have read the current version.
-              </p>
-            </div>
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-              {signatures} to sign
-            </span>
-          </div>
-
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {outstanding.slice(0, 6).map((item) => (
-              <li key={item.id}>
-                <Link
-                  href={`/materials/${item.id}`}
-                  className="group flex h-full flex-col gap-3 rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors duration-fast hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <PriorityChip priority={item.priority} />
-                    {item.estimatedMinutes ? (
-                      <span className="text-xs font-medium text-ink-muted">{item.estimatedMinutes} min</span>
-                    ) : null}
-                  </div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
-                    {item.areaName}
-                  </p>
-                  <p className="font-bold leading-snug text-ink">{item.title}</p>
-                  <span className="mt-auto inline-flex items-center gap-1.5 pt-1 text-sm font-semibold text-primary">
-                    {item.reacknowledgementRequired ? "A newer version is here" : "Read and sign"}
-                    <ArrowRight className="h-4 w-4 transition-transform duration-fast group-hover:translate-x-0.5" aria-hidden />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       {/* ── Pick up where you left off ───────────────────────────────────── */}
       <section aria-labelledby="pickup-heading" className="space-y-4">

@@ -7,10 +7,10 @@ import { AreaTileIcon, FieldTileIcon, fieldTint } from "@/components/ui/field-ti
 /**
  * One tile family for programmes and the areas inside them.
  *
- * The programme field cards in the training register set the house style: a
+ * The programme field cards in Trainings set the house style: a
  * coloured glyph sitting on the card (no badge behind it), a wash of the same hue
  * at low strength, a hairline of that hue, and a lift on hover. The signed-out
- * landing page, /programmes and the catalogue were drawing the same objects as
+ * landing page, /programmes and the library were drawing the same objects as
  * plain bordered boxes, so the same page could show a field three ways. These two
  * components are now the only way a field or an area is drawn as a card.
  *
@@ -103,7 +103,7 @@ export function ProgrammeFieldTile({
     materialCount: number;
     trainingCount?: number;
   };
-  /** Where the tile goes: the catalogue (signed in) or the public list. */
+  /** Where the tile goes: the library (signed in) or the public list. */
   href: string;
 }) {
   return (
@@ -124,7 +124,7 @@ export function ProgrammeFieldTile({
       }
       cta={
         <>
-          {href.startsWith("/trainings") ? "Filter register" : href.startsWith("/programmes") ? "Open programmes" : "Open field"}
+          {href.startsWith("/trainings") ? "See trainings" : href.startsWith("/programmes") ? "Open programmes" : "Open field"}
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
         </>
       }

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AcknowledgementPanel } from "@/components/materials/acknowledgement-panel";
 import { MaterialViewer } from "@/components/materials/material-viewer";
 import { areaHref, fieldHref } from "@/lib/links";
 import { ViewBeacon } from "@/components/materials/view-beacon";
@@ -34,10 +33,7 @@ export default async function MaterialPage({
   const detail = await getMaterialDetail(id, session);
   if (!detail) notFound();
 
-  const { material, area, field, authorName, version, progress } = detail;
-  const signedVersion = progress?.materialVersionId ?? null;
-  const acknowledged = progress?.acknowledgedAt != null && signedVersion === material.currentVersionId;
-  const versionChanged = progress?.acknowledgedAt != null && signedVersion !== null && !acknowledged;
+  const { material, area, field, authorName, version } = detail;
   const hasFile = Boolean(version?.storageKey);
   const noticeText = notice ? NOTICES[notice] : undefined;
 
@@ -48,7 +44,7 @@ export default async function MaterialPage({
         <ol className="flex flex-wrap items-center gap-2">
           <li>
             <Link href="/catalogue" className="hover:text-ink">
-              Catalogue
+              Library
             </Link>
           </li>
           <li aria-hidden>/</li>
@@ -99,63 +95,52 @@ export default async function MaterialPage({
         </div>
       </dl>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          {hasFile ? (
-            <MaterialViewer
-              materialId={material.id}
-              title={material.title}
-              mimeType={version?.mimeType ?? null}
-              sizeBytes={version?.sizeBytes ?? null}
+      <div className="space-y-6">
+        {hasFile ? (
+          <MaterialViewer
+            materialId={material.id}
+            title={material.title}
+            mimeType={version?.mimeType ?? null}
+            sizeBytes={version?.sizeBytes ?? null}
+          />
+        ) : (
+          <section aria-labelledby="file-heading" className="rounded-card border border-hairline bg-surface p-6 shadow-panel">
+            <h2 id="file-heading" className="text-lg font-bold text-ink">
+              No file attached to this version
+            </h2>
+            <ListEmptyState
+              title="Nothing uploaded yet"
+              description="Your facilitator will attach the document, slides, video or spreadsheet for this version."
             />
-          ) : (
-            <section aria-labelledby="file-heading" className="rounded-card border border-hairline bg-surface p-6 shadow-panel">
-              <h2 id="file-heading" className="text-lg font-bold text-ink">
-                No file attached to this version
-              </h2>
-              <ListEmptyState
-                title="Nothing uploaded yet"
-                description="Your facilitator will attach the document, slides, video or spreadsheet for this version."
-              />
-            </section>
-          )}
+          </section>
+        )}
 
-          {material.type === "LAB" && (
-            <section aria-labelledby="lab-heading" className="space-y-3 rounded-card border border-hairline bg-surface p-6 shadow-panel">
-              <h2 id="lab-heading" className="text-lg font-bold text-ink">
-                Practical lab
-              </h2>
-              <p className="text-sm leading-relaxed text-ink-muted">
-                This is a hands-on practical. Your facilitator runs it with you, in the facility or on the day of training — open this page
-                when you are there to take part.
-              </p>
-            </section>
-          )}
+        {material.type === "LAB" && (
+          <section aria-labelledby="lab-heading" className="space-y-3 rounded-card border border-hairline bg-surface p-6 shadow-panel">
+            <h2 id="lab-heading" className="text-lg font-bold text-ink">
+              Practical lab
+            </h2>
+            <p className="text-sm leading-relaxed text-ink-muted">
+              This is a hands-on practical. Your facilitator runs it with you, in the facility or on the day of training — open this page
+              when you are there to take part.
+            </p>
+          </section>
+        )}
 
-          {material.type === "ASSESSMENT_LINK" && (
-            <section aria-labelledby="assessment-heading" className="space-y-3 rounded-card border border-hairline bg-surface p-6 shadow-panel">
-              <h2 id="assessment-heading" className="text-lg font-bold text-ink">
-                Pre/Post test
-              </h2>
-              <p className="text-sm leading-relaxed text-ink-muted">
-                Your facilitator runs this test with you, in the room. The library keeps the paper, not the answers.
-              </p>
-            </section>
-          )}
-        </div>
+        {material.type === "ASSESSMENT_LINK" && (
+          <section aria-labelledby="assessment-heading" className="space-y-3 rounded-card border border-hairline bg-surface p-6 shadow-panel">
+            <h2 id="assessment-heading" className="text-lg font-bold text-ink">
+              Pre/Post test
+            </h2>
+            <p className="text-sm leading-relaxed text-ink-muted">
+              Your facilitator runs this test with you, in the room. The library keeps the paper, not the answers.
+            </p>
+          </section>
+        )}
 
-        <aside className="space-y-4 lg:col-span-1">
-          {material.requiresAcknowledgement && (
-            <AcknowledgementPanel
-              materialId={material.id}
-              acknowledged={acknowledged}
-              versionChanged={versionChanged}
-            />
-          )}
-          <p className="text-xs leading-relaxed text-ink-muted">
-            Opens and downloads are counted against your staff record for programme statistics.
-          </p>
-        </aside>
+        <p className="text-xs leading-relaxed text-ink-muted">
+          Opens and downloads are counted against your staff record for programme statistics.
+        </p>
       </div>
     </div>
   );

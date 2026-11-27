@@ -34,9 +34,9 @@ For each row of `docs/rbac.md` §1, as each role:
 * `SELECT` nothing that exposes PII in a list view without `user.read_pii`.
 * Audit metadata never contains email, phone, staff PIN, password or token — grep the JSONB after a
   profile update.
-* SAR drill: export a single user's data (profile, opens, acknowledgements, messages) as JSON
-  within one request, audited.
-* Erasure drill: deactivate‑and‑anonymise leaves the open/acknowledgement and audit history intact
+* SAR drill: export a single user's data (profile, opens, messages) as JSON within one request,
+  audited.
+* Erasure drill: deactivate‑and‑anonymise leaves the open and audit history intact
   with the display name replaced and PII columns nulled.
 * No public endpoint returns a person's name, staff ID or record: nothing is published about a person.
 
@@ -48,9 +48,9 @@ For each row of `docs/rbac.md` §1, as each role:
 2. Sign in as a facilitator or administrator → the rail is back, with Author/Administration as their
    role allows. Nothing on the learner's bar is reachable from the rail by accident.
 3. `/analytics` → 308 to `/dashboard`. Old notification links that point at it still land.
-4. A learner's dashboard shows the material they were reading, the protocols waiting for a signature,
-   the reading totals, the list of opens and the announcements — and no "My activity" tab anywhere in
-   the menu or the account card.
+4. A learner's dashboard shows the material they were reading, the reading totals, the list of opens
+   and the announcements — and no "My activity" tab anywhere in the menu or the account card. Nothing
+   asks for a signature: `curl -s localhost:3111/dashboard | grep -i "signature"` prints nothing.
 
 ## 4. Low‑bandwidth drill (Chrome DevTools, Slow 3G, 4× CPU throttle)
 
@@ -97,10 +97,21 @@ mobile, and a 200 % zoom check for horizontal scrolling.
 1. Grep the rendered pages for the words the product retired — "certificate", "award", "completion",
    "finished", "score", "pass mark", "transcript". Nothing should match (ADR‑0026):
    `curl -s localhost:3111/privacy | grep -Ei "certificate|award|completion"` prints nothing.
-2. Open a material → there is no "mark complete" control; opening and downloading are the only
-   actions, and the acknowledgement panel appears only where `requires_acknowledgement` is set.
+2. Open a material → there is no "mark complete" control and no acknowledgement panel; opening and
+   downloading are the only actions, and both are recorded against the version opened.
 3. Sign in as a learner → `/assessments` is not in the menu and answers 404, and no page offers a
    score, an attempt count or a result.
+
+## 6c. Nothing asks for a signature
+
+1. Grep the rendered pages for the retired vocabulary: "acknowledge", "acknowledgement", "signature",
+   "waiting for you to sign". Nothing should match (ADR‑0028), except the cryptographic sense of
+   "signature" in the storage-token comments, which no page renders.
+2. Dashboard, library index, an area page and a material page: no "Acknowledgement required" badge, no
+   "Acknowledged" chip, no signature section.
+3. `select * from material_progress` and `select * from enrollments` → `relation does not exist` on a
+   database migrated past 0021, and `select requires_acknowledgement from materials` fails too.
+4. The staff dashboard's KPI row has no "Protocols to sign" card; its reading card says what was opened.
 
 ## 7. Assessment tables are gone
 

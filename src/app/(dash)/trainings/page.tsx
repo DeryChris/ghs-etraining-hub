@@ -69,7 +69,7 @@ function pageHref(params: Query, page: number): string {
 
 const REVIEW_STATES = ["PENDING", "PUBLISHED", "REJECTED"];
 
-/** Chips above the register: the review queue is one click, not a filter hunt. */
+/** Chips above the list: the review queue is one click, not a filter hunt. */
 const REVIEW_CHIPS = [
   { key: "", label: "Everything" },
   { key: "PENDING", label: "Pending review" },
@@ -143,8 +143,8 @@ export default async function TrainingsPage({
   if (!loaded.ok) {
     return (
       <DataUnavailable
-        title="The training register did not load"
-        description="The register and its filters could not be read in time. Nothing was changed."
+        title="Trainings did not load"
+        description="The trainings list and its filters could not be read in time. Nothing was changed."
         requestId={loaded.requestId}
       />
     );
@@ -171,13 +171,13 @@ export default async function TrainingsPage({
       <LiveRefresh label="trainings" />
 
       <PageHeader
-        eyebrow="Training register"
-        title="Trainings"
-        description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme field and the area inside it, so coverage can be counted by programme rather than by memory. To browse by subject instead of by year, open the catalogue."
+        eyebrow="Trainings"
+        title="Every training GHS has planned or run"
+        description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme field and the area inside it, so coverage can be counted by programme rather than by memory. To browse by subject instead of by year, open the library."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
-              Browse the catalogue
+              Browse the library
             </Link>
             {mayManage ? (
               <NewTrainingDialog fields={fields} geography={geography} label="Create new training" />
@@ -189,11 +189,11 @@ export default async function TrainingsPage({
       <Notice notice={notice} error={error} />
 
       <section
-        id="register"
-        aria-label="Register totals"
+        id="training-totals"
+        aria-label="Training totals"
         className="scroll-mt-24 grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-4"
       >
-        <Stat value={summary.total} label="Trainings on the register" />
+        <Stat value={summary.total} label="Trainings recorded" />
         <Stat value={summary.planned} label="Planned or upcoming" />
         <Stat value={summary.thisYear} label={`Filed under ${new Date().getFullYear()}`} />
         <Stat value={summary.attendees.toLocaleString("en-GB")} label="People trained (recorded)" />
@@ -367,10 +367,10 @@ export default async function TrainingsPage({
 
       {list.items.length === 0 ? (
         <ListEmptyState
-          title={filtered ? "Nothing matches those filters" : "The register is empty"}
+          title={filtered ? "Nothing matches those filters" : "No trainings yet"}
           description={
             filtered
-              ? "Try a wider year, or clear the filters to see every training on the register."
+              ? "Try a wider year, or clear the filters to see every training."
               : mayManage
                 ? "Create the first training: the programme field and its area are the only things that must be right on day one."
                 : "Trainings appear here once the ICT team files them. Check back after the next planning cycle."

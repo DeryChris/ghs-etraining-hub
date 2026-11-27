@@ -120,10 +120,9 @@ async function main() {
       areaCode: "PF-CLIN-03",
       title: "Standard Precautions: Core SOP 2026",
       summary:
-        "Hand hygiene, PPE sequence and sharps handling — the protocol every clinical staff member acknowledges.",
+        "Hand hygiene, PPE sequence and sharps handling — the protocol every clinical staff member should know.",
       type: "DOCUMENT" as const,
       priority: "CRITICAL" as const,
-      requiresAcknowledgement: true,
       estimatedMinutes: 45,
     },
     {
@@ -133,7 +132,6 @@ async function main() {
         "Temperature monitoring, the shake test and what to do when the fridge fails overnight.",
       type: "VIDEO" as const,
       priority: "HIGH" as const,
-      requiresAcknowledgement: false,
       estimatedMinutes: 25,
     },
     {
@@ -143,7 +141,6 @@ async function main() {
         "How to complete and submit the weekly surveillance return, with the thresholds that trigger an alert.",
       type: "DOCUMENT" as const,
       priority: "HIGH" as const,
-      requiresAcknowledgement: true,
       estimatedMinutes: 30,
     },
   ];
@@ -161,7 +158,6 @@ async function main() {
         summary: starter.summary,
         type: starter.type,
         priority: starter.priority,
-        requiresAcknowledgement: starter.requiresAcknowledgement,
         estimatedMinutes: starter.estimatedMinutes,
         authorId: admin.id,
         state: "PUBLISHED",
@@ -172,8 +168,7 @@ async function main() {
         set: {
           summary: starter.summary,
           priority: starter.priority,
-          requiresAcknowledgement: starter.requiresAcknowledgement,
-          estimatedMinutes: starter.estimatedMinutes,
+            estimatedMinutes: starter.estimatedMinutes,
           state: "PUBLISHED",
           isPublished: true,
           updatedAt: new Date(),

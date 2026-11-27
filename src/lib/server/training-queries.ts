@@ -41,7 +41,7 @@ export interface TrainingFilters {
   review?: TrainingReviewState;
   /**
    * Who is asking. Anything not yet approved is a draft between its author and
-   * the unit head, so it must not leak into a learner's register — but the
+   * the unit head, so it must not leak into the trainings a learner sees — but the
    * author still needs to see their own row to fix and resubmit it.
    */
   viewer?: { userId: string; seeAll: boolean };
@@ -226,7 +226,7 @@ async function loadTrainingFilterOptions(): Promise<TrainingFilterOptions> {
  * Filter options are reference data: the regions, the districts, the years
  * anything has been filed in. They change when an administrator edits geography,
  * not between two clicks of the same session — and they are three of the dozen
- * queries the register fires on every visit. Thirty seconds of cache means
+ * queries Trainings fires on every visit. Thirty seconds of cache means
  * hopping back to Trainings costs the browser nothing at all.
  */
 export const getTrainingFilterOptions = unstable_cache(loadTrainingFilterOptions, ["training-filter-options"], {
@@ -383,10 +383,10 @@ export async function listTrainingComments(trainingId: string, limit = 200): Pro
 /**
  * Every published training filed under one programme area, newest first.
  *
- * This is what the catalogue's area page shows: the trainings held for that area,
+ * This is what the library's area page shows: the trainings held for that area,
  * so a member of staff can find the one they attended and the material that went
  * with it. Unreviewed rows are excluded — a facilitator's draft is not the
- * catalogue.
+ * library.
  */
 export interface AreaTrainingRow {
   id: string;

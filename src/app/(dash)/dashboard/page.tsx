@@ -8,7 +8,6 @@ import {
   Eye,
   History,
   Layers,
-  PenLine,
 } from "lucide-react";
 import { AreaChart } from "@/components/charts/area-chart";
 import { ChartCard, EmptyChart, chartColor } from "@/components/charts/chart-card";
@@ -35,12 +34,9 @@ import {
   getTypeMix,
   periodDelta,
 } from "@/lib/server/insights-queries";
-import { classifyLoadFailure } from "@/lib/load-failure";
-import { DeadlineError, within, withinOr } from "@/lib/server/deadline";
-import { log } from "@/lib/server/logger";
-import { getLearnerDashboard } from "@/lib/server/learning-queries";
+import { withinOr } from "@/lib/server/deadline";
+import { listRecentOpens } from "@/lib/server/learning-queries";
 import { LearnerHome, greetingFor } from "./learner-home";
-import { DashboardRetry } from "./retry-card";
 import { listNotifications } from "@/lib/server/notification-queries";
 import { requireSession } from "@/lib/server/rbac";
 import { isStaffRole } from "@/lib/viewer";
@@ -68,32 +64,17 @@ export default async function DashboardPage({
   if (!staff) return <LearnerHome session={session} />;
 
   /*
-   * Every section has a deadline. The two the page cannot do without are
-   * awaited together and fail to a retry card; the staff statistics are
-   * optional, so a slow one drops out and the rest of the page still renders.
-   * Without this a stalled query left the skeleton on screen indefinitely.
+   * Every section has a deadline. None of them is the page: the greeting and the
+   * links are drawn from the session, so a slow statistics query drops its own
+   * section out and the rest still renders. Without this a stalled query left
+   * the skeleton on screen indefinitely.
    */
-  let dashboard: Awaited<ReturnType<typeof getLearnerDashboard>>;
-  try {
-    dashboard = await within("dashboard.learner", getLearnerDashboard(session), 6_000);
-  } catch (error) {
-    const failure = classifyLoadFailure(error);
-    log.error({
-      event: "dashboard.essential_failed",
-      userId: session.sub,
-      label: error instanceof DeadlineError ? error.label : undefined,
-      failure: failure.kind,
-      code: failure.code,
-      error,
-    });
-    return <DashboardRetry hint={failure.hint} />;
-  }
-
   // The notices are a sidebar of the page, not the page: a slow bell falls back
   // to an empty list rather than taking the greeting down with it.
-  const [announcements, insights, traffic, sessionRecord, trainings, typeMix, programmeTraffic] =
+  const [announcements, recent, insights, traffic, sessionRecord, trainings, typeMix, programmeTraffic] =
     await Promise.all([
       withinOr("dashboard.notifications", listNotifications(session, 4), []),
+      withinOr("dashboard.recent", listRecentOpens(session.sub, 12), []),
       staff ? withinOr("dashboard.insights", getInsights(session), null) : null,
       staff ? withinOr("dashboard.traffic", getTrafficSeries(session, 12), null) : null,
       staff ? withinOr("dashboard.training_counts", getTrainingCounts(session), null) : null,
@@ -103,7 +84,7 @@ export default async function DashboardPage({
     ]);
 
   const noticeText = notice ? NOTICES[notice] : undefined;
-  const nextUp = dashboard.recentlyOpened[0] ?? null;
+  const nextUp = recent[0] ?? null;
 
   return (
     <div className="space-y-10">
@@ -133,9 +114,8 @@ export default async function DashboardPage({
               {greetingFor(now)}, {firstNameOf(session.name)}.
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
-              {dashboard.mandatoryOutstanding.length > 0
-                ? `${dashboard.mandatoryOutstanding.length} ${dashboard.mandatoryOutstanding.length === 1 ? "protocol is" : "protocols are"} still waiting for your signature. Everything else is in the library whenever you need it.`
-                : "Everything GHS has published for your programmes is in the library, filed under the field and area it belongs to."}
+              Everything GHS has published for your programmes is in the library, filed under the field and
+              area it belongs to.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               {nextUp ? (
@@ -171,7 +151,7 @@ export default async function DashboardPage({
               icon={Eye}
               label="Material opens · 12 weeks"
               value={traffic.totals.views}
-              hint={`${insights.catalogue.published} materials published`}
+              hint={`${insights.library.published} materials published`}
               delta={periodDelta(traffic.views)}
               spark={traffic.views}
               color="var(--chart-4)"
@@ -189,15 +169,15 @@ export default async function DashboardPage({
               icon={CalendarCheck2}
               label="Trainings · 90 days"
               value={sessionRecord.last90Days}
-              hint={`${sessionRecord.total} on the register`}
+              hint={`${sessionRecord.total} recorded`}
               spark={trainings?.counts ?? []}
               color="var(--chart-5)"
             />
             <KpiCard
               icon={ClipboardCheck}
               label="Awaiting review"
-              value={insights.catalogue.inReview}
-              hint={insights.catalogue.inReview > 0 ? "Waiting for a decision" : "The queue is clear"}
+              value={insights.library.inReview}
+              hint={insights.library.inReview > 0 ? "Waiting for a decision" : "The queue is clear"}
               color="var(--chart-2)"
             />
           </KpiGrid>
@@ -288,20 +268,9 @@ export default async function DashboardPage({
       ) : (
         <KpiGrid>
           <KpiCard
-            icon={PenLine}
-            label="Protocols to sign"
-            value={dashboard.mandatoryOutstanding.length}
-            hint={
-              dashboard.mandatoryTotal > 0
-                ? `of ${dashboard.mandatoryTotal} that ask for a signature`
-                : "Nothing published asks for one"
-            }
-            color="var(--chart-4)"
-          />
-          <KpiCard
             icon={History}
             label="Opened recently"
-            value={dashboard.recentlyOpened.length}
+            value={recent.length}
             hint="Pick one up again below"
             color="var(--chart-1)"
           />
@@ -328,7 +297,7 @@ export default async function DashboardPage({
             <h2 id="recent-heading" className="text-lg font-bold text-ink">
               Recently opened
             </h2>
-            {dashboard.recentlyOpened.length === 0 ? (
+            {recent.length === 0 ? (
               <ListEmptyState
                 art="search"
                 title="Nothing opened yet"
@@ -338,7 +307,7 @@ export default async function DashboardPage({
               />
             ) : (
               <ul className="surface-card divide-y divide-hairline overflow-hidden">
-                {dashboard.recentlyOpened.map((item) => (
+                {recent.map((item) => (
                   <li key={item.id}>
                     <Link
                       href={`/materials/${item.id}`}

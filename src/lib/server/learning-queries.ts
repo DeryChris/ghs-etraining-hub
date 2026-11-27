@@ -4,7 +4,6 @@ import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import {
   programmeFields,
-  materialProgress,
   materialVersions,
   materialViews,
   materials,
@@ -12,7 +11,7 @@ import {
   trainingSessions,
   users,
 } from "@/db/schema";
-import { PRIORITY_RANK, type MaterialType, type PriorityLevel } from "@/lib/labels";
+import type { MaterialType, PriorityLevel } from "@/lib/labels";
 import { log } from "@/lib/server/logger";
 import { audienceFor, fieldFor, liveField, liveArea, publishedMaterial } from "@/lib/server/visibility";
 import type { Viewer } from "@/lib/viewer";
@@ -98,13 +97,13 @@ export async function getField(id: string, viewer: Viewer | null) {
   return row ?? null;
 }
 
-/** A field by its stable code (`PF-PH`), which is what the catalogue URLs use. */
+/** A field by its stable code (`PF-PH`), which is what the library URLs use. */
 export async function getFieldByCode(code: string, viewer: Viewer | null) {
   /*
-   * Case-insensitive on purpose. The catalogue builds its links from the stored
+   * Case-insensitive on purpose. The library builds its links from the stored
    * code, but this used to upper-case the incoming one before comparing — so a
    * field whose code happened to contain lower case (an import, a code with a
-   * hex suffix) was listed in the catalogue and 404'd when opened.
+   * hex suffix) was listed in the library and 404'd when opened.
    */
   const [row] = await db
     .select()
@@ -120,7 +119,7 @@ export interface AreaCard {
   name: string;
   description: string | null;
   materialCount: number;
-  /** How many trainings are filed under this area — the catalogue's own count. */
+  /** How many trainings are filed under this area — the area page's own count. */
   trainingCount: number;
 }
 
@@ -184,10 +183,8 @@ export interface MaterialListItem {
   summary: string | null;
   type: MaterialType;
   priority: PriorityLevel;
-  requiresAcknowledgement: boolean;
   estimatedMinutes: number | null;
   authorName: string;
-  acknowledgedAt: Date | null;
 }
 
 export async function listMaterialsInArea(programmeAreaId: string, viewer: Viewer): Promise<MaterialListItem[]> {
@@ -198,16 +195,13 @@ export async function listMaterialsInArea(programmeAreaId: string, viewer: Viewe
       summary: materials.summary,
       type: materials.type,
       priority: materials.priority,
-      requiresAcknowledgement: materials.requiresAcknowledgement,
       estimatedMinutes: materials.estimatedMinutes,
       authorName: users.fullName,
-      acknowledgedAt: materialProgress.acknowledgedAt,
     })
     .from(materials)
     .innerJoin(users, eq(users.id, materials.authorId))
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
     .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, viewer.id)))
     .where(
       and(
         eq(materials.programmeAreaId, programmeAreaId),
@@ -282,10 +276,8 @@ export async function searchLibrary(input: {
       summary: materials.summary,
       type: materials.type,
       priority: materials.priority,
-      requiresAcknowledgement: materials.requiresAcknowledgement,
       estimatedMinutes: materials.estimatedMinutes,
       authorName: users.fullName,
-      acknowledgedAt: materialProgress.acknowledgedAt,
       areaCode: programmeAreas.code,
       areaName: programmeAreas.name,
       fieldName: programmeFields.name,
@@ -294,7 +286,6 @@ export async function searchLibrary(input: {
     .innerJoin(users, eq(users.id, materials.authorId))
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
     .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, input.viewer.id)))
     .where(where)
     .orderBy(asc(materials.title))
     .limit(LIBRARY_PAGE_SIZE)
@@ -311,14 +302,12 @@ export async function getMaterialDetail(materialId: string, viewer: Viewer) {
       field: programmeFields,
       authorName: users.fullName,
       version: materialVersions,
-      progress: materialProgress,
     })
     .from(materials)
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
     .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .innerJoin(users, eq(users.id, materials.authorId))
     .leftJoin(materialVersions, eq(materialVersions.id, materials.currentVersionId))
-    .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, viewer.id)))
     .where(
       and(
         eq(materials.id, materialId),
@@ -335,16 +324,7 @@ export async function getMaterialDetail(materialId: string, viewer: Viewer) {
 
 /* ── Learner dashboard ─────────────────────────────────────────────────── */
 
-export interface MandatoryItem {
-  id: string;
-  title: string;
-  priority: PriorityLevel;
-  estimatedMinutes: number | null;
-  areaName: string;
-  areaCode: string;
-  /** Acknowledged earlier, but a newer version was published since. */
-  reacknowledgementRequired: boolean;
-}
+/* ── Personal activity ─────────────────────────────────────────────────── */
 
 /** A material this person opened, most recent first. Activity, nothing more. */
 export interface RecentOpen {
@@ -355,70 +335,6 @@ export interface RecentOpen {
   areaCode: string;
   lastViewedAt: Date;
 }
-
-export interface LearnerDashboard {
-  mandatoryTotal: number;
-  mandatoryOutstanding: MandatoryItem[];
-  /** The last few things opened, so the dashboard can offer them again. */
-  recentlyOpened: RecentOpen[];
-}
-
-export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashboard> {
-  // Run the three dashboard queries sequentially instead of in parallel: each
-  // needs its own pooled connection, and running them together starved the pool
-  // for every other tab the visitor opened. The totals query is the cheapest
-  // and runs first so the page can show numbers quickly; mandatory and
-  // continue-learning follow.
-  const mandatoryRows = await db
-    .select({
-      id: materials.id,
-      title: materials.title,
-      priority: materials.priority,
-      estimatedMinutes: materials.estimatedMinutes,
-      currentVersionId: materials.currentVersionId,
-      areaName: programmeAreas.name,
-      areaCode: programmeAreas.code,
-      acknowledgedAt: materialProgress.acknowledgedAt,
-      acknowledgedVersionId: materialProgress.materialVersionId,
-    })
-    .from(materials)
-    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .leftJoin(materialProgress, and(eq(materialProgress.materialId, materials.id), eq(materialProgress.userId, viewer.id)))
-    .where(
-      and(
-        publishedMaterial,
-        liveArea,
-        liveField,
-        fieldFor(viewer),
-        audienceFor(viewer),
-        eq(materials.requiresAcknowledgement, true),
-      ),
-    );
-
-  const recentlyOpened = await listRecentOpens(viewer.id, 4);
-
-  const mandatoryOutstanding = mandatoryRows
-    .filter((row) => !(row.acknowledgedAt !== null && row.acknowledgedVersionId === row.currentVersionId))
-    .map((row) => ({
-      id: row.id,
-      title: row.title,
-      priority: row.priority,
-      estimatedMinutes: row.estimatedMinutes,
-      areaName: row.areaName,
-      areaCode: row.areaCode,
-      reacknowledgementRequired: row.acknowledgedAt !== null,
-    }))
-    .sort((a, b) => PRIORITY_RANK[b.priority] - PRIORITY_RANK[a.priority] || a.title.localeCompare(b.title));
-
-  return {
-    mandatoryTotal: mandatoryRows.length,
-    mandatoryOutstanding,
-    recentlyOpened,
-  };
-}
-
-/* ── Personal activity ─────────────────────────────────────────────────── */
 
 /**
  * What this person has opened, newest first.

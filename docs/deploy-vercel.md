@@ -188,7 +188,7 @@ In a browser:
 1. `/` renders the marketing page.
 2. `/login` accepts a staff account (step 9 if nobody can sign in).
 3. `/dashboard` shows the greeting, numbers and staff panels.
-4. `/catalogue` lists the programme fields; `/library` lists the materials.
+4. `/catalogue` is the Library: it lists the programme fields, and search returns the materials.
 5. `/trainings`, `/complaints`, `/users` open without sitting on skeletons.
 
 ---
