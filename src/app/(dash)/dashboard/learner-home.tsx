@@ -1,38 +1,31 @@
 import Link from "next/link";
-import { ArrowRight, Bell, BookOpen, Download, Eye, History, Sparkles } from "lucide-react";
-import { KindLabel } from "@/components/ui/kind-label";
+import { ArrowRight, Bell, BookOpen, Sparkles } from "lucide-react";
 import { ProgrammeFieldTile } from "@/components/programme/programme-tile";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { buttonClass } from "@/components/ui/button";
-import { formatDate, formatDateTime } from "@/lib/format";
-import { MATERIAL_TYPE_LABELS, notificationTypeLabel } from "@/lib/labels";
+import { formatDate } from "@/lib/format";
+import { notificationTypeLabel } from "@/lib/labels";
 import { firstNameOf } from "@/lib/names";
-import { DashboardRetry } from "./retry-card";
 import { fieldHref, safeAppLink } from "@/lib/links";
 import { withinOr } from "@/lib/server/deadline";
-import { log } from "@/lib/server/logger";
-import { listFields, listRecentOpens } from "@/lib/server/learning-queries";
-import { getMyTraffic } from "@/lib/server/insights-queries";
+import { listFields } from "@/lib/server/learning-queries";
 import { listNotifications } from "@/lib/server/notification-queries";
 import type { Session } from "@/lib/server/session";
 
 /**
  * What a member of staff lands on.
  *
- * The shape is the one every learning platform settled on, because it answers
- * the three questions people actually arrive with, in this order:
+ * What was a reading home is now a training home.
  *
- *   1. *What was I doing?* — the hero names it and offers it back as one button.
- *   2. *What did I read?* — the reading record, folded into the page rather than
- *      kept on a tab of its own (ADR‑0027). Totals sit in the hero strip; the
- *      list of opens sits beside the announcements.
+ * Material used to have a standing library: documents filed under a programme
+ * area, versioned, opened here and remembered as "pick up where you left off".
+ * Material is now attached to the training it was used at, so the only thing
+ * worth putting in front of somebody is the training itself — what was held for
+ * their programmes, and the files that came with it.
  *
- * There is nothing to sign here. The library is for reading, and reading leaves
- * a record of opens; it does not ask anyone to certify that they have read.
- *
- * Everything here is a link to material or to a training; there is no chart on
- * this page. Charts are for the people who run the programmes — they are on the
- * staff dashboard, which is a different page for a different job.
+ * There is nothing to sign here and nothing is scored. Charts are for the people
+ * who run the programmes; they are on the staff dashboard, a different page for a
+ * different job.
  */
 
 export function greetingFor(now: Date): string {
@@ -49,52 +42,18 @@ export function greetingFor(now: Date): string {
   return "Good evening";
 }
 
-/** One number in the hero strip. Small on purpose: it is context, not a dashboard. */
-function HeroStat({ icon: Icon, value, label }: { icon: typeof Eye; value: number; label: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span
-        aria-hidden
-        className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"
-      >
-        <Icon className="h-4 w-4" />
-      </span>
-      <span className="min-w-0">
-        <span className="block text-xl font-extrabold leading-none text-ink">{value}</span>
-        <span className="mt-1 block text-[11px] font-medium uppercase tracking-[0.08em] text-ink-muted">
-          {label}
-        </span>
-      </span>
-    </div>
-  );
-}
 
 export async function LearnerHome({ session }: { session: Session }) {
   const now = new Date();
 
   /*
-   * None of these is the page. A slow reading record must not take the greeting
-   * down with it, so each has a deadline and an honest empty result.
+   * None of these is the page. A slow query must not take the greeting down with
+   * it, so each has a deadline and an honest empty result.
    */
-  const [recent, traffic, announcements, fields] = await Promise.all([
-    withinOr("dashboard.recent", listRecentOpens(session.sub, 12), []),
-    withinOr("dashboard.traffic", getMyTraffic(session.sub), null),
+  const [announcements, fields] = await Promise.all([
     withinOr("dashboard.notices", listNotifications(session, 4), []),
     withinOr("dashboard.fields", listFields(session), []),
   ]);
-
-  /*
-   * The reading record is what this page is. If that read failed, the honest
-   * answer is a retry card — three empty lists would claim the person has read
-   * nothing, which is a different and untrue statement.
-   */
-  if (traffic === null) {
-    log.error({ event: "dashboard.reads_failed", userId: session.sub });
-    return <DashboardRetry hint="database" />;
-  }
-
-  const continueWith = recent[0] ?? null;
-  const pickUp = recent.slice(0, 3);
 
   return (
     <div className="space-y-10">
@@ -113,154 +72,34 @@ export async function LearnerHome({ session }: { session: Session }) {
               {greetingFor(now)}, {firstNameOf(session.name)}.
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
-              {continueWith ? (
-                <>
-                  You were reading <span className="font-semibold text-ink">{continueWith.title}</span> in{" "}
-                  {continueWith.areaName}. It is still there — or open the library and start something new.
-                </>
-              ) : (
-                "Everything GHS has published for your programmes is in the library, filed under the area and field it belongs to."
-              )}
+              Every training GHS held for your programmes is on record here — what it covered, who ran it, and
+              the slides, attendance sheet and report that came with it.
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-1">
-              {continueWith && (
-                <Link
-                  href={`/materials/${continueWith.id}`}
-                  className={buttonClass({ className: "h-12 rounded-[var(--radius-pill)] px-6" })}
-                >
-                  Continue reading
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-              )}
+              <Link
+                href="/trainings"
+                className={buttonClass({ className: "h-12 rounded-[var(--radius-pill)] px-6" })}
+              >
+                <BookOpen className="h-4 w-4" aria-hidden />
+                See the trainings
+              </Link>
               <Link
                 href="/catalogue"
                 className={buttonClass({
-                  variant: continueWith ? "secondary" : "primary",
+                  variant: "secondary",
                   className: "h-12 rounded-[var(--radius-pill)] px-6",
                 })}
               >
-                <BookOpen className="h-4 w-4" aria-hidden />
-                Browse the library
+                Browse by programme
               </Link>
             </div>
           </div>
 
-          {/* The reading record, where it belongs: beside the greeting. */}
-          {traffic && (
-            <div className="grid shrink-0 grid-cols-3 gap-5 border-t border-hairline pt-6 sm:gap-8 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-              <div>
-                <HeroStat icon={Eye} value={traffic.opens} label={`Opened · ${traffic.days}d`} />
-              </div>
-              <div>
-                <HeroStat icon={History} value={traffic.materials} label="Materials" />
-              </div>
-              <div>
-                <HeroStat icon={Download} value={traffic.downloads} label={`Saved · ${traffic.days}d`} />
-              </div>
-            </div>
-          )}
         </div>
       </section>
 
-      {/* ── Pick up where you left off ───────────────────────────────────── */}
-      <section aria-labelledby="pickup-heading" className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <h2 id="pickup-heading" className="text-xl font-extrabold tracking-tight text-ink">
-              Pick up where you left off
-            </h2>
-            <p className="mt-1 text-sm text-ink-muted">The last things you opened, newest first.</p>
-          </div>
-          <Link
-            href="/catalogue"
-            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline"
-          >
-            All material
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
-        </div>
-
-        {pickUp.length === 0 ? (
-          <ListEmptyState
-            title="Nothing opened yet"
-            description="Everything published for your programmes is in the library. What you open shows up here, so you can find your way back to it."
-            actionText="Browse the library"
-            actionHref="/catalogue"
-          />
-        ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {pickUp.map((item) => (
-              <li key={item.id}>
-                <Link
-                  href={`/materials/${item.id}`}
-                  className="group flex h-full flex-col gap-3 rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors duration-fast hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                >
-                  <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
-                    <KindLabel type={item.type} />
-                    {MATERIAL_TYPE_LABELS[item.type]} · {item.areaName}
-                  </span>
-                  <p className="text-base font-bold leading-snug text-ink">{item.title}</p>
-                  <span className="mt-auto inline-flex items-center gap-1.5 pt-1 text-xs font-medium text-ink-muted">
-                    Last opened {formatDateTime(item.lastViewedAt)}
-                    <ArrowRight
-                      className="h-3.5 w-3.5 text-primary transition-transform duration-fast group-hover:translate-x-0.5"
-                      aria-hidden
-                    />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* ── Your reading, beside the announcements ───────────────────────── */}
-      <div className="grid gap-8 lg:grid-cols-3">
-        <section aria-labelledby="reading-heading" className="space-y-4 lg:col-span-2">
-          <div>
-            <h2 id="reading-heading" className="text-xl font-extrabold tracking-tight text-ink">
-              Your reading
-            </h2>
-            <p className="mt-1 text-sm text-ink-muted">
-              {traffic
-                ? `${traffic.materials} ${traffic.materials === 1 ? "material" : "materials"} in the last ${traffic.days} days. Nothing is marked or scored — this is a record of where you have been.`
-                : "A record of where you have been, so you can find your way back."}
-            </p>
-          </div>
-
-          {recent.length === 0 ? (
-            <ListEmptyState
-              title="Nothing opened yet"
-              description="Open a material and it will appear here."
-              actionText="Browse the library"
-              actionHref="/catalogue"
-            />
-          ) : (
-            <ul className="surface-card divide-y divide-hairline overflow-hidden p-0">
-              {recent.slice(0, 8).map((item) => (
-                <li key={item.id}>
-                  <Link
-                    href={`/materials/${item.id}`}
-                    className="flex items-center gap-3 px-4 py-3 transition-colors duration-fast hover:bg-surface-2"
-                  >
-                    <KindLabel type={item.type} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-ink">{item.title}</span>
-                      <span className="mt-0.5 block truncate text-xs text-ink-muted">{item.areaName}</span>
-                    </span>
-                    <time
-                      className="shrink-0 text-xs text-ink-muted"
-                      dateTime={item.lastViewedAt.toISOString()}
-                    >
-                      {formatDateTime(item.lastViewedAt)}
-                    </time>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
+      {/* ── Announcements ───────────────────────────────────────────────── */}
+      <div className="grid gap-8">
         <aside aria-labelledby="announcements-heading" className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 id="announcements-heading" className="text-xl font-extrabold tracking-tight text-ink">

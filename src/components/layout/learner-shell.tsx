@@ -105,7 +105,7 @@ export function LearnerShell({
 
           <div className="ml-auto flex items-center gap-1.5">
             <form
-              action="/catalogue"
+              action="/trainings"
               method="get"
               role="search"
               className="relative hidden w-64 xl:block"
@@ -145,7 +145,7 @@ export function LearnerShell({
 
         {searchOpen && (
           <div id="learner-search-mobile" className="border-t border-hairline bg-canvas px-4 pb-4 pt-3 sm:px-6 xl:hidden">
-            <form action="/catalogue" method="get" role="search" className="relative">
+            <form action="/trainings" method="get" role="search" className="relative">
               <label htmlFor="learner-search-small" className="sr-only">
                 Search the library
               </label>

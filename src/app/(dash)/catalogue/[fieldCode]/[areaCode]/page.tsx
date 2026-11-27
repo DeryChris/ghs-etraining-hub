@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarDays, MapPin, Users } from "lucide-react";
-import { MaterialCard } from "@/components/materials/material-card";
 import { LibraryTrainingCard } from "@/components/trainings/library-training-card";
 import { Badge } from "@/components/ui/badge";
 import { ListEmptyState } from "@/components/ui/empty-state";
@@ -9,17 +8,17 @@ import { PageHeader } from "@/components/ui/page-header";
 import { TRAINING_STATUS_LABELS } from "@/lib/labels";
 import { fieldHref } from "@/lib/links";
 import { formatDate } from "@/lib/format";
-import { MATERIAL_TYPES, MATERIAL_TYPE_LABELS } from "@/lib/labels";
-import { getAreaByCode, listMaterialsInArea } from "@/lib/server/learning-queries";
+import { getAreaByCode } from "@/lib/server/learning-queries";
 import { listTrainingsInArea } from "@/lib/server/training-queries";
 import { requireSession } from "@/lib/server/rbac";
 
 /**
- * One programme field: the trainings held for it, then the material filed under it.
+ * One programme field: the trainings held for it, and nothing else.
  *
- * The trainings come first because that is what people come here for — the event
- * they attended, its resources and its discussion. The material below is the
- * standing library for the area, which does not expire with the event.
+ * It listed a standing library of material underneath — documents, videos and
+ * labs that applied to the field between trainings — and that is the half that
+ * went. Files belong to the event they were used at, so a field is a list of
+ * trainings, each carrying its own attachments.
  */
 export default async function AreaPage({ params }: { params: Promise<{ fieldCode: string; areaCode: string }> }) {
   const session = await requireSession();
@@ -31,14 +30,7 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
   if (!found) notFound();
   const { area, field } = found;
 
-  const [trainings, materials] = await Promise.all([
-    listTrainingsInArea(area.id),
-    listMaterialsInArea(area.id, session),
-  ]);
-
-  const groups = MATERIAL_TYPES.map((type) => ({ type, items: materials.filter((m) => m.type === type) })).filter(
-    (group) => group.items.length > 0,
-  );
+  const trainings = await listTrainingsInArea(area.id);
 
   return (
     <div className="space-y-8">
@@ -127,38 +119,6 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
         )}
       </section>
 
-      <section aria-labelledby="materials-heading" className="space-y-4">
-        <div>
-          <h2 id="materials-heading" className="text-lg font-bold text-ink">
-            Material for this field
-          </h2>
-          <p className="text-sm text-ink-muted">
-            The standing library: documents, videos and labs that apply to this field between trainings.
-          </p>
-        </div>
-
-        {materials.length === 0 ? (
-          <ListEmptyState
-            title="No published materials in this field yet"
-            description="Facilitators publish SOPs, videos and labs here once they have been reviewed."
-          />
-        ) : (
-          groups.map((group) => (
-            <section key={group.type} aria-labelledby={`group-${group.type}`} className="space-y-4">
-              <h3 id={`group-${group.type}`} className="text-base font-bold text-ink">
-                {MATERIAL_TYPE_LABELS[group.type]}s
-              </h3>
-              <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {group.items.map((material) => (
-                  <li key={material.id}>
-                    <MaterialCard material={material} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))
-        )}
-      </section>
     </div>
   );
 }

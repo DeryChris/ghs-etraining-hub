@@ -339,3 +339,6 @@ then asks only for what the sheet cannot know. Name, region, district, facility
 and grade are read-only facts; an account that already has a password cannot be
 claimed. Sign-in is a split card again: getting started beside the form. See
 `0030-accounts-are-claimed.md`.
+
+## ADR‑0031 — Material belongs to a training, not to a programme
+`0031-material-belongs-to-a-training.md`.

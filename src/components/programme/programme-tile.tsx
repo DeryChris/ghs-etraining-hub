@@ -115,8 +115,7 @@ export function ProgrammeFieldTile({
       icon={<FieldTileIcon code={field.code} size={46} />}
       meta={
         <>
-          {field.areaCount} {field.areaCount === 1 ? "field" : "fields"} ·{" "}
-          {field.materialCount} {field.materialCount === 1 ? "material" : "materials"}
+          {field.areaCount} {field.areaCount === 1 ? "field" : "fields"}
           {typeof field.trainingCount === "number" ? (
             <> · {field.trainingCount} {field.trainingCount === 1 ? "training" : "trainings"}</>
           ) : null}

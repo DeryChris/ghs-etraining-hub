@@ -20,9 +20,12 @@ describe("navFor", () => {
     expect(admin).not.toContain("/notices");
   });
 
-  it("gives a facilitator authoring and notices but no administration and no review queue", () => {
+  it("gives a facilitator notices but no administration, review queue or upload door", () => {
     const facilitator = hrefs("FACILITATOR");
-    expect(facilitator).toEqual(expect.arrayContaining(["/authoring", "/notices"]));
+    expect(facilitator).toContain("/notices");
+    // Material is uploaded from the training it belongs to, so there is no
+    // authoring workspace to walk into.
+    expect(facilitator).not.toContain("/authoring");
     // The review queue is a sign-off duty: administrators and unit heads only.
     expect(facilitator).not.toContain("/review");
     // The desk lives inside messages now, and the public help pages are for
@@ -143,7 +146,7 @@ describe("isActiveHref", () => {
   });
 
   it("keeps a section selected on its sub-pages", () => {
-    expect(isActiveHref("/authoring/8f2c", "/authoring")).toBe(true);
+    expect(isActiveHref("/trainings/8f2c", "/trainings")).toBe(true);
     expect(isActiveHref("/trainings/abc", "/trainings")).toBe(true);
   });
 
@@ -154,7 +157,7 @@ describe("isActiveHref", () => {
 
 describe("activeHref", () => {
   it("prefers the most specific match", () => {
-    expect(activeHref("/authoring/8f2c", "FACILITATOR")).toBe("/authoring");
+    expect(activeHref("/trainings/8f2c", "FACILITATOR")).toBe("/trainings");
     expect(activeHref("/messages", "LEARNER")).toBe("/messages");
     expect(activeHref("/unknown", "LEARNER")).toBeUndefined();
   });

@@ -47,7 +47,7 @@ export function Header({
         </button>
 
         <form
-          action="/catalogue"
+          action="/trainings"
           method="get"
           role="search"
           className="relative hidden w-full max-w-lg md:block"

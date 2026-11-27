@@ -6,7 +6,6 @@ import {
   ClipboardCheck,
   Download,
   Eye,
-  History,
   Layers,
   Undo2,
 } from "lucide-react";
@@ -35,7 +34,6 @@ import {
   periodDelta,
 } from "@/lib/server/insights-queries";
 import { withinOr } from "@/lib/server/deadline";
-import { listRecentOpens } from "@/lib/server/learning-queries";
 import { listReturnedTrainings } from "@/lib/server/training-queries";
 import { LearnerHome, greetingFor } from "./learner-home";
 import { listNotifications } from "@/lib/server/notification-queries";
@@ -74,7 +72,6 @@ export default async function DashboardPage({
   // to an empty list rather than taking the greeting down with it.
   const [
     announcements,
-    recent,
     returned,
     insights,
     traffic,
@@ -84,7 +81,6 @@ export default async function DashboardPage({
     programmeTraffic,
   ] = await Promise.all([
       withinOr("dashboard.notifications", listNotifications(session, 4), []),
-      withinOr("dashboard.recent", listRecentOpens(session.sub, 12), []),
       // A returned training is a task with somebody's name on it, not a row in a
       // list: it gets its own read and its own card.
       session.role === "FACILITATOR" ? withinOr("dashboard.returned", listReturnedTrainings(session.sub), []) : [],
@@ -97,7 +93,6 @@ export default async function DashboardPage({
     ]);
 
   const noticeText = notice ? NOTICES[notice] : undefined;
-  const nextUp = recent[0] ?? null;
 
   return (
     <div className="space-y-10">
@@ -143,17 +138,6 @@ export default async function DashboardPage({
               field it belongs to.
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              {nextUp ? (
-                <Link
-                  href={`/materials/${nextUp.id}`}
-                  className={buttonClass({
-                    className: "h-12 rounded-[var(--radius-pill)] px-6",
-                  })}
-                >
-                  Pick up where you left off
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-              ) : null}
               <Link
                 href="/catalogue"
                 className={buttonClass({
@@ -346,13 +330,6 @@ export default async function DashboardPage({
       ) : (
         <KpiGrid>
           <KpiCard
-            icon={History}
-            label="Opened recently"
-            value={recent.length}
-            hint="Pick one up again below"
-            color="var(--chart-1)"
-          />
-          <KpiCard
             icon={Layers}
             label="Open library"
             value="Browse"
@@ -371,43 +348,6 @@ export default async function DashboardPage({
 
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="space-y-10 lg:col-span-2">
-          <section aria-labelledby="recent-heading" className="space-y-4">
-            <h2 id="recent-heading" className="text-lg font-bold text-ink">
-              Recently opened
-            </h2>
-            {recent.length === 0 ? (
-              <ListEmptyState
-                title="Nothing opened yet"
-                description="Everything published for your programmes is in the library. What you open shows up here."
-                actionText="Browse the library"
-                actionHref="/catalogue"
-              />
-            ) : (
-              <ul className="surface-card divide-y divide-hairline overflow-hidden">
-                {recent.map((item) => (
-                  <li key={item.id}>
-                    <Link
-                      href={`/materials/${item.id}`}
-                      className="block p-5 transition-colors duration-fast hover:bg-surface-2"
-                    >
-                      <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                        {MATERIAL_TYPE_LABELS[item.type]} · {item.areaName}
-                      </p>
-                      <p className="mt-1 font-semibold text-ink">
-                        {item.title}
-                      </p>
-                      <p className="mt-1 text-xs text-ink-muted">Last opened {formatDateTime(item.lastViewedAt)}</p>
-                    </Link>
-                  </li>
-                ))}
-                <li className="p-4">
-                  <Link href="/catalogue" className="text-sm font-semibold text-primary hover:underline">
-                    Browse the whole library
-                  </Link>
-                </li>
-              </ul>
-            )}
-          </section>
         </div>
 
         <aside aria-labelledby="announcements-heading" className="space-y-4">
