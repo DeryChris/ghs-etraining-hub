@@ -58,7 +58,7 @@ export function GettingStarted() {
             <Step n={4} />
             <span>
               Wrong number, forgotten password or a form that will not open? Use the{" "}
-              <Link href="/help/report" className="font-semibold text-white underline underline-offset-4">
+              <Link href="/help" className="font-semibold text-white underline underline-offset-4">
                 Complaint Hub
               </Link>{" "}
               and keep the answer in writing.

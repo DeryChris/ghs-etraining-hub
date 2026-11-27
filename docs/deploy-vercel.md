@@ -237,7 +237,7 @@ and `/forgot-password` says so rather than promising a mail that never arrives.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `/api/health` → `db: "down"` | wrong password, or the endpoint is suspended | `npm run db:doctor` prints the host, port and the exact errno |
+| `/api/health` → `db: "down"` | one of six faults; the body now names which | read `error.dbError.code` below, or run `npm run db:doctor` |
 | `db: "down"` and host shows no `-pooler` | direct host in `DATABASE_URL` | each instance opens its own connection; use the pooled host |
 | Migrations hang or deadlock | `DIRECT_URL` points at the pooled host | use the direct host for `db:migrate` |
 | `password authentication failed` after a Neon reset | password rotated in the console | update both URLs in Vercel, redeploy |
@@ -248,3 +248,24 @@ and `/forgot-password` says so rather than promising a mail that never arrives.
 | Login loops back to `/login` | cookie not accepted | `NEXT_PUBLIC_APP_URL` must match the deployed origin exactly, and `SESSION_SECRET` must be stable across deploys |
 | Login says the server could not reach the directory | Postgres unreachable from the function | check the region pairing and `DB_POOL_MAX` |
 | Reset link says "expired" immediately | token already used, or `NEXT_PUBLIC_APP_URL` points at another host | issue a new one; links are single-use |
+
+### `db: "down"`: what `error.dbError.code` means
+
+The health body carries the driver's own code, because "not reachable" is six
+different faults with six different fixes.
+
+| `dbError.code` | What happened | What to change |
+| --- | --- | --- |
+| `ENOTFOUND`, `EAI_AGAIN` | the host name does not resolve | the endpoint was renamed or the project deleted — copy the connection string from Neon → Connect into `DATABASE_URL` again |
+| `ECONNREFUSED` | nothing is listening on that host:port | check the port (5432 for the pooled endpoint) and that the project is running |
+| `CONNECT_TIMEOUT`, `ETIMEDOUT` | the function cannot reach that region, or the project is suspended | open the Neon console once to wake it; pair `fra1` with `eu-central-1` |
+| `28P01` | the password is wrong for that role | reset it in Neon and paste the whole string again — both URLs |
+| `3D000` | that database name does not exist | check the path (`/neondb`) |
+| `NO_PG_HBA`, `SELF_SIGNED_CERT_IN_CHAIN` | the connection arrived without TLS | `DATABASE_URL` must end in `?sslmode=require`; the app now asks for TLS anyway on any host that is not local |
+| `UNKNOWN` | a fault with no written remedy | the code is still the thing to search for or paste into a support request |
+
+A connection failure is never a migration problem: `/api/health` reports
+`db: "down"` *before* it counts migrations, so `applied: 0` and
+`migrations.state: "unknown"` in that report do not mean the database is empty.
+Once the connection answers, the same endpoint will name the pending file (at the
+time of writing, `0022_grade_not_cadre`).

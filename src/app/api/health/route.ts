@@ -3,6 +3,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { poolMax, poolMaxConfigured, poolMaxSource } from "@/db/client";
 import { complaints, districts, materials, programmeFields, regions, sessions, trainingSessions, users } from "@/db/schema";
+import { connectionProblem, isPooledHost, type ConnectionProblem } from "@/lib/db-error";
 import { databaseTarget } from "@/lib/db-target";
 import { sessionSecretProblem } from "@/lib/server/session";
 import { within } from "@/lib/server/deadline";
@@ -218,6 +219,8 @@ export async function GET(request: Request) {
   let dbStatus: "up" | "down" = "down";
   let schemaStatus: "current" | "outdated" | "unknown" = "unknown";
   let missing: string[] = [];
+  /** Set only when the connection itself failed; the code and the next step. */
+  let dbFailure: ConnectionProblem | null = null;
   let migrations: Awaited<ReturnType<typeof migrationState>> = {
     state: "unknown",
     applied: 0,
@@ -248,7 +251,13 @@ export async function GET(request: Request) {
     if (migrations.state === "behind" || migrations.state === "ahead") schemaStatus = "outdated";
   } catch (cause) {
     dbStatus = "down";
-    log.error({ event: "health.db_unavailable", requestId, error: cause });
+    /*
+     * "Not reachable" is six different faults with six different fixes. The
+     * classifier turns the driver's errno into the one that applies, so the next
+     * person reads "the host name does not resolve" instead of "try again".
+     */
+    dbFailure = connectionProblem(cause);
+    log.error({ event: "health.db_unavailable", requestId, dbErrorCode: dbFailure.code, error: cause });
   }
 
   // A deployment with no session key cannot sign anybody in, and the failure
@@ -282,7 +291,11 @@ export async function GET(request: Request) {
           ? {
               host: target.host,
               port: target.port,
-              pooled: false,
+              // Derived from the host, not asserted: the report used to say
+              // `pooled: false` next to a `-pooler` host, which is exactly the
+              // fact somebody reads when they are deciding whether the pooler is
+              // the problem.
+              pooled: isPooledHost(target.host),
               // Connections this instance may open. An old DB_POOL_MAX in the
               // host's environment overrides the fix silently, so report both.
               poolMax,
@@ -328,6 +341,11 @@ export async function GET(request: Request) {
                 : {
                     code: "UPSTREAM_UNAVAILABLE",
                     message: "The training database is not reachable.",
+                    ...(dbFailure
+                      ? {
+                          dbError: { code: dbFailure.code, remedy: dbFailure.remedy },
+                        }
+                      : {}),
                   },
           }),
     },

@@ -39,8 +39,34 @@ export const poolMaxConfigured = configuredPoolMax > 0 ? configuredPoolMax : POO
 export const poolMax = Math.min(poolMaxConfigured, POOL_MAX_CEILING);
 export const poolMaxSource: "env" | "default" = configuredPoolMax > 0 ? "env" : "default";
 
+/** A host this process can reach over a private or loopback network — no TLS. */
+function isLocalHost(host: string): boolean {
+  return /^(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)$/i.test(host) || /^(10|127)\./.test(host);
+}
+
+/**
+ * Neon refuses a connection that did not start with TLS (`no pg_hba.conf entry …
+ * SSL off`), and the failure looks like a network fault rather than a missing
+ * setting. A connection string pasted from the console carries `?sslmode=require`
+ * and is left exactly as it is; one pasted from a dashboard that strips query
+ * strings is not, so TLS is requested for any host that is not local. `require`
+ * encrypts without demanding a locally-installed CA, which is what libpq's
+ * `sslmode=require` means too.
+ */
+function sslOption(url: string): "require" | undefined {
+  try {
+    const parsed = new URL(url);
+    if (/[?&]sslmode=/.test(url)) return undefined;
+    return isLocalHost(parsed.hostname) ? undefined : "require";
+  } catch {
+    return undefined;
+  }
+}
+
 function createClient(url: string) {
+  const ssl = sslOption(url);
   return postgres(url, {
+    ...(ssl ? { ssl } : {}),
     // The pooled endpoint (Neon's `-pooler` host, PgBouncer) cannot hold
     // prepared statements across connections, so keep them off.
     prepare: false,
