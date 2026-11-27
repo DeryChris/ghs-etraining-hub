@@ -98,7 +98,6 @@ export default async function ComplaintsPage({
               ? "Every complaint lodged so far has been answered and closed. New ones appear here the moment they are lodged."
               : "Complaints lodged from the public Complaint Hub are filed here, with the answer that was given."
           }
-          art="inbox"
         />
       ) : (
         <ul className="space-y-4">

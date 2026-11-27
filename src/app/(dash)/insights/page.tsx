@@ -275,10 +275,10 @@ export default async function InsightsPage() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <ChartCard
-          title="Trainings by programme field"
+          title="Trainings by programme area"
           description="Which programmes are actually running trainings in the last 12 months."
           table={{
-            head: ["Programme field", "Trainings"],
+            head: ["Programme area", "Trainings"],
             rows: sessions.byProgramme.map((row) => [row.label, row.value]),
           }}
         >

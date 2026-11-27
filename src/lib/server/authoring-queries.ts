@@ -216,7 +216,7 @@ export async function listAuthoringAreas(viewer: Viewer): Promise<AuthoringArea[
 }
 
 /**
- * The programme area a material is filed under — the scope key for every
+ * The programme field a material is filed under — the scope key for every
  * authoring action. Authority is per area since ADR-0014, so this is both the
  * key and the answer.
  */

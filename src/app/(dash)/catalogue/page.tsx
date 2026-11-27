@@ -31,12 +31,12 @@ function searchHref(params: { q: string; type: string | null; page: number }): s
 }
 
 /**
- * The library: programme field → programme area → the trainings and material
+ * The library: programme area → programme field → the trainings and material
  * filed under it, with a search box for when you know what you want.
  *
  * This is where both former doors meet. "Catalogue" was the browse-by-programme
  * route and "Library" was a flat, searchable list of every material; two tabs that
- * answered "where is the malaria protocol?" between them, and nobody knew which
+ * answered "where is the malaria guideline?" between them, and nobody knew which
  * one to open. Searching happens here now: a query replaces the field tiles with
  * results, and clearing it brings the taxonomy back.
  */
@@ -68,7 +68,7 @@ export default async function LibraryPage({
         <PageHeader
           eyebrow="Library"
           title={query ? `Results for “${query}”` : "Filtered material"}
-          description="Every published protocol, video, lab and assessment you can reach, filed under its programme field and area."
+          description="Every published document, video, lab and assessment you can reach, filed under its programme area and field."
           icon={<BookOpen className="h-7 w-7 text-primary" aria-hidden />}
           actions={
             <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
@@ -157,7 +157,7 @@ export default async function LibraryPage({
       <PageHeader
         eyebrow="Library"
         title="Programmes, areas and their trainings"
-        description="Every programme field GHS trains in, with the areas inside it. Open a field, then an area, to see the trainings held for it and the material that goes with them."
+        description="Every programme area GHS trains in, with the fields inside it. Open an area, then a field, to see the trainings held for it and the material that goes with them."
         icon={<BookOpen className="h-7 w-7 text-primary" aria-hidden />}
         actions={
           <Link href="/trainings" className={buttonClass({ variant: "ghost" })}>
@@ -169,14 +169,14 @@ export default async function LibraryPage({
       <SearchForm query="" type={null} />
 
       <p className="text-sm text-ink-muted">
-        {fields.length} {fields.length === 1 ? "programme field" : "programme fields"} ·{" "}
+        {fields.length} {fields.length === 1 ? "programme area" : "programme fields"} ·{" "}
         {trainings.toLocaleString("en-GB")} published {trainings === 1 ? "training" : "trainings"}
       </p>
 
       {fields.length === 0 ? (
         <ListEmptyState
           title="The programme taxonomy is empty"
-          description="An administrator maintains the fields and areas at Administration → Programme fields. They appear here as soon as they are published."
+          description="An administrator maintains the areas and fields at Administration → Programme areas. They appear here as soon as they are published."
         />
       ) : (
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

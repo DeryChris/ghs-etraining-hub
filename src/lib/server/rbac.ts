@@ -44,7 +44,7 @@ async function facilitatorAssignedTo(userId: string, areaId: string): Promise<bo
   return Boolean(row);
 }
 
-/** "May work anywhere in this programme field." */
+/** "May work anywhere in this programme area." */
 export async function facilitatorGrantedField(userId: string, fieldId: string): Promise<boolean> {
   const [row] = await db
     .select({ id: fieldFacilitators.id })
@@ -117,7 +117,7 @@ export async function checkCapability(action: Action, scope: Scope = {}): Promis
 
   if (session.role === "FACILITATOR" && !isGlobalForFacilitators(action) && scope.areaId) {
     if (!(await facilitatorCoversArea(session.sub, scope.areaId))) {
-      return { ok: false, message: "That programme area is not assigned to you." };
+      return { ok: false, message: "That programme field is not assigned to you." };
     }
   }
 

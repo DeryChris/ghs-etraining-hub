@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  *
  * Two kinds of work land here: a material version sent for review, and a training
  * filed by a facilitator. Both are decided the same way — by whoever holds the
- * programme field — so both are listed, and both are found by looking at the
+ * programme area — so both are listed, and both are found by looking at the
  * assignments that exist now rather than at who was a reviewer when the item
  * arrived. That is what makes an appointment retroactive: appoint a unit head
  * today and every training already waiting in their field is on this page on
@@ -63,7 +63,7 @@ export default async function ReviewQueuePage() {
 
       {session.role === "FACILITATOR" && scope.empty && (
         <div className="rounded-card border border-warn/40 bg-warn/10 p-5 text-sm leading-relaxed text-ink">
-          <p className="font-semibold">You are a unit head without a programme field yet.</p>
+          <p className="font-semibold">You are a unit head without a programme area yet.</p>
           <p className="mt-1 text-ink-muted">
             An administrator gives you a field — or one area inside it — from Users → Access. The moment that happens,
             everything already waiting in it appears here.

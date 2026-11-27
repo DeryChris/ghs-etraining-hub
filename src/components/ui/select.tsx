@@ -9,7 +9,7 @@ export interface SelectOption {
   /** A second line under the label — "what this choice means", not a tooltip. */
   hint?: string;
   disabled?: boolean;
-  /** A heading the option sits under, e.g. the programme field of an area. */
+  /** A heading the option sits under, e.g. the programme area a field belongs to. */
   group?: string;
 }
 

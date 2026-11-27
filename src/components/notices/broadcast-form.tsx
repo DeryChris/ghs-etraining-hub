@@ -11,7 +11,7 @@ import type { AuthoringArea } from "@/lib/server/authoring-queries";
 const INITIAL: NoticeActionState = { ok: false, message: null };
 
 const TYPES = [
-  { value: "MATERIAL_UPDATE", label: "Protocol update" },
+  { value: "MATERIAL_UPDATE", label: "Material update" },
   { value: "SYSTEM_MAINTENANCE", label: "Service notice" },
   { value: "TRAINING_PUBLISHED", label: "Training announcement" },
 ];
@@ -41,7 +41,7 @@ export function BroadcastForm({ areas, canAddressEveryone }: { areas: AuthoringA
               onChange={() => setScope("AREA")}
               disabled={areas.length === 0}
             />
-            One programme area&apos;s cohort
+            One programme field&apos;s cohort
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -61,7 +61,7 @@ export function BroadcastForm({ areas, canAddressEveryone }: { areas: AuthoringA
       {scope === "AREA" && (
         <div>
           <label htmlFor="notice-area" className={labelClass}>
-            Programme area
+            Programme field
           </label>
           <Select
             id="notice-area"
@@ -69,14 +69,14 @@ export function BroadcastForm({ areas, canAddressEveryone }: { areas: AuthoringA
             required
             searchable
             defaultValue=""
-            placeholder="Choose a programme area"
+            placeholder="Choose a programme field"
             options={areas.map((area) => ({
               value: area.id,
               label: area.name,
               hint: area.fieldName,
             }))}
           />
-          <p className={hintClass}>The notice inherits that area&apos;s region, directorate and cadre audience.</p>
+          <p className={hintClass}>The notice inherits that area&apos;s region, directorate and grade audience.</p>
         </div>
       )}
 

@@ -7,7 +7,7 @@ import { dateRangeError } from "@/lib/training-dates";
  * rules can be unit-tested without a database, and so the form and the action
  * cannot drift apart.
  *
- * These checks are about shape. Whether the chosen programme area really belongs
+ * These checks are about shape. Whether the chosen programme field really belongs
  * to the chosen field — or the facility to the district — is a database question
  * and is answered in the action, inside the same request.
  */

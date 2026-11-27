@@ -281,7 +281,7 @@ npm run staff:status`}
                       <p className="text-xs text-ink-muted">
                         {[row.directorate, row.facility, row.region].filter(Boolean).join(" · ") || "No posting recorded"}
                       </p>
-                      {row.cadre && <p className="text-xs text-ink-muted">{row.cadre}</p>}
+                      {row.grade && <p className="text-xs text-ink-muted">{row.grade}</p>}
                     </td>
                     <td className="px-4 py-4">
                       <Badge variant={row.isActive ? "success" : "danger"}>{row.isActive ? "Active" : "Deactivated"}</Badge>
@@ -296,7 +296,7 @@ npm run staff:status`}
                         email={row.email ?? ""}
                         role={row.role}
                         region={row.region}
-                        cadre={row.cadre}
+                        grade={row.grade}
                         facility={row.facility}
                         isActive={row.isActive}
                         isUnitHead={row.isUnitHead}

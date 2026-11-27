@@ -176,7 +176,7 @@ export default async function SettingsPage() {
         </div>
         <ul className="space-y-3">
           <Planned done={false}>
-            <strong className="font-semibold text-ink">Programme and space taxonomy</strong> — created with the seeder
+            <strong className="font-semibold text-ink">Programme areas and fields</strong> — created with the seeder
             and SQL today; a create/edit screen is the next administration surface.
           </Planned>
           <Planned done={false}>

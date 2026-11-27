@@ -77,7 +77,7 @@ export default async function MaterialPage({
       {/*
         * One wrapped line, not a four-cell table. On a phone this used to be the
         * tallest thing between the title and the document; the reader came here
-        * for the protocol, so the metadata keeps its facts and loses its rows.
+        * for the document, so the metadata keeps its facts and loses its rows.
         */}
       <dl className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-card border border-hairline bg-surface px-4 py-3 text-xs">
         <div className="flex items-baseline gap-1.5">

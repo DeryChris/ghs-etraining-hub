@@ -120,7 +120,7 @@ async function main() {
       areaCode: "PF-CLIN-03",
       title: "Standard Precautions: Core SOP 2026",
       summary:
-        "Hand hygiene, PPE sequence and sharps handling — the protocol every clinical staff member should know.",
+        "Hand hygiene, PPE sequence and sharps handling — the procedure every clinical staff member should know.",
       type: "DOCUMENT" as const,
       priority: "CRITICAL" as const,
       estimatedMinutes: 45,

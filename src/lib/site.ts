@@ -25,7 +25,7 @@ export const SITE = {
   purpose: "Every Ghana Health Service training programme, with its material kept in one library — versioned and traceable.",
   /** Metadata description: what the service is, for a search result or share card. */
   description:
-    "The Ghana Health Service Training Library keeps the material from every GHS training programme — slides, protocols, videos and references — filed by programme field and area, versioned, and traceable to the people who uploaded, reviewed and downloaded it.",
+    "The Ghana Health Service Training Library keeps the material from every GHS training programme — slides, documents, videos and references — filed by programme area and field, versioned, and traceable to the people who uploaded, reviewed and downloaded it.",
   regionCount: 16,
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? null,
   supportPhone: process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? null,

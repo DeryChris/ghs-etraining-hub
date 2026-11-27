@@ -26,7 +26,7 @@ export interface DirectoryRow {
   role: Role;
   region: string | null;
   directorate: string | null;
-  cadre: string | null;
+  grade: string | null;
   facility: string | null;
   isActive: boolean;
   isUnitHead: boolean;
@@ -104,7 +104,7 @@ export async function listDirectory(input: DirectoryFilters & { page?: number })
       role: users.role,
       region: users.region,
       directorate: users.directorate,
-      cadre: users.cadre,
+      grade: users.grade,
       facility: users.facility,
       isActive: users.isActive,
       isUnitHead: users.isUnitHead,

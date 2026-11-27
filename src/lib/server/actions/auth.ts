@@ -90,7 +90,7 @@ export async function signInAction(_previous: SignInState, formData: FormData): 
         email: user.email,
         region: user.region ?? null,
         directorate: user.directorate ?? null,
-        cadre: user.cadre ?? null,
+        grade: user.grade ?? null,
         unitHead: user.unitHead ?? false,
         mustChange: user.mustChangePassword,
       },

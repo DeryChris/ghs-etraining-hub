@@ -66,7 +66,7 @@ export const users = pgTable("users", {
   fullName: text("full_name").notNull(),
   phone: text("phone"),
   role: userRoleEnum("role").notNull().default("LEARNER"),
-  cadre: text("cadre"),
+  grade: text("grade"),
   directorate: text("directorate"),
   region: text("region"),
   district: text("district"),
@@ -331,7 +331,7 @@ export const facilities = pgTable("facilities", {
 
 /* ── Programme taxonomy (fields → areas) ────────────────────────────────────
  * The vocabulary a training plan is written in: "Administration and Support
- * Services" is a field, "Biomedical Equipment" an area inside it. GHS supplied
+ * Services" is a programme area, "Biomedical Equipment" a field inside it. GHS supplied
  * the list (src/db/data/programme-taxonomy.ts) and administrators maintain it
  * at /programme-fields.
  *
@@ -365,7 +365,7 @@ export const programmeAreas = pgTable("programme_areas", {
   /** Cohort targeting: null means "for everyone"; see visibility.ts. */
   audienceRegion: text("audience_region"),
   audienceDirectorate: text("audience_directorate"),
-  audienceCadre: text("audience_cadre"),
+  audienceGrade: text("audience_grade"),
   sortOrder: integer("sort_order").notNull().default(0),
   isArchived: boolean("is_archived").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -396,7 +396,7 @@ export const areaFacilitators = pgTable("area_facilitators", {
  * (PLANNED), which is what makes the same table serve both the calendar and
  * the record.
  *
- * A training is classified by programme field and the area inside it — nothing
+ * A training is classified by programme area and the field inside it — nothing
  * else. `organisedOn` is the start date, `endsOn` the last day, and `year` the
  * plan year trainings are reported by.
  */
@@ -480,7 +480,7 @@ export const trainingComments = pgTable("training_comments", {
 }, (t) => [index("training_comments_training_idx").on(t.trainingId, t.createdAt)]);
 
 /**
- * "May work anywhere in this programme field."
+ * "May work anywhere in this programme area."
  *
  * `area_facilitators` grants one area at a time; this grants the field, so a
  * facilitator appointed to Malaria keeps working as areas are added. Unit heads

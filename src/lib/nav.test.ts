@@ -109,7 +109,7 @@ describe("navFor", () => {
     expect(admin?.items.map((item) => item.label)).toEqual([
       "Users",
       "Geography & facilities",
-      "Programme fields",
+      "Programme areas",
       "Complaints",
       "Settings",
     ]);

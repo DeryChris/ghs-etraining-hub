@@ -68,7 +68,7 @@ export type Scope = {
   areaId?: string;
   region?: string;
   directorate?: string;
-  cadre?: string;
+  grade?: string;
   reviewerIsAuthor?: boolean;
   audienceMatch?: boolean;
 };

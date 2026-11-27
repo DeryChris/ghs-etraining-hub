@@ -10,7 +10,7 @@ import { previewKindFor } from "@/lib/ghs-constants";
  * The file, opened in the page — and nothing around it.
  *
  * A learner should never have to leave the library, find the download folder and
- * hunt for an app to read a protocol. So every accepted format has a way to be
+ * hunt for an app to read a document. So every accepted format has a way to be
  * read here:
  *
  *  - PDF: the browser's own viewer, framed.

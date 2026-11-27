@@ -16,12 +16,12 @@ export function safeAppLink(url: string | null | undefined): string | null {
   return KNOWN_ROUTES.some((pattern) => pattern.test(path)) ? url : null;
 }
 
-/** The library URL for a programme area: /catalogue/PF-PH/PF-PH-03 (the route keeps its old name). */
+/** The library URL for a programme field: /catalogue/PF-PH/PF-PH-03 (the route keeps its old name). */
 export function areaHref(fieldCode: string, areaCode: string): string {
   return `/catalogue/${encodeURIComponent(fieldCode)}/${encodeURIComponent(areaCode)}`;
 }
 
-/** The library URL for a programme field: /catalogue/PF-PH. */
+/** The library URL for a programme area: /catalogue/PF-PH. */
 export function fieldHref(fieldCode: string): string {
   return `/catalogue/${encodeURIComponent(fieldCode)}`;
 }

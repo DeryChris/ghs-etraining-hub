@@ -15,7 +15,7 @@ import { listTrainingsInArea } from "@/lib/server/training-queries";
 import { requireSession } from "@/lib/server/rbac";
 
 /**
- * One programme area: the trainings held for it, then the material filed under it.
+ * One programme field: the trainings held for it, then the material filed under it.
  *
  * The trainings come first because that is what people come here for — the event
  * they attended, its resources and its discussion. The material below is the
@@ -130,16 +130,16 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
       <section aria-labelledby="materials-heading" className="space-y-4">
         <div>
           <h2 id="materials-heading" className="text-lg font-bold text-ink">
-            Material for this area
+            Material for this field
           </h2>
           <p className="text-sm text-ink-muted">
-            The standing library: protocols, videos and labs that apply to the area between trainings.
+            The standing library: documents, videos and labs that apply to this field between trainings.
           </p>
         </div>
 
         {materials.length === 0 ? (
           <ListEmptyState
-            title="No published materials in this area yet"
+            title="No published materials in this field yet"
             description="Facilitators publish SOPs, videos and labs here once they have been reviewed."
           />
         ) : (

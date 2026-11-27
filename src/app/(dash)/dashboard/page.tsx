@@ -23,7 +23,6 @@ import {
   STAFF_ROLE_LABELS,
   notificationTypeLabel,
 } from "@/lib/labels";
-import { firstNameOf } from "@/lib/names";
 import { staffRoleOf } from "@/lib/rbac/capabilities";
 import {
   getInsights,
@@ -104,18 +103,30 @@ export default async function DashboardPage({
       >
         <div className="grid items-center gap-10 lg:grid-cols-[1fr_auto]">
           <div className="space-y-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-              {STAFF_ROLE_LABELS[staffRoleOf({ role: session.role, unitHead: session.unitHead })]} · {formatDate(now)}
-            </p>
+            {/* Who you are, top-left, in the order a person would say it: the
+                grade they hold, then the duty, then the date. The greeting below
+                keeps the name, so "Good morning" is addressed to somebody with a
+                role and not to a first name floating on its own. */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              {session.grade && (
+                <span className="rounded-full border border-primary/25 bg-primary/[0.08] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+                  {session.grade}
+                </span>
+              )}
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">
+                {STAFF_ROLE_LABELS[staffRoleOf({ role: session.role, unitHead: session.unitHead })]} · {formatDate(now)}
+              </p>
+            </div>
             <h1
               id="dash-title"
               className="text-balance text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl"
             >
-              {greetingFor(now)}, {firstNameOf(session.name)}.
+              {greetingFor(now)},{" "}
+              {STAFF_ROLE_LABELS[staffRoleOf({ role: session.role, unitHead: session.unitHead })]} {session.name}.
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
-              Everything GHS has published for your programmes is in the library, filed under the field and
-              area it belongs to.
+              Everything GHS has published for your programmes is in the library, filed under the area and
+              field it belongs to.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               {nextUp ? (
@@ -246,7 +257,7 @@ export default async function DashboardPage({
               title="Busiest programme areas"
               description="Opens in the last 30 days, by the area the material is filed under."
               table={{
-                head: ["Programme area", "Opens"],
+                head: ["Programme field", "Opens"],
                 rows: programmeTraffic.map((row) => [row.label, row.value]),
               }}
             >
@@ -299,7 +310,6 @@ export default async function DashboardPage({
             </h2>
             {recent.length === 0 ? (
               <ListEmptyState
-                art="search"
                 title="Nothing opened yet"
                 description="Everything published for your programmes is in the library. What you open shows up here."
                 actionText="Browse the library"
@@ -345,7 +355,6 @@ export default async function DashboardPage({
           </div>
           {announcements.length === 0 ? (
             <ListEmptyState
-              art="bell"
               title="No announcements"
               description="Notices from your directorate appear here."
             />

@@ -46,7 +46,7 @@ export interface ProgrammeAreaRow {
   audience: {
     region: string | null;
     directorate: string | null;
-    cadre: string | null;
+    grade: string | null;
   };
   sortOrder: number;
   isArchived: boolean;
@@ -132,7 +132,7 @@ const loadProgrammeTaxonomy = async (): Promise<ProgrammeFieldRow[]> => {
         audience: {
           region: area.audienceRegion,
           directorate: area.audienceDirectorate,
-          cadre: area.audienceCadre,
+          grade: area.audienceGrade,
         },
         sortOrder: area.sortOrder,
         isArchived: area.isArchived,
@@ -163,7 +163,7 @@ export const listProgrammeTaxonomy = unstable_cache(
   { revalidate: 30, tags: ["taxonomy"] },
 );
 
-/** The people a programme area can be assigned to: active facilitators and admins. */
+/** The people a programme field can be assigned to: active facilitators and admins. */
 export async function listAssignableFacilitators(): Promise<
   { id: string; fullName: string; staffId: string }[]
 > {

@@ -83,7 +83,7 @@ const createInput = z
     role: z.enum(ROLE_VALUES),
     region: z.enum(REGIONS).optional().or(z.literal("").transform(() => undefined)),
     directorate: optionalText(120),
-    cadre: optionalText(80),
+    grade: optionalText(80),
     facility: optionalText(160),
     phone: optionalText(40),
   })
@@ -110,7 +110,7 @@ async function announceWaiting(userId: string, actorId: string): Promise<void> {
       role: target.role,
       region: null,
       directorate: null,
-      cadre: null,
+      grade: null,
       unitHead: target.isUnitHead,
     });
     const total = waiting.trainings + waiting.materials;
@@ -168,7 +168,7 @@ export async function createUserAction(_previous: UserActionState, formData: For
     role: field(formData, "role") ?? "LEARNER",
     region: field(formData, "region") ?? "",
     directorate: field(formData, "directorate"),
-    cadre: field(formData, "cadre"),
+    grade: field(formData, "grade"),
     facility: field(formData, "facility"),
     phone: field(formData, "phone"),
   });
@@ -211,7 +211,7 @@ export async function createUserAction(_previous: UserActionState, formData: For
           isUnitHead: duty.unitHead,
           region: input.region ?? null,
           directorate: input.directorate,
-          cadre: input.cadre,
+          grade: input.grade,
           facility: input.facility,
           phone: input.phone,
           passwordHash: null, // No password set — must be set via reset link
@@ -507,7 +507,7 @@ const detailsInput = z
     // Optional: staff without a work address sign in with their employee number.
     email: z.union([z.string().trim().toLowerCase().email("Enter a valid e-mail address."), z.literal("")]),
     phone: z.string().trim().max(32).optional().or(z.literal("")),
-    cadre: z.string().trim().max(80).optional().or(z.literal("")),
+    grade: z.string().trim().max(80).optional().or(z.literal("")),
     facility: z.string().trim().max(120).optional().or(z.literal("")),
     region: z.string().trim().max(60).optional().or(z.literal("")),
   })
@@ -522,7 +522,7 @@ export async function updateUserDetailsAction(
     fullName: field(formData, "fullName"),
     email: field(formData, "email"),
     phone: field(formData, "phone"),
-    cadre: field(formData, "cadre"),
+    grade: field(formData, "grade"),
     facility: field(formData, "facility"),
     region: field(formData, "region"),
   });
@@ -549,7 +549,7 @@ export async function updateUserDetailsAction(
           fullName: parsed.data.fullName,
           email: parsed.data.email || null,
           phone: parsed.data.phone || null,
-          cadre: parsed.data.cadre || null,
+          grade: parsed.data.grade || null,
           facility: parsed.data.facility || null,
           region: parsed.data.region || null,
           updatedAt: new Date(),

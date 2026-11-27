@@ -63,7 +63,7 @@ export function Header({
             id="global-search"
             name="q"
             type="search"
-            placeholder="Search protocols, videos and labs"
+            placeholder="Search documents, videos and labs"
             className={`${inputClass} h-11 rounded-[var(--radius-pill)] pl-10`}
           />
         </form>

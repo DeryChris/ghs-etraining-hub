@@ -9,7 +9,7 @@ import type { Role } from "@/lib/rbac/capabilities";
 
 /**
  * The signed-in identity. It carries the cohort attributes (region, directorate,
- * cadre) that content visibility depends on, so a page never has to re-read the
+ * grade) that content visibility depends on, so a page never has to re-read the
  * user row to decide whether a material is meant for this learner.
  */
 export interface Session {
@@ -23,7 +23,7 @@ export interface Session {
   /** Cohort attributes. `null` means "not recorded", which is what the row holds. */
   region: string | null;
   directorate: string | null;
-  cadre: string | null;
+  grade: string | null;
   unitHead?: boolean;
   /** Set while the account still carries the password ICT issued. */
   mustChange?: boolean;
@@ -123,7 +123,7 @@ export async function createDbSession(userId: string, ip?: string, userAgent?: s
     email: user.email ?? "",
     region: user.region,
     directorate: user.directorate,
-    cadre: user.cadre,
+    grade: user.grade,
     unitHead: user.isUnitHead,
     mustChange: user.mustChangePassword,
   };
@@ -183,7 +183,7 @@ export const resolveAccount = cache(async (): Promise<AccountState> => {
       email: user.email ?? "",
       region: user.region,
       directorate: user.directorate,
-      cadre: user.cadre,
+      grade: user.grade,
       unitHead: user.isUnitHead,
       mustChange: user.mustChangePassword,
     },

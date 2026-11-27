@@ -217,7 +217,7 @@ function identityOf(row: StaffRow) {
     gender: row.gender,
     email: row.email,
     phone: row.phone,
-    cadre: row.cadre,
+    grade: row.grade,
     region: row.region,
     district: row.district || null,
     subDistrict: row.subDistrict,
@@ -235,7 +235,7 @@ function identityOf(row: StaffRow) {
 async function updateExisting(tx: typeof db, rows: StaffRow[]) {
   const tuples = rows.map((row) => {
     const person = identityOf(row);
-    return sql`(${person.ghsStaffId}::text, ${person.fullName}::text, ${person.gender}::text, ${person.email}::text, ${person.phone}::text, ${person.cadre}::text, ${person.region}::text, ${person.district}::text, ${person.subDistrict}::text, ${person.facility}::text)`;
+    return sql`(${person.ghsStaffId}::text, ${person.fullName}::text, ${person.gender}::text, ${person.email}::text, ${person.phone}::text, ${person.grade}::text, ${person.region}::text, ${person.district}::text, ${person.subDistrict}::text, ${person.facility}::text)`;
   });
 
   await tx.execute(sql`
@@ -244,13 +244,13 @@ async function updateExisting(tx: typeof db, rows: StaffRow[]) {
       "gender" = v.gender,
       "email" = v.email,
       "phone" = v.phone,
-      "cadre" = v.cadre,
+      "grade" = v.grade,
       "region" = v.region,
       "district" = v.district,
       "sub_district" = v.sub_district,
       "facility" = v.facility,
       "updated_at" = now()
-    from (values ${sql.join(tuples, sql`, `)}) as v(ghs_staff_id, full_name, gender, email, phone, cadre, region, district, sub_district, facility)
+    from (values ${sql.join(tuples, sql`, `)}) as v(ghs_staff_id, full_name, gender, email, phone, grade, region, district, sub_district, facility)
     where u."ghs_staff_id" = v.ghs_staff_id
   `);
 }
@@ -413,7 +413,7 @@ async function main() {
                   // employee number instead.
                   email: sql`excluded.email`,
                   phone: sql`excluded.phone`,
-                  cadre: sql`excluded.cadre`,
+                  grade: sql`excluded.grade`,
                   region: sql`excluded.region`,
                   district: sql`excluded.district`,
                   subDistrict: sql`excluded.sub_district`,

@@ -119,7 +119,7 @@ export async function LearnerHome({ session }: { session: Session }) {
                   {continueWith.areaName}. It is still there — or open the library and start something new.
                 </>
               ) : (
-                "Everything GHS has published for your programmes is in the library, filed under the field and area it belongs to."
+                "Everything GHS has published for your programmes is in the library, filed under the area and field it belongs to."
               )}
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -182,7 +182,6 @@ export async function LearnerHome({ session }: { session: Session }) {
 
         {pickUp.length === 0 ? (
           <ListEmptyState
-            art="search"
             title="Nothing opened yet"
             description="Everything published for your programmes is in the library. What you open shows up here, so you can find your way back to it."
             actionText="Browse the library"
@@ -271,7 +270,6 @@ export async function LearnerHome({ session }: { session: Session }) {
           </div>
           {announcements.length === 0 ? (
             <ListEmptyState
-              art="bell"
               title="No announcements"
               description="Notices from your programme appear here."
             />
@@ -319,7 +317,7 @@ export async function LearnerHome({ session }: { session: Session }) {
               Explore the library
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Programmes are filed the way GHS runs them: a field, then the areas inside it.
+              Programmes are filed the way GHS runs them: a programme area, then the fields inside it.
             </p>
           </div>
           <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

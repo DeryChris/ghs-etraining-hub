@@ -23,7 +23,7 @@ import { yearRange } from "@/lib/training-dates";
  * Everything the page needs in one place: the filtered list, the counters above
  * it, the values its filters offer, and one training for its detail page. The
  * joins are all LEFT joins on purpose — a training keeps its place in the list
- * when the programme area, the district or the facility it referenced is later
+ * when the programme field, the district or the facility it referenced is later
  * removed, and reads "not recorded" instead of disappearing.
  */
 
@@ -381,7 +381,7 @@ export async function listTrainingComments(trainingId: string, limit = 200): Pro
 }
 
 /**
- * Every published training filed under one programme area, newest first.
+ * Every published training filed under one programme field, newest first.
  *
  * This is what the library's area page shows: the trainings held for that area,
  * so a member of staff can find the one they attended and the material that went
@@ -432,7 +432,7 @@ export async function listTrainingsInArea(programmeAreaId: string, limit = 50): 
 }
 
 /**
- * Trainings per programme field, for the small breakdown under the counters.
+ * Trainings per programme area, for the small breakdown under the counters.
  * Grouped in SQL so a field with no trainings can still be shown as zero.
  */
 export async function trainingsByField(): Promise<{ fieldName: string; n: number }[]> {

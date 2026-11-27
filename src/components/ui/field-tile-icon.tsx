@@ -5,11 +5,19 @@ import {
   Baby,
   Bandage,
   Brain,
+  Building2,
+  Calculator,
   ClipboardList,
   Droplets,
+  FlaskConical,
+  Globe,
+  HeartHandshake,
   HeartPulse,
+  Megaphone,
   Microscope,
+  Network,
   Pill,
+  Scale,
   ShieldPlus,
   Stethoscope,
   Syringe,
@@ -47,6 +55,34 @@ const SKINS: Skin[] = [
   { light: "#48d3b6", deep: "#0c6d66", glow: "rgba(12,109,102,0.28)", glyph: Pill },
 ];
 
+/**
+ * One glyph per programme field, chosen from what the area is about.
+ *
+ * These ten used to be hashed off the code like the colours, so "Clinical Care"
+ * could be drawn as a microscope while "Finance and Audit" got a stethoscope —
+ * the picture said nothing and the same subject looked different from the words
+ * next to it. The colour still comes from the code (a stable identity, no data
+ * needed to render it); the glyph now says what the tile says:
+ *
+ *   Administration      a building          Policy / Planning   scales
+ *   Clinical Care       a syringe           Public Health       a globe
+ *   Family and Health   a family            Research            a flask
+ *   Finance and Audit   a calculator        Supply Chain        a truck
+ *   Health Promotion    a megaphone         Human Resource      a network
+ */
+const FIELD_GLYPHS: Record<string, LucideIcon> = {
+  "PF-ADM": Building2,
+  "PF-CLIN": Syringe,
+  "PF-FAM": HeartHandshake,
+  "PF-FIN": Calculator,
+  "PF-HPR": Megaphone,
+  "PF-HR": Network,
+  "PF-PPME": Scale,
+  "PF-PH": Globe,
+  "PF-RD": FlaskConical,
+  "PF-SCM": Truck,
+};
+
 /** Stable per field: the same code gets the same colour on every screen. */
 function skinFor(code: string): Skin {
   let hash = 0;
@@ -70,7 +106,10 @@ export function FieldTileIcon({
   className?: string;
 }) {
   const skin = skinFor(code);
-  const Glyph = skin.glyph;
+  // A record lookup, not a call: the lint rule refuses a component that is
+  // *created* during render, and a custom code an administrator adds falls back
+  // to the glyph its colour already has.
+  const Glyph = FIELD_GLYPHS[code.toUpperCase()] ?? skin.glyph;
   const id = `field-${code.replace(/[^a-zA-Z0-9]/g, "")}`;
 
   return (

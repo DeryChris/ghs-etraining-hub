@@ -19,7 +19,7 @@ const COPY: Record<ReviewState, { label: string; variant: "success" | "outline" 
   PENDING: {
     label: "Pending review",
     variant: "outline",
-    sentence: "Waiting for the unit head of this programme field. Only you and the reviewers can see it.",
+    sentence: "Waiting for the unit head of this programme area. Only you and the reviewers can see it.",
   },
   REJECTED: {
     label: "Sent back",

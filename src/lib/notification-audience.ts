@@ -9,7 +9,7 @@ import type { Viewer } from "@/lib/viewer";
  * directorate, a learner whose directorate is blank does not see it. Guessing in
  * the other direction would leak a notice to the wrong cohort.
  */
-export const AUDIENCE_KEYS = ["region", "directorate", "cadre"] as const;
+export const AUDIENCE_KEYS = ["region", "directorate", "grade"] as const;
 export type AudienceKey = (typeof AUDIENCE_KEYS)[number];
 export type AudienceFilter = Partial<Record<AudienceKey, string>>;
 
@@ -32,7 +32,7 @@ export function isAudienceFilter(value: unknown): value is AudienceFilter {
 
 export function matchesAudience(
   filter: AudienceFilter | null | undefined,
-  viewer: Pick<Viewer, "region" | "directorate" | "cadre">,
+  viewer: Pick<Viewer, "region" | "directorate" | "grade">,
 ): boolean {
   if (!filter) return true;
   return AUDIENCE_KEYS.every((key) => {

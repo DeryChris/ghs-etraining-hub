@@ -173,7 +173,7 @@ export default async function TrainingsPage({
       <PageHeader
         eyebrow="Trainings"
         title="Every training GHS has planned or run"
-        description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme field and the area inside it, so coverage can be counted by programme rather than by memory. To browse by subject instead of by year, open the library."
+        description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme area and the field inside it, so coverage can be counted by programme rather than by memory. To browse by subject instead of by year, open the library."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
@@ -282,7 +282,7 @@ export default async function TrainingsPage({
 
         <div>
           <label htmlFor="filter-field" className={labelClass}>
-            Programme field
+            Programme area
           </label>
           <Select
             id="filter-field"
@@ -297,7 +297,7 @@ export default async function TrainingsPage({
 
         <div>
           <label htmlFor="filter-area" className={labelClass}>
-            Programme area
+            Programme field
           </label>
           <Select
             id="filter-area"
@@ -372,12 +372,11 @@ export default async function TrainingsPage({
             filtered
               ? "Try a wider year, or clear the filters to see every training."
               : mayManage
-                ? "Create the first training: the programme field and its area are the only things that must be right on day one."
+                ? "Create the first training: the programme area and its field are the only things that must be right on day one."
                 : "Trainings appear here once the ICT team files them. Check back after the next planning cycle."
           }
           actionText={filtered ? "Clear filters" : mayManage ? "New training" : undefined}
           actionHref={filtered ? "/trainings" : mayManage ? "/trainings/new" : undefined}
-          art="folder"
         />
       ) : (
         <ul className="space-y-3">
@@ -408,7 +407,7 @@ export default async function TrainingsPage({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 space-y-1.5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
-                      {training.fieldName ?? "Programme field not recorded"}
+                      {training.fieldName ?? "Programme area not recorded"}
                       {training.areaName ? ` · ${training.areaName}` : ""}
                     </p>
                     <h2 className="text-base font-bold text-ink transition-colors group-hover:text-primary">{training.title}</h2>

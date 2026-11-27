@@ -130,7 +130,7 @@ async function pageProbes(mode: "mirror" | "burst" | "serial" = "mirror"): Promi
       probe("page: trainings list", () => listTrainings({ page: 1 }), (result) => (result as { items?: unknown[] }).items?.length, ms),
     () => probe("page: trainings summary", () => getTrainingSummary(), undefined, ms),
     () => probe("page: training filter options", () => getTrainingFilterOptions(), undefined, ms),
-    () => probe("page: programme field options", () => listProgrammeFieldOptions(), undefined, ms),
+    () => probe("page: programme area options", () => listProgrammeFieldOptions(), undefined, ms),
     () => probe("page: library", () => listFields(null), undefined, ms),
     () => sessionProbe(),
   ];

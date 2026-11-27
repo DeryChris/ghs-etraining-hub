@@ -80,9 +80,9 @@ async function resolveReferences(input: {
     .from(programmeAreas)
     .where(eq(programmeAreas.id, input.programmeAreaId))
     .limit(1);
-  if (!area) return { ok: false, message: "That programme area no longer exists." };
+  if (!area) return { ok: false, message: "That programme field no longer exists." };
   if (area.fieldId !== input.programmeFieldId) {
-    return { ok: false, message: "That programme area belongs to a different programme field." };
+    return { ok: false, message: "That programme field belongs to a different programme area." };
   }
 
   // 2. The district must belong to the region.
@@ -463,7 +463,7 @@ export async function reviewTrainingAction(
   if (!training) return { ok: false, message: "That training no longer exists." };
 
   if (!(await mayReviewField(session, training.fieldId))) {
-    return { ok: false, message: "Only a unit head of that programme field can review it." };
+    return { ok: false, message: "Only a unit head of that programme area can review it." };
   }
   if (training.reviewState !== "PENDING") {
     return { ok: false, message: "That training has already been reviewed." };

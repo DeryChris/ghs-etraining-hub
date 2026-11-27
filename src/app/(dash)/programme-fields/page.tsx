@@ -74,7 +74,7 @@ export default async function ProgrammeFieldsPage({
       <PageHeader
         eyebrow="Administration"
         title="Programme fields"
-        description="The vocabulary every training plan is written in: a programme field (Administration and Support Services) and the areas inside it (Biomedical Equipment). GHS supplied the first list; this page is where it is corrected. Fields and areas are archived rather than deleted once a training refers to them."
+        description="The vocabulary every training plan is written in: a programme area (Administration and Support Services) and the fields inside it (Biomedical Equipment). GHS supplied the first list; this page is where it is corrected. Areas and fields are archived rather than deleted once a training refers to them."
       />
 
       <Notice notice={notice} error={error} />
@@ -93,8 +93,8 @@ export default async function ProgrammeFieldsPage({
       </section>
 
       <ActionDialog
-        label="Add a programme field"
-        title="Add a programme field"
+        label="Add a programme area"
+        title="Add a programme area"
         description="A field is the top level of the training vocabulary and becomes a tile on the library page, so the name should read the way the service says it."
         variant="primary"
         buttonSize="md"
@@ -150,7 +150,6 @@ export default async function ProgrammeFieldsPage({
         <ListEmptyState
           title="No programme fields yet"
           description="Add the first field with the button above, or run the seeder to load the ten fields and forty-one areas GHS supplied."
-          art="folder"
         />
       ) : (
         <ul className="space-y-4">
@@ -183,7 +182,7 @@ export default async function ProgrammeFieldsPage({
                       </p>
                     )}
                     <p className="mt-1 text-xs text-ink-muted">
-                      {field.areaCount} programme area
+                      {field.areaCount} programme field
                       {field.areaCount === 1 ? "" : "s"} · {field.trainingCount}{" "}
                       training{field.trainingCount === 1 ? "" : "s"} filed here
                     </p>
@@ -596,7 +595,7 @@ export default async function ProgrammeFieldsPage({
       )}
 
       <p className="text-xs text-ink-muted">
-        Archived fields and areas disappear from the training form but stay on
+        Archived areas and fields disappear from the training form but stay on
         the trainings already filed under them. Nothing here is deleted while a
         training refers to it.{" "}
         <Link

@@ -158,7 +158,7 @@ export function LearnerShell({
                 name="q"
                 type="search"
                 autoFocus
-                placeholder="Search protocols, videos and practicals"
+                placeholder="Search documents, videos and practicals"
                 className={`${inputClass} h-11 rounded-[var(--radius-pill)] pl-10`}
               />
             </form>

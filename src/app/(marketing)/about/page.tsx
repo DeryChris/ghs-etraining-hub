@@ -77,7 +77,7 @@ export default function AboutPage() {
             </h1>
             <p className="max-w-2xl text-lg leading-relaxed text-ink-muted">
               The {SITE.fullName} is the library for GHS training programmes. When a directorate runs a session, the slides,
-              protocols and recordings are filed here — under that programme, with a version and a date, and open to staff wherever
+              documents and recordings are filed here — under that programme, with a version and a date, and open to staff wherever
               they serve. Nothing is deleted, and nothing is edited without a record of who did it.
             </p>
           </Reveal>
@@ -181,7 +181,7 @@ export default function AboutPage() {
           </div>
         </Reveal>
         <Reveal delay={0.08} className="space-y-5">
-          <SectionHeading eyebrow="Reach" title={<span id="reach-title">Serving {SITE.regionCount} regions and every cadre.</span> as unknown as string} />
+          <SectionHeading eyebrow="Reach" title={<span id="reach-title">Serving {SITE.regionCount} regions and every grade.</span> as unknown as string} />
           <p className="text-base leading-relaxed text-ink-muted">
             Pages are designed for mobile networks, video loads only on request, and files open straight in the browser. Material reaches
             the district hospital and the health centre, not only the teaching hospital.

@@ -154,7 +154,7 @@ export async function createProgrammeFieldAction(
     log.error({ event: "programme_field.create_failed", err: String(error) });
     failure = failureMessage(
       error,
-      "The programme field was not created. Try again.",
+      "The programme area was not created. Try again.",
     );
   }
 
@@ -179,7 +179,7 @@ export async function updateProgrammeFieldAction(
     description: field(formData, "description"),
   });
   if (!id)
-    return backTo(PATH, { error: "That programme field could not be found." });
+    return backTo(PATH, { error: "That programme area could not be found." });
   if (!parsed.success)
     return backTo(PATH, {
       error: parsed.error.issues[0]?.message ?? "Check the details.",
@@ -211,7 +211,7 @@ export async function updateProgrammeFieldAction(
     log.error({ event: "programme_field.update_failed", err: String(error) });
     failure = failureMessage(
       error,
-      "The programme field was not saved. Try again.",
+      "The programme area was not saved. Try again.",
     );
   }
 
@@ -232,7 +232,7 @@ export async function setProgrammeFieldArchivedAction(
   const id = field(formData, "id");
   const archived = field(formData, "archived") === "true";
   if (!id)
-    return backTo(PATH, { error: "That programme field could not be found." });
+    return backTo(PATH, { error: "That programme area could not be found." });
 
   let failure: string | null = null;
   try {
@@ -257,7 +257,7 @@ export async function setProgrammeFieldArchivedAction(
     log.error({ event: "programme_field.archive_failed", err: String(error) });
     failure = failureMessage(
       error,
-      "The programme field was not changed. Try again.",
+      "The programme area was not changed. Try again.",
     );
   }
 
@@ -281,7 +281,7 @@ export async function deleteProgrammeFieldAction(
 
   const id = field(formData, "id");
   if (!id)
-    return backTo(PATH, { error: "That programme field could not be found." });
+    return backTo(PATH, { error: "That programme area could not be found." });
 
   let failure: string | null = null;
   try {
@@ -291,7 +291,7 @@ export async function deleteProgrammeFieldAction(
       .where(eq(programmeAreas.fieldId, id));
 
     if ((areas?.n ?? 0) > 0) {
-      failure = `This field still holds ${areas?.n} programme area(s). Delete or move those first, or archive the field instead.`;
+      failure = `This field still holds ${areas?.n} programme field(s). Delete or move those first, or archive the field instead.`;
     } else {
       await db.transaction(async (tx) => {
         await tx.delete(programmeFields).where(eq(programmeFields.id, id));
@@ -310,7 +310,7 @@ export async function deleteProgrammeFieldAction(
     log.error({ event: "programme_field.delete_failed", err: String(error) });
     failure = failureMessage(
       error,
-      "The programme field was not deleted. Try again.",
+      "The programme area was not deleted. Try again.",
     );
   }
 
@@ -319,7 +319,7 @@ export async function deleteProgrammeFieldAction(
   revalidatePath("/trainings");
   revalidateTag("taxonomy", "max");
   revalidateTag("taxonomy", "max");
-  return backTo(PATH, { notice: "Programme field deleted." });
+  return backTo(PATH, { notice: "Programme area deleted." });
 }
 
 /* ── Areas ──────────────────────────────────────────────────────────────── */
@@ -376,7 +376,7 @@ export async function createProgrammeAreaAction(
     log.error({ event: "programme_area.create_failed", err: String(error) });
     failure = failureMessage(
       error,
-      "The programme area was not created. Try again.",
+      "The programme field was not created. Try again.",
     );
   }
 
@@ -403,7 +403,7 @@ export async function updateProgrammeAreaAction(
     description: field(formData, "description"),
   });
   if (!id)
-    return backTo(PATH, { error: "That programme area could not be found." });
+    return backTo(PATH, { error: "That programme field could not be found." });
   if (!parsed.success)
     return backTo(PATH, {
       error: parsed.error.issues[0]?.message ?? "Check the details.",
@@ -436,7 +436,7 @@ export async function updateProgrammeAreaAction(
     log.error({ event: "programme_area.update_failed", err: String(error) });
     failure = failureMessage(
       error,
-      "The programme area was not saved. Try again.",
+      "The programme field was not saved. Try again.",
     );
   }
 
@@ -458,7 +458,7 @@ export async function setProgrammeAreaArchivedAction(
   const fieldId = field(formData, "fieldId");
   const archived = field(formData, "archived") === "true";
   if (!id)
-    return backTo(PATH, { error: "That programme area could not be found." });
+    return backTo(PATH, { error: "That programme field could not be found." });
 
   const anchor = fieldId ? `?field=${fieldId}` : "";
   let failure: string | null = null;
@@ -484,7 +484,7 @@ export async function setProgrammeAreaArchivedAction(
     log.error({ event: "programme_area.archive_failed", err: String(error) });
     failure = failureMessage(
       error,
-      "The programme area was not changed. Try again.",
+      "The programme field was not changed. Try again.",
     );
   }
 
@@ -509,7 +509,7 @@ export async function deleteProgrammeAreaAction(
   const id = field(formData, "id");
   const fieldId = field(formData, "fieldId");
   if (!id)
-    return backTo(PATH, { error: "That programme area could not be found." });
+    return backTo(PATH, { error: "That programme field could not be found." });
 
   const anchor = fieldId ? `?field=${fieldId}` : "";
   let failure: string | null = null;
@@ -539,7 +539,7 @@ export async function deleteProgrammeAreaAction(
     log.error({ event: "programme_area.delete_failed", err: String(error) });
     failure = failureMessage(
       error,
-      "The programme area was not deleted. Try again.",
+      "The programme field was not deleted. Try again.",
     );
   }
 
@@ -548,13 +548,13 @@ export async function deleteProgrammeAreaAction(
   revalidatePath("/trainings");
   revalidateTag("taxonomy", "max");
   revalidateTag("taxonomy", "max");
-  return backTo(PATH + anchor, { notice: "Programme area deleted." });
+  return backTo(PATH + anchor, { notice: "Programme field deleted." });
 }
 
 /* ── Who may author in an area ──────────────────────────────────────────── */
 
 /**
- * Assigns a staff member to a programme area. Content authority is per area
+ * Assigns a staff member to a programme field. Content authority is per area
  * (ADR-0014), so this replaces the old per-directorate grant: the facilitator
  * can then author, review and publish in that area and nowhere else.
  */
@@ -568,7 +568,7 @@ export async function assignAreaFacilitatorAction(
   const userId = field(formData, "userId");
   const fieldId = field(formData, "fieldId");
   if (!areaId || !userId)
-    return backTo(PATH, { error: "Choose a person and a programme area." });
+    return backTo(PATH, { error: "Choose a person and a programme field." });
   const anchor = fieldId ? `?field=${fieldId}` : "";
 
   let failure: string | null = null;
