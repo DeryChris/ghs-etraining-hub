@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookOpen, CheckCircle2, ClipboardCheck, LifeBuoy, LogIn, ShieldCheck, UserPlus } from "lucide-react";
+import { BookOpen, ClipboardCheck, LogIn, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { SITE } from "@/lib/site";
@@ -80,33 +80,13 @@ export function GettingStarted() {
           an account to claim it; information from another portal is not assumed to be here.
         </p>
       </div>
-
-      <ul className="hidden gap-2 text-[13px] text-white/80 lg:grid">
-        <li className="flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--accent)]" aria-hidden />
-          Every document versioned, with who uploaded and who reviewed it.
-        </li>
-        <li className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 shrink-0 text-[var(--accent)]" aria-hidden />
-          Access monitored and recorded, as internal GHS systems are.
-        </li>
-      </ul>
-
-      <Link
-        href="/help"
-        className="hidden items-center gap-1.5 text-[13px] font-semibold text-white/85 lg:inline-flex underline-offset-4 hover:text-white hover:underline"
-      >
-        <LifeBuoy className="h-3.5 w-3.5" aria-hidden />
-        Help and support
-        <ArrowUpRight className="h-3 w-3" aria-hidden />
-      </Link>
     </div>
   );
 }
 
 function Step({ n }: { n: number }) {
   return (
-    <span className="relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/25 bg-[#145c42] text-[10px] font-extrabold tabular-nums text-white">
+    <span className="relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-white/80 bg-[var(--accent)] text-[10px] font-extrabold tabular-nums text-[var(--accent-ink)]">
       {String(n).padStart(2, "0")}
     </span>
   );
