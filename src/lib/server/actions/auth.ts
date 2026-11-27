@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { safeNextPath } from "@/lib/safe-redirect";
 import { authenticateUser, type AuthResult } from "@/lib/server/auth";
 import { logAudit } from "@/lib/server/audit";
+import { isSchemaError } from "@/lib/db-error";
 import { log } from "@/lib/server/logger";
 import { getSession, clearSessionCookie, setSessionCookie } from "@/lib/server/session";
 
@@ -64,8 +65,20 @@ export async function signInAction(_previous: SignInState, formData: FormData): 
   try {
     attempt = await authenticateUser(identifier, password);
   } catch (error) {
-    log.error({ event: "auth.sign_in_failed", identifier, error: String(error) });
-    return { error: "The server could not reach the staff directory. Try again in a moment.", identifier };
+    /*
+     * "Could not reach the directory" is what a person was told when the real
+     * fault was the database being one migration behind this build — a state in
+     * which no password works, because the query itself is wrong. The two need
+     * different words: one says wait, the other says the service is mid-update.
+     */
+    const stale = isSchemaError(error);
+    log.error({ event: "auth.sign_in_failed", identifier, schemaDrift: stale, error: String(error) });
+    return {
+      error: stale
+        ? "The staff directory is being updated and cannot be read at the moment. Try again in a few minutes."
+        : "The server could not reach the staff directory. Try again in a moment.",
+      identifier,
+    };
   }
 
   if (!attempt.ok) {

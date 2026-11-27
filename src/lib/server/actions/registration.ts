@@ -4,6 +4,7 @@ import { and, eq, ne, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db/index";
+import { isSchemaError } from "@/lib/db-error";
 import { users } from "@/db/schema";
 import { isValidStaffId, staffIdDigits } from "@/lib/staff-id";
 import { logAudit } from "@/lib/server/audit";
@@ -12,6 +13,18 @@ import { log } from "@/lib/server/logger";
 import { consumeRateLimit, rateLimitKey } from "@/lib/server/rate-limit";
 import { setSessionCookie } from "@/lib/server/session";
 import { staffIdMatches } from "@/lib/server/staff-id-sql";
+
+/**
+ * What to say when the directory cannot be read.
+ *
+ * A database one migration behind this build answers with a SQLSTATE, not a
+ * network error, and telling the person to "try again in a moment" sends them to
+ * retry something that will fail identically until the deployment is fixed.
+ */
+const DIRECTORY_DOWN = (stale: boolean) =>
+  stale
+    ? "The staff directory is being updated and cannot be read at the moment. Try again in a few minutes."
+    : "The staff directory could not be reached. Try again in a moment.";
 
 /**
  * Creating an account, against the staff sheet rather than against a form.
@@ -122,8 +135,8 @@ export async function verifyStaffIdAction(
   try {
     row = await findStaff(typed);
   } catch (error) {
-    log.error({ event: "auth.register_lookup_failed", error: String(error) });
-    return { error: "The staff directory could not be reached. Try again in a moment." };
+    log.error({ event: "auth.register_lookup_failed", schemaDrift: isSchemaError(error), error: String(error) });
+    return { error: DIRECTORY_DOWN(isSchemaError(error)) };
   }
 
   if (!row) {
@@ -190,8 +203,8 @@ export async function registerAction(
   try {
     row = await findStaff(typed);
   } catch (error) {
-    log.error({ event: "auth.register_lookup_failed", error: String(error) });
-    return { ...kept, error: "The staff directory could not be reached. Try again in a moment." };
+    log.error({ event: "auth.register_lookup_failed", schemaDrift: isSchemaError(error), error: String(error) });
+    return { ...kept, error: DIRECTORY_DOWN(isSchemaError(error)) };
   }
 
   if (!row || !row.isActive) {

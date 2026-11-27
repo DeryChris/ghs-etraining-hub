@@ -238,7 +238,8 @@ and `/forgot-password` says so rather than promising a mail that never arrives.
 | Symptom | Cause | Fix |
 | --- | --- | --- |
 | `/api/health` → `checks.db: "down"` | the connection itself failed; the body names which of six faults | read `error.dbError.code` below, or run `npm run db:doctor` |
-| `/api/health` → `checks.db: "up"`, `schema: "outdated"` | the database answered and lacks something this build reads | **not a connection problem** — run `npm run db:migrate`; the body names the pending file |
+| `/api/health` → `checks.db: "up"`, `schema: "outdated"` | the database answered and lacks something this build reads | **not a connection problem** — run `npm run db:migrate`; the body names the pending file, and `docs/apply-pending-migrations.sql` does the same from the Neon SQL editor |
+| Login refuses every correct password | the same fault, seen from the form: the query selects a column that is not there | `/api/health` names the pending migration; fix it there, not in the password |
 | `db: "up"` and `error.code: "SCHEMA_BEHIND"` | the deployment is newer than the database | `npm run db:migrate` (uses `DIRECT_URL`), then redeploy/restart |
 | `db: "down"` and host shows no `-pooler` | direct host in `DATABASE_URL` | each instance opens its own connection; use the pooled host |
 | Migrations hang or deadlock | `DIRECT_URL` points at the pooled host | use the direct host for `db:migrate` |
