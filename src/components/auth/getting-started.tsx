@@ -1,68 +1,61 @@
-import { ArrowUpRight, CheckCircle2, LifeBuoy, ShieldCheck } from "lucide-react";
-import Link from "next/link";
-import { BrandMark } from "@/components/brand/brand-mark";
-import { SITE } from "@/lib/site";
+import { BookOpen, ClipboardCheck, LogIn, UserPlus } from "lucide-react";
 
-/**
- * The left half of the sign-in card: how to get in, in the order it happens.
- *
- * Written as steps rather than prose because the people who read it are on their
- * first visit and have a number to type, and because the same panel has to answer
- * the two questions support actually receives — "my old portal password does not
- * work" and "I never got an account".
- */
+/** A compact left-panel guide: signing in is the normal path; account creation is the alternative. */
 export function GettingStarted() {
   return (
     <div className="space-y-6">
-      <Link href="/" className="flex items-center gap-3 rounded-control text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]">
-        <span className="flex h-11 w-11 items-center justify-center rounded-control bg-white/12 ring-1 ring-white/25">
-          <BrandMark size={26} />
-        </span>
-        <span className="flex flex-col leading-tight">
-          <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/75">Ghana Health Service</span>
-          <span className="text-base font-extrabold">{SITE.name}</span>
-        </span>
-      </Link>
-
       <div className="space-y-2">
         <h2 className="text-xl font-extrabold tracking-tight">Sign in, or create your account</h2>
         <p className="text-sm leading-relaxed text-white/80">
-          Use the Training Library and the staff tools available to your assigned role.
+          Already registered? Sign in. New to the Library? Create an account.
         </p>
       </div>
 
-      {/* From `lg` the whole panel is shown; on a phone the form must come
-          first, so only the heading and the brand survive. */}
+      {/* Keep the guide to desktop; mobile shows the short welcome above the form. */}
       <div className="hidden space-y-3 lg:block">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]">Getting started</p>
-        <ol className="space-y-2.5 text-sm leading-relaxed text-white/85">
-          <li className="flex gap-3">
+        <ol className="relative space-y-3 text-sm leading-relaxed text-white/85 before:absolute before:bottom-5 before:left-4 before:top-4 before:w-px before:bg-white/20">
+          <li className="relative flex gap-3">
             <Step n={1} />
-            <span>
-              Sign in with your <strong className="font-semibold text-white">GHS Staff ID</strong> — the digits on your
-              payslip — and your password.
-            </span>
+            <div className="min-w-0 pt-0.5">
+              <p className="flex items-center gap-2 font-bold text-white">
+                <LogIn className="h-4 w-4 text-[var(--accent)]" aria-hidden />
+                Sign in
+              </p>
+              <p className="mt-0.5 text-white/80">Already have an account? Use your GHS Staff ID and password.</p>
+            </div>
           </li>
-          <li className="flex gap-3">
+          <li className="relative flex gap-3">
             <Step n={2} />
-            <span>
-              No account yet? Choose <strong className="font-semibold text-white">Create an account</strong> under the
-              Sign in button and confirm your number against the staff sheet.
-            </span>
+            <div className="min-w-0 pt-0.5">
+              <p className="flex items-center gap-2 font-bold text-white">
+                <UserPlus className="h-4 w-4 text-[var(--accent)]" aria-hidden />
+                Create an account
+              </p>
+              <p className="mt-0.5 text-white/80">New here? Choose the account link below the form.</p>
+            </div>
           </li>
-          <li className="flex gap-3">
+          <li className="relative flex gap-3">
             <Step n={3} />
-            <span>If your staff-directory record is eligible, its details are read-only; you provide contact details and choose a password.</span>
+            <div className="min-w-0 pt-0.5">
+              <p className="flex items-center gap-2 font-bold text-white">
+                <ClipboardCheck className="h-4 w-4 text-[var(--accent)]" aria-hidden />
+                Complete registration
+              </p>
+              <p className="mt-0.5 text-white/80">Verify your staff ID, add contact details and choose a password.</p>
+            </div>
           </li>
-          <li className="flex gap-3">
+          <li className="relative flex gap-3">
             <Step n={4} />
-            <span>
-              Wrong number, forgotten password or a form that will not open? Use the{" "}
-              <Link href="/help" className="font-semibold text-white underline underline-offset-4">
-                Complaint Hub
-              </Link>{" "}
-              and use your reference to check its status.
-            </span>
+            <div className="min-w-0 pt-0.5">
+              <p className="flex items-center gap-2 font-bold text-white">
+                <BookOpen className="h-4 w-4 text-[var(--accent)]" aria-hidden />
+                Find a training
+              </p>
+              <p className="mt-0.5 text-white/80">
+                Browse Programme Areas and Programme Fields, then open a training to find its resources.
+              </p>
+            </div>
           </li>
         </ol>
       </div>
@@ -74,34 +67,14 @@ export function GettingStarted() {
           an account to claim it; information from another portal is not assumed to be here.
         </p>
       </div>
-
-      <ul className="hidden gap-2 text-[13px] text-white/80 lg:grid">
-        <li className="flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-[var(--accent)]" aria-hidden />
-          Every document versioned, with who uploaded and who reviewed it.
-        </li>
-        <li className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 shrink-0 text-[var(--accent)]" aria-hidden />
-          Access monitored and recorded, as internal GHS systems are.
-        </li>
-      </ul>
-
-      <Link
-        href="/help"
-        className="hidden items-center gap-1.5 text-[13px] font-semibold text-white/85 lg:inline-flex underline-offset-4 hover:text-white hover:underline"
-      >
-        <LifeBuoy className="h-3.5 w-3.5" aria-hidden />
-        Help and support
-        <ArrowUpRight className="h-3 w-3" aria-hidden />
-      </Link>
     </div>
   );
 }
 
 function Step({ n }: { n: number }) {
   return (
-    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[11px] font-extrabold text-[var(--accent-ink)]">
-      {n}
+    <span className="relative z-10 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-white/80 bg-[var(--accent)] text-[10px] font-extrabold tabular-nums text-[var(--accent-ink)]">
+      {String(n).padStart(2, "0")}
     </span>
   );
 }

@@ -43,7 +43,7 @@ export function BrandMark({ size = 36, className }: { size?: number; className?:
 /** Compact wordmark: emblem, system identifier, short interface name. */
 export function Wordmark({ size = 36, className, tagline = true }: { size?: number; className?: string; tagline?: boolean }) {
   return (
-    <span className={cn("inline-flex items-center gap-2.5", className)}>
+    <span className={cn("inline-flex shrink-0 items-center gap-2.5 whitespace-nowrap", className)}>
       <BrandMark size={size} />
       <span className="flex flex-col leading-none">
         <span className="text-[15px] font-extrabold tracking-tight text-ink">{SITE.code}</span>
