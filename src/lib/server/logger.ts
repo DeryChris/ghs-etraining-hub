@@ -4,7 +4,7 @@ import { redactMetadata } from "@/lib/audit-hash";
 export type LogLevel = "info" | "warn" | "error";
 
 export interface LogFields {
-  /** Stable, greppable event name, e.g. "material.completed". */
+  /** Stable, greppable event name, e.g. "material.file_issued". */
   event: string;
   requestId?: string | null;
   userId?: string | null;

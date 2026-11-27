@@ -15,11 +15,9 @@ import { listTrainingsInArea } from "@/lib/server/training-queries";
 import { requireSession } from "@/lib/server/rbac";
 
 /**
- * One programme field: the trainings held for it, then the material filed under it.
- *
- * The trainings come first because that is what people come here for — the event
- * they attended, its resources and its discussion. The material below is the
- * standing library for the area, which does not expire with the event.
+ * One Programme Field: its published Training Session records, then the Training
+ * Materials filed under it. The two are related but distinct: the register holds
+ * event records, while the Library holds versioned materials.
  */
 export default async function AreaPage({ params }: { params: Promise<{ fieldCode: string; areaCode: string }> }) {
   const session = await requireSession();
@@ -68,21 +66,21 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="trainings-heading" className="text-lg font-bold text-ink">
-              Trainings in this area
+              Training Session records in this Programme Field
             </h2>
             <p className="text-sm text-ink-muted">
-              Every published training filed here, newest first. Open one for its write-up, resources and discussion.
+              Published Training Session records filed here, newest first. Open one for its notes, resources and discussion.
             </p>
           </div>
           <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-            {trainings.length} {trainings.length === 1 ? "training" : "trainings"}
+            {trainings.length} {trainings.length === 1 ? "record" : "records"}
           </span>
         </div>
 
         {trainings.length === 0 ? (
           <ListEmptyState
-            title="No trainings filed under this area yet"
-            description="A facilitator or an administrator records a training against this area and it appears here — with its slides, attendance sheet and report."
+            title="No Training Session records in this Programme Field yet"
+            description="An administrator or facilitator may file a record here. It appears after publication, with any resources that have been attached."
           />
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">
@@ -113,10 +111,10 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
                         {training.facilityName ?? training.venue ?? training.regionName}
                       </span>
                     )}
-                    {training.attendeeCount !== null && (
+                    {training.attendeeCount !== null && training.status === "COMPLETED" && (
                       <span className="inline-flex items-center gap-1">
                         <Users className="h-3.5 w-3.5" aria-hidden />
-                        {training.attendeeCount.toLocaleString("en-GB")} trained
+                        {training.attendeeCount.toLocaleString("en-GB")} attendees recorded
                       </span>
                     )}
                   </div>
@@ -130,7 +128,7 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
       <section aria-labelledby="materials-heading" className="space-y-4">
         <div>
           <h2 id="materials-heading" className="text-lg font-bold text-ink">
-            Material for this field
+            Training Materials for this Programme Field
           </h2>
           <p className="text-sm text-ink-muted">
             The standing library: documents, videos and labs that apply to this field between trainings.

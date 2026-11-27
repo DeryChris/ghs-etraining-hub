@@ -33,7 +33,7 @@ this repository: a migration file present on disk but absent from the journal, w
 ```bash
 export DIRECT_URL="postgresql://<user>:<pw>@ep-<name>-<id>.<region>.aws.neon.tech/neondb?sslmode=require"
 npm run db:check-chain   # no server needed: prove the journal before trusting the live database
-npm run db:migrate       # drizzle/0000_baseline.sql … 0010_password_reset_tokens.sql
+npm run db:migrate       # applies the journalled drizzle/*.sql files in order
 npm run db:seed
 ```
 

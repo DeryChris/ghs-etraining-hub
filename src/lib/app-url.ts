@@ -92,7 +92,7 @@ export function resolveAppUrl(): AppUrlResolution {
 
 /** A malformed value is worth a line in the build log, once, on the server. */
 function warn(message: string): void {
-  if (typeof window === "undefined") console.warn(`[ghs-tl] ${message}`);
+  if (typeof window === "undefined") console.warn(`[GHS-UWRHD-TL] ${message}`);
 }
 
 /** The configured origin for copy ("verify at …"), or "" when there is none to trust. */

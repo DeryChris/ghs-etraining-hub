@@ -8,7 +8,8 @@ export function CountUp({ value, suffix = "" }: { value: number; suffix?: string
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   const reduce = useReducedMotion();
-  const count = useMotionValue(0);
+  // Keep the server-rendered value truthful; reset to zero only when the client animation starts.
+  const count = useMotionValue(value);
   const display = useTransform(count, (latest) => Math.round(latest).toLocaleString("en-GB"));
 
   useEffect(() => {
@@ -17,6 +18,7 @@ export function CountUp({ value, suffix = "" }: { value: number; suffix?: string
       count.set(value);
       return;
     }
+    count.set(0);
     const controls = animate(count, value, { duration: 1.6, ease: [0.22, 1, 0.36, 1] });
     return () => controls.stop();
   }, [inView, reduce, value, count]);

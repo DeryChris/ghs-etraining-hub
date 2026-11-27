@@ -1,10 +1,11 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   GHS-TL design system · "Clinical Ledger" v3
-   Brand: GHS flag palette (red #CF2027 · gold #FCD116 · green #006B3F) plus the
-   Ghana star. Every colour is a CSS variable so light and dark themes share one
-   set of utilities. Components never hard-code colours.
+   GHS-UWRHD-TL design system · "Institutional Green" v4
+   Ghana Health Service – Upper West Regional Health Directorate – Training
+   Library. Deep institutional green on warm ivory, muted gold used sparingly,
+   soft mint surfaces. Every colour is a CSS variable so light and dark themes
+   share one set of utilities. Components never hard-code colours.
    ───────────────────────────────────────────────────────────────────────────── */
 
 @theme {
@@ -20,8 +21,15 @@
   --color-accent-ink: var(--accent-ink);
   --color-warn: var(--warn);
   --color-danger: var(--danger);
+  --color-mint: var(--mint);
 
-  /* Brand constants (never change between themes). */
+  /* Soft state surfaces — tints for badges, notices and callouts. */
+  --color-info-soft: var(--info-soft);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger-soft: var(--danger-soft);
+
+  /* Brand constants (never change between themes). The Ghana flag, for the
+     institutional stripe and the emblem context only — never as UI chrome. */
   --color-ghs-red: #cf2027;
   --color-ghs-gold: #fcd116;
   --color-ghs-green: #006b3f;
@@ -29,7 +37,7 @@
   --radius-card: 1.125rem;
   --radius-control: 0.75rem;
   --radius-pill: 999px;
-  --radius-hero: 1.75rem;
+  --radius-hero: 1.5rem;
 
   --shadow-panel: var(--elevation);
   --shadow-lift: var(--elevation-lift);
@@ -39,94 +47,107 @@
   --duration-slow: 640ms;
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Manrope Variable", var(--font-sans);
 }
 
 /* Light theme (default when no preference or stored choice). */
 :root,
 [data-theme="light"] {
   color-scheme: light;
-  --canvas: #f6f7f3;
+  --canvas: #fafbf8;
   --surface: #ffffff;
-  --surface-2: #eef3ee;
-  --ink: #0f1f17;
-  --ink-muted: #4e6358;
-  --hairline: #dbe4dc;
-  --primary: #006b3f;
+  --surface-2: #f1f5f1;
+  --ink: #202923;
+  --ink-muted: #66736b;
+  --hairline: #e2e9e3;
+  --primary: #145c42;
   --primary-ink: #ffffff;
-  --accent: #fcd116;
+  --accent: #c69a45;
   --accent-ink: #1a1400;
+  --mint: #eaf4ee;
   --warn: #8f6200;
   --danger: #b42318;
-  --elevation: 0 1px 2px rgb(15 31 23 / 0.06), 0 12px 32px -14px rgb(15 31 23 / 0.2);
-  --elevation-lift: 0 2px 6px rgb(15 31 23 / 0.08), 0 28px 56px -18px rgb(15 31 23 / 0.32);
-  --glow-a: rgb(0 107 63 / 0.1);
-  --glow-b: rgb(252 209 22 / 0.11);
-  --grid-line: rgb(15 31 23 / 0.05);
-  --grid-line-strong: rgb(15 31 23 / 0.16);
+  --info-soft: #eaf1fa;
+  --warn-soft: #f5e9ce;
+  --danger-soft: #f9e8e6;
+  --elevation: 0 1px 2px rgb(32 41 35 / 0.05), 0 12px 32px -14px rgb(32 41 35 / 0.18);
+  --elevation-lift: 0 2px 6px rgb(32 41 35 / 0.07), 0 28px 56px -18px rgb(32 41 35 / 0.28);
+  --glow-a: rgb(20 92 66 / 0.1);
+  --glow-b: rgb(198 154 69 / 0.12);
+  --grid-line: rgb(32 41 35 / 0.05);
+  --grid-line-strong: rgb(32 41 35 / 0.16);
 }
 
-/* Dark theme, chosen explicitly. */
+/* Dark theme, chosen explicitly — a proper palette, not an inversion. */
 [data-theme="dark"] {
   color-scheme: dark;
-  --canvas: #050d09;
-  --surface: #0b1812;
-  --surface-2: #112218;
-  --ink: #eef6f0;
-  --ink-muted: #9ab5a5;
-  --hairline: #1d3528;
-  --primary: #34c784;
-  --primary-ink: #04190f;
-  --accent: #fcd116;
+  --canvas: #0b1310;
+  --surface: #121c18;
+  --surface-2: #17231e;
+  --ink: #ecf3ee;
+  --ink-muted: #9fb1a8;
+  --hairline: #24352e;
+  --primary: #35a97b;
+  --primary-ink: #05170f;
+  --accent: #c69a45;
   --accent-ink: #1a1400;
-  --warn: #f5c451;
-  --danger: #ff7a70;
+  --mint: #16261f;
+  --warn: #dbae5c;
+  --danger: #ef8b82;
+  --info-soft: #16222e;
+  --warn-soft: #2e2618;
+  --danger-soft: #2e1b19;
   --elevation: 0 0 0 1px rgb(255 255 255 / 0.03), 0 16px 40px -16px rgb(0 0 0 / 0.75);
-  --elevation-lift: 0 0 0 1px rgb(52 199 132 / 0.22), 0 28px 64px -20px rgb(0 0 0 / 0.85);
-  --glow-a: rgb(52 199 132 / 0.14);
-  --glow-b: rgb(252 209 22 / 0.06);
-  --grid-line: rgb(154 181 165 / 0.06);
-  --grid-line-strong: rgb(154 181 165 / 0.2);
+  --elevation-lift: 0 0 0 1px rgb(53 169 123 / 0.24), 0 28px 64px -20px rgb(0 0 0 / 0.85);
+  --glow-a: rgb(53 169 123 / 0.14);
+  --glow-b: rgb(198 154 69 / 0.08);
+  --grid-line: rgb(159 177 168 / 0.06);
+  --grid-line-strong: rgb(159 177 168 / 0.2);
 }
 
 /* System preference, used only when the visitor has not chosen a theme. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --canvas: #050d09;
-    --surface: #0b1812;
-    --surface-2: #112218;
-    --ink: #eef6f0;
-    --ink-muted: #9ab5a5;
-    --hairline: #1d3528;
-    --primary: #34c784;
-    --primary-ink: #04190f;
-    --accent: #fcd116;
+    --canvas: #0b1310;
+    --surface: #121c18;
+    --surface-2: #17231e;
+    --ink: #ecf3ee;
+    --ink-muted: #9fb1a8;
+    --hairline: #24352e;
+    --primary: #35a97b;
+    --primary-ink: #05170f;
+    --accent: #c69a45;
     --accent-ink: #1a1400;
-    --warn: #f5c451;
-    --danger: #ff7a70;
+    --mint: #16261f;
+    --warn: #dbae5c;
+    --danger: #ef8b82;
+    --info-soft: #16222e;
+    --warn-soft: #2e2618;
+    --danger-soft: #2e1b19;
     --elevation: 0 0 0 1px rgb(255 255 255 / 0.03), 0 16px 40px -16px rgb(0 0 0 / 0.75);
-    --elevation-lift: 0 0 0 1px rgb(52 199 132 / 0.22), 0 28px 64px -20px rgb(0 0 0 / 0.85);
-    --glow-a: rgb(52 199 132 / 0.14);
-    --glow-b: rgb(252 209 22 / 0.06);
-    --grid-line: rgb(154 181 165 / 0.06);
-    --grid-line-strong: rgb(154 181 165 / 0.2);
+    --elevation-lift: 0 0 0 1px rgb(53 169 123 / 0.24), 0 28px 64px -20px rgb(0 0 0 / 0.85);
+    --glow-a: rgb(53 169 123 / 0.14);
+    --glow-b: rgb(198 154 69 / 0.08);
+    --grid-line: rgb(159 177 168 / 0.06);
+    --grid-line-strong: rgb(159 177 168 / 0.2);
   }
 }
 
 /* ── Signed-in navigation ─────────────────────────────────────────────────────
-   The sidebar is GHS green in both themes. It is the one surface that does not
-   follow the theme: the crest it carries only reads correctly on the brand
-   green, and a menu that turns near-black at night next to a white page is the
-   one place the design system would look accidental. The tones below are fixed
-   brand values, not theme tokens; white on #006B3F is 7:1, muted #CFE3D8 is
-   5.6:1, and gold #FCD116 with #211A00 ink is 12:1. */
+   The sidebar is deep institutional green in both themes. It is the one surface
+   that does not follow the theme: the crest it carries only reads correctly on
+   the brand green, and a menu that turns near-black at night next to a white page
+   is the one place the design system would look accidental. The tones below are
+   fixed brand values, not theme tokens; white on #145C42 is 8:1, muted #CFE3D8 is
+   5.9:1, and muted gold #C69A45 with #211A00 ink is 7:1. */
 :root {
-  --nav-from: #006b3f;
-  --nav-to: #003d24;
+  --nav-from: #145c42;
+  --nav-to: #0a3a2a;
   --nav-ink: #ffffff;
   --nav-muted: #cfe3d8;
-  --nav-active: #fcd116;
+  --nav-active: #c69a45;
   --nav-active-ink: #211a00;
   --nav-hairline: rgb(255 255 255 / 0.18);
   --nav-wash: rgb(255 255 255 / 0.08);
@@ -176,45 +197,46 @@
 
 /* ── Chart palette ─────────────────────────────────────────────────────────
  * Categorical colours for the insights charts. Eight hues that stay distinct at
- * small sizes and hold contrast on both canvases; the brand red, gold and green
- * lead, the rest are companions. Charts read these through `var(--chart-n)`, so
- * a chart never hard-codes a colour and dark mode is one block, not a prop.
+ * small sizes and hold contrast on both canvases; the institutional green and
+ * muted gold lead, the rest are muted companions. Charts read these through
+ * `var(--chart-n)`, so a chart never hard-codes a colour and dark mode is one
+ * block, not a prop.
  */
 :root {
-  --chart-1: #0f7a4d;
-  --chart-2: #c8a228;
+  --chart-1: #145c42;
+  --chart-2: #c69a45;
   --chart-3: #b4322f;
   --chart-4: #2f6fb5;
   --chart-5: #7a4fb3;
   --chart-6: #d4703a;
   --chart-7: #1f9a9a;
   --chart-8: #8a8f3f;
-  --chart-grid: #d8ddd3;
+  --chart-grid: #e2e9e3;
 }
 
 [data-theme="dark"] {
-  --chart-1: #3fbf86;
-  --chart-2: #e8c95a;
+  --chart-1: #35a97b;
+  --chart-2: #c69a45;
   --chart-3: #e2706c;
   --chart-4: #6ba3e8;
   --chart-5: #a98be0;
   --chart-6: #f0915c;
   --chart-7: #46c4c4;
   --chart-8: #b6bd63;
-  --chart-grid: #20302a;
+  --chart-grid: #24352e;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --chart-1: #3fbf86;
-    --chart-2: #e8c95a;
+    --chart-1: #35a97b;
+    --chart-2: #c69a45;
     --chart-3: #e2706c;
     --chart-4: #6ba3e8;
     --chart-5: #a98be0;
     --chart-6: #f0915c;
     --chart-7: #46c4c4;
     --chart-8: #b6bd63;
-    --chart-grid: #20302a;
+    --chart-grid: #24352e;
   }
 }
 
@@ -231,6 +253,17 @@
     color: var(--ink);
     font-feature-settings: "ss01" 1, "cv11" 1;
     text-rendering: optimizeLegibility;
+  }
+  /* Manrope for headings, Inter for everything else — the pairing the design
+     system specifies. Numerals keep tabular figures wherever they line up. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-variant-numeric: tabular-nums;
   }
   h1,
   h2,

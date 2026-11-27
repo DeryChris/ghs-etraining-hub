@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { complaintMessages, complaints } from "@/db/schema";
+import { redactLegacyTemporaryPassword } from "@/lib/complaint-response";
 import type { ComplaintIssue } from "@/lib/labels";
 
 /**
@@ -24,7 +25,7 @@ export interface PublicComplaint {
 }
 
 export async function complaintsForStaffId(staffId: string): Promise<PublicComplaint[]> {
-  return db
+  const rows = await db
     .select({
       reference: complaints.reference,
       issueType: complaints.issueType,
@@ -39,6 +40,10 @@ export async function complaintsForStaffId(staffId: string): Promise<PublicCompl
     .where(sql`lower(${complaints.staffId}) = ${staffId.trim().toLowerCase()}`)
     .orderBy(desc(complaints.createdAt))
     .limit(10);
+
+  // Credentials from responses written by earlier reset flows are never safe to
+  // return through this unauthenticated Staff-ID lookup.
+  return rows.map((row) => ({ ...row, response: redactLegacyTemporaryPassword(row.response) }));
 }
 
 export interface AdminComplaint extends PublicComplaint {

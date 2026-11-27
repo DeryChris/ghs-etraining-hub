@@ -14,17 +14,12 @@ import {
 const EMPTY: RegistrationState = { error: null };
 
 /**
- * Create an account, in the two steps the sheet allows.
+ * Claim an existing directory record in two steps.
  *
- * Step one is a single field — the employee number — because that is the only
- * thing a person has to know that the system does not. Everything after it is
- * read back from HRIMS and shown as disabled inputs: the name, region, district,
- * facility and grade are facts, not questions, and a form that asks for them is a
- * form that gets them wrong.
- *
- * Step two is what the sheet cannot know: where to reach you, and a password of
- * your own. The employee number travels in a hidden field, but the server looks it
- * up again rather than trusting what the page sends back.
+ * Step one checks the employee number. The existing name, region, district,
+ * facility and grade are shown read-only rather than collected from the person.
+ * Step two collects contact details and a password. The server looks up the
+ * employee number again instead of trusting the hidden field from the page.
  */
 export function RegisterForm() {
   const [verifyState, verifyStaffId, verifying] = useActionState(verifyStaffIdAction, EMPTY);
@@ -52,26 +47,26 @@ export function RegisterForm() {
         <div className="flex items-start gap-3 rounded-control border border-primary/25 bg-primary/[0.06] px-4 py-3">
           <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
           <p className="text-[13px] leading-relaxed text-ink">
-            <span className="font-semibold">Verified.</span> {person.fullName}. These details come from HRIMS; if
-            something is wrong, lodge a complaint and it is corrected on the sheet.
+            <span className="font-semibold">Verified.</span> {person.fullName}. These details come from the staff
+            directory; if something is wrong, lodge a complaint to request a correction.
           </p>
         </div>
 
-        <Field label="Full name (from HRIMS)">
+        <Field label="Full name (from staff directory)">
           <input value={person.fullName} readOnly disabled className={`${inputClass} h-11 bg-surface-2`} />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Region (from HRIMS)">
+          <Field label="Region (from staff directory)">
             <input value={person.region ?? "—"} readOnly disabled className={`${inputClass} h-11 bg-surface-2`} />
           </Field>
-          <Field label="District (from HRIMS)">
+          <Field label="District (from staff directory)">
             <input value={person.district ?? "—"} readOnly disabled className={`${inputClass} h-11 bg-surface-2`} />
           </Field>
-          <Field label="Facility (from HRIMS)">
+          <Field label="Facility (from staff directory)">
             <input value={person.facility ?? "—"} readOnly disabled className={`${inputClass} h-11 bg-surface-2`} />
           </Field>
-          <Field label="Grade (from HRIMS)">
+          <Field label="Grade (from staff directory)">
             <input value={person.grade ?? "—"} readOnly disabled className={`${inputClass} h-11 bg-surface-2`} />
           </Field>
         </div>
@@ -191,14 +186,14 @@ export function RegisterForm() {
           className={`${inputClass} h-12`}
         />
         <p id="register-staff-id-hint" className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">
-          The digits on your GHS staff card or payslip. We check them against the staff sheet before anything else is
-          asked.
+          The digits on your GHS staff card or payslip. We check them against the existing staff directory before
+          anything else is asked.
         </p>
       </div>
 
       <Button type="submit" className="h-12 w-full rounded-[var(--radius-pill)] text-[15px]" disabled={verifying} aria-busy={verifying}>
         {verifying ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <BadgeCheck className="h-4 w-4" aria-hidden />}
-        {verifying ? "Checking the staff sheet…" : "Verify my staff ID"}
+        {verifying ? "Checking the staff directory…" : "Verify my staff ID"}
       </Button>
 
       <p className="text-center text-[13px] text-ink-muted">

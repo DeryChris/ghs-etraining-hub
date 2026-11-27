@@ -14,13 +14,12 @@ import { setSessionCookie } from "@/lib/server/session";
 import { staffIdMatches } from "@/lib/server/staff-id-sql";
 
 /**
- * Creating an account, against the staff sheet rather than against a form.
+ * Claiming an account against an existing staff-directory record, not creating
+ * a new staff identity from form input.
  *
- * The directory is already here: ICT imports the payroll extract, and every row
- * carries the name, region, district, facility and grade the sheet holds. What a
- * person adds is only the part the sheet cannot know — an e-mail address, a
- * telephone number, and a password. Verifying the employee number first is what
- * lets the rest of the form be read-only facts: nobody types their own grade.
+ * The directory row supplies the name, region, district, facility and grade.
+ * The person supplies contact details and a password. Verifying the employee
+ * number first lets the remaining directory facts stay read-only.
  *
  * The account is *claimed*, never duplicated. A row that already has a password
  * is somebody's account, and this path refuses it — otherwise anyone who knows an
@@ -90,8 +89,8 @@ async function findStaff(staffId: string): Promise<DirectoryRow | undefined> {
 }
 
 /**
- * Step one: does the staff sheet know this employee number, and is the account
- * still unclaimed? The answer decides whether the form opens at all.
+ * Step one: does the staff directory contain this employee number, and is the
+ * account still unclaimed? The answer decides whether the form opens at all.
  */
 export async function verifyStaffIdAction(
   _previous: RegistrationState,
@@ -129,7 +128,7 @@ export async function verifyStaffIdAction(
   if (!row) {
     return {
       error:
-        "That staff ID is not on the GHS sheet. Check the digits, or lodge a complaint — we can add you to the directory.",
+        "That staff ID was not found in the staff directory. Check the digits, or report the issue through the Complaint Hub.",
     };
   }
   if (!row.isActive) {
@@ -195,7 +194,7 @@ export async function registerAction(
   }
 
   if (!row || !row.isActive) {
-    return { ...kept, error: "That staff ID is no longer on the GHS sheet. Lodge a complaint and we will check it." };
+    return { ...kept, error: "That staff ID is no longer in the staff directory. Report the issue through the Complaint Hub." };
   }
   if (row.passwordHash) {
     return { ...kept, error: "That account was set up while this page was open. Sign in instead." };

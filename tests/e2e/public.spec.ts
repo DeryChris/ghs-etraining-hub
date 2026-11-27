@@ -1,58 +1,82 @@
 import { expect, test } from "@playwright/test";
 
 /**
- * Public-surface smoke tests. They deliberately avoid the signed-in area: a
- * seeded database and a Supabase project are needed for the authenticated flows
- * (see docs/qa.md), while these must pass against any environment, including a
- * preview deploy of a branch.
+ * Public-surface smoke tests. The marketing pages remain available without an
+ * account; the public programme hierarchy uses the database taxonomy, so run
+ * that test against a migrated database seeded with reference taxonomy.
  */
 test.describe("public surface", () => {
-  test("landing page renders the service and a sign-in route", async ({ page }) => {
+  test("landing page presents the Upper West service and is not indexed", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("main")).toBeVisible();
-    // The internal platform must never be indexed.
+    await expect(page).toHaveTitle(/GHS-UWRHD Training Library/);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+    await expect(page.getByText(/Upper West Region/).first()).toBeVisible();
   });
 
   test("sign-in page is keyboard reachable and labelled", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
-    await expect(page.getByLabel("Email")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
+    await expect(page.getByLabel("Staff ID")).toBeVisible();
     await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: /sign in/i })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
   });
 
-  test("protected routes send anonymous visitors to sign-in with a same-origin next", async ({ page }) => {
+  test("signed-in surfaces stay protected while public browsing remains separate", async ({ page }) => {
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/login\?next=%2Fdashboard$/);
+
+    await page.goto("/catalogue");
+    await expect(page).toHaveURL(/\/login\?next=%2Fcatalogue$/);
+
+    const publicResponse = await page.goto("/programmes");
+    expect(publicResponse?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: "Explore Programme Areas" })).toBeVisible();
   });
 
   test("off-origin next parameters are discarded", async ({ page }) => {
     await page.goto("/login?next=https%3A%2F%2Fevil.example%2Fsteal");
-    // The form posts back to the sanitised default, never to the supplied host.
-    await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
     expect(page.url()).toContain("/login");
+    expect(page.url()).not.toContain("evil.example");
   });
 
-  test("certificate verification page renders without a lookup", async ({ page }) => {
+  test("public browse follows Programme Areas → Programme Fields → Training Materials", async ({ page }) => {
+    const indexResponse = await page.goto("/programmes");
+    expect(indexResponse?.status()).toBe(200);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Explore Programme Areas");
+    await expect(page.getByText(/Upper West Regional Health Directorate/).first()).toBeVisible();
+
+    const areaResponse = await page.goto("/programmes/PF-PH");
+    expect(areaResponse?.status()).toBe(200);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Public Health");
+    await page.getByRole("link", { name: "Open EPI" }).click();
+
+    await expect(page).toHaveURL(/\/programmes\/PF-PH\/PF-PH-01$/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("EPI");
+    await expect(page.locator("#materials-title")).toHaveText("Training Materials");
+    const countLabel = page.getByText(/^\d+ training materials? published under EPI\.$/);
+    await expect(countLabel).toBeVisible();
+    const countMatch = (await countLabel.textContent())?.match(/^(\d+)/);
+    const publishedCount = Number(countMatch?.[1]);
+    expect(Number.isInteger(publishedCount)).toBe(true);
+    if (publishedCount === 0) {
+      await expect(page.getByText("No training materials available yet.", { exact: true })).toBeVisible();
+    } else {
+      await expect(page.locator('section[aria-labelledby="materials-title"] ul li')).toHaveCount(publishedCount);
+    }
+    await expect(page.getByRole("link", { name: "Sign in to the Library" }).first()).toBeVisible();
+    await expect(page.getByText(/Uploaded by:/)).toHaveCount(0);
+  });
+
+  test("the retired certificate verification route is not exposed publicly", async ({ page }) => {
     await page.goto("/verify");
-    await expect(page.getByRole("heading", { name: /check that a cpd certificate is genuine/i })).toBeVisible();
-    await expect(page.getByLabel("Serial code")).toBeVisible();
+    await expect(page).toHaveURL(/\/login\?next=%2Fverify$/);
+    await expect(page.getByText(/CPD|certificate verification/i)).toHaveCount(0);
   });
 
   test("unknown routes are denied by default rather than disclosed", async ({ page }) => {
-    // The edge gate protects anything not on the public allowlist, so an unknown
-    // path looks exactly like a private one to an anonymous visitor.
     await page.goto("/this-route-does-not-exist");
     await expect(page).toHaveURL(/\/login\?next=%2Fthis-route-does-not-exist$/);
-  });
-
-  test("a malformed serial is rejected without a lookup", async ({ page }) => {
-    // Format is validated before the database is touched (and before the limiter
-    // counts a strike), so junk input cannot be used to probe codes.
-    const response = await page.goto("/verify?code=not-a-serial");
-    expect(response?.status()).toBe(200);
-    await expect(page.getByRole("heading", { name: /check that a cpd certificate is genuine/i })).toBeVisible();
-    await expect(page.getByText(/no certificate matches that code/i)).toHaveCount(0);
   });
 });

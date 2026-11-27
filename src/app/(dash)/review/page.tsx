@@ -46,7 +46,7 @@ export default async function ReviewQueuePage() {
       <PageHeader
         eyebrow="Quality assurance"
         title="Review queue"
-        description="Everything waiting for your decision: material versions sent for review, and trainings filed by facilitators. What you see is decided by the programme fields you hold — not by when the item arrived — so appointing a unit head brings everything already waiting with it. You cannot decide on something you uploaded yourself."
+        description="Everything waiting for your decision: material versions sent for review, and trainings filed by facilitators. What you see is decided by the Programme Areas and Programme Fields you hold — not by when the item arrived — so appointing a unit head brings everything already waiting with it. You cannot decide on something you uploaded yourself."
       />
 
       <div className="flex flex-wrap items-center gap-3">
@@ -63,9 +63,9 @@ export default async function ReviewQueuePage() {
 
       {session.role === "FACILITATOR" && scope.empty && (
         <div className="rounded-card border border-warn/40 bg-warn/10 p-5 text-sm leading-relaxed text-ink">
-          <p className="font-semibold">You are a unit head without a programme area yet.</p>
+          <p className="font-semibold">You are a unit head without a Programme Area yet.</p>
           <p className="mt-1 text-ink-muted">
-            An administrator gives you a field — or one area inside it — from Users → Access. The moment that happens,
+            An administrator gives you a Programme Area — or a Programme Field inside it — from Users → Access. The moment that happens,
             everything already waiting in it appears here.
           </p>
         </div>

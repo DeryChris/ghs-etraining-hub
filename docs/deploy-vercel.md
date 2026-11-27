@@ -1,4 +1,4 @@
-# Deploying GHS-TL to Vercel (Neon Postgres + S3-compatible storage)
+# Deploying GHS-UWRHD-TL to Vercel (Neon Postgres + S3-compatible storage)
 
 Start to finish: a Neon project, a private bucket, a Vercel project, and a staff account that can
 actually sign in. The application no longer uses Supabase for anything — not the database, not the
@@ -67,9 +67,9 @@ Both strings need `?sslmode=require`.
 Run these from your machine, with `DIRECT_URL` set to the **direct** host:
 
 ```bash
-npm run db:check-chain   # proves all 11 migrations apply to an empty database, no server needed
+npm run db:check-chain   # proves every journalled migration applies to an empty database, no server needed
 npm run db:migrate       # against DIRECT_URL
-npm run db:seed          # taxonomy + the 7 staff rows (refuses production unless ALLOW_PROD_SEED=true)
+npm run db:seed          # taxonomy/geography; fresh DB gets a passwordless admin; no sample catalogue content
 ```
 
 `db:check-chain` runs the whole `drizzle/meta/_journal.json` order against an in-process Postgres.
@@ -143,8 +143,12 @@ Project → **Settings → Environment Variables**. Add each to **Production _an
 | `S3_BUCKET` | `ghs-materials` | private |
 | `S3_ACCESS_KEY_ID` | from Neon object storage | server only |
 | `S3_SECRET_ACCESS_KEY` | from Neon object storage | **never** prefix with `NEXT_PUBLIC_` |
-| `NEXT_PUBLIC_APP_URL` | `https://ghstl.vercel.app` | no trailing slash; feeds canonical links and reset links |
+| `NEXT_PUBLIC_APP_URL` | `https://<your-confirmed-public-domain>` | Replace the placeholder with the actual production origin before building; no trailing slash |
 | `DB_POOL_MAX` | `3` | each warm function holds its own pool |
+
+The actual production hostname has not been confirmed in this repository. The local build currently
+runs without `NEXT_PUBLIC_APP_URL` and warns that absolute links fall back to `http://localhost:3000`;
+never deploy that fallback as the production URL.
 
 Deliberately **not** set on Vercel: `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, `ALLOW_PROD_SEED`.
 Setting `ALLOW_PROD_SEED` removes the seeder's own guard against writing to production.
@@ -185,18 +189,22 @@ That list is the difference between "the database answers" and "the tab loads".
 
 In a browser:
 
-1. `/` renders the marketing page.
-2. `/login` accepts a staff account (step 9 if nobody can sign in).
-3. `/dashboard` shows the greeting, numbers and staff panels.
-4. `/catalogue` is the Library: it lists the programme fields, and search returns the materials.
-5. `/trainings`, `/complaints`, `/users` open without sitting on skeletons.
+1. `/` renders the marketing page and database-backed, visibility-filtered counters (which may be zero).
+2. `/programmes` is public and shows the configured Programme Areas → Programme Fields; a field may have no published materials yet.
+3. `/login` accepts a staff account (step 9 if nobody can sign in).
+4. `/dashboard` shows the signed-in home and role-authorised panels.
+5. `/catalogue` is the separate signed-in Library; its visible results depend on published content and the user's access.
+6. `/trainings`, `/complaints` and `/users` open without sitting on skeletons.
 
 ---
 
 ## 9. Staff accounts
 
-The directory rows come from the seeder; the **password** is a bcrypt hash on that row, written by
-these scripts. Nothing is created in any third-party service.
+On a fresh database, the seed creates reference taxonomy/geography and a passwordless bootstrap
+administrator, not a learner roster. Reruns do not change an existing admin password. Staff directory
+rows must be supplied through the approved import or administrator workflow; `/register` can only
+claim an existing eligible row. The **password** is a bcrypt hash on that row, written by these
+scripts. Nothing is created in any third-party service.
 
 ```bash
 SEED_ADMIN_PASSWORD='…' npm run user:create-auth -- you@ghs.gov.gh   # set a known password
@@ -213,8 +221,8 @@ the lockout, and never prints the secret. `--must-change` forces a change at nex
 shows which account matched without changing anything.
 
 `user:reset-password` writes only a SHA-256 hash of the token, with a one-hour expiry, and prints a
-`/reset-password?token=…` URL. Hand it over in person or over WhatsApp: the pilot sends no e-mail,
-and `/forgot-password` says so rather than promising a mail that never arrives.
+`/reset-password?token=…` URL. Hand it over in person or over WhatsApp: the application does not
+send e-mail, and `/forgot-password` says so rather than promising a mail that never arrives.
 
 ---
 

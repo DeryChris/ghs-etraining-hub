@@ -243,10 +243,12 @@ export default async function TrainingDetailPage({
           </p>
         </div>
         <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">People trained</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Attendee count recorded</p>
           <p className="flex items-center gap-1.5 text-sm font-semibold text-ink">
             <Users className="h-4 w-4 text-primary" aria-hidden />
-            {training.attendeeCount !== null ? training.attendeeCount.toLocaleString("en-GB") : "Not recorded"}
+            {training.status === "COMPLETED" && training.attendeeCount !== null
+              ? training.attendeeCount.toLocaleString("en-GB")
+              : "Not recorded"}
           </p>
         </div>
         <div className="space-y-1">

@@ -56,13 +56,13 @@ const SKINS: Skin[] = [
 ];
 
 /**
- * One glyph per programme field, chosen from what the area is about.
+ * One glyph per user-facing Programme Area, chosen from what it is about.
  *
  * These ten used to be hashed off the code like the colours, so "Clinical Care"
  * could be drawn as a microscope while "Finance and Audit" got a stethoscope —
  * the picture said nothing and the same subject looked different from the words
  * next to it. The colour still comes from the code (a stable identity, no data
- * needed to render it); the glyph now says what the tile says:
+ * needed to render it); the glyph now says what the Programme Area tile says:
  *
  *   Administration      a building          Policy / Planning   scales
  *   Clinical Care       a syringe           Public Health       a globe

@@ -33,7 +33,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Programme fields" };
+export const metadata = { title: "Programme Areas" };
 
 function first(value: string | string[] | undefined): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
@@ -57,7 +57,7 @@ export default async function ProgrammeFieldsPage({
   if (!loaded.ok) {
     return (
       <DataUnavailable
-        title="Programme fields did not load"
+        title="Programme Areas did not load"
         description="The programme taxonomy could not be read in time. Nothing was changed."
         requestId={loaded.requestId}
       />
@@ -73,8 +73,8 @@ export default async function ProgrammeFieldsPage({
     <div className="space-y-8">
       <PageHeader
         eyebrow="Administration"
-        title="Programme fields"
-        description="The vocabulary every training plan is written in: a programme area (Administration and Support Services) and the fields inside it (Biomedical Equipment). GHS supplied the first list; this page is where it is corrected. Areas and fields are archived rather than deleted once a training refers to them."
+        title="Programme Areas"
+        description="The vocabulary every training plan is written in: a Programme Area (Administration and Support Services) and the Programme Fields inside it (Biomedical Equipment). GHS supplied the first list; this page is where it is corrected. Programme Fields and Programme Areas are archived rather than deleted once a training refers to them."
       />
 
       <Notice notice={notice} error={error} />
@@ -83,19 +83,19 @@ export default async function ProgrammeFieldsPage({
         aria-label="Taxonomy totals"
         className="grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-4"
       >
-        <Stat value={totals.fields} label="Programme fields" />
-        <Stat value={totals.areas} label="Programme areas" />
+        <Stat value={totals.fields} label="Programme Areas" />
+        <Stat value={totals.areas} label="Programme Fields" />
         <Stat value={classified} label="Trainings classified" />
         <Stat
           value={fields.filter((field) => field.isArchived).length}
-          label="Archived fields"
+          label="Archived Programme Areas"
         />
       </section>
 
       <ActionDialog
         label="Add a programme area"
         title="Add a programme area"
-        description="A field is the top level of the training vocabulary and becomes a tile on the library page, so the name should read the way the service says it."
+        description="A Programme Area is the top level of the training vocabulary and becomes a tile on the library page, so the name should read the way the service says it."
         variant="primary"
         buttonSize="md"
         className="w-full sm:w-auto"
@@ -141,15 +141,15 @@ export default async function ProgrammeFieldsPage({
             />
           </div>
           <button type="submit" className={buttonClass()}>
-            Add field
+            Add Programme Area
           </button>
         </form>
       </ActionDialog>
 
       {fields.length === 0 ? (
         <ListEmptyState
-          title="No programme fields yet"
-          description="Add the first field with the button above, or run the seeder to load the ten fields and forty-one areas GHS supplied."
+          title="No Programme Areas yet"
+          description="Add the first Programme Area with the button above, or run the seeder to load the list GHS supplied."
         />
       ) : (
         <ul className="space-y-4">
@@ -222,8 +222,8 @@ export default async function ProgrammeFieldsPage({
                 </header>
 
                 <ActionDialog
-                  label="Edit field"
-                  title="Edit this field"
+                  label="Edit Programme Area"
+                  title="Edit this Programme Area"
                   description="The code is fixed: it appears in exports and is the seeder's natural key."
                   size="sm"
                 >
@@ -268,7 +268,7 @@ export default async function ProgrammeFieldsPage({
                       type="submit"
                       className={buttonClass({ variant: "secondary" })}
                     >
-                      Save field
+                      Save Programme Area
                     </button>
                   </form>
                   <p className={hintClass}>
@@ -281,12 +281,12 @@ export default async function ProgrammeFieldsPage({
                 <div className="border-t border-hairline p-5">
                   <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
                     <Layers className="h-3.5 w-3.5" aria-hidden />
-                    Programme areas
+                    Programme Fields
                   </h3>
 
                   {field.areas.length === 0 ? (
                     <p className="mt-2 text-sm text-ink-muted">
-                      No areas in this field yet.
+                      No Programme Fields in this Programme Area yet.
                     </p>
                   ) : (
                     <ul className="mt-3 space-y-2">
@@ -312,7 +312,7 @@ export default async function ProgrammeFieldsPage({
                               </p>
                             </div>
                             <div className="flex shrink-0 flex-wrap items-center gap-2">
-                              <ActionDialog label="Edit" title="Edit this area" size="sm">
+                              <ActionDialog label="Edit" title="Edit this Programme Field" size="sm">
                                 <form
                                   action={updateProgrammeAreaAction}
                                   data-draft={`area-${area.id}`}
@@ -367,14 +367,14 @@ export default async function ProgrammeFieldsPage({
                                       size: "sm",
                                     })}
                                   >
-                                    Save area
+                                    Save Programme Field
                                   </button>
                                 </form>
                               </ActionDialog>
                               <ActionDialog
                                 label={`People (${area.facilitators.length})`}
-                                title={`Who works in ${area.name}`}
-                                description="Assigned people can author material and run trainings in this area only."
+                                title={`Who can author in ${area.name}`}
+                                description="This assigns material-authoring scope in this Programme Field. The Trainings register has separate role permissions."
                                 size="sm"
                               >
                                 <div className="space-y-2">
@@ -437,7 +437,7 @@ export default async function ProgrammeFieldsPage({
                                         htmlFor={`area-person-${area.id}`}
                                         className={labelClass}
                                       >
-                                        Give someone this area
+                                        Assign a facilitator to this Programme Field
                                       </label>
                                       <Select
                                         id={`area-person-${area.id}`}
@@ -463,8 +463,8 @@ export default async function ProgrammeFieldsPage({
                                     </button>
                                   </form>
                                   <p className={hintClass}>
-                                    Assigned people can author material and run
-                                    trainings in this area only.
+                                    Assigned facilitators can author material in
+                                    this Programme Field. Training records use separate role permissions.
                                   </p>
                                 </div>
                               </ActionDialog>
@@ -523,9 +523,9 @@ export default async function ProgrammeFieldsPage({
                   )}
 
                   <ActionDialog
-                      label="Add an area"
-                      title={`Add an area to ${field.name}`}
-                      description="Areas are what a training is filed under inside the field."
+                      label="Add a Programme Field"
+                      title={`Add a Programme Field under ${field.name}`}
+                      description="Programme Fields are what a training is filed under inside the Programme Area."
                       variant="ghost"
                       className="border border-dashed border-hairline text-ink-muted"
                     >
@@ -539,7 +539,7 @@ export default async function ProgrammeFieldsPage({
                           htmlFor={`new-area-name-${field.id}`}
                           className={labelClass}
                         >
-                          Area name <span className="text-danger">*</span>
+                          Programme Field name <span className="text-danger">*</span>
                         </label>
                         <input
                           id={`new-area-name-${field.id}`}
@@ -583,7 +583,7 @@ export default async function ProgrammeFieldsPage({
                         type="submit"
                         className={buttonClass({ variant: "secondary" })}
                       >
-                        Add area
+                        Add Programme Field
                       </button>
                     </form>
                   </ActionDialog>
@@ -595,8 +595,8 @@ export default async function ProgrammeFieldsPage({
       )}
 
       <p className="text-xs text-ink-muted">
-        Archived areas and fields disappear from the training form but stay on
-        the trainings already filed under them. Nothing here is deleted while a
+        Archived Programme Fields and Programme Areas disappear from the training form but stay
+        on the trainings already filed under them. Nothing here is deleted while a
         training refers to it.{" "}
         <Link
           href="/trainings"

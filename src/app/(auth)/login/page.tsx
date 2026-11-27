@@ -73,11 +73,11 @@ export default async function LoginPage({
           </Link>
 
           <p className="text-center text-[12px] leading-relaxed text-ink-muted">
-            Cannot sign in, or used the wrong e-mail address at signup?{" "}
+            Cannot sign in or used the wrong contact details during account setup?{" "}
             <Link href="/help/report" className="font-semibold text-primary underline underline-offset-4">
               Report it here
             </Link>{" "}
-            — every complaint is answered in writing.
+            and keep your reference number.
           </p>
         </div>
       </div>

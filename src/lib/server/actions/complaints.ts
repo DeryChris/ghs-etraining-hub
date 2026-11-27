@@ -5,6 +5,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/index";
 import { summarise } from "@/lib/complaint-subject";
+import { accessResetResponse } from "@/lib/complaint-response";
 import { complaintMessages, complaints, directMessages, trainingSessions, users } from "@/db/schema";
 import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
@@ -381,9 +382,10 @@ export async function respondToComplaintAction(
 }
 
 /**
- * Resets a person's access from inside a complaint: sets a new temporary password,
- * an optional corrected email. The temporary password is returned once so the
- * administrator can read it down the phone; it is never stored in clear text.
+ * Resets a person's access from inside a complaint: sets a new temporary password
+ * and an optional corrected email. Only the password hash is stored on the user;
+ * the temporary value is returned once to the administrator and never persisted in
+ * the complaint answer.
  */
 export async function resetAccessAction(_previous: ComplaintState, formData: FormData): Promise<ComplaintState> {
   const session = await requireRole(["SYSTEM_ADMIN"]);
@@ -430,7 +432,7 @@ export async function resetAccessAction(_previous: ComplaintState, formData: For
       .update(complaints)
       .set({
         status: "RESOLVED",
-        response: note ? `${note}\n\nAccess reset. Temporary password: ${password}. Sign in with it and change it straight away.` : `Access reset. Temporary password: ${password}. Sign in with it and change it straight away.`,
+        response: accessResetResponse(note),
         respondedById: session.sub,
         respondedAt: new Date(),
         resolvedAt: new Date(),
@@ -451,7 +453,7 @@ export async function resetAccessAction(_previous: ComplaintState, formData: For
   return {
     ok: true,
     credentials: { email: email.data, password },
-    message: `${person.fullName}: Access reset. Temporary password: ${password}. Sign in with it and change it straight away.`,
+    message: `${person.fullName}: Access reset. Share the temporary password separately and ask them to change it after signing in.`,
   };
 }
 

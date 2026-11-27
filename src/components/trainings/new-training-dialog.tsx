@@ -24,7 +24,7 @@ export function NewTrainingDialog({
   return (
     <Dialog
       title="Record a training"
-      description="Filed under a programme area and one of its fields. A facilitator's record goes to the unit head for review before it is visible to everyone else."
+      description="Filed under a Programme Area and one of its Programme Fields. A facilitator's record goes to the unit head for review before it is visible to everyone else."
       size="lg"
       trigger={({ open }) => (
         <button

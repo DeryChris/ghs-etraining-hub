@@ -1,8 +1,9 @@
 import "server-only";
-import { and, count, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { auditLogs, programmeFields, materialVersions, materialViews, materials, programmeAreas, trainingSessions, users } from "@/db/schema";
-import { scopeFor, scopeForTraining } from "@/lib/server/scope";
+import { scopeFor } from "@/lib/server/scope";
+import { trainingVisibilityFilter } from "@/lib/server/training-queries";
 import { isStaffRole, type Viewer } from "@/lib/viewer";
 
 /*
@@ -209,7 +210,7 @@ export interface UploadSeries {
   total: number;
 }
 
-/** New versions uploaded per month, split by the busiest programmes. */
+/** New Training Material versions uploaded per month, split by the busiest Programme Fields. */
 export async function getUploadSeries(viewer: Viewer, months = 12, topProgrammes = 4): Promise<UploadSeries> {
   const buckets = monthBuckets(months);
   const since = new Date();
@@ -247,7 +248,7 @@ export async function getUploadSeries(viewer: Viewer, months = 12, topProgrammes
     ...(totals.size > leaders.length
       ? [
           {
-            label: "Other programmes",
+            label: "Other Programme Fields",
             values: buckets.map((bucket) =>
               rows.filter((row) => row.month === bucket.key && !leaderIds.has(row.categoryId)).reduce((sum, row) => sum + row.n, 0),
             ),
@@ -266,37 +267,48 @@ export interface TrainingSeries {
   total: number;
 }
 
-/** Trainings that actually ran, per month and per programme. */
-/** Trainings on record, scoped: the dashboard's "Trainings · 90 days" tile. */
+/** Unarchived Training register counts visible to the current staff member. */
 export interface TrainingCounts {
   total: number;
   last90Days: number;
   attendees: number;
 }
 
+/** Match `/trainings`: admins and unit heads see all review states; facilitators see published records and their own. */
+function trainingVisibilityForInsights(viewer: Viewer) {
+  if (!isStaffRole(viewer.role)) return sql`false`;
+  return trainingVisibilityFilter({
+    userId: viewer.id,
+    seeAll: viewer.role === "SYSTEM_ADMIN" || viewer.unitHead === true,
+  });
+}
+
 export async function getTrainingCounts(viewer: Viewer): Promise<TrainingCounts> {
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - 90);
   const sinceDate = since.toISOString().slice(0, 10);
+  const throughDate = new Date().toISOString().slice(0, 10);
 
   const [row] = await db
     .select({
       total: sql<number>`count(*)::int`,
-      last90Days: sql<number>`count(*) filter (where ${trainingSessions.organisedOn} >= ${sinceDate})::int`,
-      attendees: sql<number>`coalesce(sum(${trainingSessions.attendeeCount}), 0)::int`,
+      last90Days: sql<number>`count(*) filter (where ${trainingSessions.organisedOn} >= ${sinceDate} and ${trainingSessions.organisedOn} <= ${throughDate})::int`,
+      attendees: sql<number>`coalesce(sum(${trainingSessions.attendeeCount}) filter (where ${trainingSessions.status} = 'COMPLETED'), 0)::int`,
     })
     .from(trainingSessions)
-    .where(and(scopeForTraining(viewer), eq(trainingSessions.isArchived, false)));
+    .where(and(trainingVisibilityForInsights(viewer), eq(trainingSessions.isArchived, false)));
 
   return { total: row?.total ?? 0, last90Days: row?.last90Days ?? 0, attendees: row?.attendees ?? 0 };
 }
 
+/** Training register records visible to the viewer, grouped by recorded start date and Programme Field. */
 export async function getTrainingSeries(viewer: Viewer, months = 12): Promise<TrainingSeries> {
   const buckets = monthBuckets(months);
   const since = new Date();
   since.setUTCDate(1);
   since.setUTCMonth(since.getUTCMonth() - (months - 1));
   const sinceDate = since.toISOString().slice(0, 10);
+  const throughDate = new Date().toISOString().slice(0, 10);
 
   const rows = await db
     .select({
@@ -306,7 +318,14 @@ export async function getTrainingSeries(viewer: Viewer, months = 12): Promise<Tr
     })
     .from(trainingSessions)
     .innerJoin(programmeFields, eq(programmeFields.id, trainingSessions.programmeFieldId))
-    .where(and(scopeForTraining(viewer), eq(trainingSessions.isArchived, false), gte(trainingSessions.organisedOn, sinceDate)))
+    .where(
+      and(
+        trainingVisibilityForInsights(viewer),
+        eq(trainingSessions.isArchived, false),
+        gte(trainingSessions.organisedOn, sinceDate),
+        lte(trainingSessions.organisedOn, throughDate),
+      ),
+    )
     .groupBy(sql`date_trunc('month', ${trainingSessions.organisedOn})`, programmeFields.name);
 
   const byProgramme = new Map<string, number>();
@@ -322,7 +341,7 @@ export async function getTrainingSeries(viewer: Viewer, months = 12): Promise<Tr
   };
 }
 
-/** Views of published material in the last 30 days, per programme. */
+/** Opens of published Training Materials in the last 30 days, grouped by Programme Field. */
 export async function getProgrammeTraffic(viewer: Viewer, days = 30): Promise<{ label: string; value: number }[]> {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const rows = await db

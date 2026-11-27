@@ -19,23 +19,22 @@ export default function AccessibilityPage() {
           ],
         },
         {
-          heading: "What is in place",
+          heading: "Implemented foundations",
           paragraphs: [
-            "Every page can be used with a keyboard, and focus is always visible. Light and dark themes are both available, and the system setting is respected by default.",
-            "Text follows your browser's font size settings. Animations are reduced when your device asks for less motion. Forms have visible labels and plain-English error messages.",
-            "Pages are light and text-first, so they stay usable on a slow mobile connection. Videos load only when you press play.",
+            "Shared controls and navigation include visible keyboard-focus styles. Light and dark themes are supported, with the system preference used by default.",
+            "Motion is reduced when a device requests reduced motion. Layouts adapt to smaller screens and use scalable text.",
           ],
         },
         {
-          heading: "What is still missing",
+          heading: "Review still needed",
           paragraphs: [
-            "Not every video has captions yet. Some older documents may be scanned images without structure, so screen readers cannot read them well. We are working through both.",
+            "A full route-by-route WCAG 2.2 AA audit has not been completed. Uploaded materials also need review: videos should have captions, and documents should use accessible text or an alternative when a scan cannot be read by assistive technology.",
           ],
         },
         {
-          heading: "Tell us what does not work",
+          heading: "Report an accessibility barrier",
           paragraphs: [
-            "If something is hard to use, tell us through the contact page. Include the page, your device and browser, and what you were trying to do. We will use it to prioritise fixes.",
+            "Use the Complaint Hub from the Help page. Include the page, your device and browser, and what you were trying to do so the issue can be investigated.",
           ],
         },
       ]}

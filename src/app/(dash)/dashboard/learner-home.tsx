@@ -115,11 +115,11 @@ export async function LearnerHome({ session }: { session: Session }) {
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
               {continueWith ? (
                 <>
-                  You were reading <span className="font-semibold text-ink">{continueWith.title}</span> in{" "}
-                  {continueWith.areaName}. It is still there — or open the library and start something new.
+                  You were reading <span className="font-semibold text-ink">{continueWith.title}</span> in the Programme Field{" "}
+                  {continueWith.areaName}. It is still there — or browse Training Materials by Programme Area and Programme Field.
                 </>
               ) : (
-                "Everything GHS has published for your programmes is in the library, filed under the area and field it belongs to."
+                "Published Training Materials for your Programme Areas and Programme Fields are in the Library."
               )}
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -140,7 +140,7 @@ export async function LearnerHome({ session }: { session: Session }) {
                 })}
               >
                 <BookOpen className="h-4 w-4" aria-hidden />
-                Browse the library
+                Browse the Library
               </Link>
             </div>
           </div>
@@ -175,7 +175,7 @@ export async function LearnerHome({ session }: { session: Session }) {
             href="/catalogue"
             className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline"
           >
-            All material
+            All Training Materials
             <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
         </div>
@@ -183,8 +183,8 @@ export async function LearnerHome({ session }: { session: Session }) {
         {pickUp.length === 0 ? (
           <ListEmptyState
             title="Nothing opened yet"
-            description="Everything published for your programmes is in the library. What you open shows up here, so you can find your way back to it."
-            actionText="Browse the library"
+            description="Browse published Training Materials by Programme Area and Programme Field. Opened items appear here so you can return to them."
+            actionText="Browse the Library"
             actionHref="/catalogue"
           />
         ) : (
@@ -197,7 +197,7 @@ export async function LearnerHome({ session }: { session: Session }) {
                 >
                   <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
                     <KindLabel type={item.type} />
-                    {MATERIAL_TYPE_LABELS[item.type]} · {item.areaName}
+                    {MATERIAL_TYPE_LABELS[item.type]} · Programme Field: {item.areaName}
                   </span>
                   <p className="text-base font-bold leading-snug text-ink">{item.title}</p>
                   <span className="mt-auto inline-flex items-center gap-1.5 pt-1 text-xs font-medium text-ink-muted">
@@ -223,16 +223,16 @@ export async function LearnerHome({ session }: { session: Session }) {
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
               {traffic
-                ? `${traffic.materials} ${traffic.materials === 1 ? "material" : "materials"} in the last ${traffic.days} days. Nothing is marked or scored — this is a record of where you have been.`
-                : "A record of where you have been, so you can find your way back."}
+                ? `You opened ${traffic.materials} distinct ${traffic.materials === 1 ? "Training Material" : "Training Materials"} in the last ${traffic.days} days. The list below shows your recent activity.`
+                : "Your recent activity is listed below when available."}
             </p>
           </div>
 
           {recent.length === 0 ? (
             <ListEmptyState
               title="Nothing opened yet"
-              description="Open a material and it will appear here."
-              actionText="Browse the library"
+              description="Open a Training Material to add it to your recent activity."
+              actionText="Browse the Library"
               actionHref="/catalogue"
             />
           ) : (
@@ -246,7 +246,7 @@ export async function LearnerHome({ session }: { session: Session }) {
                     <KindLabel type={item.type} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-ink">{item.title}</span>
-                      <span className="mt-0.5 block truncate text-xs text-ink-muted">{item.areaName}</span>
+                      <span className="mt-0.5 block truncate text-xs text-ink-muted">Programme Field: {item.areaName}</span>
                     </span>
                     <time
                       className="shrink-0 text-xs text-ink-muted"
@@ -271,7 +271,7 @@ export async function LearnerHome({ session }: { session: Session }) {
           {announcements.length === 0 ? (
             <ListEmptyState
               title="No announcements"
-              description="Notices from your programme appear here."
+              description="Notices sent to your staff account appear here."
             />
           ) : (
             <ul className="space-y-3">
@@ -317,7 +317,7 @@ export async function LearnerHome({ session }: { session: Session }) {
               Explore the library
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Programmes are filed the way GHS runs them: a programme area, then the fields inside it.
+              Browse Programme Areas and the Programme Fields within each one.
             </p>
           </div>
           <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

@@ -6,8 +6,6 @@ import {
   ClipboardCheck,
   Download,
   Eye,
-  History,
-  Layers,
   Undo2,
 } from "lucide-react";
 import { AreaChart } from "@/components/charts/area-chart";
@@ -139,8 +137,7 @@ export default async function DashboardPage({
               {STAFF_ROLE_LABELS[staffRoleOf({ role: session.role, unitHead: session.unitHead })]} {session.name}.
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
-              Everything GHS has published for your programmes is in the library, filed under the area and
-              field it belongs to.
+              Browse the Training Materials available to you in the signed-in Library, organised by Programme Area and Programme Field.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               {nextUp ? (
@@ -203,7 +200,13 @@ export default async function DashboardPage({
                 >
                   <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="text-sm font-semibold text-ink group-hover:text-danger">{training.title}</span>
-                    {training.areaName && <span className="text-xs text-ink-muted">· {training.areaName}</span>}
+                    {(training.fieldName || training.areaName) && (
+                      <span className="text-xs text-ink-muted">
+                        {training.fieldName ? `Programme Area: ${training.fieldName}` : ""}
+                        {training.fieldName && training.areaName ? " · " : ""}
+                        {training.areaName ? `Programme Field: ${training.areaName}` : ""}
+                      </span>
+                    )}
                   </span>
                   {training.reviewNote && (
                     <span className="text-[13px] leading-relaxed text-ink-muted">
@@ -245,15 +248,15 @@ export default async function DashboardPage({
             />
             <KpiCard
               icon={CalendarCheck2}
-              label="Trainings · 90 days"
+              label="Training records · 90 days"
               value={sessionRecord.last90Days}
-              hint={`${sessionRecord.total} recorded`}
+              hint={`${sessionRecord.total} unarchived on file`}
               spark={trainings?.counts ?? []}
               color="var(--chart-5)"
             />
             <KpiCard
               icon={ClipboardCheck}
-              label="Awaiting review"
+              label="Materials awaiting review"
               value={insights.library.inReview}
               hint={insights.library.inReview > 0 ? "Waiting for a decision" : "The queue is clear"}
               color="var(--chart-2)"
@@ -261,8 +264,8 @@ export default async function DashboardPage({
           </KpiGrid>
 
           <ChartCard
-            title="Performance trend"
-            description="Opens of published material against file downloads, week by week, across the programmes you can see."
+            title="Material activity"
+            description="Opens of published Training Materials and file downloads, week by week, across the Programme Areas and Programme Fields you can see."
             series={[
               { label: "Opens", color: "var(--chart-4)" },
               { label: "Downloads", color: "var(--chart-1)" },
@@ -321,10 +324,10 @@ export default async function DashboardPage({
             </ChartCard>
 
             <ChartCard
-              title="Busiest programme areas"
-              description="Opens in the last 30 days, by the area the material is filed under."
+              title="Programme Fields with most opens"
+              description="Recorded opens in the last 30 days, grouped by Programme Field."
               table={{
-                head: ["Programme field", "Opens"],
+                head: ["Programme Field", "Opens"],
                 rows: programmeTraffic.map((row) => [row.label, row.value]),
               }}
             >
@@ -344,29 +347,9 @@ export default async function DashboardPage({
           </div>
         </>
       ) : (
-        <KpiGrid>
-          <KpiCard
-            icon={History}
-            label="Opened recently"
-            value={recent.length}
-            hint="Pick one up again below"
-            color="var(--chart-1)"
-          />
-          <KpiCard
-            icon={Layers}
-            label="Open library"
-            value="Browse"
-            hint="Every published programme"
-            color="var(--chart-5)"
-          />
-          <KpiCard
-            icon={ClipboardCheck}
-            label="Pre/post tests"
-            value="Take one"
-            hint="Attached to your trainings"
-            color="var(--chart-2)"
-          />
-        </KpiGrid>
+        <p role="status" className="rounded-control border border-warn/40 bg-warn/10 px-4 py-3 text-sm leading-relaxed text-ink">
+          Some dashboard statistics could not be loaded. Your recent items and notices are still shown below where available.
+        </p>
       )}
 
       <div className="grid gap-10 lg:grid-cols-3">
@@ -378,8 +361,8 @@ export default async function DashboardPage({
             {recent.length === 0 ? (
               <ListEmptyState
                 title="Nothing opened yet"
-                description="Everything published for your programmes is in the library. What you open shows up here."
-                actionText="Browse the library"
+                description="Browse published Training Materials by Programme Area and Programme Field. Opened items appear here so you can return to them."
+                actionText="Browse the Library"
                 actionHref="/catalogue"
               />
             ) : (
@@ -391,7 +374,7 @@ export default async function DashboardPage({
                       className="block p-5 transition-colors duration-fast hover:bg-surface-2"
                     >
                       <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-                        {MATERIAL_TYPE_LABELS[item.type]} · {item.areaName}
+                        {MATERIAL_TYPE_LABELS[item.type]} · Programme Field: {item.areaName}
                       </p>
                       <p className="mt-1 font-semibold text-ink">
                         {item.title}
@@ -423,7 +406,7 @@ export default async function DashboardPage({
           {announcements.length === 0 ? (
             <ListEmptyState
               title="No announcements"
-              description="Notices from your directorate appear here."
+              description="Notices sent to your staff account appear here."
             />
           ) : (
             <ul className="space-y-3">

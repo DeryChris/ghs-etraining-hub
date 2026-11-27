@@ -31,7 +31,7 @@ export function AuthSplit({ aside, children }: { aside: ReactNode; children: Rea
       className="w-full overflow-hidden rounded-[28px] border border-white/45 bg-surface shadow-[0_28px_70px_-30px_rgba(0,32,18,0.65),0_2px_0_rgba(255,255,255,0.6)_inset]"
     >
       <div className="grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-        <div className="relative overflow-hidden bg-[linear-gradient(155deg,#0a8f57_0%,#0b6b45_48%,#084d33_100%)] px-6 py-7 text-white sm:px-8 lg:py-10">
+        <div className="relative overflow-hidden bg-[linear-gradient(155deg,#1d7d5b_0%,#145c42_48%,#0a3a2a_100%)] px-6 py-7 text-white sm:px-8 lg:py-10">
           {/* The same grey-green circles as the backdrop, at low strength: the
               panel reads as part of the page rather than a slab dropped on it. */}
           <span

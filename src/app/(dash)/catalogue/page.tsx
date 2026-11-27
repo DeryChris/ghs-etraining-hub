@@ -68,7 +68,7 @@ export default async function LibraryPage({
         <PageHeader
           eyebrow="Library"
           title={query ? `Results for “${query}”` : "Filtered material"}
-          description="Every published document, video, lab and assessment you can reach, filed under its programme area and field."
+          description="Published Training Materials you can access, filed under their Programme Area and Programme Field."
           icon={<BookOpen className="h-7 w-7 text-primary" aria-hidden />}
           actions={
             <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
@@ -143,7 +143,7 @@ export default async function LibraryPage({
     return (
       <DataUnavailable
         title="The library did not load"
-        description="The programme fields could not be read in time. Nothing was changed."
+        description="The Programme Areas could not be read in time. Nothing was changed."
         requestId={loaded.requestId}
         hint={loaded.hint}
       />
@@ -156,8 +156,8 @@ export default async function LibraryPage({
     <div className="space-y-8">
       <PageHeader
         eyebrow="Library"
-        title="Programmes, areas and their trainings"
-        description="Every programme area GHS trains in, with the fields inside it. Open an area, then a field, to see the trainings held for it and the material that goes with them."
+        title="Programme Areas and their Programme Fields"
+        description="Browse Programme Areas and the Programme Fields within each. Open a field to see published Training Session records and Training Materials available to you."
         icon={<BookOpen className="h-7 w-7 text-primary" aria-hidden />}
         actions={
           <Link href="/trainings" className={buttonClass({ variant: "ghost" })}>
@@ -169,14 +169,14 @@ export default async function LibraryPage({
       <SearchForm query="" type={null} />
 
       <p className="text-sm text-ink-muted">
-        {fields.length} {fields.length === 1 ? "programme area" : "programme fields"} ·{" "}
+        {fields.length} {fields.length === 1 ? "Programme Area" : "Programme Areas"} ·{" "}
         {trainings.toLocaleString("en-GB")} published {trainings === 1 ? "training" : "trainings"}
       </p>
 
       {fields.length === 0 ? (
         <ListEmptyState
           title="The programme taxonomy is empty"
-          description="An administrator maintains the areas and fields at Administration → Programme areas. They appear here as soon as they are published."
+          description="An administrator maintains the Programme Areas and Programme Fields at Administration → Programme Areas. They appear here as soon as they are published."
         />
       ) : (
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

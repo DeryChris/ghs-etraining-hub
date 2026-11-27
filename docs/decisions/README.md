@@ -5,7 +5,9 @@ same pull request as the change it justifies. (The old in-app `/decisions` conso
 with the product; this directory is the record.)
 
 Format: `ADR-NNN — Title`, then **Status** (proposed | accepted | superseded by ADR-NNN),
-**Context**, **Decision**, **Consequences** (positive and negative), **Date**.
+**Context**, **Decision**, **Consequences** (positive and negative), **Date**. This is a historical
+decision log: later accepted ADRs can supersede earlier choices. For the current product baseline,
+see [`docs/PRD.md`](../PRD.md) and the running implementation.
 
 ---
 
@@ -57,8 +59,9 @@ API for a first‑party UI duplicates authorisation logic, invites CSRF‑prone 
 the amount of code that must be security‑reviewed.
 
 **Decision.** Mutations are Server Actions with guard → zod → transaction(logAudit) → revalidate.
-Route Handlers exist only for webhooks, private file streaming, certificate verification and
-`/api/health`.
+At the time this ADR was recorded, Route Handlers also covered certificate verification; that
+public route was later removed by ADR‑0026. Current handlers serve webhooks, private file streaming
+and `/api/health`.
 
 **Consequences.** (+) End‑to‑end types, one authorisation choke point, smaller attack surface.
 (−) Third‑party integrations (mobile app, LMS bridges) will later need a deliberate API layer —
@@ -155,9 +158,10 @@ project settings.
 **Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0010-role-aware-navigation-and-administration.md`](./0010-role-aware-navigation-and-administration.md)
 
 **Decision.** The signed-in menu becomes pure, unit‑tested data (`src/lib/nav.ts`) with a role on every item,
-so the menu and `requireRole` cannot disagree. It is backed by four new surfaces — `/assessments`,
-`/insights`, `/users` (directory CRUD) and `/settings` — each stating what it does not do yet, with the
-directory invariants (no self‑demotion, last administrator protected) enforced on the server and audited.
+so the menu and `requireRole` cannot disagree. It was backed by four surfaces — `/assessments`,
+`/insights`, `/users` (directory CRUD) and `/settings`; `/assessments` was later retired by ADR‑0026.
+The directory invariants (no self‑demotion, last administrator protected) are enforced on the server
+and audited.
 
 ---
 
@@ -165,13 +169,17 @@ directory invariants (no self‑demotion, last administrator protected) enforced
 
 **Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0014-programme-areas-replace-directorates.md`](./0014-programme-areas-replace-directorates.md)
 
-**Decision.** `categories`, `spaces` and `category_facilitators` are dropped; programme fields and
-their areas are the only taxonomy. Materials, enrolments and facilitator assignments move to the
-area (`materials.programme_area_id`, `area_facilitators`), cohort targeting moves to
-`programme_areas.audience_*`, the browse surface becomes `/catalogue`, and the Sessions tab is
-retired because a session is a training. Migration `0005` maps every existing space to the area that
-teaches the same subject, keeps a JSON snapshot in `legacy_taxonomy_backup`, and refuses to run if
-anything would be left unfiled.
+**Decision.** `categories`, `spaces` and `category_facilitators` were dropped; Programme Areas and
+Programme Fields became the only taxonomy. In the legacy schema, `programme_fields` stores parent
+Programme Areas and `programme_areas` stores child Programme Fields. Materials are filed against the
+child row (`materials.programme_area_id`); cohort targeting lives on that child, while the parent
+row retains the restricted-area flag. Facilitator scope may be granted to a parent through
+`field_facilitators` or to a child through `area_facilitators`; a parent grant covers its child
+Programme Fields. The signed-in catalogue is `/catalogue`. Later, separate anonymous Programme Area
+→ Programme Field browsing was added at `/programmes`; it does not replace `/catalogue`. The original
+Sessions surface was retired and the Trainings register was introduced by ADR‑0013. Migration `0005`
+maps every legacy space to the corresponding taxonomy row and preserves a JSON snapshot in
+`legacy_taxonomy_backup`.
 
 ## ADR‑0013 — The Trainings register, and two surfaces for reference data
 
@@ -188,12 +196,12 @@ columns), capabilities split into `session.create`, `training.manage`, `taxonomy
 
 ## ADR‑0011 — The library is informational: retire CPD awards, keep issued certificates
 
-**Status:** accepted · **Date:** 2026‑11 · **Detail:** [`0011-informational-library-retires-cpd.md`](./0011-informational-library-retires-cpd.md)
+**Status:** accepted · **Partially superseded by:** ADR‑0026 · **Date:** 2026‑11 · **Detail:** [`0011-informational-library-retires-cpd.md`](./0011-informational-library-retires-cpd.md)
 
-**Decision.** The service is an informational library: no CPD points, no cycle target, no certificate
-awarded on completion. `My CPD` becomes `My activity` (what you opened, downloaded and finished). Every
-already‑issued certificate row, the `/verify` check, the printable award and the frozen serial format stay
-untouched — certificates in people's hands must still check out.
+**Original decision.** Retire CPD points and cycles. The initial decision retained existing
+certificates and `/verify`, then ADR‑0026 superseded that retention: the certificates table and
+public verification surface were removed. Current product behavior has no certificate issuance or
+verification. The activity surface was simplified to opens and downloads by ADR‑0026 and ADR‑0028.
 
 ---
 
@@ -303,11 +311,11 @@ submit exactly what they did before. See
 
 ## ADR‑0026 — No marks, no certificates
 
-Outcome-free by design: the Pre/Post Test page, the question-bank tables and the
-capabilities behind them are gone, "finished" leaves the interface, and the
-disclaimers that kept explaining what was not awarded are deleted rather than
-reworded. The complaint form keeps one narrative field. See
-`0026-no-marks-no-certificates.md`.
+Supersedes ADR‑0011's temporary retention of certificates and `/verify`: no
+certificate table, awarding flow or public verification surface remains. The
+assessment pages and question-bank tables are also gone. Reading activity is
+limited to opens and downloads, with no marks, completion status or signature.
+See `0026-no-marks-no-certificates.md`.
 
 ## ADR‑0027 — Two shells
 
@@ -334,8 +342,7 @@ that unit head when saved. See `0029-one-inbox-and-returned-work.md`.
 
 ## ADR‑0030 — Accounts are claimed, not created
 
-`/register` verifies the employee number against the imported staff sheet and
-then asks only for what the sheet cannot know. Name, region, district, facility
-and grade are read-only facts; an account that already has a password cannot be
-claimed. Sign-in is a split card again: getting started beside the form. See
-`0030-accounts-are-claimed.md`.
+`/register` verifies the employee number against the application's imported staff
+directory, then allows an active, passwordless row to be claimed. Name, region,
+district, facility and grade are read-only directory facts; the application does
+not query HRIMS. See `0030-accounts-are-claimed.md`.

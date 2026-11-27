@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | `ghs-logo-light.svg` | Source hand-over: the official GHS emblem with dark lettering and motto | Source only — kept for traceability |
 | `ghs-logo-dark.svg` | Source hand-over: the same emblem with white lettering and motto, for dark surfaces | Source only |
-| `public/brand/ghs-emblem-light.png` | 320 px-wide, palette-optimised extraction of the light artwork | `BrandMark` on light surfaces, certificate award |
+| `public/brand/ghs-emblem-light.png` | 320 px-wide, palette-optimised extraction of the light artwork | `BrandMark` on light surfaces |
 | `public/brand/ghs-emblem-dark.png` | 320 px-wide, palette-optimised extraction of the dark artwork | `BrandMark` on the dark theme |
 | `src/app/icon.png` | 512×512 favicon: light artwork on a white plate | Browser tab, bookmarks |
 | `src/app/apple-icon.png` | 180×180 iOS home-screen icon, same plate | iOS "Add to Home Screen" |
@@ -43,7 +43,7 @@ convert /tmp/ghs-light.png -filter Lanczos -resize 150x -background white -gravi
 
 * The emblem is never redrawn, recoloured or cropped to its initials. Both official variants are used
   as supplied; the theme decides which one shows (`.brand-emblem` in `src/app/globals.css`).
-* The mark is always paired with a text wordmark (`GHS-TL`), so the name does not depend on the
+* The mark is always paired with a text wordmark (`GHS-UWRHD-TL`), so the name does not depend on the
   artwork being legible at small sizes.
 * Do not add a third variant. If a surface needs a different tone, place the supplied artwork on a
   plate rather than generating new colours.

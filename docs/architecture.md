@@ -1,4 +1,11 @@
-# Architecture — GHS-TL
+# Architecture — GHS-UWRHD-TL
+
+> **Current product scope:** GHS-UWRHD Training Library serves the Upper West Region. Public
+> Programme Area/Programme Field browsing lives at `/programmes/...`; the authenticated catalogue
+> remains separate at `/catalogue`. The legacy schema maps `programme_fields` to parent Programme
+> Areas and `programme_areas` to child Programme Fields. `directorate` remains a staff/audience
+> attribute, but is not part of the current taxonomy; older directorate/space references below
+> describe the former hierarchy, not additional current product areas.
 
 Companion to `AGENTS.md` (contract) and `docs/PRD.md` (requirements). This file explains *how the
 request lifecycle works* so an agent never has to guess where code belongs.
@@ -18,10 +25,10 @@ Browser ──▶ Edge Middleware (cheap session signature check, redirect, secu
 
 1. Server Components fetch. Client Components receive serialisable DTOs and own only
    interaction state. A client component must never contain a query path.
-2. `export const revalidate` / `cache tags`: dashboard and library data are user‑scoped, so they
-   are `dynamic = "force-dynamic"` by default. Only truly public artefacts (the landing page's
-   published SOP *metadata*, the statistics on it) may be cached — and then tagged
-   `["material", material.id]` so publishing can `revalidateTag`.
+2. `export const revalidate` / `cache tags`: dashboard and signed-in catalogue data are user-scoped,
+   so they are `dynamic = "force-dynamic"` by default. Public Programme Area/Field browse, publicly
+   visible published material metadata and aggregate counters may be cached for five minutes under
+   the `taxonomy` tag. Publishing and taxonomy changes must invalidate that tag.
 3. Parallelise independent awaits with `Promise.all`; sequential awaits only when a value feeds the
    next query.
 4. Never `await` a database call inside `.map()` — use `inArray` batches.
@@ -41,10 +48,18 @@ types end‑to‑end, and remove a whole REST surface from the security review.
 
 ## 3. Connection & pool sizing
 
-Sandbox: `pg.Pool` with defaults (max 10) is fine. Production: **pool per serverless instance is
-the danger** — set `max: 3–5`, `idleTimeoutMillis: 10000`, `connectionTimeoutMillis: 10000`, and
-point `DATABASE_URL` at the transaction pooler (port 6543). `DIRECT_URL` is used only by
-`drizzle-kit`. Never hold a transaction open across an `await fetch` or file read.
+`src/db/client.ts` uses `postgres` (postgres-js) through Drizzle's `postgres-js` adapter; it does not
+use `pg.Pool`. One client pool is created per Node process, and development hot reloads reuse it via
+`globalThis`. The `max` setting comes from `DB_POOL_MAX`, defaults to 5 and is capped at 5; deployments
+can lower it (the Vercel guide uses 3). The postgres-js options are `idle_timeout: 5` seconds,
+`max_lifetime: 30` minutes and `connect_timeout: 15` seconds. Prepared statements are disabled for
+the pooled runtime endpoint; statement timeout is 30 seconds and idle-in-transaction timeout is 10
+seconds.
+
+`DATABASE_URL` is the runtime connection string (the Neon example uses the `-pooler` host).
+`DIRECT_URL` is for migrations that need a direct connection. Keep the connection string and pool
+settings aligned with the selected provider; never hold a transaction open across an `await fetch`
+or file read.
 
 ## 4. Error handling
 
@@ -62,7 +77,7 @@ resource must not be revealed, and `redirect()` when the surface is already know
 `src/lib/server/errors.ts` is the one vocabulary: `AppError(code, publicMessage, { details, cause })`
 with an HTTP status per code, `toFieldErrors(zodError)` for field-level messages, and
 `publicMessageOf()` which collapses anything unexpected to "Something went wrong on our side" so a
-pg error or table name can never reach a learner. Route handlers catch, log, and answer in that
+database error or table name can never reach a user. Route handlers catch, log, and answer in that
 shape.
 
 Every response carries `x-request-id` (set in `src/proxy.ts`), forwarded downstream on the same
@@ -79,8 +94,9 @@ carries the full id plus Next's digest. No stack trace is ever sent to the brows
   (`{ level, time, event, userId?, role?, … }`) that a log drain can index. Keys matching the PII
   pattern are redacted by `redactMetadata()` before the line is written, so message bodies,
   e-mails and staff PINs never reach stdout.
-* Correlated events: `material.file_issued`, `message.sent`, `progress.recorded`,
-  `progress.rate_limited`, `notification.delivered`, `notification.failed`.
+* Correlated events: `material.file_issued`, `message.sent`, `training.view_failed`,
+  `notification.delivered`, `notification.failed`. Reading activity is tracked in `material_views`,
+  not as learner progress or completion.
 * Alert thresholds (to wire in the hosting platform): p95 > 1.5 s for 10 min, error rate > 1 %,
   `*.rate_limited` spikes, and any `db:verify-chain` failure.
 
@@ -88,10 +104,10 @@ carries the full id plus Next's digest. No stack trace is ever sent to the brows
 
 | Env | Data | Behaviour |
 | --- | --- | --- |
-| local | seeded demo roster, fake PINs | verbose Drizzle logging, seeded admin from env |
-| preview | anonymised copy | every PR gets a URL, seeded, no real PII |
-| staging | anonymised + masked | mirrors prod, DPIA checks |
-| production | real | migrations only (`drizzle-kit migrate`), seeder blocked, MFA enforced |
+| local | reference taxonomy/geography; a fresh DB gets a passwordless bootstrap admin; no sample materials or sessions | verbose Drizzle logging |
+| preview | deployment-specific | use an isolated or masked database; do not seed fabricated people or catalogue content |
+| staging | masked, source-backed records | validate migrations and release behavior before production |
+| production | real | migrations only (`drizzle-kit migrate`); seeding is blocked by default; MFA is not implemented |
 
 **Anonymised copy rule**: any data copied to a lower environment must pass
 `scripts/anonymise-roster.ts` (names → "Test User N", phones → null, emails → `user<n>@example.gh`).
@@ -102,8 +118,8 @@ carries the full id plus Next's digest. No stack trace is ever sent to the brows
 | --- | --- | --- |
 | Dashboard aggregates | none (dynamic) | n/a |
 | Published material metadata | tagged `material:{id}` | `revalidateTag` on publish |
-| Public directorate list + counters | `unstable_cache` 5 min, tag `taxonomy` | `revalidateTag("taxonomy")` on category/material write |
-| Signed-in directorate/space/material views | none (dynamic, per-viewer cohort) | n/a |
+| Public Programme Area/Field browse + aggregate counters | `unstable_cache` 5 min, tag `taxonomy` | `revalidateTag("taxonomy")` on taxonomy/material write |
+| Signed-in catalogue and material views | none (dynamic, per-viewer cohort) | n/a |
 | Static assets / media | CDN, immutable keys (version‑prefixed) | never — new version = new key |
 
 ## 7a. Schema migrations
@@ -199,7 +215,7 @@ plainly with the download beside it instead of showing an empty frame.
 
 | Step | Where | Rule |
 | --- | --- | --- |
-| Draft | `createDraftAction` → `materials` row, state `DRAFT` | `material.create`, category scope |
+| Draft | `createDraftAction` → `materials` row, state `DRAFT` | `material.create`, Programme Field scope |
 | Upload | `requestUploadAction` → signed slot; `finaliseUploadAction` → `material_versions` row | `material.upload_version`, MIME/size allowlist, checksum recorded |
 | Submit | `submitForReviewAction` → version `IN_REVIEW` | `material.submit_review`, transition checked by `canTransition` |
 | Review | `recordReviewDecisionAction` → `review_assignments` row | `material.review`, reviewer ≠ uploader, reason required to reject |
@@ -208,9 +224,9 @@ plainly with the download beside it instead of showing an empty frame.
 | Notify | `broadcastNoticeAction` → `notifications` row with `audience_filter` | `notification.broadcast`; audited `NOTIFICATION_BROADCAST` |
 
 Notices share the same cohort vocabulary: `notifications.audience_filter` holds only the dimensions
-that were narrowed (`region`/`directorate`/`cadre`), and `src/lib/notification-audience.ts` decides
-whether a viewer matches. A space announcement copies the space's `audience_*` columns into that
-filter and links back to the space; only a `SYSTEM_ADMIN` may address everyone. "Mark all read"
+that were narrowed (`region`/`directorate`/`grade`), and `src/lib/notification-audience.ts` decides
+whether a viewer matches. A Programme Field notice copies that field's audience settings into the
+filter and links back to the field; only a `SYSTEM_ADMIN` may address everyone. "Mark all read"
 applies the same predicate, so a cursor is never written for a notice the person cannot see.
 
 Pure rules live in `src/lib/material-workflow.ts` (14 unit tests); input shapes in

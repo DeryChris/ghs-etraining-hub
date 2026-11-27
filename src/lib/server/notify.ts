@@ -97,7 +97,7 @@ export async function notifyTrainingPublished(input: {
 }): Promise<void> {
   await deliver({
     title: "New training added",
-    body: `${input.title}${input.fieldName ? ` — ${input.fieldName}` : ""} is now live. Details, attendance and resources are on the training page.`,
+    body: `${input.title}${input.fieldName ? ` — ${input.fieldName}` : ""} is now live. Details and attached resources are on the Training Session record.`,
     type: "TRAINING_PUBLISHED",
     linkUrl: `/trainings/${input.trainingId}`,
     actorId: input.actorId,

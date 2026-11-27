@@ -44,12 +44,12 @@ export default async function FieldPage({ params }: { params: Promise<{ fieldCod
 
       <section aria-labelledby="areas-heading" className="space-y-4">
         <h2 id="areas-heading" className="text-lg font-bold text-ink">
-          Programme areas
+          Programme Fields
         </h2>
         {areas.length === 0 ? (
           <ListEmptyState
-            title="No areas in this field yet"
-            description="An administrator adds the areas at Administration → Programme fields. A training cannot be filed under this field until it has one."
+            title="No Programme Fields in this Programme Area yet"
+            description="An administrator maintains Programme Fields under Programme Areas at Administration → Programme Areas."
           />
         ) : (
           <ul className="grid gap-4 md:grid-cols-2">
@@ -60,8 +60,8 @@ export default async function FieldPage({ params }: { params: Promise<{ fieldCod
                   href={areaHref(field.code, area.code)}
                   meta={
                     <>
-                      {area.trainingCount} {area.trainingCount === 1 ? "training" : "trainings"} ·{" "}
-                      {area.materialCount} {area.materialCount === 1 ? "material" : "materials"}
+                      {area.trainingCount} {area.trainingCount === 1 ? "Training Session record" : "Training Session records"} ·{" "}
+                      {area.materialCount} {area.materialCount === 1 ? "Training Material" : "Training Materials"}
                     </>
                   }
                 />

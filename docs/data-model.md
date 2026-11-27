@@ -1,4 +1,4 @@
-# Data model — GHS-TL
+# Data model — GHS-UWRHD-TL
 
 Authoritative schema lives in `src/db/schema.ts`. This document explains intent, invariants and
 indexes so an agent does not have to reverse‑engineer them. Naming/style rules are in
@@ -16,6 +16,11 @@ indexes so an agent does not have to reverse‑engineer them. Naming/style rules
 6. PII columns are listed in `src/lib/pii-inventory.ts` and that file drives SAR/erasure tooling.
 
 ## 2. Tables
+
+**Current interface taxonomy:** the historical database table names do not match the user-facing labels.
+`programme_fields` is the parent **Programme Areas** table; `programme_areas` is the child **Programme
+Fields** table; `materials.programme_area_id` points to a child Programme Field. Public and signed-in
+interfaces present the hierarchy as **Programme Areas → Programme Fields → Training Materials**.
 
 ### users
 `ghsStaffId` (unique — the employee number as the payroll list prints it, plain digits such as
@@ -151,17 +156,18 @@ Rows are archived, never deleted.
 ### message_reports, review_assignments, rate_limit_windows
 Support tables for abuse handling, the two‑person publish rule, and login/upload throttling.
 
-## 3. Suggested seed data (`src/db/seed.ts`)
+## 3. Seed data (`src/db/seed.ts`)
 
-The ten programme fields and forty-one areas GHS supplied (`PROGRAMME_FIELDS`), keyed on their
-codes so a revised list updates rather than duplicates. Three starter materials filed under real
-programme areas (standard precautions → Quality Assurance, cold chain → EPI, surveillance → Surveillance),
-one of them a `CRITICAL` SOP and none asking to be signed for; the sixteen regions; the eleven Upper West
-districts with their Nadowli‑Kaleo sub-districts and hospitals; a facilitator assigned to two areas so
-the authoring and review queues are not empty; a demo roster of staff across all 16 regions with fake
-PINs (`GHS-000001`…); and one superadmin whose credentials come from
-`SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD`. Idempotent: keyed upserts, safe to
-re‑run, refuses to run in production unless `ALLOW_PROD_SEED=true`.
+The seed upserts the ten GHS-supplied parent Programme Areas and forty-one child Programme Fields
+from `PROGRAMME_FIELDS`, keyed by stable codes. It also installs reference geography and, when the
+row is absent, a passwordless bootstrap administrator (`SEED_ADMIN_EMAIL`, defaulting to
+`admin@ghs.gov.gh`). Re-running does not reset an existing administrator password. Its reference
+geography includes Ghana's region names, but only the Upper West districts, sub-districts and
+facilities are seeded as the service geography; reference names do not imply service availability or
+rollout. It creates **no learner roster, training materials or training sessions**: published
+catalogue content and training-session counts must come from approved, source-backed records, never
+sample content. The seed is idempotent and refuses to run when `NODE_ENV=production` unless
+`ALLOW_PROD_SEED=true`; do not use that override to populate fabricated records.
 
 ## 4. Migration discipline
 

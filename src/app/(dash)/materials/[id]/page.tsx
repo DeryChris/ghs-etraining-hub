@@ -137,10 +137,10 @@ export default async function MaterialPage({
         {material.type === "ASSESSMENT_LINK" && (
           <section aria-labelledby="assessment-heading" className="space-y-3 rounded-card border border-hairline bg-surface p-6 shadow-panel">
             <h2 id="assessment-heading" className="text-lg font-bold text-ink">
-              Pre/Post test
+              Assessment resource
             </h2>
             <p className="text-sm leading-relaxed text-ink-muted">
-              Your facilitator runs this test with you, in the room. The library keeps the paper, not the answers.
+              The Library stores this resource, not response submissions or scores.
             </p>
           </section>
         )}

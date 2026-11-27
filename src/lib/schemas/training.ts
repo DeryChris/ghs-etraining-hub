@@ -64,7 +64,7 @@ const trainingFields = z.object({
     .optional()
     .transform((value) => (value && value.length > 0 ? Number.parseInt(value, 10) : undefined))
     .refine((value) => value === undefined || (Number.isInteger(value) && value >= 0 && value <= 5000), {
-      message: "Enter the number of people trained, between 0 and 5,000.",
+      message: "Enter the recorded attendee count, between 0 and 5,000.",
     }),
   notes: optionalText(1000),
 });

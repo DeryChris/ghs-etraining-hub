@@ -101,7 +101,7 @@ export default async function SettingsPage() {
                 <span className="text-warn">NEXT_PUBLIC_APP_URL is not set</span>
               )}
             </Fact>
-            <Fact term="Regions served">{SITE.regionCount}</Fact>
+            <Fact term="Regional scope">{SITE.regionName}</Fact>
             <Fact term="Support e-mail">{SITE.supportEmail ?? <span className="text-ink-muted">Not configured</span>}</Fact>
             <Fact term="Support phone">{SITE.supportPhone ?? <span className="text-ink-muted">Not configured</span>}</Fact>
             <Fact term="Policies last updated">{SITE.policyUpdated}</Fact>

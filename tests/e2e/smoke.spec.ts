@@ -13,15 +13,15 @@ test.skip(!email || !password, "Set E2E_LEARNER_EMAIL and E2E_LEARNER_PASSWORD t
 test("anonymous visitors are sent to sign-in", async ({ page }) => {
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login\?next=%2Fdashboard/);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Welcome back");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sign in");
   // The brand lives in the document title, which is where the name is rendered on
   // the sign-in screen (the wordmark itself is an image plus SITE.code).
-  await expect(page).toHaveTitle(/GHS-TL/);
+  await expect(page).toHaveTitle(/GHS-UWRHD Training Library/);
 });
 
 test("learner can sign in and reach every primary page", async ({ page }) => {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Staff ID").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
 
@@ -29,11 +29,10 @@ test("learner can sign in and reach every primary page", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1 })).toContainText(/Good (morning|afternoon|evening)/);
 
   const pages: Array<[string, RegExp]> = [
-    ["/directorates", /Directorates/],
-    ["/library", /Library/],
-    ["/messages", /Messages/],
+    ["/catalogue", /Programme Areas and their Programme Fields/],
+    ["/trainings", /Training register/],
+    ["/messages", /Messages & complaints/],
     ["/notifications", /Notifications/],
-    ["/analytics", /Analytics/],
   ];
   for (const [path, heading] of pages) {
     await page.goto(path);
@@ -43,7 +42,7 @@ test("learner can sign in and reach every primary page", async ({ page }) => {
 
 test("sign-out returns to sign-in and blocks the dashboard", async ({ page }) => {
   await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Staff ID").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);

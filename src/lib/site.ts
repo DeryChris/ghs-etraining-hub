@@ -9,31 +9,40 @@
  *
  * Which form to use where:
  *   `code`     — the wordmark, browser-title suffixes, tight UI chrome.
- *   `name`     — headings and body copy ("Open the GHS Training Library").
+ *   `name`     — headings and body copy ("Open the GHS-UWRHD Training Library").
  *   `fullName` — first mention on a page, legal documents, metadata/OG titles.
  */
 export const SITE = {
   /** Abbreviated form. Wordmark, title template, favicon label. */
-  code: "GHS-TL",
+  code: "GHS-UWRHD-TL",
   /** Short display form. Headings, body copy, buttons. */
-  name: "GHS Training Library",
+  name: "GHS-UWRHD Training Library",
   /** Registered long form. Legal pages, first mentions, metadata. */
-  fullName: "Ghana Health Service Training Library",
+  fullName:
+    "Ghana Health Service – Upper West Regional Health Directorate – Training Library",
+  /** Institutional parent, for lockups and footers. */
+  institution: "Ghana Health Service",
+  /** Regional authority the platform serves. */
+  authority: "Upper West Regional Health Directorate",
   /** Second line of the wordmark. */
   tagline: "Training Library",
   /** One sentence. Shell footers, share cards, structured data. */
-  purpose: "Every Ghana Health Service training programme, with its material kept in one library — versioned and traceable.",
+  purpose:
+    "A centralised digital platform for organising, managing and accessing institutional training materials across the Upper West Region.",
   /** Metadata description: what the service is, for a search result or share card. */
   description:
-    "The Ghana Health Service Training Library keeps the material from every GHS training programme — slides, documents, videos and references — filed by programme area and field, versioned, and traceable to the people who uploaded, reviewed and downloaded it.",
-  regionCount: 16,
+    "Access and manage training materials from the Ghana Health Service Upper West Regional Health Directorate through a centralised, organised and version-controlled digital library.",
+  /** The single regional scope of the platform. No other region is served. */
+  regionName: "Upper West Region",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? null,
   supportPhone: process.env.NEXT_PUBLIC_SUPPORT_PHONE ?? null,
   policyUpdated: "16 November 2026",
 } as const;
 
 export const PRIMARY_NAV = [
-  { href: "/programmes", label: "Programmes" },
+  { href: "/", label: "Home" },
+  { href: "/programmes", label: "Programme Areas" },
+  { href: "/catalogue", label: "Library" },
   { href: "/about", label: "About" },
   { href: "/help", label: "Help" },
   { href: "/contact", label: "Contact" },

@@ -21,7 +21,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
   const reference = requestId ? shortRequestId(requestId) : (error.digest ?? null);
 
   useEffect(() => {
-    console.error("[ghs-tl] route error", { requestId, digest: error.digest });
+    console.error("[GHS-UWRHD-TL] route error", { requestId, digest: error.digest });
   }, [requestId, error.digest]);
 
   return (

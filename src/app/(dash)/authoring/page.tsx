@@ -75,7 +75,7 @@ export default async function AuthoringPage() {
         {materials.length === 0 ? (
           <ListEmptyState
             title="Nothing here yet"
-            description="Create a draft above. Materials appear here once you are assigned to a directorate."
+            description="Create a draft above. Materials appear here when they fall within your assigned Programme Areas or Programme Fields."
           />
         ) : (
           <ul className="space-y-3">

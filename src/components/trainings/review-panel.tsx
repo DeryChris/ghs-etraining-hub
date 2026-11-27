@@ -19,7 +19,7 @@ const COPY: Record<ReviewState, { label: string; variant: "success" | "outline" 
   PENDING: {
     label: "Pending review",
     variant: "outline",
-    sentence: "Waiting for the unit head of this programme area. Only you and the reviewers can see it.",
+    sentence: "Waiting for a unit head assigned to this Programme Area or Programme Field. Only you and reviewers can see it.",
   },
   REJECTED: {
     label: "Returned for correction",
@@ -204,7 +204,7 @@ function ReviewForm({
           rows={3}
           required={requireNote}
           className={inputClass}
-          placeholder={requireNote ? "e.g. the attendance figure is missing" : ""}
+          placeholder={requireNote ? "e.g. check the recorded date" : ""}
         />
       </div>
 

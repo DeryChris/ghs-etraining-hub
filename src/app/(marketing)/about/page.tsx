@@ -1,61 +1,88 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ClipboardPen, Eye, HeartHandshake, Lock, ShieldCheck, Target, Users } from "lucide-react";
-import { RegionMap } from "@/components/brand/illustrations";
+import { ArrowRight, ClipboardPen, Eye, History, Lock, Search, ShieldCheck, Users } from "lucide-react";
 import { Reveal } from "@/components/marketing/reveal";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { buttonClass } from "@/components/ui/button";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "About",
-  description: `Why the ${SITE.name} exists, how it is governed and what comes next.`,
+  title: "About the Library",
+  description: `Why the ${SITE.name} exists, how it works and who can access it.`,
 };
 
-const VALUES = [
-  { icon: ShieldCheck, title: "Material you can still find", body: "Training material is only useful if it survives the week. Every programme keeps its material here, with the version and the date it changed." },
-  { icon: HeartHandshake, title: "Equity across regions", body: "A nurse in Nalerigu opens the same document, at the same version, as one in Accra. Access does not depend on who was in the room." },
-  { icon: Eye, title: "Accountable by design", body: "Uploads, approvals, downloads and withdrawals are written to a tamper-evident audit trail. Nobody, including administrators, edits history quietly." },
-  { icon: Lock, title: "Privacy by default", body: "We collect what the work needs. We do not handle patient information here, and personal data is protected under Act 843." },
+const SUBSECTIONS: { id: string; eyebrow: string; title: string; body: string[] }[] = [
+  {
+    id: "purpose",
+    eyebrow: "Our Purpose",
+    title: "Make institutional training knowledge easier to organise, retrieve and maintain.",
+    body: [
+      `The ${SITE.fullName} is an institutional digital platform designed to improve the organisation, management and accessibility of training materials associated with programmes within the ${SITE.regionName}.`,
+      "The platform provides a structured environment for maintaining learning resources, supporting document version control, facilitating review and approval processes and preserving relevant resource activity records.",
+    ],
+  },
+  {
+    id: "why",
+    eyebrow: "Why the Library Exists",
+    title: "Training knowledge should never get lost.",
+    body: [
+      "Training teams may need to retain slides, documents and references after a session. When materials are shared only through informal channels, they can be difficult to retrieve and keep current.",
+      "When authorised personnel submit and publish a material, the library organises it under its Programme Area and Programme Field and keeps its supported version and review details.",
+    ],
+  },
+  {
+    id: "how",
+    eyebrow: "How the Platform Works",
+    title: "A clear hierarchy, from programme to resource.",
+    body: [
+      "Programme Areas contain Programme Fields, and training materials are filed under the relevant Programme Field while retaining their parent Programme Area. Anyone can browse Programme Areas and see listings for publicly visible Training Materials. After signing in, staff can search the separate Library and open the current published version allowed by their role and audience.",
+    ],
+  },
+  {
+    id: "resources",
+    eyebrow: "Resource Management",
+    title: "Version history follows each published update.",
+    body: [
+      "A new upload does not overwrite the existing file. When a newer version is approved, earlier versions remain in the history and are clearly distinguished from the current version for authorised users.",
+    ],
+  },
+  {
+    id: "accountability",
+    eyebrow: "Institutional Accountability",
+    title: "Reviewed before it goes live, and never silently deleted.",
+    body: [
+      "Submissions, reviews, approvals, updates and withdrawals are recorded. A second person reviews material before publication, and the activity record behind each resource is preserved for reference.",
+    ],
+  },
+  {
+    id: "access",
+    eyebrow: "Who Can Access the Library",
+    title: "Authorised Ghana Health Service personnel.",
+    body: [
+      "An active GHS staff directory record is required. A person with an unclaimed record can verify their Staff ID on the public registration page and set a password; that form cannot add a new staff-directory record. Access to materials and management actions follows the account's assigned role and scope.",
+    ],
+  },
 ];
 
 const ROLES = [
   {
     icon: Users,
-    name: "Learners",
-    who: "Ghana Health Service staff",
-    body: "Find the material for every programme attended, in the library, and read or download it whenever you need it.",
+    name: "Staff",
+    who: "Ghana Health Service personnel",
+    body: "Browse Programme Areas and listings for publicly visible Training Materials. When signed in, access follows the account's role and audience.",
   },
   {
     icon: ClipboardPen,
     name: "Facilitators",
-    who: "Directorate subject experts",
-    body: "Upload and version material for the directorates they are assigned to, review a colleague's upload before it goes live, and archive what is retired.",
+    who: "Programme subject experts",
+    body: "Submit and maintain materials within assigned Programme Areas or Programme Fields. New versions go through the review and publication workflow.",
   },
   {
     icon: ShieldCheck,
-    name: "System administrators",
-    who: "ICT and directorate leads",
-    body: "Manage the staff directory, the programme taxonomy and official notices, and review the audit trail.",
-  },
-];
-
-const ROADMAP = [
-  {
-    phase: "Live now",
-    status: "done" as const,
-    items: ["Library of versioned material by programme", "Reviewed uploads and two-person publishing", "A record of what you opened and downloaded", "Search, library and cohort-targeted notices", "Every administrative action audited"],
-  },
-  {
-    phase: "Next",
-    status: "next" as const,
-    items: ["Assessments with scoring and retakes", "Discussion on each material", "Attendance records for sessions", "Server-rendered PDFs of the material index and e-mail delivery"],
-  },
-  {
-    phase: "Later",
-    status: "later" as const,
-    items: ["Learning that works offline on low-bandwidth phones", "Twi and other Ghanaian languages", "Directory sync with GHS HR records"],
+    name: "Unit heads and administrators",
+    who: "Review and system administration",
+    body: "Unit heads review submissions within their assigned scope. System administrators manage directory access and programme reference data.",
   },
 ];
 
@@ -69,16 +96,15 @@ export default function AboutPage() {
   return (
     <>
       <section aria-labelledby="about-title" className="hero-glow relative overflow-hidden">
-        <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-20 pt-16 sm:px-8 sm:pt-24 lg:grid-cols-12 lg:gap-12 lg:px-10">
+        <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 pb-16 pt-10 sm:px-8 sm:pt-16 lg:grid-cols-12 lg:gap-12 lg:px-10">
           <Reveal className="space-y-7 lg:col-span-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">About {SITE.code}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">About the Library</p>
             <h1 id="about-title" className="text-balance text-4xl font-extrabold leading-[1.05] tracking-tight text-ink sm:text-5xl lg:text-6xl">
-              Every training leaves material behind. This is where it lives.
+              About the {SITE.name}
             </h1>
             <p className="max-w-2xl text-lg leading-relaxed text-ink-muted">
-              The {SITE.fullName} is the library for GHS training programmes. When a directorate runs a session, the slides,
-              documents and recordings are filed here — under that programme, with a version and a date, and open to staff wherever
-              they serve. Nothing is deleted, and nothing is edited without a record of who did it.
+              The {SITE.fullName} is an institutional digital platform designed to improve the organisation, management
+              and accessibility of training materials associated with programmes within the {SITE.regionName}.
             </p>
           </Reveal>
           <Reveal delay={0.1} className="lg:col-span-5">
@@ -95,66 +121,47 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Mission and vision */}
-      <section aria-labelledby="mission-title" className="mx-auto grid max-w-7xl gap-6 px-5 py-20 sm:px-8 md:grid-cols-2 lg:px-10">
-        <Reveal>
-          <article className="h-full rounded-card border border-hairline bg-surface p-8 shadow-panel sm:p-10">
-            <Target className="h-7 w-7 text-primary" aria-hidden />
-            <h2 id="mission-title" className="mt-6 text-2xl font-extrabold text-ink">Our mission</h2>
-            <p className="mt-4 text-base leading-relaxed text-ink-muted">
-              Keep the material from every GHS training programme findable, current and accountable — so what was taught in a session is
-              still available to the people who attended it, months later.
-            </p>
-          </article>
-        </Reveal>
-        <Reveal delay={0.08}>
-          <article className="h-full rounded-card border border-hairline bg-primary p-8 text-primary-ink shadow-panel sm:p-10">
-            <Eye className="h-7 w-7 text-accent" aria-hidden />
-            <h2 className="mt-6 text-2xl font-extrabold">Our vision</h2>
-            <p className="mt-4 text-base leading-relaxed text-primary-ink/85">
-              A health service where no training output is lost to a chat thread, and where any worker can produce the material — and the
-              proof of their learning — long after the session ended.
-            </p>
-          </article>
-        </Reveal>
-      </section>
+      {/* The six subsections, in order. */}
+      {SUBSECTIONS.map((section, index) => (
+        <section
+          key={section.id}
+          id={section.id}
+          aria-labelledby={`${section.id}-title`}
+          className={index % 2 === 1 ? "bg-surface/60 py-20 lg:py-24" : "py-20 lg:py-24"}
+        >
+          <div className="mx-auto grid max-w-7xl gap-8 px-5 sm:px-8 lg:grid-cols-[0.42fr_0.58fr] lg:px-10">
+            <Reveal>
+              <div className="space-y-3 lg:sticky lg:top-24 lg:self-start">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{section.eyebrow}</p>
+                <h2 id={`${section.id}-title`} className="text-balance text-2xl font-extrabold leading-tight tracking-tight text-ink sm:text-3xl">
+                  {section.title}
+                </h2>
+              </div>
+            </Reveal>
+            <Reveal delay={0.06}>
+              <div className="space-y-4">
+                {section.body.map((paragraph) => (
+                  <p key={paragraph.slice(0, 40)} className="text-base leading-relaxed text-ink-muted">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      ))}
 
-      {/* Values */}
-      <section aria-labelledby="values-title" className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-10 lg:py-28">
-        <Reveal>
-          <SectionHeading eyebrow="Our values" title={<span id="values-title">What we hold ourselves to.</span> as unknown as string} />
-        </Reveal>
-        <div className="mt-14 grid gap-5 sm:grid-cols-2">
-          {VALUES.map((value, index) => {
-            const Icon = value.icon;
-            return (
-              <Reveal key={value.title} delay={index * 0.06}>
-                <article className="flex h-full gap-5 rounded-card border border-hairline bg-surface p-7 shadow-panel">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-primary/10 text-primary">
-                    <Icon className="h-6 w-6" aria-hidden />
-                  </span>
-                  <div>
-                    <h3 className="text-lg font-bold text-ink">{value.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-ink-muted">{value.body}</p>
-                  </div>
-                </article>
-              </Reveal>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Governance */}
-      <section aria-labelledby="governance-title" className="bg-surface/60 py-20 lg:py-28">
+      {/* Roles */}
+      <section aria-labelledby="roles-title" className="bg-surface/60 py-20 lg:py-28">
         <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
           <Reveal>
             <SectionHeading
-              eyebrow="How it is governed"
-              title={<span id="governance-title">Three roles, each with clear limits.</span> as unknown as string}
-              description="Access follows the job. Staff directory records decide what each person can do, a second reviewer has to approve new material, and every change to that authority is itself recorded."
+              eyebrow="Access"
+              title={<span id="roles-title">Different access for different responsibilities.</span> as unknown as string}
+              description="Access follows the directory role and assigned scope. Unit heads carry a review duty; system administrators manage access and reference data. Changes to authority are recorded."
             />
           </Reveal>
-          <ul className="mt-14 grid gap-5 md:grid-cols-3">
+          <ul className="mt-12 grid gap-5 md:grid-cols-3">
             {ROLES.map((role, index) => {
               const Icon = role.icon;
               return (
@@ -172,69 +179,44 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Reach */}
-      <section aria-labelledby="reach-title" className="mx-auto grid max-w-7xl items-center gap-12 px-5 py-20 sm:px-8 lg:grid-cols-2 lg:px-10 lg:py-28">
-        <Reveal>
-          <div className="relative overflow-hidden rounded-hero border border-hairline bg-surface p-8 shadow-panel">
-            <div className="grid-texture absolute inset-0 opacity-70" aria-hidden />
-            <RegionMap className="relative mx-auto h-auto w-full max-w-[18rem]" />
-          </div>
-        </Reveal>
-        <Reveal delay={0.08} className="space-y-5">
-          <SectionHeading eyebrow="Reach" title={<span id="reach-title">Serving {SITE.regionCount} regions and every grade.</span> as unknown as string} />
-          <p className="text-base leading-relaxed text-ink-muted">
-            Pages are designed for mobile networks, video loads only on request, and files open straight in the browser. Material reaches
-            the district hospital and the health centre, not only the teaching hospital.
-          </p>
-        </Reveal>
-      </section>
-
-      {/* Roadmap */}
-      <section aria-labelledby="roadmap-title" className="bg-surface/60 py-20 lg:py-28">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-          <Reveal>
-            <SectionHeading eyebrow="Roadmap" title={<span id="roadmap-title">What is live, what is next.</span> as unknown as string} />
-          </Reveal>
-          <ol className="mt-14 grid gap-5 lg:grid-cols-3">
-            {ROADMAP.map((stage, index) => (
-              <Reveal key={stage.phase} delay={index * 0.08}>
-                <li className="h-full list-none rounded-card border border-hairline bg-canvas p-7">
-                  <span
-                    className={`inline-flex items-center gap-2 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-                      stage.status === "done" ? "bg-primary text-primary-ink" : stage.status === "next" ? "bg-accent text-accent-ink" : "bg-surface-2 text-ink-muted"
-                    }`}
-                  >
-                    {stage.phase}
-                  </span>
-                  <ul className="mt-6 space-y-3">
-                    {stage.items.map((item) => (
-                      <li key={item} className="flex gap-3 text-sm leading-relaxed text-ink">
-                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              </Reveal>
-            ))}
-          </ol>
-        </div>
+      {/* Principles strip */}
+      <section aria-label="Design principles" className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:px-10">
+        <ul className="grid gap-4 sm:grid-cols-3">
+          {[
+            { icon: History, text: "Published materials can be archived; their supported history is retained." },
+            { icon: Lock, text: "No patient information, ever. Personal data is protected." },
+            { icon: Search, text: "Findable first: hierarchy, search and version clarity." },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <li key={item.text} className="flex items-center gap-3 rounded-card border border-hairline bg-surface px-5 py-4 shadow-panel">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-mint text-primary">
+                  <Icon className="h-5 w-5" aria-hidden />
+                </span>
+                <p className="text-sm font-semibold leading-snug text-ink">{item.text}</p>
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       {/* Closing */}
-      <section aria-labelledby="about-cta" className="mx-auto max-w-7xl px-5 py-24 text-center sm:px-8 lg:px-10">
+      <section aria-labelledby="about-cta" className="mx-auto max-w-7xl px-5 pb-10 text-center sm:px-8 lg:px-10">
         <Reveal className="mx-auto max-w-2xl space-y-6">
+          <Eye className="mx-auto h-8 w-8 text-primary" aria-hidden />
           <h2 id="about-cta" className="text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
-            Looking for the material from a training?
+            Browse the Programme Areas.
           </h2>
-          <p className="text-base leading-relaxed text-ink-muted">Open the programme you were trained under, or ask your facility administrator for an account.</p>
+          <p className="text-base leading-relaxed text-ink-muted">
+            Open a Programme Area to see its Programme Fields. Listings for Training Materials published for public access appear under the relevant Programme Field; account setup requires a matching record in the staff directory.
+          </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link href="/login" className={buttonClass({ className: "h-12 rounded-[var(--radius-pill)] px-6" })}>
-              Sign in
+            <Link href="/programmes" className={buttonClass({ className: "h-12 rounded-[var(--radius-pill)] px-6" })}>
+              Explore Programme Areas
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
-            <Link href="/programmes" className={buttonClass({ variant: "secondary", className: "h-12 rounded-[var(--radius-pill)] px-6" })}>
-              View programmes
+            <Link href="/login" className={buttonClass({ variant: "secondary", className: "h-12 rounded-[var(--radius-pill)] px-6" })}>
+              Sign in
             </Link>
           </div>
         </Reveal>

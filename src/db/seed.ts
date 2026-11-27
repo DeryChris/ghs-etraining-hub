@@ -1,13 +1,7 @@
 import "dotenv/config";
 import { eq, sql } from "drizzle-orm";
 import { db } from "./client";
-import {
-  users,
-  materials,
-  programmeFields,
-  programmeAreas,
-  areaFacilitators,
-} from "./schema";
+import { users, programmeFields, programmeAreas } from "./schema";
 import { seedGeography } from "./seed-geography";
 import {
   PROGRAMME_FIELDS,
@@ -27,42 +21,19 @@ async function main() {
   console.log("🌱 Seeding the training library database...");
 
   // Upsert admin user
-  const [admin] = await db
+  await db
     .insert(users)
     .values({
       ghsStaffId: "GHS-000001",
       email: ADMIN_EMAIL,
       fullName: "GHS System Administrator",
       role: "SYSTEM_ADMIN",
-      directorate: "HR Directorate",
-      region: "Greater Accra",
-      facility: "GHS HQ, Accra",
       isActive: true,
     })
     .onConflictDoUpdate({
       target: users.ghsStaffId,
       set: { role: "SYSTEM_ADMIN", isActive: true, updatedAt: new Date() },
-    })
-    .returning();
-
-  // A facilitator account, assigned to a couple of programme areas so the
-  // authoring and review queues are not empty on a fresh install.
-  const [facilitator] = await db
-    .insert(users)
-    .values({
-      ghsStaffId: "GHS-000002",
-      email: "facilitator@ghs.gov.gh",
-      fullName: "GHS Facilitator",
-      role: "FACILITATOR",
-      directorate: "Public Health Directorate",
-      region: "Upper West",
-      isActive: true,
-    })
-    .onConflictDoUpdate({
-      target: users.ghsStaffId,
-      set: { role: "FACILITATOR", isActive: true, updatedAt: new Date() },
-    })
-    .returning();
+    });
 
   // ── Programme taxonomy (fields → areas) ───────────────────────────────────
   // Upserted on the code, so re-running after GHS revises the list updates the
@@ -103,95 +74,6 @@ async function main() {
     `   Programme taxonomy: ${PROGRAMME_FIELDS.length} fields, ${flatProgrammeAreas().length} areas`,
   );
 
-  // ── Starter content, filed under programme areas ──────────────────────────
-  // Materials live under an area, never under a second taxonomy: what a learner
-  // reads and what a training covered are filed in the same place (ADR-0014).
-  const seededAreas = await db
-    .select({
-      id: programmeAreas.id,
-      code: programmeAreas.code,
-      name: programmeAreas.name,
-    })
-    .from(programmeAreas);
-  const areaByCode = new Map(seededAreas.map((area) => [area.code, area]));
-
-  const starterMaterials = [
-    {
-      areaCode: "PF-CLIN-03",
-      title: "Standard Precautions: Core SOP 2026",
-      summary:
-        "Hand hygiene, PPE sequence and sharps handling — the procedure every clinical staff member should know.",
-      type: "DOCUMENT" as const,
-      priority: "CRITICAL" as const,
-      estimatedMinutes: 45,
-    },
-    {
-      areaCode: "PF-PH-01",
-      title: "Cold Chain and Vaccine Handling",
-      summary:
-        "Temperature monitoring, the shake test and what to do when the fridge fails overnight.",
-      type: "VIDEO" as const,
-      priority: "HIGH" as const,
-      estimatedMinutes: 25,
-    },
-    {
-      areaCode: "PF-PH-06",
-      title: "Integrated Disease Surveillance: Weekly Reporting",
-      summary:
-        "How to complete and submit the weekly surveillance return, with the thresholds that trigger an alert.",
-      type: "DOCUMENT" as const,
-      priority: "HIGH" as const,
-      estimatedMinutes: 30,
-    },
-  ];
-
-  let seededMaterialCount = 0;
-  for (const starter of starterMaterials) {
-    const area = areaByCode.get(starter.areaCode);
-    if (!area) continue;
-
-    await db
-      .insert(materials)
-      .values({
-        programmeAreaId: area.id,
-        title: starter.title,
-        summary: starter.summary,
-        type: starter.type,
-        priority: starter.priority,
-        estimatedMinutes: starter.estimatedMinutes,
-        authorId: admin.id,
-        state: "PUBLISHED",
-        isPublished: true,
-      })
-      .onConflictDoUpdate({
-        target: [materials.programmeAreaId, materials.title],
-        set: {
-          summary: starter.summary,
-          priority: starter.priority,
-            estimatedMinutes: starter.estimatedMinutes,
-          state: "PUBLISHED",
-          isPublished: true,
-          updatedAt: new Date(),
-        },
-      });
-    seededMaterialCount += 1;
-  }
-
-  if (facilitator) {
-    for (const code of ["PF-CLIN-03", "PF-PH-06"]) {
-      const area = areaByCode.get(code);
-      if (!area) continue;
-      await db
-        .insert(areaFacilitators)
-        .values({ areaId: area.id, userId: facilitator.id })
-        .onConflictDoNothing();
-    }
-  }
-
-  console.log(
-    `   Content: ${seededMaterialCount} starter materials filed under programme areas`,
-  );
-
   // ── Reference geography ───────────────────────────────────────────────────
   const geography = await seedGeography(db);
   console.log(
@@ -200,12 +82,10 @@ async function main() {
   );
 
   /*
-   * Say what was NOT created, out loud.
-   *
-   * "I ran the seed and the staff are not there" is the expected reading of this
-   * script's name: it seeds geography, the taxonomy and one administrator, and
-   * people come from the GHS staff sheet, which is personal data and is never
-   * committed. Printing the next command here is cheaper than the support call.
+   * Be explicit about the boundary between reference data and real content.
+   * The only account row created here is a passwordless bootstrap administrator;
+   * staff identities come from the authorised GHS roster. Training materials and
+   * training sessions are never fabricated by the seed.
    */
   const [{ people }] = await db
     .select({ people: sql<number>`count(*)::int` })
@@ -213,16 +93,18 @@ async function main() {
     .where(eq(users.role, "LEARNER"));
 
   console.log("✅ Seed complete");
-  console.log(`   Admin: ${ADMIN_EMAIL} (GHS-000001)`);
+  console.log(`   Bootstrap administrator: ${ADMIN_EMAIL} (GHS-000001; credentials unchanged by this seed)`);
+  console.log("   Training materials: none created. Add only approved, source-backed resources through authoring.");
+  console.log("   Training sessions: none created. Record only verified sessions.");
   if (people === 0) {
     console.log("");
-    console.log("   Staff accounts: none. This seed writes reference data only — people come from");
-    console.log("   the GHS staff sheet, which is not in this repository. Import it next:");
+    console.log("   Learner accounts: none. Staff identities come from the authorised GHS staff sheet,");
+    console.log("   which is personal data and is not included in this repository. Import it next:");
     console.log('     npm run staff:import -- --file "<path to Staff Data.csv>" --dry-run');
     console.log('     npm run staff:import -- --file "<path to Staff Data.csv>"');
     console.log("   Then check the result with: npm run staff:status");
   } else {
-    console.log(`   Staff accounts already in the directory: ${people} (npm run staff:status for the breakdown)`);
+    console.log(`   Learner accounts already in the directory: ${people} (npm run staff:status for the breakdown)`);
   }
 }
 

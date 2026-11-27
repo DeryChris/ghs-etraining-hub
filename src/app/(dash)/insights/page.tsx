@@ -105,8 +105,8 @@ export default async function InsightsPage() {
         title={admin ? "Service insights" : "Programme insights"}
         description={
           admin
-            ? "Traffic, upload rate and the trainings that ran — across every programme. Views are counted once per person per day; downloads come from the audit trail."
-            : "Traffic, upload rate and the trainings that ran in the programmes you are assigned to. Views are counted once per person per day."
+            ? "Material opens, downloads, uploaded versions and Training register records across the service. Opens are counted once per person per day; downloads come from the audit trail."
+            : "Training Material activity within your assigned Programme Area and Programme Field scopes; Training register figures count records visible to you. Opens are counted once per person per day."
         }
         actions={
           <>
@@ -143,9 +143,9 @@ export default async function InsightsPage() {
         />
         <KpiCard
           icon={ClipboardCheck}
-          label="Trainings · 90 days"
+          label="Training records · 90 days"
           value={trainingCounts.last90Days}
-          hint={`${trainingCounts.total} on record`}
+          hint={`${trainingCounts.total} unarchived records visible to you`}
           spark={sessions.counts}
           color="var(--chart-5)"
         />
@@ -188,7 +188,7 @@ export default async function InsightsPage() {
       <div className="grid gap-6 xl:grid-cols-2">
         <ChartCard
           title="Upload rate"
-          description="New versions filed per month, split by the programmes doing the uploading."
+          description="New versions filed per month, grouped by Programme Field."
           series={uploads.series.map((item, index) => ({ label: item.label, color: chartColor(index) }))}
           table={{
             head: ["Month", ...uploads.series.map((item) => item.label)],
@@ -207,21 +207,21 @@ export default async function InsightsPage() {
         </ChartCard>
 
         <ChartCard
-          title="Trainings organised"
-          description="Trainings recorded per month. This is the count of trainings that actually ran, not material that exists."
+          title="Training records by date"
+          description="Training register records visible to you, grouped by recorded start date. Includes entries marked planned, held and cancelled."
           table={{
-            head: ["Month", "Trainings"],
+            head: ["Month", "Training records"],
             rows: sessions.buckets.map((bucket, index) => [bucket.label, sessions.counts[index] ?? 0]),
           }}
         >
           {hasSessions ? (
             <BarChart
               labels={sessions.buckets.map((bucket) => bucket.label)}
-              series={[{ label: "Trainings", color: "var(--chart-2)", values: sessions.counts }]}
+              series={[{ label: "Training records", color: "var(--chart-2)", values: sessions.counts }]}
               height={230}
             />
           ) : (
-            <EmptyChart message="No trainings recorded yet. Staff add them from Trainings, one per training that ran." />
+            <EmptyChart message="No Training register records fall in this date range." />
           )}
         </ChartCard>
       </div>
@@ -229,9 +229,9 @@ export default async function InsightsPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <ChartCard
           title="Where the traffic goes"
-          description="Material opens per programme over the last 30 days. Traffic that never leaves one programme is worth knowing about."
+          description="Recorded Training Material opens by Programme Field over the last 30 days."
           table={{
-            head: ["Programme", "Opens · 30 days"],
+            head: ["Programme Field", "Opens · 30 days"],
             rows: programmeTraffic.map((row) => [row.label, row.value]),
           }}
           actions={
@@ -275,17 +275,17 @@ export default async function InsightsPage() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <ChartCard
-          title="Trainings by programme area"
-          description="Which programmes are actually running trainings in the last 12 months."
+          title="Training records by Programme Field"
+          description="Training register records visible to you, grouped by Programme Field over the last 12 months. Includes entries marked planned, held and cancelled."
           table={{
-            head: ["Programme area", "Trainings"],
+            head: ["Programme Field", "Records"],
             rows: sessions.byProgramme.map((row) => [row.label, row.value]),
           }}
         >
           {sessions.byProgramme.length > 0 ? (
-            <RankBars items={sessions.byProgramme.map((row, index) => ({ label: row.label, value: row.value, color: chartColor(index + 2) }))} unit="trainings" />
+            <RankBars items={sessions.byProgramme.map((row, index) => ({ label: row.label, value: row.value, color: chartColor(index + 2) }))} unit="records" />
           ) : (
-            <EmptyChart message="No trainings recorded in the last 12 months." />
+            <EmptyChart message="No Training register records fall in the last 12 months." />
           )}
         </ChartCard>
 
@@ -299,27 +299,27 @@ export default async function InsightsPage() {
           </div>
           <dl className="space-y-2 text-sm">
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Programmes in scope</dt>
+              <dt className="text-ink-muted">Programme Areas</dt>
               <dd className="tabular-nums font-semibold text-ink">{insights.library.programmes}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Programme areas</dt>
+              <dt className="text-ink-muted">Programme Fields</dt>
               <dd className="tabular-nums font-semibold text-ink">{insights.library.programmeAreas}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Awaiting review</dt>
+              <dt className="text-ink-muted">Training Materials awaiting review</dt>
               <dd className="tabular-nums font-semibold text-ink">{insights.library.inReview}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Drafts</dt>
+              <dt className="text-ink-muted">Training Material drafts</dt>
               <dd className="tabular-nums font-semibold text-ink">{insights.library.draft}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">Trainings on record</dt>
+              <dt className="text-ink-muted">Unarchived Training records visible to you</dt>
               <dd className="tabular-nums font-semibold text-ink">{trainingCounts.total}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-ink-muted">People reached in trainings</dt>
+              <dt className="text-ink-muted">Attendee-count total on held records</dt>
               <dd className="tabular-nums font-semibold text-ink">{trainingCounts.attendees}</dd>
             </div>
             {insights.people && (
@@ -329,6 +329,9 @@ export default async function InsightsPage() {
               </div>
             )}
           </dl>
+          <p className="text-xs leading-relaxed text-ink-muted">
+            Attendee-count totals are sums of optional counts entered on records marked Held; they are not unique-person or service-reach totals.
+          </p>
 
           <div className="space-y-2">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
@@ -336,7 +339,7 @@ export default async function InsightsPage() {
               Nothing published
             </h3>
             {insights.gaps.length === 0 ? (
-              <p className="text-sm text-ink-muted">Every programme in scope has at least one published material.</p>
+              <p className="text-sm text-ink-muted">Every Programme Area in scope has at least one published Training Material.</p>
             ) : (
               <ul className="flex flex-wrap gap-2">
                 {insights.gaps.map((gap) => (
@@ -358,9 +361,7 @@ export default async function InsightsPage() {
 
       <p className="flex flex-wrap items-center gap-2 rounded-card border border-hairline bg-surface-2 p-5 text-sm leading-relaxed text-ink-muted">
         <Download className="h-4 w-4 shrink-0" aria-hidden />
-        Opens are recorded once per person per day and respect Do Not Track. Download counts come from the audit trail, so
-        they cannot be lost or edited later. Per-region reach and time-to-publish are the next figures to add; both are
-        derivable from what is already recorded.
+        Opens are recorded once per person per day and respect Do Not Track; downloads are counted from audit entries.
         <TrendingUp className="h-4 w-4 shrink-0" aria-hidden />
       </p>
     </div>

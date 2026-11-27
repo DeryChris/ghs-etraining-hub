@@ -22,11 +22,11 @@ import { checkCapability } from "@/lib/server/rbac";
 import { backTo, failureMessage } from "./managed-form";
 
 /*
- * Programme fields and their areas — the vocabulary a training plan is written
- * in. Administrators only (`taxonomy.manage`), and every change is audited in
- * the same transaction as the write: renaming a field rewrites what past plans
- * say they covered, which is exactly the kind of edit that needs a name
- * attached to it.
+ * The database keeps legacy names: `programme_fields` is the parent Programme
+ * Area table, and `programme_areas` is the child Programme Field table. The
+ * actions below use the public vocabulary in their messages. Administrators
+ * only (`taxonomy.manage`), and every change is audited in the same transaction
+ * as the write: renaming a node rewrites what past plans say they covered.
  *
  * Codes are generated when the administrator does not supply one, and never
  * change afterwards: they appear in exports and in the seeder's natural keys.
@@ -106,7 +106,7 @@ async function availableAreaCode(
   return `${base}-${Date.now().toString(36).toUpperCase().slice(-4)}`;
 }
 
-/* ── Fields ─────────────────────────────────────────────────────────────── */
+/* ── Programme Areas (database table: programme_fields) ─────────────────── */
 
 export async function createProgrammeFieldAction(
   formData: FormData,
@@ -161,7 +161,6 @@ export async function createProgrammeFieldAction(
   if (failure) return backTo(PATH, { error: failure });
   revalidatePath(PATH);
   revalidatePath("/trainings");
-  revalidateTag("taxonomy", "max");
   revalidateTag("taxonomy", "max");
   return backTo(PATH, { notice: `Added “${input.name}”.` });
 }
@@ -219,7 +218,6 @@ export async function updateProgrammeFieldAction(
   revalidatePath(PATH);
   revalidatePath("/trainings");
   revalidateTag("taxonomy", "max");
-  revalidateTag("taxonomy", "max");
   return backTo(PATH, { notice: `Saved “${parsed.data.name}”.` });
 }
 
@@ -265,7 +263,6 @@ export async function setProgrammeFieldArchivedAction(
   revalidatePath(PATH);
   revalidatePath("/trainings");
   revalidateTag("taxonomy", "max");
-  revalidateTag("taxonomy", "max");
   return backTo(PATH, {
     notice: archived
       ? "Archived. It stays on past trainings but is no longer offered on a new plan."
@@ -291,7 +288,7 @@ export async function deleteProgrammeFieldAction(
       .where(eq(programmeAreas.fieldId, id));
 
     if ((areas?.n ?? 0) > 0) {
-      failure = `This field still holds ${areas?.n} programme field(s). Delete or move those first, or archive the field instead.`;
+      failure = `This Programme Area still contains ${areas?.n} Programme Field${areas?.n === 1 ? "" : "s"}. Move or delete those first, or archive the Programme Area instead.`;
     } else {
       await db.transaction(async (tx) => {
         await tx.delete(programmeFields).where(eq(programmeFields.id, id));
@@ -318,11 +315,10 @@ export async function deleteProgrammeFieldAction(
   revalidatePath(PATH);
   revalidatePath("/trainings");
   revalidateTag("taxonomy", "max");
-  revalidateTag("taxonomy", "max");
   return backTo(PATH, { notice: "Programme area deleted." });
 }
 
-/* ── Areas ──────────────────────────────────────────────────────────────── */
+/* ── Programme Fields (database table: programme_areas) ─────────────────── */
 
 export async function createProgrammeAreaAction(
   formData: FormData,
@@ -384,7 +380,6 @@ export async function createProgrammeAreaAction(
   revalidatePath(PATH);
   revalidatePath("/trainings");
   revalidateTag("taxonomy", "max");
-  revalidateTag("taxonomy", "max");
   return backTo(PATH + anchor, { notice: `Added “${input.name}”.` });
 }
 
@@ -444,7 +439,6 @@ export async function updateProgrammeAreaAction(
   revalidatePath(PATH);
   revalidatePath("/trainings");
   revalidateTag("taxonomy", "max");
-  revalidateTag("taxonomy", "max");
   return backTo(PATH + anchor, { notice: `Saved “${parsed.data.name}”.` });
 }
 
@@ -492,7 +486,6 @@ export async function setProgrammeAreaArchivedAction(
   revalidatePath(PATH);
   revalidatePath("/trainings");
   revalidateTag("taxonomy", "max");
-  revalidateTag("taxonomy", "max");
   return backTo(PATH + anchor, {
     notice: archived
       ? "Archived. Existing trainings keep it; new plans no longer offer it."
@@ -520,7 +513,7 @@ export async function deleteProgrammeAreaAction(
       .where(eq(trainingSessions.programmeAreaId, id));
 
     if ((used?.n ?? 0) > 0) {
-      failure = `${used?.n} training(s) are filed under this area. Archive it instead — deleting would orphan their records.`;
+      failure = `${used?.n} training(s) are filed under this Programme Field. Archive it instead — deleting would orphan their records.`;
     } else {
       await db.transaction(async (tx) => {
         await tx.delete(programmeAreas).where(eq(programmeAreas.id, id));
@@ -547,16 +540,16 @@ export async function deleteProgrammeAreaAction(
   revalidatePath(PATH);
   revalidatePath("/trainings");
   revalidateTag("taxonomy", "max");
-  revalidateTag("taxonomy", "max");
   return backTo(PATH + anchor, { notice: "Programme field deleted." });
 }
 
 /* ── Who may author in an area ──────────────────────────────────────────── */
 
 /**
- * Assigns a staff member to a programme field. Content authority is per area
- * (ADR-0014), so this replaces the old per-directorate grant: the facilitator
- * can then author, review and publish in that area and nowhere else.
+ * Assigns a staff member to one child Programme Field (legacy
+ * `programme_areas` row). A parent Programme Area grant can cover several
+ * fields, but this action adds only the selected field to the facilitator's
+ * scope.
  */
 export async function assignAreaFacilitatorAction(
   formData: FormData,
@@ -619,7 +612,7 @@ export async function assignAreaFacilitatorAction(
   revalidatePath(PATH);
   revalidatePath("/authoring");
   return backTo(PATH + anchor, {
-    notice: "Assigned. They can author in that area now.",
+    notice: "Assigned. They can author in this Programme Field now.",
   });
 }
 

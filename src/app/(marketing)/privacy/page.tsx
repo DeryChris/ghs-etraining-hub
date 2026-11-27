@@ -15,14 +15,14 @@ export default function PrivacyPage() {
         {
           heading: "Who we are",
           paragraphs: [
-            `The ${SITE.fullName} is an internal service for GHS staff. It stores the material from training programmes, records which material each person opened or downloaded, and keeps the audit history that makes those records trustworthy.`,
+            `The ${SITE.fullName} is a GHS staff service with public Programme Area/Field browsing and public support forms. It stores training materials, records signed-in opens and downloads, and keeps an audit history of administrative changes.`,
           ],
         },
         {
           heading: "What we collect",
           paragraphs: [
             "Directory details: your staff ID, name, work email, role, directorate, region and facility.",
-            "Reading records: which material you open or download, and the version you opened it against. Views are counted once per person per day. Downloads are recorded because controlled material leaves the platform this way.",
+            "Reading records: which material you open or download and the version involved. Views are recorded by staff member, material and date; downloads are recorded because a file leaves the platform.",
             "Communication: messages you send and notices addressed to you.",
             "Security records: sign-in and sign-out events, the network address and browser used, and audit entries for privileged actions.",
             `The ${SITE.name} does not hold patient information. Do not send it through messages or support requests.`,
@@ -49,14 +49,15 @@ export default function PrivacyPage() {
         {
           heading: "Who can see it",
           paragraphs: [
-            "You can see your own records. Facilitators see learning progress within their directorate. System administrators see directory records, and every administrative action is written to the tamper-evident audit trail.",
-            "Activity records are used in aggregate for programme reporting. Nothing in them is published, and no individual's reading history is shared outside the service.",
+            "You can see your own activity. Facilitators see aggregate activity within their assigned Programme Areas and Programme Fields. System administrators manage directory records; privileged actions are recorded in the tamper-evident audit trail.",
+            "The public account-claim form shows a read-only preview of the single directory row matching the Staff ID entered. The public Complaint Hub status lookup shows complaints and saved responses associated with a supplied Staff ID; temporary-password text from older responses is redacted. Both are rate-limited and do not require sign-in; neither returns account contact details through the lookup result.",
+            "Public Programme browse and aggregate counters do not show author names, Staff IDs or individual reading histories.",
           ],
         },
         {
           heading: "Security",
           paragraphs: [
-            "Connections are encrypted. Access is role-based and enforced on the server. Privileged actions are written to a tamper-evident audit trail, so changes cannot be made quietly.",
+            "Access is role-based and enforced on the server. Privileged actions are recorded in the tamper-evident audit trail. Production deployments should serve traffic over encrypted HTTPS connections.",
           ],
         },
         {
