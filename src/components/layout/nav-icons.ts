@@ -6,7 +6,6 @@
  * Pure data plus lucide components: no hooks, no markup.
  */
 import {
-  BarChart3,
   Bell,
   CalendarCheck2,
   ClipboardCheck,
@@ -31,7 +30,6 @@ export const NAV_ICONS: Record<NavIcon, LucideIcon> = {
   library: FolderOpen,
   messages: MessageSquare,
   notifications: Bell,
-  cpd: BarChart3,
   insights: TrendingUp,
   materials: PenLine,
   review: ClipboardCheck,

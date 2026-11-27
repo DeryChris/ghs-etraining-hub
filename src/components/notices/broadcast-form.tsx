@@ -41,7 +41,7 @@ export function BroadcastForm({ areas, canAddressEveryone }: { areas: AuthoringA
               onChange={() => setScope("AREA")}
               disabled={areas.length === 0}
             />
-            One programme field&apos;s cohort
+            One Programme Field&apos;s cohort
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -69,14 +69,14 @@ export function BroadcastForm({ areas, canAddressEveryone }: { areas: AuthoringA
             required
             searchable
             defaultValue=""
-            placeholder="Choose a programme field"
+            placeholder="Choose a Programme Field"
             options={areas.map((area) => ({
               value: area.id,
               label: area.name,
               hint: area.fieldName,
             }))}
           />
-          <p className={hintClass}>The notice inherits that area&apos;s region, directorate and grade audience.</p>
+          <p className={hintClass}>The notice inherits this Programme Field&apos;s region, directorate and grade audience settings.</p>
         </div>
       )}
 

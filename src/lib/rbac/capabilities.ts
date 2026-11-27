@@ -65,6 +65,7 @@ export type Action =
   | "maintenance_banner.manage"
 
 export type Scope = {
+  /** Legacy `programme_areas.id`: the user-facing Programme Field being acted on. */
   areaId?: string;
   region?: string;
   directorate?: string;
@@ -193,8 +194,9 @@ export const PUBLIC_ACTIONS: ReadonlySet<Action> = new Set<Action>([]);
 
 /**
  * Self-service and messaging actions a facilitator may perform outside their
- * assigned programme areas. Everything else they do is area-scoped, and
- * src/lib/server/rbac.ts verifies the assignment against area_facilitators.
+ * assigned Programme Area/Field scope. Every other facilitator action that takes
+ * an areaId is checked against the database grants in src/lib/server/rbac.ts;
+ * either a parent Programme Area grant or a child Programme Field grant applies.
  */
 export const FACILITATOR_GLOBAL_ACTIONS: readonly Action[] = [
   "training.manage",

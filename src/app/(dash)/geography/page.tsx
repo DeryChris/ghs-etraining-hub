@@ -141,13 +141,13 @@ export default async function GeographyPage({
               return (
                 <li key={row.id}>
                   <span
-                    title={`${row.name} Region — coming soon`}
+                    title={`${row.name} Region — reference data`}
                     className="inline-flex min-h-11 items-center gap-2 rounded-control border border-dashed border-hairline bg-surface-2/60 px-3 text-sm font-semibold text-ink-muted"
                   >
                     <MapPin className="h-3.5 w-3.5" aria-hidden />
                     {row.name}
                     <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-muted">
-                      Coming soon
+                      Reference
                     </span>
                   </span>
                 </li>
@@ -176,19 +176,19 @@ export default async function GeographyPage({
           })}
         </ul>
         <p className="text-xs text-ink-muted">
-          The library is live in {LIVE_REGION.name} only. The other fifteen regions are seeded and
-          read-only here until they are switched on — districts and facilities for a region are added
-          when it goes live, so nothing has to be thrown away later.
+          The platform serves the {LIVE_REGION.name} Region only. The other regions are kept here as
+          reference geography and stay read-only — districts and facilities are maintained for the
+          {LIVE_REGION.name} Region.
         </p>
       </section>
 
       {region && !isLiveRegion(region.code, region.name) ? (
         <section className="rounded-card border border-dashed border-hairline bg-surface-2/60 p-6 text-center">
-          <h2 className="text-lg font-bold text-ink">{region.name} Region is coming soon</h2>
+          <h2 className="text-lg font-bold text-ink">{region.name} Region is reference data</h2>
           <p className="mx-auto mt-2 max-w-prose text-sm text-ink-muted">
-            {LIVE_REGION.name} is the pilot region, so its districts and facilities are the ones that can
-            be edited today. {region.name} is already seeded — choose {LIVE_REGION.name} above to work on
-            the live geography.
+            Only the {LIVE_REGION.name} Region is served by the platform, so its districts and
+            facilities are the ones that can be edited today. {region.name} is already seeded — choose{" "}
+            {LIVE_REGION.name} above to work on the maintained geography.
           </p>
         </section>
       ) : !region ? (
@@ -196,7 +196,7 @@ export default async function GeographyPage({
           title={geography.length === 0 ? "No regions recorded" : "Choose a region"}
           description={
             geography.length === 0
-              ? "Add the first region with the button above. The seeder loads all sixteen, with Upper West's districts and facilities."
+              ? "Add the Upper West Region with the button above. Its districts, sub-districts and facilities can then be maintained here."
               : "Pick a region above to see and edit its districts, sub-districts and facilities."
           }
         />
@@ -340,7 +340,7 @@ export default async function GeographyPage({
                           <ConfirmAction
                             label="Delete"
                             title={`Delete ${row.name}?`}
-                            description={`Its ${row.subDistricts.length} sub-district${row.subDistricts.length === 1 ? "" : "s"} and ${row.facilities.length} facilit${row.facilities.length === 1 ? "y" : "ies"} go with it. A district with facilities recorded against it cannot be deleted — deactivate those facilities first, so the history of who was trained where stays intact.`}
+                            description={`Its ${row.subDistricts.length} sub-district${row.subDistricts.length === 1 ? "" : "s"} and ${row.facilities.length} facilit${row.facilities.length === 1 ? "y" : "ies"} go with it. A district with facilities recorded against it cannot be deleted — deactivate those facilities first, so Training Session records that refer to those places stay intact.`}
                             confirmLabel="Delete this district"
                             action={deleteDistrictAction}
                             fields={{ id: row.id, regionId: region.id }}

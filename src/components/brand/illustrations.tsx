@@ -1,4 +1,4 @@
-import { GHANA_MAP } from "@/lib/ghana-map";
+import { UPPER_WEST_REGION } from "@/lib/ghana-map";
 
 /**
  * Original vector illustrations for the training library. Colour comes from currentColor and the
@@ -6,47 +6,34 @@ import { GHANA_MAP } from "@/lib/ghana-map";
  * is not also in text.
  */
 
-/* ── Region map: the sixteen regions, from real boundaries ─────────────────────
- * Paths come from src/lib/ghana-map.ts (generated from the 2019 boundaries), not
- * from a hand-drawn outline: the country is the right shape, and each region is a
- * shape you can point at. The library is live in Upper West only, so that region
- * carries the brand fill and the rest are legible but plainly inactive — the map
- * answers "where is this available?" without a caption doing the work.
+/* ── Upper West silhouette ────────────────────────────────────────────────
+ * The region on its own, from the same real boundaries — cropped to the
+ * region's own bounding box so no other region appears, and marked at its
+ * centroid. This is the regional identity asset: a shape you can point at,
+ * without surrounding regional boundaries.
  */
-
-const LIVE_REGION = "Upper West";
-
-export function RegionMap({ className }: { className?: string }) {
+export function UpperWestMap({ className }: { className?: string }) {
+  const upperWest = UPPER_WEST_REGION;
+  if (!upperWest) return null;
   return (
     <svg
-      viewBox={`0 0 ${GHANA_MAP.width} ${GHANA_MAP.height}`}
+      viewBox="20 9 118 111"
       className={className}
       role="img"
-      aria-label="Map of Ghana's sixteen regions. The training library is live in the Upper West Region; the other fifteen regions are coming soon."
+      aria-label="Outline map of the Upper West Region of Ghana"
     >
       <defs>
-        <linearGradient id="region-live" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.92" />
-          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.62" />
+        <linearGradient id="uw-fill" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.55" />
         </linearGradient>
       </defs>
-
-      {GHANA_MAP.regions.map((region) => {
-        const live = region.name === LIVE_REGION;
-        return (
-          <path
-            key={region.name}
-            d={region.d}
-            fill={live ? "url(#region-live)" : "var(--surface-2)"}
-            fillOpacity={live ? 1 : 0.75}
-            stroke={live ? "var(--primary)" : "var(--hairline)"}
-            strokeWidth={live ? 1.4 : 0.9}
-            strokeLinejoin="round"
-          >
-            <title>{live ? `${region.name} — live` : `${region.name} — coming soon`}</title>
-          </path>
-        );
-      })}
+      <path d={upperWest.d} fill="url(#uw-fill)" stroke="var(--primary)" strokeWidth="1.6" strokeLinejoin="round" />
+      {/* Location marker at the region's centroid. */}
+      <g transform="translate(78.6 59.25)">
+        <circle r="10" fill="var(--accent)" fillOpacity="0.35" className="region-pulse" />
+        <circle r="5" fill="var(--accent)" stroke="var(--surface)" strokeWidth="2" />
+      </g>
     </svg>
   );
 }

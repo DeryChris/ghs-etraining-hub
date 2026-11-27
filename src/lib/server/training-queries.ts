@@ -29,6 +29,12 @@ import { yearRange } from "@/lib/training-dates";
 
 export const TRAININGS_PAGE_SIZE = 12;
 
+export interface TrainingVisibility {
+  userId: string;
+  /** Administrators and unit heads may see every review state. */
+  seeAll: boolean;
+}
+
 export interface TrainingFilters {
   q?: string;
   year?: number;
@@ -39,16 +45,18 @@ export interface TrainingFilters {
   status?: TrainingStatus;
   /** Review queue: `PENDING` is what a unit head acts on. */
   review?: TrainingReviewState;
-  /**
-   * Who is asking. Anything not yet approved is a draft between its author and
-   * the unit head, so it must not leak into the trainings a learner sees — but the
-   * author still needs to see their own row to fix and resubmit it.
-   */
-  viewer?: { userId: string; seeAll: boolean };
+  /** Published rows plus this author's unapproved rows, unless `seeAll`. */
+  viewer?: TrainingVisibility;
   page?: number;
 }
 
 export type TrainingReviewState = "PENDING" | "PUBLISHED" | "REJECTED";
+
+/** Keep list and aggregate visibility consistent; programme grants do not gate the Trainings register. */
+export function trainingVisibilityFilter(viewer: TrainingVisibility): SQL | undefined {
+  if (viewer.seeAll) return undefined;
+  return or(eq(trainingSessions.reviewState, "PUBLISHED"), eq(trainingSessions.createdById, viewer.userId));
+}
 
 export interface TrainingListRow {
   id: string;
@@ -98,11 +106,7 @@ function whereFor(filters: TrainingFilters): SQL | undefined {
   if (filters.status) clauses.push(eq(trainingSessions.status, filters.status));
   if (filters.review) clauses.push(eq(trainingSessions.reviewState, filters.review));
 
-  if (filters.viewer && !filters.viewer.seeAll) {
-    clauses.push(
-      or(eq(trainingSessions.reviewState, "PUBLISHED"), eq(trainingSessions.createdById, filters.viewer.userId)),
-    );
-  }
+  if (filters.viewer) clauses.push(trainingVisibilityFilter(filters.viewer));
 
   return and(...clauses);
 }
@@ -217,7 +221,7 @@ export interface TrainingSummary {
   attendees: number;
 }
 
-export async function getTrainingSummary(): Promise<TrainingSummary> {
+export async function getTrainingSummary(viewer?: TrainingVisibility): Promise<TrainingSummary> {
   const year = new Date().getFullYear();
   const [row] = await db
     .select({
@@ -225,10 +229,10 @@ export async function getTrainingSummary(): Promise<TrainingSummary> {
       planned: sql<number>`count(*) filter (where ${trainingSessions.status} = 'PLANNED')::int`,
       completed: sql<number>`count(*) filter (where ${trainingSessions.status} = 'COMPLETED')::int`,
       thisYear: sql<number>`count(*) filter (where ${trainingSessions.year} = ${year})::int`,
-      attendees: sql<number>`coalesce(sum(${trainingSessions.attendeeCount}), 0)::int`,
+      attendees: sql<number>`coalesce(sum(${trainingSessions.attendeeCount}) filter (where ${trainingSessions.status} = 'COMPLETED'), 0)::int`,
     })
     .from(trainingSessions)
-    .where(eq(trainingSessions.isArchived, false));
+    .where(and(eq(trainingSessions.isArchived, false), viewer ? trainingVisibilityFilter(viewer) : undefined));
 
   return row ?? { total: 0, planned: 0, completed: 0, thisYear: 0, attendees: 0 };
 }
@@ -427,12 +431,10 @@ export async function listTrainingComments(trainingId: string, limit = 200): Pro
 }
 
 /**
- * Every published training filed under one programme field, newest first.
- *
- * This is what the library's area page shows: the trainings held for that area,
- * so a member of staff can find the one they attended and the material that went
- * with it. Unreviewed rows are excluded — a facilitator's draft is not the
- * library.
+ * Every published Training Session record filed under one Programme Field,
+ * newest first. The Library can show these associated register entries beside
+ * Training Materials; a record is not itself a material or proof of attendance.
+ * Unreviewed rows are excluded from this Library view.
  */
 export interface AreaTrainingRow {
   id: string;
@@ -478,8 +480,8 @@ export async function listTrainingsInArea(programmeAreaId: string, limit = 50): 
 }
 
 /**
- * Trainings per programme area, for the small breakdown under the counters.
- * Grouped in SQL so a field with no trainings can still be shown as zero.
+ * Training Session record counts per Programme Area, for the breakdown under
+ * the counters. Grouped in SQL so an area with no records can still be shown as zero.
  */
 export async function trainingsByField(): Promise<{ fieldName: string; n: number }[]> {
   return db

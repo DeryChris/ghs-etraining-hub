@@ -135,7 +135,7 @@ export default async function TrainingsPage({
           viewer: { userId: session.sub, seeAll: canSeeUnpublished },
           page: query.page,
         }),
-      getTrainingSummary,
+      () => getTrainingSummary({ userId: session.sub, seeAll: canSeeUnpublished }),
       getTrainingFilterOptions,
       listProgrammeFieldOptions,
       listGeography,
@@ -178,8 +178,8 @@ export default async function TrainingsPage({
 
       <PageHeader
         eyebrow="Trainings"
-        title="Every training GHS has planned or run"
-        description="Every training GHS has planned or run: what it covers, who it was for, and where it happened. Filed under a programme area and the field inside it, so coverage can be counted by programme rather than by memory. To browse by subject instead of by year, open the library."
+        title="Training register"
+        description="Find Training Session records, including plans and records marked as held. Filter by Programme Area, Programme Field, year, location, status or review state. Open a training to see the files attached to it."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
@@ -199,10 +199,10 @@ export default async function TrainingsPage({
         aria-label="Training totals"
         className="scroll-mt-24 grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-4"
       >
-        <Stat value={summary.total} label="Trainings recorded" />
-        <Stat value={summary.planned} label="Planned or upcoming" />
-        <Stat value={summary.thisYear} label={`Filed under ${new Date().getFullYear()}`} />
-        <Stat value={summary.attendees.toLocaleString("en-GB")} label="People trained (recorded)" />
+        <Stat value={summary.total} label="Training records" />
+        <Stat value={summary.planned} label="Marked as planned" />
+        <Stat value={summary.thisYear} label={`Records filed for ${new Date().getFullYear()}`} />
+        <Stat value={summary.attendees.toLocaleString("en-GB")} label="Attendee counts recorded" />
       </section>
 
       <nav aria-label="Review queue" className="flex flex-wrap items-center gap-2">
@@ -281,14 +281,14 @@ export default async function TrainingsPage({
 
       <div>
         <label htmlFor="filter-field" className={labelClass}>
-          Programme area
+          Programme Area
         </label>
         <Select
           id="filter-field"
           name="field"
           defaultValue={query.field ?? ""}
           options={[
-            { value: "", label: "All fields" },
+            { value: "", label: "All Programme Areas" },
             ...fields.map((field) => ({ value: field.id, label: field.name })),
           ]}
         />
@@ -296,7 +296,7 @@ export default async function TrainingsPage({
 
       <div>
         <label htmlFor="filter-area" className={labelClass}>
-          Programme field
+          Programme Field
         </label>
         <Select
           id="filter-area"
@@ -304,7 +304,7 @@ export default async function TrainingsPage({
           searchable
           defaultValue={query.area ?? ""}
           options={[
-            { value: "", label: "All areas" },
+            { value: "", label: "All Programme Fields" },
             ...fields.flatMap((field) =>
               field.areas.map((area) => ({ value: area.id, label: area.name, group: field.name })),
             ),
@@ -350,13 +350,13 @@ export default async function TrainingsPage({
 
       {list.items.length === 0 ? (
         <ListEmptyState
-          title={filtered ? "Nothing matches those filters" : "No trainings yet"}
+          title={filtered ? "Nothing matches those filters" : "No Training Session records yet"}
           description={
             filtered
-              ? "Try a wider year, or clear the filters to see every training."
+              ? "Try a wider year, or clear the filters to see the records available to you."
               : mayManage
-                ? "Create the first training: the programme area and its field are the only things that must be right on day one."
-                : "Trainings appear here once the ICT team files them. Check back after the next planning cycle."
+                ? "Create a record with a title, plan year, Programme Area and Programme Field. Add the date and location when known."
+                : "Training Session records appear here after an administrator or facilitator files and publishes them."
           }
           actionText={filtered ? "Clear filters" : mayManage ? "New training" : undefined}
           actionHref={filtered ? "/trainings" : mayManage ? "/trainings/new" : undefined}
@@ -390,8 +390,8 @@ export default async function TrainingsPage({
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 space-y-1.5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
-                      {training.fieldName ?? "Programme field not recorded"}
-                      {training.areaName ? ` · ${training.areaName}` : ""}
+                      Programme Field: {training.fieldName ?? "Not recorded"}
+                      {training.areaName ? ` · Programme Area: ${training.areaName}` : ""}
                     </p>
                     <h2 className="text-base font-bold text-ink transition-colors group-hover:text-primary">{training.title}</h2>
                     {training.targetGroup && <p className="text-sm text-ink-muted">For {training.targetGroup}</p>}
@@ -407,10 +407,10 @@ export default async function TrainingsPage({
                           {place}
                         </span>
                       )}
-                      {training.attendeeCount !== null && (
+                      {training.attendeeCount !== null && training.status === "COMPLETED" && (
                         <span className="inline-flex items-center gap-1.5">
                           <Users className="h-3.5 w-3.5" aria-hidden />
-                          {training.attendeeCount.toLocaleString("en-GB")} trained
+                          {training.attendeeCount.toLocaleString("en-GB")} attendees recorded
                         </span>
                       )}
                     </p>

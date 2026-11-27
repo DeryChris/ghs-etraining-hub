@@ -1,8 +1,11 @@
 import "server-only";
-import { and, count, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { auditLogs, programmeFields, materialVersions, materialViews, materials, programmeAreas, trainingSessions, users } from "@/db/schema";
-import { scopeFor, scopeForTraining } from "@/lib/server/scope";
+import { ACCRA_TIME_ZONE, dateKeyInTimeZone } from "@/lib/dates";
+import { monthBuckets, trafficWindow, type Bucket, type TrafficPeriod } from "@/lib/traffic-periods";
+import { scopeFor } from "@/lib/server/scope";
+import { trainingVisibilityFilter } from "@/lib/server/training-queries";
 import { isStaffRole, type Viewer } from "@/lib/viewer";
 
 /*
@@ -50,7 +53,7 @@ export async function getInsights(viewer: Viewer): Promise<Insights> {
       id: programmeFields.id,
       name: programmeFields.name,
       code: programmeFields.code,
-      published: sql<number>`count(distinct ${materials.id}) filter (where ${materials.state} = 'PUBLISHED')::int`,
+      published: sql<number>`count(distinct ${materials.id}) filter (where ${materials.isPublished} and ${materials.state} = 'PUBLISHED')::int`,
       inReview: sql<number>`count(distinct ${materials.id}) filter (where ${materials.state} = 'IN_REVIEW')::int`,
       programmeAreas: sql<number>`count(distinct ${programmeAreas.id})::int`,
     })
@@ -117,37 +120,16 @@ export async function getInsights(viewer: Viewer): Promise<Insights> {
  * hundred numbers rather than a row per event.
  */
 
-export interface Bucket {
-  /** Sort key, e.g. 2026-11 or 2026-W46. */
-  key: string;
-  /** Axis label, e.g. "Nov" or "12 Oct". */
-  label: string;
+function accraDateKey(date = new Date()): string {
+  return dateKeyInTimeZone(date, ACCRA_TIME_ZONE);
 }
 
-const MONTH_LABEL = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "Africa/Accra" });
-const DAY_LABEL = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "Africa/Accra" });
-
-function monthBuckets(count: number): Bucket[] {
-  const now = new Date();
-  return Array.from({ length: count }, (_, index) => {
-    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (count - 1 - index), 1));
-    return { key: `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`, label: MONTH_LABEL.format(date) };
-  });
+function dateFromKey(key: string): Date {
+  return new Date(`${key}T00:00:00.000Z`);
 }
 
-function weekBuckets(count: number): Bucket[] {
-  const now = new Date();
-  // Monday of the current week, then back `count - 1` weeks.
-  const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const day = (monday.getUTCDay() + 6) % 7;
-  monday.setUTCDate(monday.getUTCDate() - day);
-
-  return Array.from({ length: count }, (_, index) => {
-    const start = new Date(monday);
-    start.setUTCDate(monday.getUTCDate() - (count - 1 - index) * 7);
-    const iso = start.toISOString().slice(0, 10);
-    return { key: iso, label: DAY_LABEL.format(start) };
-  });
+function dateKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }
 
 export interface TrafficSeries {
@@ -155,50 +137,88 @@ export interface TrafficSeries {
   views: number[];
   downloads: number[];
   totals: { views: number; downloads: number };
+  /** Totals for the equal-length reporting window immediately before `buckets`. */
+  previousTotals: { views: number; downloads: number };
 }
 
-/** Views (from material_views) and downloads (from the audit trail), weekly. */
-export async function getTrafficSeries(viewer: Viewer, weeks = 12): Promise<TrafficSeries> {
-  const buckets = weekBuckets(weeks);
-  const since = buckets[0]?.key ?? new Date().toISOString().slice(0, 10);
+/**
+ * Material opens from the daily material_views ledger and completed file issues
+ * from the audit trail. The selected window is compared with the immediately
+ * preceding window of equal length; labels and timestamp grouping use Accra time.
+ * Passing a number remains supported for the Insights page's weekly series.
+ */
+export async function getTrafficSeries(viewer: Viewer, periodOrWeeks: TrafficPeriod | number = "12w"): Promise<TrafficSeries> {
+  const window = trafficWindow(periodOrWeeks);
+  const { unit, buckets, currentStart, currentEnd, previousStart } = window;
+  const currentStartAt = dateFromKey(currentStart);
+  const previousStartAt = dateFromKey(previousStart);
+  const tomorrow = dateFromKey(currentEnd);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const beforeTomorrow = dateFromKey(dateKey(tomorrow));
 
-  const viewRows = await db
-    .select({
-      week: sql<string>`to_char(date_trunc('week', ${materialViews.viewedOn}), 'YYYY-MM-DD')`,
-      n: sql<number>`coalesce(sum(${materialViews.viewCount}), 0)::int`,
-    })
-    .from(materialViews)
-    .innerJoin(materials, eq(materials.id, materialViews.materialId))
-    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(and(scopeFor(viewer), gte(materialViews.viewedOn, since)))
-    .groupBy(sql`date_trunc('week', ${materialViews.viewedOn})`);
+  const viewBucket =
+    unit === "day"
+      ? sql<string>`to_char(${materialViews.viewedOn}, 'YYYY-MM-DD')`
+      : unit === "week"
+        ? sql<string>`to_char(date_trunc('week', ${materialViews.viewedOn}::timestamp), 'YYYY-MM-DD')`
+        : sql<string>`to_char(date_trunc('month', ${materialViews.viewedOn}::timestamp), 'YYYY-MM')`;
+  const downloadBucket =
+    unit === "day"
+      ? sql<string>`to_char(${auditLogs.createdAt} at time zone 'Africa/Accra', 'YYYY-MM-DD')`
+      : unit === "week"
+        ? sql<string>`to_char(date_trunc('week', ${auditLogs.createdAt} at time zone 'Africa/Accra'), 'YYYY-MM-DD')`
+        : sql<string>`to_char(date_trunc('month', ${auditLogs.createdAt} at time zone 'Africa/Accra'), 'YYYY-MM')`;
 
-  const downloadRows = await db
-    .select({
-      week: sql<string>`to_char(date_trunc('week', ${auditLogs.createdAt}), 'YYYY-MM-DD')`,
-      n: sql<number>`count(*)::int`,
-    })
-    .from(auditLogs)
-    .innerJoin(materials, eq(materials.id, sql`${auditLogs.entityId}::uuid`))
-    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(and(eq(auditLogs.action, "MATERIAL_FILE_ISSUED"), scopeFor(viewer), gte(auditLogs.createdAt, new Date(`${since}T00:00:00Z`))))
-    .groupBy(sql`date_trunc('week', ${auditLogs.createdAt})`);
+  const [viewRows, downloadRows] = await Promise.all([
+    db
+      .select({
+        bucket: viewBucket,
+        n: sql<number>`count(*) filter (where ${materialViews.viewedOn} >= ${currentStart}::date and ${materialViews.viewedOn} <= ${currentEnd}::date)::int`,
+        previous: sql<number>`count(*) filter (where ${materialViews.viewedOn} >= ${previousStart}::date and ${materialViews.viewedOn} < ${currentStart}::date)::int`,
+      })
+      .from(materialViews)
+      .innerJoin(materials, eq(materials.id, materialViews.materialId))
+      .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+      .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
+      .where(and(scopeFor(viewer), gte(materialViews.viewedOn, previousStart), lte(materialViews.viewedOn, currentEnd)))
+      .groupBy(viewBucket),
+    db
+      .select({
+        bucket: downloadBucket,
+        n: sql<number>`count(*) filter (where ${auditLogs.createdAt} >= ${currentStartAt} and ${auditLogs.createdAt} < ${beforeTomorrow})::int`,
+        previous: sql<number>`count(*) filter (where ${auditLogs.createdAt} >= ${previousStartAt} and ${auditLogs.createdAt} < ${currentStartAt})::int`,
+      })
+      .from(auditLogs)
+      .innerJoin(materials, eq(materials.id, sql`${auditLogs.entityId}::uuid`))
+      .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
+      .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
+      .where(
+        and(
+          eq(auditLogs.action, "MATERIAL_FILE_ISSUED"),
+          scopeFor(viewer),
+          gte(auditLogs.createdAt, previousStartAt),
+          lt(auditLogs.createdAt, beforeTomorrow),
+        ),
+      )
+      .groupBy(downloadBucket),
+  ]);
 
-  const viewsByWeek = new Map(viewRows.map((row) => [row.week, row.n]));
-  const downloadsByWeek = new Map(downloadRows.map((row) => [row.week, row.n]));
-
-  const views = buckets.map((bucket) => viewsByWeek.get(bucket.key) ?? 0);
-  const downloads = buckets.map((bucket) => downloadsByWeek.get(bucket.key) ?? 0);
+  const viewsByBucket = new Map(viewRows.map((row) => [row.bucket, row.n]));
+  const downloadsByBucket = new Map(downloadRows.map((row) => [row.bucket, row.n]));
+  const views = buckets.map((bucket) => viewsByBucket.get(bucket.key) ?? 0);
+  const downloads = buckets.map((bucket) => downloadsByBucket.get(bucket.key) ?? 0);
 
   return {
     buckets,
     views,
     downloads,
     totals: {
-      views: views.reduce((sum, n) => sum + n, 0),
-      downloads: downloads.reduce((sum, n) => sum + n, 0),
+      views: views.reduce((sum, value) => sum + value, 0),
+      downloads: downloads.reduce((sum, value) => sum + value, 0),
+    },
+    previousTotals: {
+      views: viewRows.reduce((sum, row) => sum + row.previous, 0),
+      downloads: downloadRows.reduce((sum, row) => sum + row.previous, 0),
     },
   };
 }
@@ -209,145 +229,213 @@ export interface UploadSeries {
   total: number;
 }
 
-/** New versions uploaded per month, split by the busiest programmes. */
+/** New Training Material versions per month, grouped by child Programme Field. */
 export async function getUploadSeries(viewer: Viewer, months = 12, topProgrammes = 4): Promise<UploadSeries> {
   const buckets = monthBuckets(months);
-  const since = new Date();
-  since.setUTCDate(1);
-  since.setUTCMonth(since.getUTCMonth() - (months - 1));
+  const since = new Date(`${buckets[0]?.key ?? accraDateKey().slice(0, 7)}-01T00:00:00.000Z`);
+  const tomorrow = dateFromKey(accraDateKey());
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const monthBucket = sql<string>`to_char(date_trunc('month', ${materialVersions.createdAt} at time zone 'Africa/Accra'), 'YYYY-MM')`;
 
   const rows = await db
     .select({
-      month: sql<string>`to_char(date_trunc('month', ${materialVersions.createdAt}), 'YYYY-MM')`,
-      categoryId: programmeFields.id,
-      fieldName: programmeFields.name,
+      month: monthBucket,
+      categoryId: programmeAreas.id,
+      fieldName: programmeAreas.name,
+      parentName: programmeFields.name,
       n: sql<number>`count(*)::int`,
     })
     .from(materialVersions)
     .innerJoin(materials, eq(materials.id, materialVersions.materialId))
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
     .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(and(scopeFor(viewer), gte(materialVersions.createdAt, since)))
-    .groupBy(sql`date_trunc('month', ${materialVersions.createdAt})`, programmeFields.id, programmeFields.name);
+    .where(
+      and(
+        scopeFor(viewer),
+        eq(programmeAreas.isArchived, false),
+        eq(programmeFields.isArchived, false),
+        gte(materialVersions.createdAt, since),
+        lt(materialVersions.createdAt, new Date(`${dateKey(tomorrow)}T00:00:00.000Z`)),
+      ),
+    )
+    .groupBy(monthBucket, programmeAreas.id, programmeAreas.name, programmeFields.name);
 
-  const totals = new Map<string, { name: string; n: number }>();
+  const totals = new Map<string, { label: string; n: number }>();
+  const valuesByMonth = new Map<string, number>();
   for (const row of rows) {
-    const current = totals.get(row.categoryId) ?? { name: row.fieldName, n: 0 };
+    const current = totals.get(row.categoryId) ?? { label: `${row.parentName} → ${row.fieldName}`, n: 0 };
     current.n += row.n;
     totals.set(row.categoryId, current);
+    valuesByMonth.set(`${row.month}:${row.categoryId}`, row.n);
   }
   const leaders = [...totals.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, topProgrammes);
   const leaderIds = new Set(leaders.map(([id]) => id));
+  const otherByMonth = new Map<string, number>();
+  for (const row of rows) {
+    if (!leaderIds.has(row.categoryId)) otherByMonth.set(row.month, (otherByMonth.get(row.month) ?? 0) + row.n);
+  }
 
   const series = [
     ...leaders.map(([id, value]) => ({
-      label: value.name,
-      values: buckets.map((bucket) => rows.find((row) => row.month === bucket.key && row.categoryId === id)?.n ?? 0),
+      label: value.label,
+      values: buckets.map((bucket) => valuesByMonth.get(`${bucket.key}:${id}`) ?? 0),
     })),
     ...(totals.size > leaders.length
-      ? [
-          {
-            label: "Other programmes",
-            values: buckets.map((bucket) =>
-              rows.filter((row) => row.month === bucket.key && !leaderIds.has(row.categoryId)).reduce((sum, row) => sum + row.n, 0),
-            ),
-          },
-        ]
+      ? [{ label: "Other Programme Fields", values: buckets.map((bucket) => otherByMonth.get(bucket.key) ?? 0) }]
       : []),
   ];
 
-  return { buckets, series: series.length ? series : [{ label: "Uploads", values: buckets.map(() => 0) }], total: [...totals.values()].reduce((sum, value) => sum + value.n, 0) };
+  return {
+    buckets,
+    series: series.length ? series : [{ label: "Uploads", values: buckets.map(() => 0) }],
+    total: [...totals.values()].reduce((sum, value) => sum + value.n, 0),
+  };
 }
 
 export interface TrainingSeries {
   buckets: Bucket[];
   counts: number[];
-  byProgramme: { label: string; value: number }[];
+  byProgramme: { label: string; parentLabel: string; value: number }[];
   total: number;
 }
 
-/** Trainings that actually ran, per month and per programme. */
-/** Trainings on record, scoped: the dashboard's "Trainings · 90 days" tile. */
+/** Unarchived Training register counts visible to the current staff member. */
 export interface TrainingCounts {
   total: number;
   last90Days: number;
   attendees: number;
 }
 
+/** Match `/trainings`: admins and unit heads see all review states; facilitators see published records and their own. */
+function trainingVisibilityForInsights(viewer: Viewer) {
+  if (!isStaffRole(viewer.role)) return sql`false`;
+  return trainingVisibilityFilter({
+    userId: viewer.id,
+    seeAll: viewer.role === "SYSTEM_ADMIN" || viewer.unitHead === true,
+  });
+}
+
 export async function getTrainingCounts(viewer: Viewer): Promise<TrainingCounts> {
-  const since = new Date();
-  since.setUTCDate(since.getUTCDate() - 90);
-  const sinceDate = since.toISOString().slice(0, 10);
+  const throughDate = accraDateKey();
+  const since = dateFromKey(throughDate);
+  since.setUTCDate(since.getUTCDate() - 89);
+  const sinceDate = dateKey(since);
 
   const [row] = await db
     .select({
       total: sql<number>`count(*)::int`,
-      last90Days: sql<number>`count(*) filter (where ${trainingSessions.organisedOn} >= ${sinceDate})::int`,
-      attendees: sql<number>`coalesce(sum(${trainingSessions.attendeeCount}), 0)::int`,
+      last90Days: sql<number>`count(*) filter (where ${trainingSessions.organisedOn} >= ${sinceDate} and ${trainingSessions.organisedOn} <= ${throughDate})::int`,
+      attendees: sql<number>`coalesce(sum(${trainingSessions.attendeeCount}) filter (where ${trainingSessions.status} = 'COMPLETED'), 0)::int`,
     })
     .from(trainingSessions)
-    .where(and(scopeForTraining(viewer), eq(trainingSessions.isArchived, false)));
+    .where(and(trainingVisibilityForInsights(viewer), eq(trainingSessions.isArchived, false)));
 
   return { total: row?.total ?? 0, last90Days: row?.last90Days ?? 0, attendees: row?.attendees ?? 0 };
 }
 
+/** Training register records visible to the viewer, grouped by Programme Area → Programme Field. */
 export async function getTrainingSeries(viewer: Viewer, months = 12): Promise<TrainingSeries> {
   const buckets = monthBuckets(months);
-  const since = new Date();
-  since.setUTCDate(1);
-  since.setUTCMonth(since.getUTCMonth() - (months - 1));
-  const sinceDate = since.toISOString().slice(0, 10);
+  const sinceDate = `${buckets[0]?.key ?? accraDateKey().slice(0, 7)}-01`;
+  const throughDate = accraDateKey();
+  const monthBucket = sql<string>`to_char(date_trunc('month', ${trainingSessions.organisedOn}::timestamp), 'YYYY-MM')`;
 
   const rows = await db
     .select({
-      month: sql<string>`to_char(date_trunc('month', ${trainingSessions.organisedOn}), 'YYYY-MM')`,
-      fieldName: programmeFields.name,
+      month: monthBucket,
+      fieldId: programmeAreas.id,
+      fieldName: programmeAreas.name,
+      parentId: programmeFields.id,
+      parentName: programmeFields.name,
       n: sql<number>`count(*)::int`,
     })
     .from(trainingSessions)
-    .innerJoin(programmeFields, eq(programmeFields.id, trainingSessions.programmeFieldId))
-    .where(and(scopeForTraining(viewer), eq(trainingSessions.isArchived, false), gte(trainingSessions.organisedOn, sinceDate)))
-    .groupBy(sql`date_trunc('month', ${trainingSessions.organisedOn})`, programmeFields.name);
+    .leftJoin(programmeFields, eq(programmeFields.id, trainingSessions.programmeFieldId))
+    .leftJoin(
+      programmeAreas,
+      and(
+        eq(programmeAreas.id, trainingSessions.programmeAreaId),
+        eq(programmeAreas.fieldId, trainingSessions.programmeFieldId),
+      ),
+    )
+    .where(
+      and(
+        trainingVisibilityForInsights(viewer),
+        eq(trainingSessions.isArchived, false),
+        gte(trainingSessions.organisedOn, sinceDate),
+        lte(trainingSessions.organisedOn, throughDate),
+      ),
+    )
+    .groupBy(monthBucket, programmeAreas.id, programmeAreas.name, programmeFields.id, programmeFields.name);
 
-  const byProgramme = new Map<string, number>();
-  for (const row of rows) byProgramme.set(row.fieldName, (byProgramme.get(row.fieldName) ?? 0) + row.n);
+  const byProgramme = new Map<string, { label: string; parentLabel: string; value: number }>();
+  for (const row of rows) {
+    const key = row.fieldId ?? `unassigned:${row.parentId ?? "unknown"}`;
+    const current = byProgramme.get(key) ?? {
+      label: row.fieldName ?? "Programme Field not recorded",
+      parentLabel: row.parentName ?? "Programme Area not recorded",
+      value: 0,
+    };
+    current.value += row.n;
+    byProgramme.set(key, current);
+  }
 
   return {
     buckets,
     counts: buckets.map((bucket) => rows.filter((row) => row.month === bucket.key).reduce((sum, row) => sum + row.n, 0)),
-    byProgramme: [...byProgramme.entries()]
-      .map(([label, value]) => ({ label, value }))
-      .sort((a, b) => b.value - a.value),
+    byProgramme: [...byProgramme.values()].sort((a, b) => b.value - a.value),
     total: rows.reduce((sum, row) => sum + row.n, 0),
   };
 }
 
-/** Views of published material in the last 30 days, per programme. */
-export async function getProgrammeTraffic(viewer: Viewer, days = 30): Promise<{ label: string; value: number }[]> {
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+export interface ProgrammeTrafficRow {
+  id: string;
+  /** Child Programme Field. */
+  label: string;
+  /** Parent Programme Area. */
+  parentLabel: string;
+  value: number;
+}
+
+/** Material opens in the last 30 calendar days, grouped by Programme Area → Programme Field. */
+export async function getProgrammeTraffic(viewer: Viewer, days = 30): Promise<ProgrammeTrafficRow[]> {
+  const today = dateFromKey(accraDateKey());
+  today.setUTCDate(today.getUTCDate() - Math.max(0, days - 1));
+  const since = dateKey(today);
   const rows = await db
-    .select({ label: programmeFields.name, n: sql<number>`coalesce(sum(${materialViews.viewCount}), 0)::int` })
+    .select({
+      id: programmeAreas.id,
+      label: programmeAreas.name,
+      parentLabel: programmeFields.name,
+      n: sql<number>`count(*)::int`,
+    })
     .from(materialViews)
     .innerJoin(materials, eq(materials.id, materialViews.materialId))
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
     .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-    .where(and(scopeFor(viewer), gte(materialViews.viewedOn, since)))
-    .groupBy(programmeFields.name)
-    .orderBy(desc(sql`coalesce(sum(${materialViews.viewCount}), 0)`));
-  return rows.map((row) => ({ label: row.label, value: row.n }));
+    .where(and(scopeFor(viewer), gte(materialViews.viewedOn, since), lte(materialViews.viewedOn, accraDateKey())))
+    .groupBy(programmeAreas.id, programmeAreas.name, programmeFields.name)
+    .orderBy(desc(sql`count(*)`));
+  return rows.map((row) => ({ id: row.id, label: row.label, parentLabel: row.parentLabel, value: row.n }));
 }
 
 /** A person's own traffic, for "My activity". Never another person's. */
 export async function getMyTraffic(userId: string, days = 30): Promise<{ opens: number; materials: number; downloads: number; days: number }> {
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const periodDays = Math.max(1, Math.floor(days));
+  const today = dateFromKey(accraDateKey());
+  const sinceDate = new Date(today);
+  sinceDate.setUTCDate(sinceDate.getUTCDate() - (periodDays - 1));
+  const since = dateKey(sinceDate);
+  const beforeTomorrow = new Date(today);
+  beforeTomorrow.setUTCDate(beforeTomorrow.getUTCDate() + 1);
 
   const [viewRow] = await db
     .select({
-      opens: sql<number>`coalesce(sum(${materialViews.viewCount}), 0)::int`,
+      opens: sql<number>`count(*)::int`,
       materials: sql<number>`count(distinct ${materialViews.materialId})::int`,
     })
     .from(materialViews)
-    .where(and(eq(materialViews.userId, userId), gte(materialViews.viewedOn, since)));
+    .where(and(eq(materialViews.userId, userId), gte(materialViews.viewedOn, since), lte(materialViews.viewedOn, dateKey(today))));
 
   const [downloadRow] = await db
     .select({ n: sql<number>`count(*)::int` })
@@ -356,7 +444,8 @@ export async function getMyTraffic(userId: string, days = 30): Promise<{ opens: 
       and(
         eq(auditLogs.action, "MATERIAL_FILE_ISSUED"),
         eq(auditLogs.userId, userId),
-        gte(auditLogs.createdAt, new Date(`${since}T00:00:00Z`)),
+        gte(auditLogs.createdAt, new Date(`${since}T00:00:00.000Z`)),
+        lt(auditLogs.createdAt, beforeTomorrow),
       ),
     );
 
@@ -364,14 +453,15 @@ export async function getMyTraffic(userId: string, days = 30): Promise<{ opens: 
     opens: viewRow?.opens ?? 0,
     materials: viewRow?.materials ?? 0,
     downloads: downloadRow?.n ?? 0,
-    days,
+    days: periodDays,
   };
 }
 
 /* ── Published material by type ──────────────────────────────────────────────
- * The donut on both dashboards. Counted through the programme taxonomy, so a
- * scoped facilitator sees their own areas' material and an administrator sees
- * everything — the same shape, honestly narrowed.
+ * The donut and the published-material KPI use the same publication, taxonomy
+ * and viewer-scope predicates. Materials remain classified by their declared
+ * type even if a current file is missing; otherwise that extra version check
+ * would make the visible categories fail to reconcile with the headline total.
  */
 
 export const MATERIAL_TYPE_ORDER = ["DOCUMENT", "VIDEO", "LAB", "ASSESSMENT_LINK"] as const;
@@ -379,29 +469,20 @@ export type MaterialTypeKey = (typeof MATERIAL_TYPE_ORDER)[number];
 
 export async function getTypeMix(viewer: Viewer): Promise<{ type: MaterialTypeKey; count: number }[]> {
   const rows = await db
-    .select({ type: materials.type, n: sql<number>`count(*)::int` })
+    .select({ type: materials.type, n: sql<number>`count(distinct ${materials.id})::int` })
     .from(materials)
     .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
     .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
     .where(
       and(
         scopeFor(viewer),
+        eq(programmeAreas.isArchived, false),
+        eq(programmeFields.isArchived, false),
         eq(materials.isPublished, true),
         eq(materials.state, "PUBLISHED"),
-        isNotNull(materials.currentVersionId),
       ),
     )
     .groupBy(materials.type);
   const byType = new Map(rows.map((row) => [row.type, row.n]));
   return MATERIAL_TYPE_ORDER.map((type) => ({ type, count: byType.get(type) ?? 0 }));
-}
-
-/** Percentage change between the two halves of a series, or null when there is nothing to compare. */
-export function periodDelta(values: number[]): number | null {
-  if (values.length < 4) return null;
-  const half = Math.floor(values.length / 2);
-  const previous = values.slice(0, half).reduce((sum, value) => sum + value, 0);
-  const current = values.slice(half).reduce((sum, value) => sum + value, 0);
-  if (previous === 0) return current === 0 ? null : 100;
-  return ((current - previous) / previous) * 100;
 }

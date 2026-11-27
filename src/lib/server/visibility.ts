@@ -12,9 +12,11 @@ import { isStaffRole, type Viewer } from "@/lib/viewer";
  * Columns are always referenced through the drizzle table objects, never as raw
  * sql`` fragments: unqualified column names break correlated subqueries.
  *
- * Since ADR-0014 there is one taxonomy: a programme area holds areas, an area
- * holds materials. "Live" therefore means both the field and the area are not
- * archived, and audience targeting is read off the area.
+ * Since ADR-0014 there is one taxonomy. In the user-facing hierarchy,
+ * `programme_fields` stores parent Programme Areas and `programme_areas` stores
+ * child Programme Fields; materials point to the child. "Live" means both
+ * parent and child are not archived, and audience targeting is read from the
+ * child Programme Field.
  */
 
 /** Only live, published material — drafts belong to the authoring surfaces. */
@@ -24,10 +26,10 @@ export const liveArea = eq(programmeAreas.isArchived, false);
 export const liveField = eq(programmeFields.isArchived, false);
 
 /**
- * Audience targeting: an area with no audience is for everyone; an area that
- * names a region, directorate or grade is for that cohort only. Staff are exempt
- * (they review content outside their own cohort), and a viewer with no cohort
- * attribute is compared against "" so it matches untargeted content only.
+ * Audience targeting: a Programme Field with no audience is for everyone; a
+ * Programme Field that names a region, directorate or grade is for that cohort
+ * only. Staff roles are exempt (they may review content outside their own
+ * cohort), and a viewer with no cohort attribute matches untargeted content only.
  */
 export function audienceFor(viewer: Viewer | null): SQL | undefined {
   if (viewer && isStaffRole(viewer.role)) return undefined;
@@ -38,7 +40,7 @@ export function audienceFor(viewer: Viewer | null): SQL | undefined {
   );
 }
 
-/** Restricted fields (sensitive clinical programmes) are staff-only. */
+/** Restricted parent Programme Areas are hidden from Staff accounts. */
 export function fieldFor(viewer: Viewer | null): SQL | undefined {
   if (viewer && isStaffRole(viewer.role)) return undefined;
   return eq(programmeFields.isRestricted, false);

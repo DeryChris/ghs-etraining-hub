@@ -1,5 +1,5 @@
 /**
- * Reference geography for the pilot region, and the national region list.
+ * Reference geography for the Upper West service scope, plus national region names retained for reference.
  *
  * **Provenance.** Regions are the sixteen administrative regions of Ghana (2019
  * boundaries). The Upper West districts, sub-districts and facilities below are
@@ -33,7 +33,7 @@ export interface SeedRegion {
   name: string;
 }
 
-/** The sixteen regions of Ghana (2019 boundaries). Upper West is the pilot. */
+/** Ghana's sixteen region names (2019 boundaries), retained as reference geography; the service scope is Upper West. */
 export const REGIONS: SeedRegion[] = [
   { code: "AA", name: "Ashanti" },
   { code: "AH", name: "Ahafo" },

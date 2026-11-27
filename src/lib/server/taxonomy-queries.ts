@@ -21,13 +21,14 @@ import type {
 } from "@/lib/labels";
 
 /*
- * Reference data for the two administration surfaces and for every picker that
- * depends on them: the programme taxonomy (field → area) and the geography
- * (region → district → sub-district → facility).
+ * Reference data for the administration surfaces and pickers. The stored
+ * programme taxonomy is `programme_fields` → `programme_areas`, which maps to
+ * the user-facing hierarchy Programme Areas → Programme Fields. Geography is
+ * region → district → sub-district → facility.
  *
- * Both are read whole. They are small — ten fields, sixteen regions — and the
- * pickers need the entire chain anyway to filter a select without a round trip,
- * so a page costs one query per table instead of one per box.
+ * The programme taxonomy and the reference geography are small enough to read
+ * together; pickers need the full chain to filter a select without another
+ * round trip, so a page costs one query per table instead of one per box.
  */
 
 /* ── Programme taxonomy ─────────────────────────────────────────────────── */

@@ -241,8 +241,8 @@ export function ComplaintCard({ complaint }: { complaint: ComplaintCardData }) {
           <input type="hidden" name="complaintId" value={complaint.id} />
           <p className="text-sm font-bold text-ink">Reset this person&apos;s access</p>
           <p className="text-xs leading-relaxed text-ink-muted">
-            Sets a temporary password, corrects the email address if it was wrong, and closes this complaint with the new
-            details written into the answer.
+            Sets a temporary password, corrects the email address if it was wrong, and closes this complaint. The
+            generated password is shown here to you once and is not saved in the public answer.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -272,14 +272,16 @@ export function ComplaintCard({ complaint }: { complaint: ComplaintCardData }) {
           </div>
           <div>
             <label htmlFor={`reset-note-${complaint.id}`} className={labelClass}>
-              Note to include in the answer
+              Public note to include in the answer
             </label>
             <input
               id={`reset-note-${complaint.id}`}
               name="note"
               placeholder="Your email has been corrected."
+              maxLength={500}
               className={inputClass}
             />
+            <p className="mt-1 text-xs text-ink-muted">Do not include passwords or other secrets here. The temporary password is shown separately.</p>
           </div>
           <button type="submit" disabled={resetPending} aria-busy={resetPending} className={buttonClass({ size: "sm" })}>
             {resetPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <KeyRound className="h-4 w-4" aria-hidden />}

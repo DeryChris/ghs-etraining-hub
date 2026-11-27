@@ -145,8 +145,8 @@ export function TrainingForm({
           {mode === "create" ? "New training" : "Edit training"}
         </h2>
         <p className="text-sm text-ink-muted">
-          Three short steps. Title, plan year and programme area are the only things that must be there — place
-          and date can be filled in later, because a plan is allowed to be provisional.
+          Three short steps. Title, plan year, Programme Area and Programme Field are required. Place and dates can
+          be filled in later because a training plan can be provisional.
         </p>
       </div>
 
@@ -154,7 +154,7 @@ export function TrainingForm({
         steps={[
           {
             title: "The basics",
-            blurb: "what it is and which programme area owns it — the only step with required fields.",
+            blurb: "what it is and which Programme Area and Programme Field it belongs to — required fields.",
           },
           {
             title: "Where and when",
@@ -162,7 +162,7 @@ export function TrainingForm({
           },
           {
             title: "The record",
-            blurb: "status, how many people came, and the paragraph that will sit under the title.",
+            blurb: "status, an attendee count if recorded, and notes for the Training Session entry.",
           },
         ]}
         panels={[
@@ -205,16 +205,16 @@ export function TrainingForm({
           </div>
           <div>
             <label htmlFor="training-field" className={labelClass}>
-              Programme area <span className="text-danger">*</span>
+              Programme Area <span className="text-danger">*</span>
             </label>
             <Select
               id="training-field"
               name="programmeFieldId"
               required
               value={fieldId}
-              placeholder="— Select programme area —"
+              placeholder="— Select Programme Area —"
               options={[
-                { value: "", label: "— Select programme area —" },
+                { value: "", label: "— Select Programme Area —" },
                 ...fields.map((field) => ({ value: field.id, label: field.name })),
               ]}
               onChange={(next) => {
@@ -225,7 +225,7 @@ export function TrainingForm({
           </div>
           <div>
             <label htmlFor="training-area" className={labelClass}>
-              Programme field <span className="text-danger">*</span>
+              Programme Field <span className="text-danger">*</span>
             </label>
             <Select
               id="training-area"
@@ -233,18 +233,18 @@ export function TrainingForm({
               required
               value={areaId}
               disabled={!fieldId}
-              placeholder={fieldId ? "— Select programme field —" : "— Select programme area first —"}
+              placeholder={fieldId ? "— Select Programme Field —" : "— Select Programme Area first —"}
               options={[
                 {
                   value: "",
-                  label: fieldId ? "— Select programme field —" : "— Select programme area first —",
+                  label: fieldId ? "— Select Programme Field —" : "— Select Programme Area first —",
                 },
                 ...areas.map((area) => ({ value: area.id, label: area.name })),
               ]}
               onChange={setAreaId}
             />
             {fieldId && areas.length === 0 && (
-              <p className={hintClass}>That area has no fields yet. Add one under Administration → Programme areas.</p>
+              <p className={hintClass}>That Programme Area has no Programme Fields yet. Add one under Administration → Programme Areas.</p>
             )}
           </div>
           <div>
@@ -284,7 +284,7 @@ export function TrainingForm({
             />
             <p className={hintClass}>
               {regionChoices.length <= 1
-                ? "The library is live in Upper West only; the other regions are added as the rollout reaches them."
+                ? "The platform serves the Upper West Region only."
                 : "Only regions where the library is live are listed."}
             </p>
           </div>
@@ -322,7 +322,7 @@ export function TrainingForm({
             />
             <p className={hintClass}>
               {regionChoices.length <= 1
-                ? "The library is live in Upper West only; the other regions are added as the rollout reaches them."
+                ? "The platform serves the Upper West Region only."
                 : "Only regions where the library is live are listed."}
             </p>
           </div>
@@ -357,7 +357,7 @@ export function TrainingForm({
             />
             <p className={hintClass}>
               {regionChoices.length <= 1
-                ? "The library is live in Upper West only; the other regions are added as the rollout reaches them."
+                ? "The platform serves the Upper West Region only."
                 : "Only regions where the library is live are listed."}
             </p>
           </div>
@@ -476,7 +476,7 @@ export function TrainingForm({
           </div>
           <div>
             <label htmlFor="training-attendees" className={labelClass}>
-              People trained
+              Attendee count (recorded)
             </label>
             <input
               id="training-attendees"
@@ -487,7 +487,7 @@ export function TrainingForm({
               defaultValue={start.attendeeCount}
               className={inputClass}
             />
-            <p className={hintClass}>Fill this in once the training has run.</p>
+            <p className={hintClass}>Use a count from the Training Session record; leave blank if no count was recorded.</p>
           </div>
           <div className="md:col-span-2">
             <label htmlFor="training-notes" className={labelClass}>

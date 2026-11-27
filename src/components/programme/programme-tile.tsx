@@ -115,15 +115,20 @@ export function ProgrammeFieldTile({
       icon={<FieldTileIcon code={field.code} size={46} />}
       meta={
         <>
-          {field.areaCount} {field.areaCount === 1 ? "field" : "fields"}
+          {field.areaCount} {field.areaCount === 1 ? "Programme Field" : "Programme Fields"} ·{" "}
+          {field.materialCount} {field.materialCount === 1 ? "Training Material" : "Training Materials"}
           {typeof field.trainingCount === "number" ? (
-            <> · {field.trainingCount} {field.trainingCount === 1 ? "training" : "trainings"}</>
+            <> · {field.trainingCount} {field.trainingCount === 1 ? "Training Session record" : "Training Session records"}</>
           ) : null}
         </>
       }
       cta={
         <>
-          {href.startsWith("/trainings") ? "See trainings" : href.startsWith("/programmes") ? "Open programmes" : "Open area"}
+          {href.startsWith("/trainings")
+            ? "See Training records"
+            : href.startsWith("/programmes")
+              ? "View Programme Area"
+              : "Open Programme Area"}
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
         </>
       }
@@ -152,7 +157,7 @@ export function ProgrammeAreaTile({
       cta={
         <>
           <FolderOpen className="h-3.5 w-3.5" aria-hidden />
-          Open field
+          Open Programme Field
         </>
       }
     />

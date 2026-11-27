@@ -8,6 +8,7 @@ import {
   materialViews,
   materials,
   programmeAreas,
+  regions,
   trainingSessions,
   users,
 } from "@/db/schema";
@@ -15,6 +16,7 @@ import type { MaterialType, PriorityLevel } from "@/lib/labels";
 import { log } from "@/lib/server/logger";
 import { audienceFor, fieldFor, liveField, liveArea, publishedMaterial } from "@/lib/server/visibility";
 import type { Viewer } from "@/lib/viewer";
+import { UPPER_WEST_REGION_CODE } from "@/db/data/geography";
 
 function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`);
@@ -47,11 +49,13 @@ export async function listFields(viewer: Viewer | null): Promise<FieldCard[]> {
   const trainingTotal = db
     .select({ n: count() })
     .from(trainingSessions)
+    .innerJoin(regions, eq(regions.id, trainingSessions.regionId))
     .where(
       and(
         eq(trainingSessions.programmeFieldId, programmeFields.id),
         eq(trainingSessions.reviewState, "PUBLISHED"),
         eq(trainingSessions.isArchived, false),
+        eq(regions.code, UPPER_WEST_REGION_CODE),
       ),
     );
 
@@ -123,7 +127,7 @@ export interface AreaCard {
   trainingCount: number;
 }
 
-export async function listAreasInField(fieldId: string, viewer: Viewer): Promise<AreaCard[]> {
+export async function listAreasInField(fieldId: string, viewer: Viewer | null): Promise<AreaCard[]> {
   const materialTotal = db
     .select({ n: count() })
     .from(materials)
@@ -132,7 +136,15 @@ export async function listAreasInField(fieldId: string, viewer: Viewer): Promise
   const trainingTotal = db
     .select({ n: count() })
     .from(trainingSessions)
-    .where(and(eq(trainingSessions.programmeAreaId, programmeAreas.id), eq(trainingSessions.reviewState, "PUBLISHED")));
+    .innerJoin(regions, eq(regions.id, trainingSessions.regionId))
+    .where(
+      and(
+        eq(trainingSessions.programmeAreaId, programmeAreas.id),
+        eq(trainingSessions.reviewState, "PUBLISHED"),
+        eq(trainingSessions.isArchived, false),
+        eq(regions.code, UPPER_WEST_REGION_CODE),
+      ),
+    );
 
   return db
     .select({
@@ -187,7 +199,7 @@ export interface MaterialListItem {
   authorName: string;
 }
 
-export async function listMaterialsInArea(programmeAreaId: string, viewer: Viewer): Promise<MaterialListItem[]> {
+export async function listMaterialsInArea(programmeAreaId: string, viewer: Viewer | null): Promise<MaterialListItem[]> {
   return db
     .select({
       id: materials.id,

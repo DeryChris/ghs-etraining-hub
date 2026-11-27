@@ -24,8 +24,7 @@ export function NewDraftForm({ programmeAreas }: { programmeAreas: AuthoringArea
   if (programmeAreas.length === 0) {
     return (
       <p className="rounded-control border border-hairline bg-surface-2 px-4 py-3 text-sm text-ink-muted">
-        You are not assigned to a directorate yet, so you cannot author material. Ask an administrator to assign you to
-        one in <span className="font-semibold text-ink">Programmes</span>.
+        No Programme Area or Programme Field material-authoring scope is assigned to you yet. Ask a system administrator to update your access under <span className="font-semibold text-ink">Users → Access</span>.
       </p>
     );
   }
@@ -35,7 +34,7 @@ export function NewDraftForm({ programmeAreas }: { programmeAreas: AuthoringArea
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label htmlFor="draft-area" className={labelClass}>
-            Programme area
+            Programme Field
           </label>
           <Select
             id="draft-area"
@@ -43,7 +42,7 @@ export function NewDraftForm({ programmeAreas }: { programmeAreas: AuthoringArea
             required
             searchable
             defaultValue=""
-            placeholder="Choose a programme area"
+            placeholder="Choose a Programme Field"
             options={programmeAreas.map((area) => ({
               value: area.id,
               label: area.name,

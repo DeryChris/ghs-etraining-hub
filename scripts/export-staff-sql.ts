@@ -103,7 +103,7 @@ async function main() {
   const push = (value = "") => lines.push(value);
 
   push("/*");
-  push(" * GHS Training Library — staff accounts, generated from the staffing sheet.");
+  push(" * GHS-UWRHD Training Library — staff accounts, generated from the staffing sheet.");
   push(` * ${rows.length} people. Generated ${new Date().toISOString().slice(0, 10)} by npm run staff:sql.`);
   push(" *");
   push(" * Safe to run twice: everything is an upsert on a natural key. Existing passwords,");

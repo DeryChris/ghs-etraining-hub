@@ -11,10 +11,10 @@ npm run lint
 npm test
 npm run db:check                         # migration/snapshot consistency
 npm run build                            # hermetic: no Google Fonts / CDN fetch
-npm run test:e2e:public                  # needs DATABASE_URL and SESSION_SECRET in .env.local
+npm run test:e2e:public                  # browse-route test needs a migrated DB with the reference taxonomy; Playwright browsers installed
 curl -s localhost:3000/api/health        # expect {"ok":true,...}
 npm run db:migrate                       # not drizzle-kit push
-npm run db:seed                          # idempotent: run twice, counts must not change
+npm run db:seed                          # reference data; fresh DB gets passwordless admin, no sample content
 npm run db:verify-chain                  # audit chain intact
 ```
 
@@ -38,7 +38,8 @@ For each row of `docs/rbac.md` §1, as each role:
   audited.
 * Erasure drill: deactivate‑and‑anonymise leaves the open and audit history intact
   with the display name replaced and PII columns nulled.
-* No public endpoint returns a person's name, staff ID or record: nothing is published about a person.
+* Public Programme browse and counters must not expose staff names, Staff IDs or directory records. Do not claim every public route is PII-free: `/register` intentionally displays the matched directory preview after a Staff ID lookup, and `/help/status` returns complaints and saved responses for a supplied Staff ID (legacy temporary-password text is redacted). Those flows are public and rate-limited, not proof of identity; test their exact scope and obtain privacy/security approval before using real personal data.
+* Access reset must never persist the generated password in `complaints.response`; it is returned only in the administrator action state. The migration `0023_redact_legacy_complaint_passwords` removes previously saved values, and the public status query redacts legacy text as a defense-in-depth check.
 
 ## 3a. Two shells drill
 
@@ -76,18 +77,20 @@ mobile, and a 200 % zoom check for horizontal scrolling.
 2. Submits for review → `/review` lists it for colleagues; the uploader sees "You uploaded this
    version" instead of Approve/Send back.
 3. Publish with no approval → refused by `publishBlockers()` with a named blocker. After a colleague
-   approves, publish → `currentVersionId` flips, learners see v1, audit `MATERIAL_PUBLISHED` recorded.
-   A `SYSTEM_ADMIN` override without a reason ≥ 10 characters is still refused.
-4. Upload v2 → v1 becomes `SUPERSEDED`, learners still see v1 until v2 is published.
-5. Re‑open a learner's progress record → it still points at v1 (`material_version_id`).
-6. Old version shows the "This version has been replaced" banner and remains readable.
+   approves, publish → `currentVersionId` points to v1 and audit `MATERIAL_PUBLISHED` is recorded.
+   A `SYSTEM_ADMIN` override without a reason of at least 10 characters is still refused.
+4. Upload v2 and submit it for review → v1 remains the current published version while v2 is pending.
+   After v2 is approved and published, the pointer changes to v2 and v1 becomes `SUPERSEDED`.
+5. Check the signed-in Staff activity view: opens and downloads may be attributed to the material and
+   version opened. No learner progress, attendance or completion record is created from that activity.
+6. The old version is clearly marked as superseded and remains available to authorised users.
 
 ### 6a. Notice targeting drill
 
-1. As a facilitator, send a notice to a space whose audience is one directorate.
-2. Sign in as a learner in a different directorate → the notice is absent from `/notifications` and
-   from the sidebar count; as a learner in that directorate → it is present.
-3. Learner with a blank directorate → absent (a narrowed notice never leaks to "unknown").
+1. As a facilitator, send a notice to an assigned Programme Field with a narrowed grade audience.
+2. Sign in as a Staff user in a different grade → the notice is absent from `/notifications` and
+   from the sidebar count; as a Staff user in that grade → it is present.
+3. Staff user with a blank grade → absent (a narrowed notice never leaks to "unknown").
 4. Mark all as read → only visible notices get read cursors; re-open as the other cohort and the
    notice is still unread.
 5. `NOTIFICATION_BROADCAST` appears in the audit log with the audience filter.

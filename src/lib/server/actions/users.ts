@@ -92,8 +92,8 @@ const createInput = z
 /**
  * "There are N things waiting for you."
  *
- * Run after an appointment — a new unit head, a field granted, a role change —
- * because a live queue is only useful if the person knows to look at it. Silent
+ * Run after an appointment — a new unit head, a Programme Area/Field grant or a
+ * role change — because a live queue is only useful if the person knows to look. Silent
  * when nothing is waiting: an empty notification is noise.
  */
 async function announceWaiting(userId: string, actorId: string): Promise<void> {
@@ -119,7 +119,7 @@ async function announceWaiting(userId: string, actorId: string): Promise<void> {
     await notifyAccount({
       userId,
       title: "The review queue is yours now",
-      body: `${total} item${total === 1 ? "" : "s"} in your programme fields ${total === 1 ? "is" : "are"} already waiting for a decision — ${waiting.trainings} training${waiting.trainings === 1 ? "" : "s"} and ${waiting.materials} material${waiting.materials === 1 ? "" : "s"}.`,
+      body: `${total} item${total === 1 ? " is" : "s are"} in your assigned programme scope and waiting for a decision — ${waiting.trainings} training${waiting.trainings === 1 ? "" : "s"} and ${waiting.materials} material${waiting.materials === 1 ? "" : "s"}.`,
       actorId,
       priority: "HIGH",
     });
@@ -576,10 +576,11 @@ export async function updateUserDetailsAction(
   return { ok: true, message: `Details saved for ${parsed.data.fullName}.` };
 }
 
-/* ── Access: programme fields and areas ──────────────────────────────────────
- * Replaces the whole grant set in one transaction, so the screen's checkboxes
- * mean what they say. A field grant covers every area inside it, including ones
- * created later; an area grant covers just that area.
+/* ── Access: Programme Areas and Programme Fields ────────────────────────────
+ * Legacy names: fieldIds point to parent Programme Areas; areaIds point to
+ * child Programme Fields. Replaces the whole grant set in one transaction. A
+ * Programme Area grant covers every child Programme Field, including later
+ * additions; a Programme Field grant covers only that field.
  */
 
 export async function setUserAccessAction(
@@ -605,7 +606,7 @@ export async function setUserAccessAction(
   if (target.role === "LEARNER") {
     return {
       ok: false,
-      message: `${target.fullName} has the staff role. Make them a facilitator first, then choose the programme fields they hold.`,
+      message: `${target.fullName} has the Staff role. Make them a facilitator first, then assign Programme Areas or Programme Fields.`,
     };
   }
 
@@ -647,7 +648,10 @@ export async function setUserAccessAction(
     .limit(1);
   if (after?.isUnitHead || after?.role === "SYSTEM_ADMIN") await announceWaiting(userId, session.sub);
 
-  const summary = [fieldIds.length ? `${fieldIds.length} field${fieldIds.length === 1 ? "" : "s"}` : null, areaIds.length ? `${areaIds.length} area${areaIds.length === 1 ? "" : "s"}` : null]
+  const summary = [
+    fieldIds.length ? `${fieldIds.length} Programme Area${fieldIds.length === 1 ? "" : "s"}` : null,
+    areaIds.length ? `${areaIds.length} Programme Field${areaIds.length === 1 ? "" : "s"}` : null,
+  ]
     .filter(Boolean)
     .join(" and ");
   return {

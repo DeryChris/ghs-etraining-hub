@@ -9,12 +9,11 @@ export const metadata: Metadata = { title: "Create an account" };
 export const dynamic = "force-dynamic";
 
 /**
- * Claim an account the staff sheet already describes.
+ * Claim an account for a staff-directory record that already exists.
  *
- * One column, the way a form with a paper equivalent is: the employee number
- * first, then the facts HRIMS holds, then the three things only the person knows.
- * The card is wider than the sign-in panel because the HRIMS block is two columns
- * of read-only facts and squeezing them made the form look like a table.
+ * The employee number is checked first; directory facts are shown read-only,
+ * followed by the contact details and password the person supplies. The card is
+ * wider than the sign-in panel because the directory details use two columns.
  */
 export default function RegisterPage() {
   return (
@@ -26,8 +25,8 @@ export default function RegisterPage() {
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-ink-muted">{SITE.fullName}</p>
             <h1 className="text-2xl font-extrabold tracking-tight text-ink">Create an account</h1>
             <p className="mx-auto max-w-md text-[13px] leading-relaxed text-ink-muted">
-              Enter your GHS Staff ID and we verify it against HRIMS. Your name, region, facility and grade are read
-              from the sheet — you choose a password and confirm where we can reach you.
+              Enter your GHS Staff ID and we check it against the existing staff directory. If the record can be
+              claimed, your directory details are shown and you choose a password and contact information.
             </p>
           </div>
         </div>
@@ -35,11 +34,11 @@ export default function RegisterPage() {
         <RegisterForm />
 
         <p className="border-t border-hairline pt-4 text-center text-[12px] leading-relaxed text-ink-muted">
-          Not on the staff sheet, or the number is wrong?{" "}
+          Staff ID not recognised, or a directory detail is wrong?{" "}
           <Link href="/help/report" className="font-semibold text-primary underline underline-offset-4">
             Lodge a complaint
           </Link>{" "}
-          and it will be corrected.
+          to request a correction.
         </p>
       </div>
     </AuthCard>

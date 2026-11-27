@@ -15,17 +15,20 @@ import type { Session } from "@/lib/server/session";
 /**
  * What a member of staff lands on.
  *
- * What was a reading home is now a training home.
+ * The shape is the one every learning platform settled on, because it answers
+ * the three questions people actually arrive with, in this order:
  *
- * Material used to have a standing library: documents filed under a programme
- * area, versioned, opened here and remembered as "pick up where you left off".
- * Material is now attached to the training it was used at, so the only thing
- * worth putting in front of somebody is the training itself — what was held for
- * their programmes, and the files that came with it.
+ *   1. *What was I doing?* — the hero names it and offers it back as one button.
+ *   2. *What did I read?* — the reading record, folded into the page rather than
+ *      kept on a tab of its own (ADR‑0027). Totals sit in the hero strip; the
+ *      list of opens sits beside the announcements.
  *
- * There is nothing to sign here and nothing is scored. Charts are for the people
- * who run the programmes; they are on the staff dashboard, a different page for a
- * different job.
+ * There is nothing to sign here. The library is for reading, and reading leaves
+ * a record of opens; it does not ask anyone to certify that they have read.
+ *
+ * Everything here is a link to material or to a training; there is no chart on
+ * this page. Charts are for the people who run the programmes — they are on the
+ * staff dashboard, which is a different page for a different job.
  */
 
 export function greetingFor(now: Date): string {
@@ -47,8 +50,8 @@ export async function LearnerHome({ session }: { session: Session }) {
   const now = new Date();
 
   /*
-   * None of these is the page. A slow query must not take the greeting down with
-   * it, so each has a deadline and an honest empty result.
+   * None of these is the page. A slow reading record must not take the greeting
+   * down with it, so each has a deadline and an honest empty result.
    */
   const [announcements, fields] = await Promise.all([
     withinOr("dashboard.notices", listNotifications(session, 4), []),
@@ -72,8 +75,8 @@ export async function LearnerHome({ session }: { session: Session }) {
               {greetingFor(now)}, {firstNameOf(session.name)}.
             </h1>
             <p className="max-w-xl text-base leading-relaxed text-ink-muted">
-              Every training GHS held for your programmes is on record here — what it covered, who ran it, and
-              the slides, attendance sheet and report that came with it.
+              Every training GHS held for your Programme Areas and Programme Fields is on record here — what it
+              covered, who ran it, and the slides, attendance sheet and report that came with it.
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <Link
@@ -110,7 +113,7 @@ export async function LearnerHome({ session }: { session: Session }) {
           {announcements.length === 0 ? (
             <ListEmptyState
               title="No announcements"
-              description="Notices from your programme appear here."
+              description="Notices sent to your staff account appear here."
             />
           ) : (
             <ul className="space-y-3">
@@ -156,7 +159,7 @@ export async function LearnerHome({ session }: { session: Session }) {
               Explore the library
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Programmes are filed the way GHS runs them: a programme area, then the fields inside it.
+              Browse Programme Areas and the Programme Fields within each one.
             </p>
           </div>
           <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

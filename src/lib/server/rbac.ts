@@ -31,9 +31,9 @@ export async function requireRole(roles: Role[]): Promise<Session> {
 }
 
 /**
- * A facilitator's authority is the set of programme areas they are assigned to
- * in area_facilitators — read from the database, never from the request payload
- * (docs/rbac.md §2).
+ * Facilitator authority is read from the database, never from request payloads
+ * (docs/rbac.md §2): a parent `field_facilitators` grant covers a Programme Area,
+ * and an `area_facilitators` grant covers one Programme Field.
  */
 async function facilitatorAssignedTo(userId: string, areaId: string): Promise<boolean> {
   const [row] = await db
@@ -44,7 +44,7 @@ async function facilitatorAssignedTo(userId: string, areaId: string): Promise<bo
   return Boolean(row);
 }
 
-/** "May work anywhere in this programme area." */
+/** A database `programme_fields` grant covers one user-facing Programme Area. */
 export async function facilitatorGrantedField(userId: string, fieldId: string): Promise<boolean> {
   const [row] = await db
     .select({ id: fieldFacilitators.id })
@@ -55,9 +55,9 @@ export async function facilitatorGrantedField(userId: string, fieldId: string): 
 }
 
 /**
- * A facilitator may work in an area if the area itself was granted, or if the
- * field holding it was. The second case is how unit heads are appointed: they
- * take the field, and areas added afterwards are covered without re-assignment.
+ * A facilitator may work in a Programme Field if assigned that field directly
+ * or to its parent Programme Area. The parent grant also covers fields added
+ * later, without another assignment.
  */
 async function facilitatorCoversArea(userId: string, areaId: string): Promise<boolean> {
   if (await facilitatorAssignedTo(userId, areaId)) return true;
@@ -71,11 +71,13 @@ async function facilitatorCoversArea(userId: string, areaId: string): Promise<bo
 }
 
 /**
- * Who may approve or reject a training (or material) filed under a field.
+ * Who may approve or reject a training (or material) under a Programme Area.
+ * `fieldId` is the legacy `programme_fields.id` (parent Programme Area); a direct
+ * assignment to any child Programme Field also counts.
  *
  * An administrator always may. A facilitator may when they are a unit head and
- * hold the field — read from the database on every call, because "unit head" is
- * a duty that can be withdrawn between two requests.
+ * hold that scope — read from the database on every call, because the duty can
+ * be withdrawn between two requests.
  */
 export async function mayReviewField(session: Session, fieldId: string | null): Promise<boolean> {
   if (session.role === "SYSTEM_ADMIN") return true;

@@ -20,6 +20,7 @@ import {
   type CredentialState,
   type UserActionState,
 } from "@/lib/server/actions/users";
+import { SITE } from "@/lib/site";
 
 const INITIAL: UserActionState = { ok: false, message: null };
 const INITIAL_CREDENTIALS: CredentialState = { ok: false, message: null };
@@ -163,7 +164,7 @@ function ResetPasswordDialog({ userId, fullName }: { userId: string; fullName: s
               className="w-full"
               onClick={async () => {
                 await navigator.clipboard?.writeText(
-                  `GHS Training Library\n${state.credentials?.email}\nPassword: ${state.credentials?.password}`,
+                  `${SITE.name}\n${state.credentials?.email}\nPassword: ${state.credentials?.password}`,
                 );
                 setCopied(true);
               }}
@@ -215,7 +216,7 @@ function AccessDialog({
     <Dialog
       size="lg"
       title="Programme access"
-      description={`What ${fullName} may work on. A field covers every area inside it, including ones added later.`}
+      description={`What ${fullName} may work on. A Programme Area grant covers every Programme Field inside it, including ones added later.`}
       trigger={({ open }) => (
         <Button type="button" size="sm" variant="ghost" onClick={open} aria-label={`Manage programme access for ${fullName}`}>
           <Settings2 className="h-4 w-4" aria-hidden />
@@ -245,8 +246,8 @@ function AccessDialog({
                     <span>
                       {field.name}
                       <span className="block text-xs font-normal text-ink-muted">
-                        Whole field · {field.areas.length} area{field.areas.length === 1 ? "" : "s"}
-                        {areasHeld > 0 && !holdsField ? ` · ${areasHeld} selected individually` : ""}
+                        Whole Programme Area · {field.areas.length} Programme Field{field.areas.length === 1 ? "" : "s"}
+                        {areasHeld > 0 && !holdsField ? ` · ${areasHeld} Programme Field${areasHeld === 1 ? "" : "s"} selected individually` : ""}
                       </span>
                     </span>
                   </label>
@@ -257,7 +258,7 @@ function AccessDialog({
                       aria-expanded={expanded}
                       className="shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10"
                     >
-                      {expanded ? "Hide areas" : "Choose areas"}
+                      {expanded ? "Hide Programme Fields" : "Choose Programme Fields"}
                     </button>
                   )}
                 </div>
@@ -286,7 +287,7 @@ function AccessDialog({
         </div>
 
         <p className="text-xs leading-relaxed text-ink-muted">
-          Ticking a whole field also covers its areas, so tick either the field or the individual areas — not both.
+          Selecting a whole Programme Area also covers its Programme Fields. Select either the Programme Area or individual Programme Fields, not both.
         </p>
 
         <Button type="submit" className="w-full" disabled={pending} aria-busy={pending}>

@@ -1,35 +1,29 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { Activity, ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { useId } from "react";
 import { cn } from "@/lib/utils";
 
-/**
- * A headline number with its trend drawn beside it.
- *
- * The colour is the series' own (materials, downloads, trainings…) rather than a
- * red/green judgement: a fall in "awaiting review" is good news, so the arrow
- * carries the direction and the label says what moved. Nothing is compared that
- * has no earlier period to compare with — an invented "+0%" is worse than no
- * figure at all.
- */
-
+/** A headline number, its own trend and a restrained series-colour accent. */
 export interface KpiCardProps {
   icon: LucideIcon;
   label: string;
   value: string | number;
-  /** Text under the number, e.g. "of 42 staff". */
+  /** Text under the number, e.g. "Published in your assigned scope". */
   hint?: string;
-  /** Percentage change against the previous period. Omit when there is none. */
+  /** Percentage change against the immediately preceding equivalent period. */
   delta?: number | null;
+  /** Used instead of a percentage when the previous period had no activity. */
+  deltaLabel?: string | null;
   /** Points for the sparkline — same period as the headline number. */
   spark?: number[];
-  /** CSS colour for the icon chip, sparkline and accent. */
+  /** CSS colour for the icon chip, sparkline and trend indicator. */
   color: string;
   className?: string;
 }
 
-function Sparkline({ values, color }: { values: number[]; color: string }) {
-  if (values.length < 2) return null;
+function Sparkline({ values, color, id }: { values: number[]; color: string; id: string }) {
+  if (values.length < 2) return <span className="h-9" aria-hidden />;
   const width = 120;
   const height = 36;
   const max = Math.max(1, ...values);
@@ -40,13 +34,12 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
     const y = height - ((value - min) / span) * (height - 4) - 2;
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   });
-  const id = `spark-${color.replace(/[^a-z0-9]/gi, "")}`;
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="h-9 w-[120px]" aria-hidden focusable="false">
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.34" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
@@ -56,48 +49,60 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
   );
 }
 
-export function KpiCard({ icon: Icon, label, value, hint, delta, spark, color, className }: KpiCardProps) {
+export function KpiCard({ icon: Icon, label, value, hint, delta, deltaLabel, spark, color, className }: KpiCardProps) {
+  const gradientId = `kpi-spark-${useId().replace(/:/g, "")}`;
+  const hasChange = typeof delta === "number" || Boolean(deltaLabel);
   const up = (delta ?? 0) >= 0;
 
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-card border border-hairline bg-surface p-5 shadow-panel",
+        "relative flex h-full min-h-[172px] flex-col overflow-hidden rounded-card border border-hairline bg-surface p-5 shadow-panel transition-[border-color,box-shadow] duration-base hover:shadow-lift",
         className,
       )}
       style={{ borderTopColor: color, borderTopWidth: 3 }}
     >
-      <div className="flex items-start justify-between gap-3">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-7 -top-10 h-28 w-28 rounded-full"
+        style={{ backgroundColor: `color-mix(in oklab, ${color} 7%, transparent)` }}
+      />
+      <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <span
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full"
-            style={{ backgroundColor: `color-mix(in oklab, ${color} 16%, transparent)`, color }}
-          >
-            <Icon className="h-5 w-5" aria-hidden />
-          </span>
-          <p className="mt-3 text-sm font-semibold text-ink-muted">{label}</p>
-          <p className="mt-1 text-3xl font-extrabold leading-none tracking-tight text-ink tabular-nums">
+          <p className="text-xs font-semibold uppercase tracking-[0.11em] text-ink-muted">{label}</p>
+          <p className="mt-3 text-4xl font-extrabold leading-none tracking-tight text-ink tabular-nums">
             {typeof value === "number" ? value.toLocaleString("en-GB") : value}
           </p>
-          {hint && <p className="mt-1.5 text-xs text-ink-muted">{hint}</p>}
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-2">
-          {spark && spark.length > 1 && <Sparkline values={spark} color={color} />}
-          {typeof delta === "number" && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold"
-              style={{
-                backgroundColor: up ? "color-mix(in oklab, var(--chart-1) 14%, transparent)" : "color-mix(in oklab, var(--chart-3) 14%, transparent)",
-                color: up ? "var(--chart-1)" : "var(--chart-3)",
-              }}
-            >
-              {up ? <ArrowUpRight className="h-3 w-3" aria-hidden /> : <ArrowDownRight className="h-3 w-3" aria-hidden />}
-              {up ? "+" : ""}
-              {delta.toFixed(1)}%
-              <span className="sr-only">versus the previous period</span>
-            </span>
-          )}
-        </div>
+        <span
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+          style={{ backgroundColor: `color-mix(in oklab, ${color} 15%, transparent)`, color }}
+        >
+          <Icon className="h-5 w-5" aria-hidden />
+        </span>
+      </div>
+
+      {hint && <p className="relative mt-2 text-xs leading-relaxed text-ink-muted">{hint}</p>}
+
+      <div className="relative mt-auto flex items-end justify-between gap-3 pt-4">
+        <Sparkline values={spark ?? []} color={color} id={gradientId} />
+        {hasChange && (
+          <span
+            className="inline-flex min-h-7 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
+            style={{
+              backgroundColor: `color-mix(in oklab, ${color} 12%, transparent)`,
+              color,
+            }}
+          >
+            {typeof delta === "number" ? (
+              up ? <ArrowUpRight className="h-3.5 w-3.5" aria-hidden /> : <ArrowDownRight className="h-3.5 w-3.5" aria-hidden />
+            ) : (
+              <Activity className="h-3.5 w-3.5" aria-hidden />
+            )}
+            {typeof delta === "number" ? `${up ? "+" : ""}${delta.toFixed(1)}%` : deltaLabel}
+            <span className="sr-only">versus the previous equivalent period</span>
+          </span>
+        )}
       </div>
     </div>
   );

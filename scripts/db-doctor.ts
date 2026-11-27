@@ -255,7 +255,7 @@ async function main() {
   if (direct !== runtime) await checkDatabase("DIRECT_URL", direct, false);
 
   const icon: Record<Level, string> = { ok: "✓", warn: "!", fail: "✗" };
-  console.log("\nGHS-TL database doctor\n");
+  console.log("\nGHS-UWRHD-TL database doctor\n");
   for (const result of results) {
     console.log(`  ${icon[result.level]} ${result.label}`);
     for (const line of result.detail.split("\n")) console.log(`      ${line}`);

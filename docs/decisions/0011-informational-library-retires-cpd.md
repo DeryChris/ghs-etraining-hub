@@ -1,6 +1,11 @@
 # ADR‑0011 — The library is informational: retire CPD awards, keep issued certificates
 
-**Status:** accepted · **Date:** 2026‑11
+**Status:** accepted · **Date:** 2026‑11 · **Partially superseded by:** ADR‑0026
+
+> This record preserves the original decision, including the temporary choice to retain previously
+> issued certificates and `/verify`. ADR‑0026 supersedes that retention choice: the certificate table
+> and public verification surface are removed. No certificates are issued or verified by the current
+> product.
 
 ## Context
 

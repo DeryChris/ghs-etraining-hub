@@ -146,12 +146,12 @@ function TrainingViewBody({ data, href }: { data: TrainingView; href: string }) 
             </div>
           </div>
         )}
-        {data.attendeeCount !== null && (
+        {data.attendeeCount !== null && data.status === "COMPLETED" && (
           <div className="flex items-start gap-2 text-sm text-ink-muted">
             <Users className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <div>
-              <dt className="sr-only">People trained</dt>
-              <dd>{data.attendeeCount.toLocaleString("en-GB")} trained</dd>
+              <dt className="sr-only">Attendee count recorded</dt>
+              <dd>{data.attendeeCount.toLocaleString("en-GB")} attendees recorded</dd>
             </div>
           </div>
         )}
