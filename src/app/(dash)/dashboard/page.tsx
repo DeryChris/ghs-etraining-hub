@@ -21,7 +21,6 @@ import { RankBars } from "@/components/charts/rank-bars";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { firstNameOf } from "@/lib/names";
 import { safeAppLink } from "@/lib/links";
 import {
   MATERIAL_TYPE_COLORS,
@@ -117,6 +116,8 @@ export default async function DashboardPage({
   const typeTotal = typeMix?.reduce((sum, entry) => sum + entry.count, 0) ?? 0;
   const publishedTotal = insights?.library.published ?? null;
   const typeMixReconciles = publishedTotal !== null && typeTotal === publishedTotal;
+  const duty = STAFF_ROLE_LABELS[staffRoleOf({ role: session.role, unitHead: session.unitHead })];
+
   const latestBucket = traffic?.buckets.at(-1);
   const latestOpens = traffic?.views.at(-1) ?? 0;
   const latestDownloads = traffic?.downloads.at(-1) ?? 0;
@@ -156,18 +157,27 @@ export default async function DashboardPage({
 
         <div className="relative z-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-end">
           <div className="max-w-3xl">
+            {/* Who you are, top-left, in the order a person would say it: the grade
+                you hold, then where you work, then the duty and the date. The
+                greeting below keeps the name, so "Good morning" is addressed to
+                somebody with a role and not to a first name floating alone. */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              {session.grade && (
+                <span className="inline-flex items-center rounded-full border border-primary/25 bg-primary/[0.10] px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+                  {session.grade}
+                </span>
+              )}
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/[0.07] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.13em] text-primary">
                 <span className="flag-stripe h-1.5 w-7 rounded-full" aria-hidden="true" />
                 Upper West Regional Health Directorate
               </span>
               <span className="text-xs font-semibold text-ink-muted">
-                {STAFF_ROLE_LABELS[staffRoleOf({ role: session.role, unitHead: session.unitHead })]} · {formatDate(now)}
+                {duty} · {formatDate(now)}
               </span>
             </div>
 
             <h1 id="dash-title" className="mt-4 text-balance text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl xl:text-5xl">
-              {greetingFor(now)}, {firstNameOf(session.name)}.
+              {greetingFor(now)}, {duty} {session.name}.
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-muted sm:text-base">
               Welcome to your Training Library. Here is an overview of resource engagement and training activity in your authorised programme scope.
