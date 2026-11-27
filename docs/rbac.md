@@ -1,6 +1,9 @@
 # RBAC — capability matrix and test vectors
 
-Roles are `SYSTEM_ADMIN`, `FACILITATOR`, `LEARNER`. **The matrix below is the spec; the code in
+Roles are `SYSTEM_ADMIN`, `FACILITATOR`, `LEARNER`. The key `LEARNER` is stored in the database and
+read on every check, but it is **never shown to people**: the label is **Staff** (`STAFF_ROLE_LABELS`),
+because "learner" described a CPD platform this product is not. Renaming the enum would rewrite every
+grant, audit row and row-level rule for a word on a screen. **The matrix below is the spec; the code in
 `src/lib/rbac/capabilities.ts` is the implementation, and the table‑driven tests must cover every
 row.** Any change here is a `ROLE_CHANGE` audit event and requires an ADR.
 

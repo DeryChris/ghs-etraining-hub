@@ -27,7 +27,7 @@
  *   changed — pass `--reset-passwords` if that is what you actually want.
  */
 import "dotenv/config";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db, client } from "@/db/index";
 import { districts, facilities, regions, subDistricts, users } from "@/db/schema";
@@ -58,13 +58,26 @@ for (let index = 0; index < argv.length; index += 1) {
   }
 }
 
-const file = typeof args.get("file") === "string" ? (args.get("file") as string) : null;
+const file =
+  (typeof args.get("file") === "string" ? (args.get("file") as string) : null) ?? process.env.STAFF_CSV ?? null;
 const dryRun = args.has("dry-run");
 const resetPasswords = args.has("reset-passwords");
 const limit = Number.parseInt(String(args.get("limit") ?? ""), 10);
 
 if (!file) {
   console.error("Usage: npm run staff:import -- --file <path to the staff CSV> [--dry-run] [--limit=N] [--reset-passwords]");
+  console.error("");
+  console.error("  The CSV is the GHS staffing export with columns: Employee No., Surname, Firstname(s),");
+  console.error("  Full name, Gender, Work email, Work phone, Home mobile, Region, District / Division,");
+  console.error("  Sub-district, Facility / Unit, Facility type, Category.");
+  console.error("  It is never committed — pass its path, or set STAFF_CSV in the environment.");
+  console.error("  Reference data (regions, districts, facilities) is written by `npm run db:seed`.");
+  process.exit(1);
+}
+
+if (!existsSync(file)) {
+  console.error(`✖ No file at ${file}.`);
+  console.error("  Quote the path if it contains spaces: --file \"C:\\Users\\me\\Staff Data.csv\"");
   process.exit(1);
 }
 

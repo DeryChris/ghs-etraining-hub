@@ -572,7 +572,7 @@ export async function publishVersionAction(
     }),
   });
 
-  return { ok: true, message: "Published. Learners in the audience can see it now." };
+  return { ok: true, message: "Published. Staff in the audience can see it now." };
 }
 
 export async function archiveMaterialAction(
@@ -624,5 +624,5 @@ export async function archiveMaterialAction(
   });
 
   revalidateAuthoring(material.id);
-  return { ok: true, message: "Archived. It no longer appears to learners, and the audit trail keeps the history." };
+  return { ok: true, message: "Archived. It no longer appears to staff, and the audit trail keeps the history." };
 }

@@ -34,14 +34,14 @@ export interface DirectoryRow {
   createdAt: Date;
 }
 
-export type DirectoryGroup = "facilitators" | "unit-heads" | "admins";
+export type DirectoryGroup = "staff" | "facilitators" | "unit-heads" | "admins";
 
 export interface DirectoryFilters {
   query: string;
   /** A role choice, so `UNIT_HEAD` means "facilitators carrying the duty". */
   role: StaffRole | null;
   status: DirectoryStatus | null;
-  /** The three management lenses the Users tab is split into. */
+  /** The four management lenses the Users tab is split into. */
   group?: DirectoryGroup | null;
 }
 
@@ -76,7 +76,10 @@ function filters(input: DirectoryFilters): SQL | undefined {
     input.status ? eq(users.isActive, input.status === "active") : undefined,
     input.group === "admins"
       ? eq(users.role, "SYSTEM_ADMIN")
-      : input.group === "facilitators"
+      : /* Plain staff: the role with no programme duty attached. */
+        input.group === "staff"
+        ? eq(users.role, "LEARNER")
+        : input.group === "facilitators"
         ? and(eq(users.role, "FACILITATOR"), eq(users.isUnitHead, false))
         : input.group === "unit-heads"
           ? and(eq(users.role, "FACILITATOR"), eq(users.isUnitHead, true))

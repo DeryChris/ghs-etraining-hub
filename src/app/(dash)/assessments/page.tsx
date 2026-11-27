@@ -179,7 +179,7 @@ export default async function AssessmentsPage() {
       {staff && (
         <p className="rounded-card border border-hairline bg-surface-2 p-5 text-sm leading-relaxed text-ink-muted">
           Editing a question bank is not built yet. Until it is, assessments are configured in the database by an
-          administrator, and the material page tells a learner what to expect.
+          administrator, and the material page tells staff what to expect.
         </p>
       )}
     </div>

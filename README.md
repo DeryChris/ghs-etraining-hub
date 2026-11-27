@@ -304,6 +304,20 @@ import writes one audit row for the batch rather than a row per person.
    `/reset-password?token=…` link to hand over in person — the pilot sends no e-mail, and
    `/forgot-password` says so.
 
+   **Staff accounts are a separate step from the seed.** `db:seed` writes geography, the programme
+   taxonomy and one administrator; people come from the GHS staff sheet, which is personal data and is
+   never committed. Import it, then check what landed:
+
+   ```bash
+   npm run staff:import -- --file "C:\path\to\Staff Data.csv" --dry-run
+   npm run staff:import -- --file "C:\path\to\Staff Data.csv"
+   npm run staff:status
+   ```
+
+   Everyone imported arrives with the **Staff** role (stored as `LEARNER`) and chooses a password at first
+   sign-in. `staff:status` prints the counts by role, how many have never signed in and how many can
+   actually sign in, and tells you the next command if something is missing.
+
    To set a password you choose, by e-mail or by employee number (this also clears a lockout):
 
    ```bash

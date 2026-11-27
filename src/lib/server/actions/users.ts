@@ -605,7 +605,7 @@ export async function setUserAccessAction(
   if (target.role === "LEARNER") {
     return {
       ok: false,
-      message: `${target.fullName} is a learner. Make them a facilitator first, then choose the programme fields they hold.`,
+      message: `${target.fullName} has the staff role. Make them a facilitator first, then choose the programme fields they hold.`,
     };
   }
 

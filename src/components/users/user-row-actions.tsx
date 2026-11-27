@@ -403,7 +403,7 @@ function DetailsDialog({
           </div>
           <p className="text-xs text-ink-muted">{STAFF_ROLE_HINTS[currentRole]}</p>
           <p className="text-xs text-ink-muted">
-            Changing a facilitator to a learner removes their programme access; the audit trail keeps the history.
+            Changing a facilitator back to staff removes their programme access; the audit trail keeps the history.
           </p>
           <Result state={roleState} />
         </form>

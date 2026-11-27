@@ -317,12 +317,7 @@ export default async function TrainingDetailPage({
             </form>
           </section>
         </>
-      ) : (
-        <p className="rounded-card border border-hairline bg-surface p-5 text-sm text-ink-muted shadow-panel">
-          You can read this training but not change it. Editing the register needs an administrator or a
-          facilitator account.
-        </p>
-      )}
+      ) : null}
     </div>
   );
 }

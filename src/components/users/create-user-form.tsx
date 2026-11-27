@@ -1,14 +1,16 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { CheckCircle2, UserPlus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { FormFeedback } from "@/components/ui/form-feedback";
+import { FormSteps } from "@/components/ui/form-steps";
 import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { createUserAction, type UserActionState } from "@/lib/server/actions/users";
 import { STAFF_ROLE_HINTS, STAFF_ROLE_LABELS } from "@/lib/labels";
+import type { StaffRole } from "@/lib/rbac/capabilities";
 import { STAFF_ROLE_VALUES } from "@/lib/rbac/capabilities";
 import { GHS_REGIONS, isLiveRegion } from "@/lib/ghs-constants";
 
@@ -35,7 +37,8 @@ const REGIONS: readonly string[] = GHS_REGIONS.filter((name) => isLiveRegion(nul
  * The employee number is asked for as the payroll list prints it — plain digits.
  */
 export function CreateUserForm() {
-  const [state, formAction] = useActionState(createUserAction, INITIAL);
+  const [state, formAction, pending] = useActionState(createUserAction, INITIAL);
+  const [role, setRole] = useState<StaffRole>("LEARNER");
 
   return (
     <Dialog
@@ -64,106 +67,139 @@ export function CreateUserForm() {
               </div>
             </div>
           ) : (
-            <form action={formAction} className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label htmlFor="new-staffId" className={labelClass}>
-                  Employee number
-                </label>
-                <input
-                  id="new-staffId"
-                  name="staffId"
-                  required
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="2681763"
-                  pattern="[0-9]*"
-                  className={inputClass}
-                />
-                <p className={hintClass}>Digits as printed on the payroll list — no letters or dashes.</p>
-              </div>
-              <div>
-                <label htmlFor="new-fullName" className={labelClass}>
-                  Full name
-                </label>
-                <input id="new-fullName" name="fullName" required autoComplete="off" className={inputClass} />
-              </div>
-              <div>
-                <label htmlFor="new-email" className={labelClass}>
-                  Work e-mail
-                </label>
-                <input id="new-email" name="email" type="email" required autoComplete="off" className={inputClass} />
-                <p className={hintClass}>The set-password link goes here.</p>
-              </div>
-              <div>
-                <label htmlFor="new-role" className={labelClass}>
-                  Role
-                </label>
-                <select id="new-role" name="role" defaultValue="LEARNER" className={inputClass}>
-                  {STAFF_ROLE_VALUES.map((role) => (
-                    <option key={role} value={role}>
-                      {STAFF_ROLE_LABELS[role]}
-                    </option>
-                  ))}
-                </select>
-                <p className={hintClass}>{STAFF_ROLE_HINTS.LEARNER}</p>
-              </div>
-              <div>
-                <label htmlFor="new-region" className={labelClass}>
-                  Region
-                </label>
-                <select id="new-region" name="region" defaultValue="" className={inputClass}>
-                  <option value="">Not recorded</option>
-                  {REGIONS.map((region) => (
-                    <option key={region} value={region}>
-                      {region}
-                    </option>
-                  ))}
-                </select>
-                <p className={hintClass}>
-                  Only the regions where the library is live are listed. The rest appear as the rollout reaches them.
-                </p>
-              </div>
-              <div>
-                <label htmlFor="new-directorate" className={labelClass}>
-                  Directorate
-                </label>
-                <input id="new-directorate" name="directorate" className={inputClass} />
-              </div>
-              <div>
-                <label htmlFor="new-cadre" className={labelClass}>
-                  Cadre
-                </label>
-                <input id="new-cadre" name="cadre" placeholder="Nurse, Midwife, Pharmacist…" className={inputClass} />
-              </div>
-              <div>
-                <label htmlFor="new-facility" className={labelClass}>
-                  Facility
-                </label>
-                <input id="new-facility" name="facility" className={inputClass} />
-              </div>
-              <div>
-                <label htmlFor="new-phone" className={labelClass}>
-                  Phone
-                </label>
-                <input id="new-phone" name="phone" type="tel" className={inputClass} />
-              </div>
+            <form action={formAction} noValidate className="space-y-4">
+              <FormSteps
+                steps={[
+                  { title: "Who they are", blurb: "the three things the directory cannot do without." },
+                  { title: "Posting and role", blurb: "where they work, and what they may do here." },
+                ]}
+                panels={[
+                  <div key="identity" className="grid gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <label htmlFor="new-fullName" className={labelClass}>
+                        Full name <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        id="new-fullName"
+                        name="fullName"
+                        required
+                        autoComplete="off"
+                        placeholder="e.g. Ama Mensah"
+                        className={inputClass}
+                      />
+                      <p className={hintClass}>As it appears on the payroll list — this is what colleagues will see.</p>
+                    </div>
+                    <div>
+                      <label htmlFor="new-staffId" className={labelClass}>
+                        Employee number <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        id="new-staffId"
+                        name="staffId"
+                        required
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="2681763"
+                        pattern="[0-9]*"
+                        className={inputClass}
+                      />
+                      <p className={hintClass}>Digits only, as printed on the payroll list. They sign in with these.</p>
+                    </div>
+                    <div>
+                      <label htmlFor="new-phone" className={labelClass}>
+                        Phone <span className="font-normal text-ink-muted">(optional)</span>
+                      </label>
+                      <input id="new-phone" name="phone" type="tel" placeholder="024 000 0000" className={inputClass} />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label htmlFor="new-email" className={labelClass}>
+                        Work e-mail <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        id="new-email"
+                        name="email"
+                        type="email"
+                        required
+                        autoComplete="off"
+                        placeholder="ama.mensah@ghs.gov.gh"
+                        className={inputClass}
+                      />
+                      <p className={hintClass}>Used for the password link. It must belong to this person alone.</p>
+                    </div>
+                  </div>,
 
-              <div className="flex flex-wrap items-center gap-3 md:col-span-2">
-                <SubmitButton pendingLabel="Adding…">Add to the directory</SubmitButton>
-                <Button type="button" variant="ghost" onClick={close}>
-                  Cancel
-                </Button>
-                <Badge variant="outline">Authority comes from this record</Badge>
-              </div>
+                  <div key="posting" className="grid gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <label htmlFor="new-role" className={labelClass}>
+                        Role
+                      </label>
+                      <select
+                        id="new-role"
+                        name="role"
+                        value={role}
+                        onChange={(event) => setRole(event.target.value as StaffRole)}
+                        className={inputClass}
+                      >
+                        {STAFF_ROLE_VALUES.map((option) => (
+                          <option key={option} value={option}>
+                            {STAFF_ROLE_LABELS[option]}
+                          </option>
+                        ))}
+                      </select>
+                      <p className={hintClass}>{STAFF_ROLE_HINTS[role]}</p>
+                    </div>
+                    <div>
+                      <label htmlFor="new-region" className={labelClass}>
+                        Region
+                      </label>
+                      <select id="new-region" name="region" defaultValue="" className={inputClass}>
+                        <option value="">Not recorded</option>
+                        {REGIONS.map((region) => (
+                          <option key={region} value={region}>
+                            {region}
+                          </option>
+                        ))}
+                      </select>
+                      <p className={hintClass}>Only regions where the library is live are listed.</p>
+                    </div>
+                    <div>
+                      <label htmlFor="new-directorate" className={labelClass}>
+                        Directorate
+                      </label>
+                      <input id="new-directorate" name="directorate" className={inputClass} />
+                    </div>
+                    <div>
+                      <label htmlFor="new-cadre" className={labelClass}>
+                        Cadre
+                      </label>
+                      <input id="new-cadre" name="cadre" placeholder="Nurse, Midwife, Pharmacist…" className={inputClass} />
+                    </div>
+                    <div>
+                      <label htmlFor="new-facility" className={labelClass}>
+                        Facility
+                      </label>
+                      <input id="new-facility" name="facility" className={inputClass} />
+                    </div>
+                  </div>,
+                ]}
+                footer={
+                  <div className="flex flex-wrap items-center gap-3">
+                    <SubmitButton pendingLabel="Adding…">
+                      <CheckCircle2 className="h-4 w-4" aria-hidden />
+                      Add to the directory
+                    </SubmitButton>
+                    <Button type="button" variant="ghost" size="sm" onClick={close}>
+                      Cancel
+                    </Button>
+                  </div>
+                }
+              />
 
-              {state.message && (
-                <p
-                  role="alert"
-                  className="rounded-control border border-danger/40 bg-danger/10 px-4 py-3 text-sm font-medium text-danger md:col-span-2"
-                >
-                  {state.message}
-                </p>
-              )}
+              <FormFeedback
+                state={state}
+                pending={pending}
+                pendingMessage="Adding them to the directory…"
+              />
             </form>
           )}
         </div>

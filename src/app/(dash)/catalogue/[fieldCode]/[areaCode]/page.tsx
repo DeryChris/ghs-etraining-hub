@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarDays, MapPin, Users } from "lucide-react";
 import { MaterialCard } from "@/components/materials/material-card";
+import { LibraryTrainingCard } from "@/components/trainings/library-training-card";
 import { Badge } from "@/components/ui/badge";
 import { ListEmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -87,12 +88,13 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
           <ul className="grid gap-4 md:grid-cols-2">
             {trainings.map((training) => (
               <li key={training.id}>
-                <Link
-                  /* `from=library` opens the training as a reading page: no uploads,
-                     no editing, exactly what a learner sees. The register keeps the levers. */
-                  href={`/trainings/${training.id}?from=library`}
-                  className="group flex h-full flex-col gap-3 rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                >
+                {/*
+                 * Opens in an overlay over the library rather than navigating to the
+                 * register, and the overlay is read-only: no uploads, no editing,
+                 * exactly what a staff member sees. `href` stays a real link for a
+                 * new tab, a middle-click or an error page inside the panel.
+                 */}
+                <LibraryTrainingCard trainingId={training.id} href={`/trainings/${training.id}?from=library`}>
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{training.year}</span>
                     <Badge variant={training.status === "CANCELLED" ? "danger" : training.status === "PLANNED" ? "success" : "default"}>
@@ -118,7 +120,7 @@ export default async function AreaPage({ params }: { params: Promise<{ fieldCode
                       </span>
                     )}
                   </div>
-                </Link>
+                </LibraryTrainingCard>
               </li>
             ))}
           </ul>

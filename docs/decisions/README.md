@@ -250,3 +250,15 @@ A training opened from the library opens read-only — no uploads, no editing, t
 same page a learner sees; the register keeps the management surfaces. Tiles are
 one link over the whole card, painted above the content. See
 `0021-library-is-a-reading-surface.md`.
+
+---
+
+## ADR‑0022 — Short forms, visible answers, and reading in place
+
+**Status:** accepted · **Date:** 2026‑11
+
+Long forms are stepped (all panels stay mounted so nothing is lost), every submit
+answers next to the button, a training opened from the library opens in an overlay
+over the catalogue, overlays keep a fixed title and a properly scrolling body,
+destructive geography actions are confirmed, and the role people read is **Staff**
+(key stays `LEARNER`). See `0022-short-forms-and-reading-in-place.md`.

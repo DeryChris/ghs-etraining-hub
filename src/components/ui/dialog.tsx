@@ -76,11 +76,20 @@ export function Dialog({
           // A click on the backdrop lands on the dialog element itself.
           if (event.target === ref.current) setOpen(false);
         }}
-        className={`m-auto w-[calc(100vw-1.5rem)] ${width} max-h-[calc(100dvh-2rem)] rounded-card border border-hairline bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/45 backdrop:backdrop-blur-[3px]`}
+        className={`m-auto w-[calc(100vw-1.5rem)] ${width} max-h-[calc(100dvh-2rem)] overflow-hidden rounded-card border border-hairline bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/45 backdrop:backdrop-blur-[3px]`}
       >
         {open && (
-          <div className="max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain p-6 sm:p-7">
-            <div className="mb-5 flex items-start justify-between gap-4">
+          /*
+           * Header, then a scrolling body — never one long scroll region.
+           *
+           * The title used to scroll away with the form, so a panel long enough to
+           * need a bar (every edit form on the geography page) lost the one line
+           * saying which record was being changed. The body scrolls inside its own
+           * inset track (`.overlay-scroll`), so the bar stops short of the rounded
+           * corners instead of cutting across them.
+           */
+          <div className="flex max-h-[calc(100dvh-2rem)] flex-col">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-hairline px-6 py-4 sm:px-7">
               <div className="space-y-1">
                 <h2 id={titleId} className="text-lg font-bold text-ink">
                   {title}
@@ -101,7 +110,9 @@ export function Dialog({
               </button>
             </div>
 
-            {typeof children === "function" ? children({ close: () => setOpen(false) }) : children}
+            <div className="overlay-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5 pb-7 sm:px-7">
+              {typeof children === "function" ? children({ close: () => setOpen(false) }) : children}
+            </div>
           </div>
         )}
       </dialog>

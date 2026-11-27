@@ -589,7 +589,7 @@ export async function assignAreaFacilitatorAction(
       failure = `${person.fullName}'s account is inactive. Reactivate it before assigning work.`;
     } else if (person.role === "LEARNER") {
       failure =
-        "Learners cannot author material. Change their role to facilitator first.";
+        "Staff cannot author material. Change their role to facilitator first.";
     } else {
       await db.transaction(async (tx) => {
         await tx

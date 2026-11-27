@@ -42,7 +42,12 @@ export const PRIORITY_RANK: Record<PriorityLevel, number> = { LOW: 0, MEDIUM: 1,
 export const ROLE_LABELS: Record<Role, string> = {
   SYSTEM_ADMIN: "System administrator",
   FACILITATOR: "Facilitator",
-  LEARNER: "Learner",
+  /*
+   * The role key is still LEARNER in the database — renaming an enum value would
+   * rewrite every grant, every audit row and every RLS rule for a word on a
+   * screen. What people read is Staff, which is what they are.
+   */
+  LEARNER: "Staff",
 };
 
 /** Includes the unit head, which is chosen like a role but stored as a duty. */
@@ -53,7 +58,7 @@ export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
 
 /** One line under each choice in a role field, in the same order. */
 export const STAFF_ROLE_HINTS: Record<StaffRole, string> = {
-  LEARNER: "Reads and downloads the material written for their audience.",
+  LEARNER: "Signs in, reads and downloads what has been published for staff.",
   FACILITATOR: "Files material and trains, inside the programme areas they are given.",
   UNIT_HEAD: "A facilitator who also signs off the review queue for their fields.",
   SYSTEM_ADMIN: "Runs the directory, the taxonomy and every programme area.",

@@ -43,7 +43,7 @@ export default async function AuthoringPage() {
       <PageHeader
         eyebrow="Authoring"
         title="My materials"
-        description="Draft, upload and track every version you are responsible for. A second person reviews each version before learners see it."
+        description="Draft, upload and track every version you are responsible for. A second person reviews each version before staff see it."
       />
 
       <div className="flex flex-wrap gap-3">

@@ -14,6 +14,7 @@ import { STAFF_ROLE_LABELS } from "@/lib/labels";
 import { isStaffRole, staffRoleOf, STAFF_ROLE_VALUES } from "@/lib/rbac/capabilities";
 import {
   DIRECTORY_PAGE_SIZE,
+  type DirectorySummary,
   getDirectorySummary,
   listAccessGrants,
   listDirectory,
@@ -44,11 +45,12 @@ function pageHref(params: {
   return suffix ? `/users?${suffix}` : "/users";
 }
 
-const GROUPS: { key: DirectoryGroup | null; label: string }[] = [
-  { key: null, label: "Everyone" },
-  { key: "facilitators", label: "Facilitators" },
-  { key: "unit-heads", label: "Unit heads" },
-  { key: "admins", label: "Admins" },
+const GROUPS: { key: DirectoryGroup | null; label: string; count: (summary: DirectorySummary) => number }[] = [
+  { key: null, label: "Everyone", count: (summary) => summary.total },
+  { key: "staff", label: "Staff", count: (summary) => summary.learners },
+  { key: "facilitators", label: "Facilitators", count: (summary) => summary.facilitators },
+  { key: "unit-heads", label: "Unit heads", count: (summary) => summary.unitHeads },
+  { key: "admins", label: "Admins", count: (summary) => summary.admins },
 ];
 
 export default async function UsersPage({
@@ -64,7 +66,9 @@ export default async function UsersPage({
   const role = isStaffRole(params.role) ? params.role : null;
   const status: DirectoryStatus | null = params.status === "active" || params.status === "inactive" ? params.status : null;
   const group: DirectoryGroup | null =
-    params.group === "facilitators" || params.group === "unit-heads" || params.group === "admins" ? params.group : null;
+    params.group === "staff" || params.group === "facilitators" || params.group === "unit-heads" || params.group === "admins"
+      ? params.group
+      : null;
   const requestedPage = Number.parseInt(params.page ?? "1", 10);
 
   const loaded = await withDeadline("users", () =>
@@ -97,7 +101,7 @@ export default async function UsersPage({
       <PageHeader
         eyebrow="Administration"
         title="Users"
-        description="Who may sign in and what they may do. The role is chosen from four: learner, facilitator, unit head and system administrator. Every change here is capability-checked on the server and written to the audit trail."
+        description="Who may sign in and what they may do. The role is chosen from four: staff, facilitator, unit head and system administrator. Every change here is capability-checked on the server and written to the audit trail."
         actions={
           <Link href="/insights" className={buttonClass({ variant: "ghost" })}>
             Service insights
@@ -128,6 +132,13 @@ export default async function UsersPage({
               }`}
             >
               {entry.label}
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                  active ? "bg-primary-ink/20 text-primary-ink" : "bg-surface-2 text-ink-muted"
+                }`}
+              >
+                {entry.count(summary)}
+              </span>
             </Link>
           );
         })}
@@ -138,7 +149,7 @@ export default async function UsersPage({
         className="grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
       >
         <Stat value={summary.total} label="People in the directory" />
-        <Stat value={summary.learners} label="Active learners" />
+        <Stat value={summary.learners} label="Active staff" />
         <Stat value={summary.facilitators} label="Active facilitators" />
         <Stat value={summary.unitHeads} label="Active unit heads" />
         <Stat value={summary.admins} label="Active administrators" />
@@ -146,6 +157,31 @@ export default async function UsersPage({
       </section>
 
       <CreateUserForm />
+
+      {summary.learners === 0 && (
+        <section
+          aria-labelledby="staff-import-heading"
+          className="rounded-card border border-warn/40 bg-warn/10 p-5 shadow-panel"
+        >
+          <h2 id="staff-import-heading" className="text-sm font-bold text-warn">
+            No staff accounts yet — the seed does not create people
+          </h2>
+          <p className="mt-1 max-w-[80ch] text-sm leading-relaxed text-ink">
+            <code className="rounded bg-surface px-1 py-0.5 text-xs">npm run db:seed</code> writes regions, districts,
+            facilities and the programme taxonomy from this repository. The people come from the GHS staff sheet,
+            which is personal data and is never committed — so it is a separate, explicit step:
+          </p>
+          <pre className="mt-3 overflow-x-auto rounded-control border border-hairline bg-surface px-4 py-3 text-xs leading-relaxed text-ink">
+{`npm run staff:import -- --file "C:\\path\\to\\Staff Data.csv" --dry-run
+npm run staff:import -- --file "C:\\path\\to\\Staff Data.csv"
+npm run staff:status`}
+          </pre>
+          <p className="mt-2 text-xs text-ink-muted">
+            Every imported person arrives with the Staff role and chooses a password at first sign-in. Check the
+            result with <code className="rounded bg-surface px-1 py-0.5">npm run staff:status</code>.
+          </p>
+        </section>
+      )}
 
       <form action="/users" method="get" role="search" className="grid gap-3 rounded-card border border-hairline bg-surface p-4 md:grid-cols-[1fr_200px_180px_auto] md:items-end">
         {/* Searching inside a group keeps you inside it. */}

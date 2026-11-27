@@ -7,6 +7,7 @@ import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { ActionDialog } from "@/components/ui/action-dialog";
+import { ConfirmAction } from "@/components/ui/confirm-action";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { Stat } from "@/components/ui/stat";
@@ -213,12 +214,14 @@ export default async function GeographyPage({
                 {region.districts.reduce((total, row) => total + row.facilities.length, 0)} facilities
               </p>
             </div>
-            <form action={deleteRegionAction}>
-              <input type="hidden" name="id" value={region.id} />
-              <button type="submit" className={buttonClass({ variant: "danger", size: "sm" })}>
-                Delete region
-              </button>
-            </form>
+            <ConfirmAction
+              label="Delete region"
+              title={`Delete ${region.name}?`}
+              description="A region can only be deleted once it holds no districts. The audit trail keeps who removed it and when."
+              confirmLabel="Delete this region"
+              action={deleteRegionAction}
+              fields={{ id: region.id }}
+            />
           </div>
 
           <ActionDialog label="Edit" title="Edit region name and code" size="sm">
@@ -335,13 +338,14 @@ export default async function GeographyPage({
                           >
                             Open
                           </Link>
-                          <form action={deleteDistrictAction}>
-                            <input type="hidden" name="id" value={row.id} />
-                            <input type="hidden" name="regionId" value={region.id} />
-                            <button type="submit" className={buttonClass({ variant: "danger", size: "sm" })}>
-                              Delete
-                            </button>
-                          </form>
+                          <ConfirmAction
+                            label="Delete"
+                            title={`Delete ${row.name}?`}
+                            description={`Its ${row.subDistricts.length} sub-district${row.subDistricts.length === 1 ? "" : "s"} and ${row.facilities.length} facilit${row.facilities.length === 1 ? "y" : "ies"} go with it. A district with facilities recorded against it cannot be deleted — deactivate those facilities first, so the history of who was trained where stays intact.`}
+                            confirmLabel="Delete this district"
+                            action={deleteDistrictAction}
+                            fields={{ id: row.id, regionId: region.id }}
+                          />
                         </div>
                       </div>
 
@@ -453,18 +457,15 @@ export default async function GeographyPage({
                         className="inline-flex items-center gap-2 rounded-control border border-hairline bg-surface-2/40 px-3 py-1.5"
                       >
                         <span className="text-sm text-ink">{sub.name}</span>
-                        <form action={deleteSubDistrictAction}>
-                          <input type="hidden" name="id" value={sub.id} />
-                          <input type="hidden" name="districtId" value={district.id} />
-                          <input type="hidden" name="regionId" value={region.id} />
-                          <button
-                            type="submit"
-                            className="text-xs font-semibold text-danger hover:underline"
-                            aria-label={`Delete ${sub.name}`}
-                          >
-                            Remove
-                          </button>
-                        </form>
+                        <ConfirmAction
+                          label="Remove"
+                          title={`Remove ${sub.name}?`}
+                          description="Sub-districts are optional. Removing one leaves any facility already filed under it in the district, without a sub-district."
+                          confirmLabel="Remove this sub-district"
+                          action={deleteSubDistrictAction}
+                          fields={{ id: sub.id, districtId: district.id, regionId: region.id }}
+                          className="text-xs font-semibold text-danger hover:underline"
+                        />
                       </li>
                     ))}
                   </ul>
@@ -563,23 +564,33 @@ export default async function GeographyPage({
                             </p>
                           </div>
                           <div className="flex shrink-0 flex-wrap items-center gap-2">
-                            <form action={setFacilityActiveAction}>
-                              <input type="hidden" name="id" value={facility.id} />
-                              <input type="hidden" name="regionId" value={region.id} />
-                              <input type="hidden" name="districtId" value={district.id} />
-                              <input type="hidden" name="isActive" value={facility.isActive ? "false" : "true"} />
-                              <button type="submit" className={buttonClass({ variant: "secondary", size: "sm" })}>
-                                {facility.isActive ? "Deactivate" : "Reactivate"}
-                              </button>
-                            </form>
-                            <form action={deleteFacilityAction}>
-                              <input type="hidden" name="id" value={facility.id} />
-                              <input type="hidden" name="regionId" value={region.id} />
-                              <input type="hidden" name="districtId" value={district.id} />
-                              <button type="submit" className={buttonClass({ variant: "danger", size: "sm" })}>
-                                Delete
-                              </button>
-                            </form>
+                            <ConfirmAction
+                              label={facility.isActive ? "Deactivate" : "Reactivate"}
+                              title={facility.isActive ? `Deactivate ${facility.name}?` : `Reactivate ${facility.name}?`}
+                              description={
+                                facility.isActive
+                                  ? "A deactivated facility disappears from the picker on new trainings. Everything already filed against it keeps its place, and you can reactivate it at any time."
+                                  : "Reactivating puts this facility back in the picker on new trainings."
+                              }
+                              confirmLabel={facility.isActive ? "Deactivate it" : "Reactivate it"}
+                              action={setFacilityActiveAction}
+                              variant="secondary"
+                              fields={{ id: facility.id, regionId: region.id, districtId: district.id, isActive: facility.isActive ? "false" : "true" }}
+                            >
+                              <p className="text-sm text-ink-muted">
+                                {facility.isActive
+                                  ? "Nothing is deleted. Trainings already recorded here stay exactly as they are."
+                                  : "It will be selectable again straight away."}
+                              </p>
+                            </ConfirmAction>
+                            <ConfirmAction
+                              label="Delete"
+                              title={`Delete ${facility.name}?`}
+                              description="A facility can be deleted only when nothing has been filed against it. Deactivating is the usual answer — it keeps the record readable."
+                              confirmLabel="Delete this facility"
+                              action={deleteFacilityAction}
+                              fields={{ id: facility.id, regionId: region.id, districtId: district.id }}
+                            />
                           </div>
                         </div>
 
