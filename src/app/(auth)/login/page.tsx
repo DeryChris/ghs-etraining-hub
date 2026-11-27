@@ -64,7 +64,7 @@ export default async function LoginPage({
           </div>
 
           <Link
-            href="/help/report"
+            href="/help"
             className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-danger/40 bg-danger/10 px-5 text-[15px] font-bold text-danger transition-colors hover:bg-danger/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
           >
             <MessageSquareWarning className="h-4 w-4" aria-hidden />
@@ -74,8 +74,8 @@ export default async function LoginPage({
 
           <p className="text-center text-[12px] leading-relaxed text-ink-muted">
             Cannot sign in or used the wrong contact details during account setup?{" "}
-            <Link href="/help/report" className="font-semibold text-primary underline underline-offset-4">
-              Report it here
+            <Link href="/help" className="font-semibold text-primary underline underline-offset-4">
+              Visit the Help &amp; Complaint Hub
             </Link>{" "}
             and keep your reference number.
           </p>
