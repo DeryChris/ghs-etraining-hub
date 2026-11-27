@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Maximize2, Minimize2, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 /**
@@ -20,15 +20,46 @@ export function Dialog({
   description,
   children,
   size = "md",
+  allowFullscreen = false,
+  bodyClassName,
 }: {
   trigger: (props: { open: () => void; expanded: boolean }) => ReactNode;
   title: string;
   description?: string;
   children: ReactNode | ((props: { close: () => void }) => ReactNode);
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
+  /** Adds an expand control: the panel becomes the whole screen, Escape leaves it. */
+  allowFullscreen?: boolean;
+  /** Overrides the body padding — a file viewer wants the frame, not a form's margins. */
+  bodyClassName?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  /*
+   * The browser owns full screen: `requestFullscreen` on the dialog element, and
+   * the `fullscreenchange` event is the only truth about whether it worked (a
+   * denied request, an Escape key and a gesture all end here). The CSS below
+   * removes the panel's own frame in that state, so the file gets the screen.
+   */
+  useEffect(() => {
+    const onChange = () => setFullscreen(document.fullscreenElement === ref.current);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  async function toggleFullscreen() {
+    const dialog = ref.current;
+    if (!dialog) return;
+    try {
+      if (document.fullscreenElement === dialog) await document.exitFullscreen();
+      else await dialog.requestFullscreen();
+    } catch {
+      // Some browsers refuse without a direct gesture; the button is a gesture,
+      // so a failure here means full screen is simply unavailable.
+    }
+  }
   const titleId = useId();
   const descriptionId = useId();
 
@@ -61,7 +92,7 @@ export function Dialog({
     };
   }, [open]);
 
-  const width = size === "sm" ? "max-w-md" : size === "lg" ? "max-w-3xl" : "max-w-xl";
+  const width = size === "sm" ? "max-w-md" : size === "lg" ? "max-w-3xl" : size === "xl" ? "max-w-6xl" : "max-w-xl";
 
   return (
     <>
@@ -76,7 +107,7 @@ export function Dialog({
           // A click on the backdrop lands on the dialog element itself.
           if (event.target === ref.current) setOpen(false);
         }}
-        className={`m-auto w-[calc(100vw-1.5rem)] ${width} max-h-[calc(100dvh-2rem)] overflow-hidden rounded-card border border-hairline bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/45 backdrop:backdrop-blur-[3px]`}
+        className={`overlay-panel m-auto w-[calc(100vw-1.5rem)] ${width} max-h-[calc(100dvh-2rem)] overflow-hidden rounded-card border border-hairline bg-surface p-0 text-ink shadow-2xl backdrop:bg-ink/45 backdrop:backdrop-blur-[3px]`}
       >
         {open && (
           /*
@@ -100,6 +131,17 @@ export function Dialog({
                   </p>
                 )}
               </div>
+              {allowFullscreen && (
+                <button
+                  type="button"
+                  onClick={toggleFullscreen}
+                  aria-label={fullscreen ? "Leave full screen" : "Full screen"}
+                  title={fullscreen ? "Leave full screen" : "Full screen"}
+                  className="-mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  {fullscreen ? <Minimize2 className="h-4 w-4" aria-hidden /> : <Maximize2 className="h-4 w-4" aria-hidden />}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -110,7 +152,12 @@ export function Dialog({
               </button>
             </div>
 
-            <div className="overlay-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5 pb-7 sm:px-7">
+            <div
+              className={
+                bodyClassName ??
+                "overlay-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5 pb-7 sm:px-7"
+              }
+            >
               {typeof children === "function" ? children({ close: () => setOpen(false) }) : children}
             </div>
           </div>

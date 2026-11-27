@@ -3,7 +3,6 @@
 import { createMaterialSignedUrl } from "@/lib/server/file-storage";
 import { getSession } from "@/lib/server/session";
 import { mayReviewField } from "@/lib/server/rbac";
-import { downloadFileName } from "@/lib/file-name";
 import { getTraining, listTrainingComments } from "@/lib/server/training-queries";
 import { log } from "@/lib/server/logger";
 
@@ -34,7 +33,7 @@ export interface TrainingView {
   attendeeCount: number | null;
   notes: string | null;
   coverSrc: string | null;
-  resources: { id: string; title: string; sizeBytes: number | null; href: string | null }[];
+  resources: { id: string; title: string; mimeType: string | null; sizeBytes: number | null }[];
   comments: { id: string; body: string; authorName: string; authorRole: string; createdAtLabel: string }[];
 }
 
@@ -57,23 +56,14 @@ export async function loadTrainingViewAction(trainingId: string): Promise<Traini
       return { ok: false, message: "That training could not be found." };
     }
 
-    const [comments, cover, resources] = await Promise.all([
+    /*
+     * The files are listed, not linked: the viewer asks for one when it is opened
+     * (`/api/trainings/…/resources/…/file`), so opening a training does not mint
+     * a signed URL for every attachment, and clicking one never downloads it.
+     */
+    const [comments, cover] = await Promise.all([
       listTrainingComments(training.id),
       training.imageStorageKey ? createMaterialSignedUrl(training.imageStorageKey) : Promise.resolve(null),
-      Promise.all(
-        training.resources.map(async (resource) => {
-          const signed = await createMaterialSignedUrl(
-            resource.storageKey,
-            downloadFileName(resource.title, resource.mimeType),
-          );
-          return {
-            id: resource.id,
-            title: resource.title,
-            sizeBytes: resource.sizeBytes,
-            href: signed.ok ? signed.url : null,
-          };
-        }),
-      ),
     ]);
 
     const dates =
@@ -100,7 +90,12 @@ export async function loadTrainingViewAction(trainingId: string): Promise<Traini
         attendeeCount: training.attendeeCount,
         notes: training.notes,
         coverSrc: cover?.ok ? cover.url : null,
-        resources,
+        resources: training.resources.map((resource) => ({
+          id: resource.id,
+          title: resource.title,
+          mimeType: resource.mimeType,
+          sizeBytes: resource.sizeBytes,
+        })),
         comments: comments.map((comment) => ({
           id: comment.id,
           body: comment.body,

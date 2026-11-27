@@ -316,6 +316,22 @@
   background-color: rgb(252 209 22 / 0.5);
 }
 
+/* A panel told to go full screen sheds its own frame: no radius, no margin, no
+   width cap, and the whole viewport becomes the file. The header and the
+   `.overlay-scroll` body keep their layout, so a long document still scrolls
+   inside the screen rather than the page. */
+.overlay-panel:fullscreen,
+.overlay-panel:-webkit-full-screen {
+  max-width: none;
+  max-height: none;
+  width: 100vw;
+  height: 100dvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+}
+
 /* Overlay panels (dialogs, drawers) get their own bar: a thin track inset from
    the rounded corner, a stable gutter so opening a panel does not shift the
    content sideways when the bar appears, and a thumb that goes primary on hover

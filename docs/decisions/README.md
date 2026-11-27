@@ -262,3 +262,16 @@ answers next to the button, a training opened from the library opens in an overl
 over the catalogue, overlays keep a fixed title and a properly scrolling body,
 destructive geography actions are confirmed, and the role people read is **Staff**
 (key stays `LEARNER`). See `0022-short-forms-and-reading-in-place.md`.
+
+---
+
+## ADR‑0023 — An attachment opens; only Download saves it
+
+**Status:** accepted · **Date:** 2026‑11
+
+Clicking a resource opens it in a wide overlay with a full-screen control; only
+the overlay's Download button saves a file. `FilePreview` is the single renderer
+for every format, the browser draws PDF/image/video/audio while the server reads
+Word/PowerPoint/Excel/text, and attachments inside the library panel are compact
+tiles instead of full-width rows. See
+`0023-attachments-open-before-they-save.md`.

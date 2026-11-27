@@ -2,12 +2,13 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CalendarDays, Download, MapPin, MessageSquare, Paperclip, Users } from "lucide-react";
+import { CalendarDays, MapPin, MessageSquare, Paperclip, Users } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
-import { formatBytes, formatDate } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { TRAINING_STATUS_LABELS, type TrainingStatus } from "@/lib/labels";
+import { ResourceTiles } from "@/components/trainings/resource-viewer";
 import { loadTrainingViewAction, type TrainingView } from "@/lib/server/actions/training-view";
 
 type State =
@@ -174,32 +175,12 @@ function TrainingViewBody({ data, href }: { data: TrainingView; href: string }) 
           <Paperclip className="h-4 w-4 text-primary" aria-hidden />
           Resources
         </h3>
-        {data.resources.length === 0 ? (
-          <p className="text-sm text-ink-muted">Nothing attached to this training yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {data.resources.map((resource) => (
-              <li key={resource.id}>
-                {resource.href ? (
-                  <a
-                    href={resource.href}
-                    className="flex items-center justify-between gap-3 rounded-control border border-hairline bg-surface-2/40 px-3 py-2 text-sm font-semibold text-ink hover:border-primary/40 hover:text-primary"
-                  >
-                    <span className="truncate">{resource.title}</span>
-                    <span className="flex shrink-0 items-center gap-2 text-xs font-normal text-ink-muted">
-                      {resource.sizeBytes !== null ? formatBytes(resource.sizeBytes) : null}
-                      <Download className="h-3.5 w-3.5" aria-hidden />
-                    </span>
-                  </a>
-                ) : (
-                  <span className="block rounded-control border border-hairline bg-surface-2/40 px-3 py-2 text-sm text-ink-muted">
-                    {resource.title} — not available right now
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+        {/*
+         * A grid of compact tiles, not full-width rows: a file is a thing you
+         * pick, and a row stretched across the panel reads like a section heading
+         * with a download bolted on. Two-up, and each one opens to be read.
+         */}
+        <ResourceTiles trainingId={data.id} resources={data.resources} />
       </section>
 
       <section aria-labelledby="panel-discussion" className="space-y-2">

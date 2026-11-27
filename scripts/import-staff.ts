@@ -351,8 +351,17 @@ async function main() {
     const subInSheet = new Set(staff.map((row) => row.subDistrict).filter(Boolean));
     const facilitiesInSheet = new Set(staff.map((row) => row.facility).filter(Boolean));
     console.log(
-      `Dry run — would upsert ${districtsInSheet.size} districts, ${subInSheet.size} sub-districts, ${facilitiesInSheet.size} facilities, ${staff.length} accounts. Nothing written.`,
+      `Dry run — would upsert ${districtsInSheet.size} districts, ${subInSheet.size} sub-districts, ${facilitiesInSheet.size} facilities, ${staff.length} accounts.`,
     );
+    /*
+     * Said plainly, and last, because "Nothing written" on the line above a prompt
+     * is easy to skim past — this is the command somebody runs, sees a success
+     * message and a count, and then wonders why the directory is still empty.
+     */
+    console.log("");
+    console.log("  NOTHING WAS WRITTEN. This was a dry run.");
+    console.log("  Run the same command again without --dry-run to create the accounts:");
+    console.log(`    npm run staff:import -- --file "${file}"`);
     return;
   }
 
@@ -438,7 +447,9 @@ async function main() {
 
   process.stdout.write("\n");
   console.log(`Accounts: ${created} created, ${updated} refreshed${resetPasswords ? " (passwords reset)" : ""}`);
-  console.log("Every account is a LEARNER with a first password of <employee no.>@123, and must change it at first sign-in.");
+  console.log("Every account holds the Staff role (stored as LEARNER) with a first password of <employee no.>@123,");
+  console.log("and must choose a new one at first sign-in. Nothing else is printed: the sheet is never echoed.");
+  console.log("Check the result with: npm run staff:status");
   console.log("Promote people from /users — Facilitators / Admins by role, then programme access per person.");
 }
 

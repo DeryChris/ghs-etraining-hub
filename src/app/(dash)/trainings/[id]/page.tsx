@@ -13,7 +13,6 @@ import { buttonClass } from "@/components/ui/button";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { downloadFileName } from "@/lib/file-name";
 import { TRAINING_STATUS_LABELS } from "@/lib/labels";
 import { can } from "@/lib/rbac/capabilities";
 import { archiveTrainingAction } from "@/lib/server/actions/trainings";
@@ -107,21 +106,17 @@ export default async function TrainingDetailPage({
     : null;
   const coverSrc = cover?.ok ? cover.url : null;
 
-  const chips = await Promise.all(
-    training.resources.map(async (resource) => {
-      const signed = await createMaterialSignedUrl(
-        resource.storageKey,
-        downloadFileName(resource.title, resource.mimeType),
-      );
-      return {
-        id: resource.id,
-        title: resource.title,
-        mimeType: resource.mimeType,
-        sizeBytes: resource.sizeBytes,
-        href: signed.ok ? signed.url : null,
-      };
-    }),
-  );
+  /*
+   * The attachments are listed, not pre-signed: each one is read or downloaded
+   * through its own route when somebody asks for it, so opening this page does
+   * not mint six links nobody clicked.
+   */
+  const chips = training.resources.map((resource) => ({
+    id: resource.id,
+    title: resource.title,
+    mimeType: resource.mimeType,
+    sizeBytes: resource.sizeBytes,
+  }));
   let fields: Awaited<ReturnType<typeof listProgrammeFieldOptions>> = [];
   let geography: Awaited<ReturnType<typeof listGeography>> = [];
   if (mayManage) {
@@ -207,7 +202,7 @@ export default async function TrainingDetailPage({
           </p>
         )}
 
-        <ResourceChips resources={chips} />
+        <ResourceChips trainingId={training.id} resources={chips} />
       </div>
 
       {(notice || error) && (
