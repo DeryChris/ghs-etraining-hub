@@ -346,7 +346,7 @@ export interface MandatoryItem {
   reacknowledgementRequired: boolean;
 }
 
-/** A material this person opened, most recent first. Activity, not a grade. */
+/** A material this person opened, most recent first. Activity, nothing more. */
 export interface RecentOpen {
   id: string;
   title: string;
@@ -424,8 +424,8 @@ export async function getLearnerDashboard(viewer: Viewer): Promise<LearnerDashbo
  * What this person has opened, newest first.
  *
  * This is the activity record the library keeps for statistics: which material,
- * when it was last opened, how many times. It is not a transcript — nothing is
- * "finished" here, and nothing is awarded for it.
+ * when it was last opened, how many times. It says where somebody has been, and
+ * nothing more.
  */
 export async function listRecentOpens(userId: string, limit = 20): Promise<RecentOpen[]> {
   const rows = await db

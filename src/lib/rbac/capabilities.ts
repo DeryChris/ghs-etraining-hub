@@ -48,9 +48,6 @@ export type Action =
   | "material.read_draft"
   | "material.read_published"
   | "material.download"
-  | "assessment.configure"
-  | "assessment.take"
-  | "assessment.override_score"
   | "enrollment.self"
   | "enrollment.assign"
   | "comment.create"
@@ -75,8 +72,6 @@ export type Scope = {
   directorate?: string;
   cadre?: string;
   reviewerIsAuthor?: boolean;
-  enrolled?: boolean;
-  attemptsLeft?: boolean;
   audienceMatch?: boolean;
 };
 
@@ -103,9 +98,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "training.manage": true,
     "taxonomy.manage": true,
     "geography.manage": true,
-    "assessment.configure": true,
-    "assessment.take": true,
-    "assessment.override_score": true,
     "enrollment.self": true,
     "enrollment.assign": true,
     "comment.create": true,
@@ -143,9 +135,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "training.manage": true,
     "taxonomy.manage": false,
     "geography.manage": false,
-    "assessment.configure": true,
-    "assessment.take": true,
-    "assessment.override_score": false,
     "enrollment.self": true,
     "enrollment.assign": true,
     "comment.create": true,
@@ -183,9 +172,6 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "training.manage": false,
     "taxonomy.manage": false,
     "geography.manage": false,
-    "assessment.configure": false,
-    "assessment.take": true,
-    "assessment.override_score": false,
     "enrollment.self": true,
     "enrollment.assign": false,
     "comment.create": true,
@@ -206,10 +192,10 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
 /**
  * Actions that need no session at all.
  *
- * Empty on purpose: certificate verification was the only public action, and it
- * is gone with the awarding model. The set stays because `can(null, …)` and the
- * matrix are written against it — anything added here becomes anonymous-accessible
- * by definition, so it should stay empty unless there is a real reason.
+ * Empty on purpose: nothing here is done without a session. The set stays
+ * because `can(null, …)` and the matrix are written against it — anything added
+ * here becomes anonymous-accessible by definition, so it should stay empty
+ * unless there is a real reason.
  */
 export const PUBLIC_ACTIONS: ReadonlySet<Action> = new Set<Action>([]);
 
@@ -222,7 +208,6 @@ export const FACILITATOR_GLOBAL_ACTIONS: readonly Action[] = [
   "training.manage",
   "material.read_published",
   "material.download",
-  "assessment.take",
   "enrollment.self",
   "comment.create",
   "comment.edit_own",
@@ -260,7 +245,6 @@ export function scopeAllows(
     if ((action === "material.read_published" || action === "material.download") && scope.audienceMatch === false) {
       return false;
     }
-    if (action === "assessment.take" && (scope.enrolled === false || scope.attemptsLeft === false)) return false;
     return true;
   }
 

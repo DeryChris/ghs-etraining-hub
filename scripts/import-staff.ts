@@ -5,6 +5,12 @@
  *   npm run staff:import -- --file "C:\path\to\Staff Data.csv" --dry-run
  *   npm run staff:import -- --file "C:\path\to\Staff Data.csv"
  *
+ *   --limit=50            stop after 50 people (a smoke test on real data)
+ *   --batch=100           rows per statement (lower it if the network is slow)
+ *   --from=1 --to=1000    a window of the sheet, so a failed run can be resumed
+ *   --users-only          skip the geography pass (the tree is already there)
+ *   --reset-passwords     re-issue <employee no.>@123 to everybody
+ *
  * The sheet never enters this repository: the path is an argument, nothing is
  * committed, and the only output is a count per table. Every line of PII stays in
  * this process — no names, no phone numbers, no employee numbers are printed, and
@@ -25,47 +31,65 @@
  *   to say and easy to replace; it is never stored in plain text and never
  *   printed. Re-running the import does NOT reset a password that has since been
  *   changed — pass `--reset-passwords` if that is what you actually want.
+ *
+ * ── Why this used to die halfway ──────────────────────────────────────────────
+ *   Three separate ceilings, all of them hit by a six-thousand-row sheet:
+ *
+ *   1. `users.email` is unique and the sheet repeats corporate addresses, so a
+ *      batch containing two of them was rejected by the database — the whole
+ *      batch, after minutes of hashing. The first row now keeps the address and
+ *      the rest fall back to the employee number (see `scripts/lib/staff-sheet.ts`).
+ *   2. One statement per 250 people is ~3 500 bound parameters over a pooled
+ *      Neon connection, and the pool's `statement_timeout` is 30 s. Batches are
+ *      now 100 rows by default, written inside a transaction with the timeout
+ *      lifted for that transaction only.
+ *   3. bcrypt at cost 12 is a third of a second per person: 6 377 people is
+ *      over half an hour single-file, which reads as "frozen". Hashing now runs
+ *      on one worker per core, and only for people who do not exist yet.
+ *
+ * A failed batch is retried, then reported with its Postgres code, constraint
+ * and a `--from` value to resume at. Nothing is written for that batch, so
+ * re-running is always safe: `ghs_staff_id` is unique and the upsert is
+ * identity-only.
+ *
+ * There is also `npm run staff:sql`, which writes the same rows as one `.sql`
+ * file for the Neon SQL editor or `psql -f` when a long-running Node process is
+ * not an option.
  */
 import "dotenv/config";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { availableParallelism } from "node:os";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db, client } from "@/db/index";
 import { districts, facilities, regions, subDistricts, users } from "@/db/schema";
+import {
+  DISTRICT_KIND,
+  FACILITY_TYPE,
+  defaultPassword,
+  flagNumber,
+  hashPasswords,
+  parseStaffSheet,
+  readFlags,
+  regionSlug,
+  type StaffRow,
+} from "./lib/staff-sheet";
 
 /* ── Arguments ─────────────────────────────────────────────────────────────── */
 
-/** `--file x`, `--file=x`, `--dry-run` — all three are things people type. */
-const args = new Map<string, string | true>();
-// Node keeps `--conditions`/`--import` in argv in some versions; start from the
-// script itself so the flags are the only thing being read.
-const scriptIndex = process.argv.findIndex((entry) => entry.endsWith("import-staff.ts"));
-const argv = process.argv.slice(scriptIndex + 1);
+const args = readFlags(process.argv, "import-staff.ts");
 
-for (let index = 0; index < argv.length; index += 1) {
-  const entry = argv[index];
-  if (!entry.startsWith("--")) continue;
-  const [key, ...rest] = entry.replace(/^--/, "").split("=");
-  if (rest.length) {
-    args.set(key, rest.join("="));
-    continue;
-  }
-  const next = argv[index + 1];
-  if (next && !next.startsWith("--")) {
-    args.set(key, next);
-    index += 1;
-  } else {
-    args.set(key, true);
-  }
-}
-
-const file =
-  (typeof args.get("file") === "string" ? (args.get("file") as string) : null) ?? process.env.STAFF_CSV ?? null;
+const file = (typeof args.get("file") === "string" ? (args.get("file") as string) : null) ?? process.env.STAFF_CSV ?? null;
 const dryRun = args.has("dry-run");
 const resetPasswords = args.has("reset-passwords");
-const limit = Number.parseInt(String(args.get("limit") ?? ""), 10);
+const usersOnly = args.has("users-only");
+const limit = flagNumber(args, "limit");
+const batchSize = Math.min(Math.max(flagNumber(args, "batch") ?? 100, 1), 500);
+const from = Math.max(flagNumber(args, "from") ?? 1, 1);
+const to = flagNumber(args, "to");
 
 if (!file) {
-  console.error("Usage: npm run staff:import -- --file <path to the staff CSV> [--dry-run] [--limit=N] [--reset-passwords]");
+  console.error("Usage: npm run staff:import -- --file <path to the staff CSV> [--dry-run] [--limit=N] [--batch=N]");
+  console.error("       [--from=N] [--to=N] [--users-only] [--reset-passwords]");
   console.error("");
   console.error("  The CSV is the GHS staffing export with columns: Employee No., Surname, Firstname(s),");
   console.error("  Full name, Gender, Work email, Work phone, Home mobile, Region, District / Division,");
@@ -77,163 +101,14 @@ if (!file) {
 
 if (!existsSync(file)) {
   console.error(`✖ No file at ${file}.`);
-  console.error("  Quote the path if it contains spaces: --file \"C:\\Users\\me\\Staff Data.csv\"");
+  console.error('  Quote the path if it contains spaces: --file "C:\\Users\\me\\Staff Data.csv"');
   process.exit(1);
 }
 
-/* ── CSV ─────────────────────────────────────────────────────────────────────
- * Written by hand rather than pulled in: the sheet is quoted throughout, quotes
- * inside fields are doubled, and there are no embedded newlines. That is a small
- * enough grammar to own, and it keeps a dependency out of the repo for one job.
- */
+const sheet = parseStaffSheet(file, { limit: limit ?? undefined });
+const staff = sheet.rows.filter((_, index) => index + 1 >= from && (to === null || index + 1 <= to));
 
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let quoted = false;
-
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    if (quoted) {
-      if (char === '"') {
-        if (text[index + 1] === '"') {
-          field += '"';
-          index += 1;
-        } else quoted = false;
-      } else field += char;
-      continue;
-    }
-    if (char === '"') quoted = true;
-    else if (char === ",") {
-      row.push(field);
-      field = "";
-    } else if (char === "\n") {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = "";
-    } else if (char !== "\r") field += char;
-  }
-  if (field.length || row.length) {
-    row.push(field);
-    rows.push(row);
-  }
-  return rows;
-}
-
-const clean = (value: string | undefined): string => (value ?? "").replace(/\s+/g, " ").trim();
-
-const raw = readFileSync(file, "utf8").replace(/^\uFEFF/, "");
-const [headerRow, ...dataRows] = parseCsv(raw);
-const header = headerRow.map((cell) => clean(cell).toLowerCase());
-
-const column = (name: string): number => {
-  const index = header.indexOf(name.toLowerCase());
-  if (index === -1) throw new Error(`The sheet has no "${name}" column. Expected the GHS staffing export.`);
-  return index;
-};
-
-const COL = {
-  employeeNo: column("Employee No."),
-  surname: column("Surname"),
-  firstNames: column("Firstname(s)"),
-  fullName: column("Full name"),
-  gender: column("Gender"),
-  workEmail: column("Work email"),
-  workPhone: column("Work phone"),
-  homeMobile: column("Home mobile"),
-  region: column("Region"),
-  district: column("District / Division"),
-  subDistrict: column("Sub-district"),
-  facility: column("Facility / Unit"),
-  facilityType: column("Facility type"),
-  category: column("Category"),
-};
-
-interface StaffRow {
-  staffId: string;
-  fullName: string;
-  gender: string | null;
-  email: string | null;
-  phone: string | null;
-  region: string;
-  district: string;
-  subDistrict: string | null;
-  facility: string | null;
-  cadre: string | null;
-}
-
-const seen = new Set<string>();
-const staff: StaffRow[] = [];
-let skippedBlankId = 0;
-let skippedDuplicate = 0;
-
-for (const cells of dataRows) {
-  const staffId = clean(cells[COL.employeeNo]).slice(0, 16);
-  if (!staffId) {
-    skippedBlankId += 1;
-    continue;
-  }
-  if (seen.has(staffId.toLowerCase())) {
-    skippedDuplicate += 1;
-    continue;
-  }
-  seen.add(staffId.toLowerCase());
-
-  const fullName = clean(cells[COL.fullName]) || `${clean(cells[COL.firstNames])} ${clean(cells[COL.surname])}`.trim();
-  if (!fullName) {
-    skippedBlankId += 1;
-    continue;
-  }
-
-  const email = clean(cells[COL.workEmail]).toLowerCase();
-  const phone = clean(cells[COL.workPhone]) || clean(cells[COL.homeMobile]);
-  const region = clean(cells[COL.region]);
-  const district = clean(cells[COL.district]);
-
-  staff.push({
-    staffId,
-    fullName,
-    gender: clean(cells[COL.gender]) || null,
-    email: email.includes("@") ? email : null,
-    phone: phone || null,
-    region: region || "Upper West",
-    district: district || "",
-    subDistrict: clean(cells[COL.subDistrict]) || null,
-    facility: clean(cells[COL.facility]) || null,
-    cadre: clean(cells[COL.category]) || null,
-  });
-
-  if (Number.isFinite(limit) && staff.length >= limit) break;
-}
-
-/* ── Geography vocabulary ───────────────────────────────────────────────────── */
-
-const DISTRICT_KIND = (name: string): "METROPOLITAN" | "MUNICIPAL" | "DISTRICT" => {
-  const lower = name.toLowerCase();
-  if (lower.includes("metropolitan")) return "METROPOLITAN";
-  if (lower.includes("municipal")) return "MUNICIPAL";
-  return "DISTRICT";
-};
-
-const FACILITY_TYPE = (name: string): (typeof facilities.$inferInsert)["type"] => {
-  const lower = name.toLowerCase();
-  if (lower.includes("regional hospital")) return "REGIONAL_HOSPITAL";
-  if (lower.includes("municipal hospital")) return "MUNICIPAL_HOSPITAL";
-  if (lower.includes("hospital")) return "DISTRICT_HOSPITAL";
-  if (lower.includes("polyclinic")) return "POLYCLINIC";
-  if (lower.includes("directorate")) return "DIRECTORATE";
-  if (lower.includes("clinic")) return "CLINIC";
-  if (lower.includes("health centre") || lower.includes("health center") || lower.includes("chps")) return "HEALTH_CENTRE";
-  return "OTHER";
-};
-
-const slug = (name: string): string =>
-  name
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, "")
-    .slice(0, 8) || "UW";
+/* ── Geography ─────────────────────────────────────────────────────────────── */
 
 async function geo() {
   // Regions present in the sheet (one today, but the loop costs nothing).
@@ -248,7 +123,7 @@ async function geo() {
     }
     const [inserted] = await db
       .insert(regions)
-      .values({ code: slug(name), name })
+      .values({ code: regionSlug(name), name })
       .onConflictDoUpdate({ target: regions.name, set: { name } })
       .returning({ id: regions.id });
     regionIds.set(name, inserted.id);
@@ -300,9 +175,7 @@ async function geo() {
   }
 
   // Facilities, unique per district by name.
-  const facilityKeys = [
-    ...new Set(staff.filter((row) => row.facility).map((row) => `${row.region}||${row.district || ""}||${row.facility}`)),
-  ];
+  const facilityKeys = [...new Set(staff.filter((row) => row.facility).map((row) => `${row.region}||${row.district || ""}||${row.facility}`))];
   let facilitiesCreated = 0;
 
   for (const key of facilityKeys) {
@@ -334,17 +207,93 @@ async function geo() {
   };
 }
 
-/* ── Users ─────────────────────────────────────────────────────────────────── */
+/* ── Writes ────────────────────────────────────────────────────────────────── */
 
-const CHUNK = 250;
+/** Everything a person's row puts into `users`, whichever statement writes it. */
+function identityOf(row: StaffRow) {
+  return {
+    ghsStaffId: row.staffId,
+    fullName: row.fullName,
+    gender: row.gender,
+    email: row.email,
+    phone: row.phone,
+    cadre: row.cadre,
+    region: row.region,
+    district: row.district || null,
+    subDistrict: row.subDistrict,
+    facility: row.facility,
+  };
+}
+
+/**
+ * `update … from (values …)`: one statement for the people who already exist.
+ *
+ * The alternative — an insert that conflicts and an update clause that leaves
+ * `password_hash` alone — needs a hash in the values list for every row, which
+ * is exactly the cost a re-import is trying to avoid.
+ */
+async function updateExisting(tx: typeof db, rows: StaffRow[]) {
+  const tuples = rows.map((row) => {
+    const person = identityOf(row);
+    return sql`(${person.ghsStaffId}::text, ${person.fullName}::text, ${person.gender}::text, ${person.email}::text, ${person.phone}::text, ${person.cadre}::text, ${person.region}::text, ${person.district}::text, ${person.subDistrict}::text, ${person.facility}::text)`;
+  });
+
+  await tx.execute(sql`
+    update "users" as u set
+      "full_name" = v.full_name,
+      "gender" = v.gender,
+      "email" = v.email,
+      "phone" = v.phone,
+      "cadre" = v.cadre,
+      "region" = v.region,
+      "district" = v.district,
+      "sub_district" = v.sub_district,
+      "facility" = v.facility,
+      "updated_at" = now()
+    from (values ${sql.join(tuples, sql`, `)}) as v(ghs_staff_id, full_name, gender, email, phone, cadre, region, district, sub_district, facility)
+    where u."ghs_staff_id" = v.ghs_staff_id
+  `);
+}
+
+/** Postgres errors carry the useful half in fields `message` does not. */
+function describeError(error: unknown): string {
+  const detail = error as { message?: string; code?: string; detail?: string; hint?: string; constraint?: string };
+  const lines = [detail.message ?? String(error)];
+  if (detail.code) lines.push(`  code: ${detail.code}`);
+  if (detail.constraint) lines.push(`  constraint: ${detail.constraint}`);
+  if (detail.detail) lines.push(`  detail: ${detail.detail}`);
+  if (detail.hint) lines.push(`  hint: ${detail.hint}`);
+  return lines.join("\n");
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Three attempts, then the batch is reported instead of guessed at. */
+async function writeBatch(run: () => Promise<void>, label: string) {
+  let last: unknown;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      await run();
+      return;
+    } catch (error) {
+      last = error;
+      if (attempt < 3) await sleep(attempt * 750);
+    }
+  }
+  throw new Error(`Batch ${label} failed after 3 attempts.\n${describeError(last)}`);
+}
+
+/* ── Main ──────────────────────────────────────────────────────────────────── */
 
 async function main() {
-  console.log(`Sheet: ${dataRows.length} rows → ${staff.length} usable`);
-  if (skippedDuplicate) console.log(`  ${skippedDuplicate} duplicate employee numbers skipped`);
-  if (skippedBlankId) console.log(`  ${skippedBlankId} rows without an employee number or name skipped`);
-  console.log(
-    `  ${staff.filter((row) => row.email).length} with a work e-mail, ${staff.filter((row) => !row.email).length} without (they sign in with their employee number)`,
-  );
+  const { stats } = sheet;
+  console.log(`Sheet: ${stats.rows} rows → ${stats.usable} usable`);
+  if (stats.duplicates) console.log(`  ${stats.duplicates} duplicate employee numbers skipped`);
+  if (stats.blank) console.log(`  ${stats.blank} rows without an employee number or name skipped`);
+  if (stats.invalidEmails) console.log(`  ${stats.invalidEmails} work e-mails were not addresses — those staff sign in by employee number`);
+  if (stats.sharedEmails) console.log(`  ${stats.sharedEmails} repeated work e-mails — only the first account keeps one`);
+  console.log(`  ${stats.withEmail} with a work e-mail, ${stats.withoutEmail} without (they sign in with their employee number)`);
+  if (from > 1 || to !== null) console.log(`  window: rows ${from}–${to ?? stats.usable} of the sheet (${staff.length} people)`);
 
   if (dryRun) {
     const districtsInSheet = new Set(staff.map((row) => row.district).filter(Boolean));
@@ -365,88 +314,131 @@ async function main() {
     return;
   }
 
-  // Geography first: an account can point at a facility that does not exist yet,
-  // but the directory reads better when the tree is complete before the people.
-  const geoCounts = await geo();
-  console.log(`Geography: ${geoCounts.districts} districts, ${geoCounts.subDistricts} sub-districts, ${geoCounts.facilities} facilities (${geoCounts.facilitiesCreated} new)`);
+  if (!usersOnly) {
+    // Geography first: an account can point at a facility that does not exist yet,
+    // but the directory reads better when the tree is complete before the people.
+    const geoCounts = await geo();
+    console.log(
+      `Geography: ${geoCounts.districts} districts, ${geoCounts.subDistricts} sub-districts, ${geoCounts.facilities} facilities (${geoCounts.facilitiesCreated} new)`,
+    );
+  }
 
   // Which employee numbers already exist? Only the missing ones need a hash —
   // bcrypt at cost 12 is deliberately slow, and 6 000 of them is minutes.
-  const ids = staff.map((row) => row.staffId);
   const existing = new Set<string>();
-  for (let index = 0; index < ids.length; index += 500) {
-    const slice = ids.slice(index, index + 500);
-    const found = await db
-      .select({ staffId: users.ghsStaffId })
-      .from(users)
-      .where(inArray(users.ghsStaffId, slice));
+  for (let index = 0; index < staff.length; index += 500) {
+    const slice = staff.slice(index, index + 500).map((row) => row.staffId);
+    const found = await db.select({ staffId: users.ghsStaffId }).from(users).where(inArray(users.ghsStaffId, slice));
     for (const row of found) existing.add(row.staffId);
   }
 
-  const { hashPassword } = await import("@/lib/server/auth");
-  let created = 0;
-  let updated = 0;
-
-  for (let index = 0; index < staff.length; index += CHUNK) {
-    const chunk = staff.slice(index, index + CHUNK);
-    const values: (typeof users.$inferInsert)[] = [];
-
-    for (const person of chunk) {
-      const known = existing.has(person.staffId);
-      const base = {
-        ghsStaffId: person.staffId,
-        fullName: person.fullName,
-        gender: person.gender,
-        email: person.email,
-        phone: person.phone,
-        cadre: person.cadre,
-        region: person.region,
-        district: person.district || null,
-        subDistrict: person.subDistrict,
-        facility: person.facility,
-        role: "LEARNER" as const,
-        updatedAt: new Date(),
-      };
-
-      if (known && !resetPasswords) {
-        // The update set below never touches password_hash, so an existing
-        // password survives a re-import untouched.
-        values.push(base);
-      } else {
-        // "<employee number>@123" — easy to say over the phone, replaced on first sign-in.
-        const passwordHash = await hashPassword(`${person.staffId}@123`);
-        values.push({ ...base, passwordHash, mustChangePassword: true });
-      }
-      if (known) updated += 1;
-      else created += 1;
+  /* An address already used by a *different* account is a unique violation that
+   * would sink whichever batch it landed in. Drop it here instead: the person
+   * still gets an account, and signs in with the employee number. */
+  const emails = [...new Set(staff.map((row) => row.email).filter((value): value is string => Boolean(value)))];
+  const owners = new Map<string, string>();
+  for (let index = 0; index < emails.length; index += 500) {
+    const slice = emails.slice(index, index + 500).map((value) => value.toLowerCase());
+    const found = await db
+      .select({ staffId: users.ghsStaffId, email: users.email })
+      .from(users)
+      .where(inArray(sql`lower(${users.email})`, slice));
+    for (const row of found) if (row.email) owners.set(row.email.toLowerCase(), row.staffId);
+  }
+  let freed = 0;
+  for (const row of staff) {
+    const owner = row.email ? owners.get(row.email) : undefined;
+    if (owner && owner !== row.staffId) {
+      row.email = null;
+      freed += 1;
     }
+  }
+  if (freed) console.log(`  ${freed} addresses already belong to another account here — left to the employee number`);
 
-    await db
-      .insert(users)
-      .values(values)
-      .onConflictDoUpdate({
-        target: users.ghsStaffId,
-        // Identity fields only. An existing password, role, unit-head duty or
-        // programme assignment is never overwritten by a re-import.
-        set: {
-          fullName: sql`excluded.full_name`,
-          gender: sql`excluded.gender`,
-          email: sql`excluded.email`,
-          phone: sql`excluded.phone`,
-          cadre: sql`excluded.cadre`,
-          region: sql`excluded.region`,
-          district: sql`excluded.district`,
-          subDistrict: sql`excluded.sub_district`,
-          facility: sql`excluded.facility`,
-          updatedAt: new Date(),
-        },
-      });
+  const fresh = staff.filter((row) => !existing.has(row.staffId) || resetPasswords);
+  const known = staff.filter((row) => existing.has(row.staffId) && !resetPasswords);
 
-    process.stdout.write(`\r  accounts: ${Math.min(index + CHUNK, staff.length)}/${staff.length}`);
+  console.log(`Accounts: ${fresh.length} to create${resetPasswords ? " (passwords reset)" : ""}, ${known.length} to refresh`);
+  if (fresh.length >= 200) {
+    // 0.33 s per bcrypt hash at cost 12, split across the cores doing the work.
+    const cores = Math.max(1, Math.min(8, availableParallelism()));
+    const minutes = Math.max(1, Math.round((fresh.length * 0.33) / cores / 60));
+    console.log(`  hashing ${fresh.length} first passwords on ${cores} cores — about ${minutes} min. Ctrl-C is safe: re-run and it continues.`);
+  }
+
+  const hashes = await hashPasswords(
+    fresh.map((row) => defaultPassword(row.staffId)),
+    (done, total) => process.stdout.write(`\r  hashing: ${done}/${total}`),
+  );
+  if (fresh.length) process.stdout.write("\n");
+
+  const hashOf = new Map<string, string>();
+  fresh.forEach((row, index) => hashOf.set(row.staffId, hashes[index]));
+
+  let created = 0;
+  let refreshed = 0;
+
+  for (let index = 0; index < staff.length; index += batchSize) {
+    const batch = staff.slice(index, index + batchSize);
+    const creations = batch.filter((row) => hashOf.has(row.staffId));
+    const refreshes = batch.filter((row) => !hashOf.has(row.staffId));
+
+    await writeBatch(
+      async () => {
+        await db.transaction(async (tx) => {
+          // The pool's 30 s ceiling is for a page request, not for a batch of
+          // 100 payroll rows over a pooled connection in another continent.
+          await tx.execute(sql`set local statement_timeout = 0`);
+
+          if (creations.length) {
+            const values = creations.map((row) => ({
+              ...identityOf(row),
+              role: "LEARNER" as const,
+              passwordHash: hashOf.get(row.staffId)!,
+              mustChangePassword: true,
+              updatedAt: new Date(),
+            }));
+            await tx
+              .insert(users)
+              .values(values)
+              .onConflictDoUpdate({
+                target: users.ghsStaffId,
+                // Identity fields only. An existing password, role, unit-head duty
+                // or programme assignment is never overwritten by a re-import.
+                set: {
+                  fullName: sql`excluded.full_name`,
+                  gender: sql`excluded.gender`,
+                  // The sheet owns the address. Null means the sheet has none (or
+                  // another account holds it), which is how a person signs in by
+                  // employee number instead.
+                  email: sql`excluded.email`,
+                  phone: sql`excluded.phone`,
+                  cadre: sql`excluded.cadre`,
+                  region: sql`excluded.region`,
+                  district: sql`excluded.district`,
+                  subDistrict: sql`excluded.sub_district`,
+                  facility: sql`excluded.facility`,
+                  ...(resetPasswords
+                    ? { passwordHash: sql`excluded.password_hash`, mustChangePassword: sql`excluded.must_change_password` }
+                    : {}),
+                  updatedAt: new Date(),
+                },
+              });
+          }
+
+          if (refreshes.length) await updateExisting(tx as unknown as typeof db, refreshes);
+        });
+      },
+      `${index + 1}–${index + batch.length} of ${staff.length}`,
+    );
+
+    created += creations.length;
+    refreshed += refreshes.length;
+    process.stdout.write(`\r  accounts: ${Math.min(index + batchSize, staff.length)}/${staff.length}`);
   }
 
   process.stdout.write("\n");
-  console.log(`Accounts: ${created} created, ${updated} refreshed${resetPasswords ? " (passwords reset)" : ""}`);
+  console.log(`Accounts: ${created} created, ${refreshed} refreshed${resetPasswords ? " (passwords reset)" : ""}`);
   console.log("Every account holds the Staff role (stored as LEARNER) with a first password of <employee no.>@123,");
   console.log("and must choose a new one at first sign-in. Nothing else is printed: the sheet is never echoed.");
   console.log("Check the result with: npm run staff:status");
@@ -459,7 +451,12 @@ main()
     process.exit(0);
   })
   .catch(async (error) => {
-    console.error("\nImport failed:", error instanceof Error ? error.message : error);
+    console.error("\nImport failed:", error instanceof Error ? error.message : describeError(error));
+    console.error("");
+    console.error("  Nothing from the failed batch was written. Re-run the same command — rows that");
+    console.error("  already exist are refreshed, not duplicated. To skip the work that is done:");
+    console.error(`    npm run staff:import -- --file "${file}" --from=<first row of the failed batch>`);
+    console.error("  Or use the plain-SQL route: npm run staff:sql -- --file <csv>");
     await client.end({ timeout: 5 }).catch(() => {});
     process.exit(1);
   });

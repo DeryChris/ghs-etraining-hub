@@ -229,7 +229,7 @@ Each phase ships something a user can do, and ends with the §10 gates green.
 | **P0 Foundations** | Schema, session, RBAC skeleton, audit logger, design tokens, shell, health endpoint | `/api/health` ok; capability matrix tested; audit writes hash‑chained |
 | **P1 Identity & roster** | Login, forced first‑login, profile, admin users, bulk import, lockout | Admin can import 500 rows; wrong PIN rejected with a readable report |
 | **P2 Content** | Categories, spaces, upload pipeline, versioning, review, publish | New version published by reviewer ≠ author; superseded banner shows |
-| **P3 Learning** | Enrollment, progress, acknowledgement, assessments — ~~certificates, verification link~~ (retired) | Completion is recorded against the version read; nothing is certified or verified publicly |
+| **P3 Learning** | Acknowledgement of protocols, opens and downloads recorded against the version read — ~~certificates, verification link, assessments and marks~~ (retired, ADR‑0011 and ADR‑0026) | An acknowledgement names the version it was signed against; nothing is marked, scored or certified |
 | **P4 Social** | Discussions, messaging, notifications, moderation, abuse reports | Nested threads render; unread counts correct under polling and realtime |
 | **P5 Insight** | Analytics per role, exports, national coverage | p95 analytics query < 800 ms; export streams 50k rows |
 | **P6 Hardening** | Offline SW, data saver, a11y sweep, load test, DPIA sign‑off, DR drill | 3G smoke test passes; axe 0 critical; 5k concurrent users OK |

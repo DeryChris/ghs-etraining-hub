@@ -45,7 +45,7 @@ const ROADMAP = [
   {
     phase: "Live now",
     status: "done" as const,
-    items: ["Programme catalogue with versioned material", "Reviewed uploads and two-person publishing", "A record of what you opened, downloaded and finished", "Search, library and cohort-targeted notices", "Every administrative action audited"],
+    items: ["Programme catalogue with versioned material", "Reviewed uploads and two-person publishing", "A record of what you opened and downloaded", "Search, library and cohort-targeted notices", "Every administrative action audited"],
   },
   {
     phase: "Next",

@@ -72,5 +72,8 @@ Staff Data.csv
 staff-data*.csv
 /data/staff*/
 
+# `npm run staff:sql` output: a bcrypt hash per person.
+staff-accounts*.sql
+
 # Commands
 commands.md

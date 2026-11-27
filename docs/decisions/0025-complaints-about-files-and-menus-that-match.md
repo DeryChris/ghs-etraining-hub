@@ -29,7 +29,8 @@ using it.
    a training cannot be worked.
 3. **The complaint form is three steps, not thirteen fields.** *You* (Staff ID,
    look-up, name, email, phone), *The problem* (issue cards, and the training
-   picker when the issue is a file), *The details* (subject, what happened). Every
+   picker when the issue is a file), *The details* (what happened — one field;
+   the subject line is cut from it server-side, ADR‑0026). Every
    panel stays mounted, so nothing is lost by stepping; a failure keeps every
    value typed. The issue is a row of cards with an icon and a sentence, not a
    word in a list — it is the one answer that decides what the rest of the form

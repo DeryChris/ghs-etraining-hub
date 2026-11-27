@@ -92,8 +92,8 @@ const STEPS = [
   },
   {
     icon: BadgeCheck,
-    title: "Record what you completed",
-    body: "The library keeps what you opened, downloaded and marked as finished, so you can find your way back to it.",
+    title: "Find your way back",
+    body: "The library keeps what you opened and downloaded, so you can return to the same version.",
   },
 ];
 
@@ -131,9 +131,9 @@ const FAQ = [
       "Facilitators assigned to the directorate upload and version it. Nothing is deleted: material is archived, and the audit trail keeps who uploaded, reviewed, published, downloaded or withdrew it.",
   },
   {
-    question: "Is my learning record official?",
+    question: "What does the library keep about me?",
     answer:
-      "The library records which material you opened, downloaded and marked as finished, always against the version you saw. Nothing is scored and nothing is awarded: the record exists so programme teams can see what is being read and what is being missed."
+      "Which material you opened and downloaded, always against the version you saw. The record exists so programme teams can see what is being read and what is being missed."
   },
   {
     question: "I forgot my password. What now?",

@@ -45,9 +45,9 @@ describe("capability matrix", () => {
   // capabilities.ts appears in the vectors file" — this is that assertion,
   // expressed as a self-consistency sweep so a new action cannot ship untested.
   it("answers for every documented action and every role", () => {
-    // Was 40 before the award model was retired with its two actions; the floor
-    // exists to catch a vocabulary that silently shrinks, not to pin a number.
-    expect(ACTIONS.length).toBeGreaterThanOrEqual(38);
+    // A floor, not a pin: it catches a vocabulary that silently loses an action
+    // as the product sheds features.
+    expect(ACTIONS.length).toBeGreaterThanOrEqual(35);
     for (const role of ROLES) {
       for (const action of ACTIONS) {
         expect(CAPABILITY_MATRIX[role][action], `${role} → ${action}`).toBeTypeOf("boolean");
@@ -81,11 +81,6 @@ describe("scope resolution", () => {
       expect(isGlobalForFacilitators(action), action).toBe(true);
     }
     expect(isGlobalForFacilitators("material.publish")).toBe(false);
-  });
-
-  it("denies learners a locked assessment", () => {
-    expect(scopeAllows("LEARNER", "assessment.take", { enrolled: false })).toBe(false);
-    expect(scopeAllows("LEARNER", "assessment.take", { enrolled: true, attemptsLeft: true })).toBe(true);
   });
 
   it("denies learners material aimed at another cohort", () => {

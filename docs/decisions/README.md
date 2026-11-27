@@ -300,3 +300,11 @@ complaint form becomes three steps with issue cards. One listbox replaces every
 native `<select>` in the product, posting through a real hidden select so forms
 submit exactly what they did before. See
 `0025-complaints-about-files-and-menus-that-match.md`.
+
+## ADR‑0026 — No marks, no certificates
+
+Outcome-free by design: the Pre/Post Test page, the question-bank tables and the
+capabilities behind them are gone, "finished" leaves the interface, and the
+disclaimers that kept explaining what was not awarded are deleted rather than
+reworded. The complaint form keeps one narrative field. See
+`0026-no-marks-no-certificates.md`.

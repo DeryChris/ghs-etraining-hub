@@ -31,6 +31,7 @@
     "db:doctor": "node --conditions=react-server --import tsx scripts/db-doctor.ts",
     "db:check-chain": "node scripts/check-migration-chain.mjs",
     "staff:import": "node --conditions=react-server --import tsx scripts/import-staff.ts",
+    "staff:sql": "node --conditions=react-server --import tsx scripts/export-staff-sql.ts",
     "db:repair": "node scripts/db-repair.mjs",
     "user:password": "node --conditions=react-server --import tsx scripts/set-password.ts",
     "staff:status": "node --conditions=react-server --import tsx scripts/staff-status.ts"

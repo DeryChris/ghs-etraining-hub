@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default async function ReportComplaintPage({
   searchParams,
 }: {
-  searchParams: Promise<{ issue?: string; training?: string; trainingTitle?: string; subject?: string }>;
+  searchParams: Promise<{ issue?: string; training?: string; trainingTitle?: string }>;
 }) {
   const params = await searchParams;
   const issue = COMPLAINT_ISSUES.find((entry) => entry === params.issue) as ComplaintIssue | undefined;
@@ -48,7 +48,6 @@ export default async function ReportComplaintPage({
               issue,
               trainingId: params.training ?? null,
               trainingTitle: params.trainingTitle ?? null,
-              subject: params.subject ?? null,
             }}
           />
         </div>
