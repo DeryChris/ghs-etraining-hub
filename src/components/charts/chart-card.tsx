@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /*
@@ -78,6 +79,7 @@ export function ChartCard({
         </summary>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full border-collapse text-sm">
+            <caption className="sr-only">{title} data table</caption>
             <thead>
               <tr className="text-left text-xs uppercase tracking-[0.12em] text-ink-muted">
                 {table.head.map((cell) => (
@@ -107,8 +109,11 @@ export function ChartCard({
 
 export function EmptyChart({ message }: { message: string }) {
   return (
-    <div className="flex h-40 items-center justify-center rounded-control border border-dashed border-hairline bg-surface-2 px-6 text-center text-sm text-ink-muted">
-      {message}
+    <div role="status" className="flex min-h-48 flex-col items-center justify-center gap-3 rounded-control border border-dashed border-hairline bg-surface-2 px-6 py-8 text-center text-sm text-ink-muted">
+      <span className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-primary" aria-hidden>
+        <Activity className="h-5 w-5" />
+      </span>
+      <p className="max-w-[42ch] leading-relaxed">{message}</p>
     </div>
   );
 }

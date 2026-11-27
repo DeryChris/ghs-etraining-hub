@@ -39,11 +39,10 @@ interface SidebarProps {
 /**
  * The signed-in menu, on GHS green.
  *
- * The green is fixed rather than themed (see `.nav-surface` in globals.css): the
- * crest reads correctly on it in both themes, and the menu stops being the only
- * surface that flips colour at night. The active item is a gold bar of the flag
- * with near-black ink — 12:1 contrast — and the decorative weave and star are
- * `aria-hidden` at under 10% so the text keeps 7:1.
+ * The saturated green is fixed rather than themed (see `.nav-surface` in
+ * globals.css), so the official crest and the navigation keep their identity in
+ * both themes. A Ghana-flag gold highlight with deep ink marks the active route;
+ * the decorative weave and seal remain subtle and hidden from assistive tech.
  */
 export function Sidebar({ user, counts, collapsed = false, onToggleCollapse, onNavigate, onClose }: SidebarProps) {
   const pathname = usePathname();

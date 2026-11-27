@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   GHS-UWRHD-TL design system · "Institutional Green" v4
+   GHS-UWRHD-TL design system · vivid GHS green and flag gold
    Ghana Health Service – Upper West Regional Health Directorate – Training
-   Library. Deep institutional green on warm ivory, muted gold used sparingly,
-   soft mint surfaces. Every colour is a CSS variable so light and dark themes
-   share one set of utilities. Components never hard-code colours.
+   Library. Vivid institutional green, Ghana-flag gold, warm ivory and soft mint
+   surfaces. Every colour is a CSS variable so public and authenticated surfaces
+   share one system across light and dark themes.
    ───────────────────────────────────────────────────────────────────────────── */
 
 @theme {
@@ -51,20 +51,20 @@
   --font-heading: "Manrope Variable", var(--font-sans);
 }
 
-/* Light theme (default when no preference or stored choice). */
+/* Light theme: warm ivory, clean white and vivid Ghana Health Service green. */
 :root,
 [data-theme="light"] {
   color-scheme: light;
   --canvas: #fafbf8;
   --surface: #ffffff;
-  --surface-2: #f1f5f1;
+  --surface-2: #f1f6f2;
   --ink: #202923;
-  --ink-muted: #66736b;
-  --hairline: #e2e9e3;
-  --primary: #145c42;
+  --ink-muted: #5d7064;
+  --hairline: #dce7df;
+  --primary: #006b3f;
   --primary-ink: #ffffff;
-  --accent: #c69a45;
-  --accent-ink: #1a1400;
+  --accent: #fcd116;
+  --accent-ink: #262000;
   --mint: #eaf4ee;
   --warn: #8f6200;
   --danger: #b42318;
@@ -73,35 +73,35 @@
   --danger-soft: #f9e8e6;
   --elevation: 0 1px 2px rgb(32 41 35 / 0.05), 0 12px 32px -14px rgb(32 41 35 / 0.18);
   --elevation-lift: 0 2px 6px rgb(32 41 35 / 0.07), 0 28px 56px -18px rgb(32 41 35 / 0.28);
-  --glow-a: rgb(20 92 66 / 0.1);
-  --glow-b: rgb(198 154 69 / 0.12);
+  --glow-a: rgb(0 107 63 / 0.1);
+  --glow-b: rgb(252 209 22 / 0.13);
   --grid-line: rgb(32 41 35 / 0.05);
   --grid-line-strong: rgb(32 41 35 / 0.16);
 }
 
-/* Dark theme, chosen explicitly — a proper palette, not an inversion. */
+/* Dark theme: deep green-charcoal surfaces with brighter, controlled accents. */
 [data-theme="dark"] {
   color-scheme: dark;
   --canvas: #0b1310;
   --surface: #121c18;
   --surface-2: #17231e;
   --ink: #ecf3ee;
-  --ink-muted: #9fb1a8;
-  --hairline: #24352e;
-  --primary: #35a97b;
+  --ink-muted: #a8bab0;
+  --hairline: #293b32;
+  --primary: #35b981;
   --primary-ink: #05170f;
-  --accent: #c69a45;
-  --accent-ink: #1a1400;
+  --accent: #fcd116;
+  --accent-ink: #262000;
   --mint: #16261f;
-  --warn: #dbae5c;
+  --warn: #e1b657;
   --danger: #ef8b82;
   --info-soft: #16222e;
   --warn-soft: #2e2618;
   --danger-soft: #2e1b19;
   --elevation: 0 0 0 1px rgb(255 255 255 / 0.03), 0 16px 40px -16px rgb(0 0 0 / 0.75);
-  --elevation-lift: 0 0 0 1px rgb(53 169 123 / 0.24), 0 28px 64px -20px rgb(0 0 0 / 0.85);
-  --glow-a: rgb(53 169 123 / 0.14);
-  --glow-b: rgb(198 154 69 / 0.08);
+  --elevation-lift: 0 0 0 1px rgb(53 185 129 / 0.24), 0 28px 64px -20px rgb(0 0 0 / 0.85);
+  --glow-a: rgb(53 185 129 / 0.14);
+  --glow-b: rgb(252 209 22 / 0.08);
   --grid-line: rgb(159 177 168 / 0.06);
   --grid-line-strong: rgb(159 177 168 / 0.2);
 }
@@ -114,43 +114,40 @@
     --surface: #121c18;
     --surface-2: #17231e;
     --ink: #ecf3ee;
-    --ink-muted: #9fb1a8;
-    --hairline: #24352e;
-    --primary: #35a97b;
+    --ink-muted: #a8bab0;
+    --hairline: #293b32;
+    --primary: #35b981;
     --primary-ink: #05170f;
-    --accent: #c69a45;
-    --accent-ink: #1a1400;
+    --accent: #fcd116;
+    --accent-ink: #262000;
     --mint: #16261f;
-    --warn: #dbae5c;
+    --warn: #e1b657;
     --danger: #ef8b82;
     --info-soft: #16222e;
     --warn-soft: #2e2618;
     --danger-soft: #2e1b19;
     --elevation: 0 0 0 1px rgb(255 255 255 / 0.03), 0 16px 40px -16px rgb(0 0 0 / 0.75);
-    --elevation-lift: 0 0 0 1px rgb(53 169 123 / 0.24), 0 28px 64px -20px rgb(0 0 0 / 0.85);
-    --glow-a: rgb(53 169 123 / 0.14);
-    --glow-b: rgb(198 154 69 / 0.08);
+    --elevation-lift: 0 0 0 1px rgb(53 185 129 / 0.24), 0 28px 64px -20px rgb(0 0 0 / 0.85);
+    --glow-a: rgb(53 185 129 / 0.14);
+    --glow-b: rgb(252 209 22 / 0.08);
     --grid-line: rgb(159 177 168 / 0.06);
     --grid-line-strong: rgb(159 177 168 / 0.2);
   }
 }
 
 /* ── Signed-in navigation ─────────────────────────────────────────────────────
-   The sidebar is deep institutional green in both themes. It is the one surface
-   that does not follow the theme: the crest it carries only reads correctly on
-   the brand green, and a menu that turns near-black at night next to a white page
-   is the one place the design system would look accidental. The tones below are
-   fixed brand values, not theme tokens; white on #145C42 is 8:1, muted #CFE3D8 is
-   5.9:1, and muted gold #C69A45 with #211A00 ink is 7:1. */
+   The sidebar keeps a saturated GHS-green identity in both themes. White copy
+   stays legible on the evergreen gradient; the selected destination uses the
+   bright flag gold with deep-green ink, matching the supplied visual reference. */
 :root {
-  --nav-from: #145c42;
-  --nav-to: #0a3a2a;
+  --nav-from: #006b3f;
+  --nav-to: #063d2b;
   --nav-ink: #ffffff;
-  --nav-muted: #cfe3d8;
-  --nav-active: #c69a45;
+  --nav-muted: #d7ebdd;
+  --nav-active: #fcd116;
   --nav-active-ink: #211a00;
-  --nav-hairline: rgb(255 255 255 / 0.18);
-  --nav-wash: rgb(255 255 255 / 0.08);
+  --nav-hairline: rgb(255 255 255 / 0.2);
+  --nav-wash: rgb(255 255 255 / 0.1);
 }
 
 .nav-surface {
@@ -196,47 +193,45 @@
 }
 
 /* ── Chart palette ─────────────────────────────────────────────────────────
- * Categorical colours for the insights charts. Eight hues that stay distinct at
- * small sizes and hold contrast on both canvases; the institutional green and
- * muted gold lead, the rest are muted companions. Charts read these through
- * `var(--chart-n)`, so a chart never hard-codes a colour and dark mode is one
- * block, not a prop.
+ * Stable analytics meanings across every chart: opens are emerald, downloads
+ * cobalt, training violet, published resources teal, review amber and engagement
+ * coral. Dark mode brightens each hue without changing what it represents.
  */
 :root {
-  --chart-1: #145c42;
-  --chart-2: #c69a45;
-  --chart-3: #b4322f;
-  --chart-4: #2f6fb5;
-  --chart-5: #7a4fb3;
-  --chart-6: #d4703a;
-  --chart-7: #1f9a9a;
-  --chart-8: #8a8f3f;
-  --chart-grid: #e2e9e3;
+  --chart-1: #22a879;
+  --chart-2: #4f86e8;
+  --chart-3: #9875d5;
+  --chart-4: #25a9a1;
+  --chart-5: #d9a441;
+  --chart-6: #e68170;
+  --chart-7: #7894b8;
+  --chart-8: #428b68;
+  --chart-grid: #dce7df;
 }
 
 [data-theme="dark"] {
-  --chart-1: #35a97b;
-  --chart-2: #c69a45;
-  --chart-3: #e2706c;
-  --chart-4: #6ba3e8;
-  --chart-5: #a98be0;
-  --chart-6: #f0915c;
-  --chart-7: #46c4c4;
-  --chart-8: #b6bd63;
-  --chart-grid: #24352e;
+  --chart-1: #3acb91;
+  --chart-2: #78a6ff;
+  --chart-3: #b39aee;
+  --chart-4: #48c7be;
+  --chart-5: #f2c35b;
+  --chart-6: #f49b8d;
+  --chart-7: #a8c1e8;
+  --chart-8: #70c195;
+  --chart-grid: #2b4036;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --chart-1: #35a97b;
-    --chart-2: #c69a45;
-    --chart-3: #e2706c;
-    --chart-4: #6ba3e8;
-    --chart-5: #a98be0;
-    --chart-6: #f0915c;
-    --chart-7: #46c4c4;
-    --chart-8: #b6bd63;
-    --chart-grid: #24352e;
+    --chart-1: #3acb91;
+    --chart-2: #78a6ff;
+    --chart-3: #b39aee;
+    --chart-4: #48c7be;
+    --chart-5: #f2c35b;
+    --chart-6: #f49b8d;
+    --chart-7: #a8c1e8;
+    --chart-8: #70c195;
+    --chart-grid: #2b4036;
   }
 }
 
@@ -477,6 +472,38 @@
 @keyframes shimmer {
   to {
     background-position: -200% 0;
+  }
+}
+
+@keyframes chart-line-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes chart-area-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.chart-line-reveal {
+  animation: chart-line-draw 620ms var(--ease-out-quint) both;
+}
+
+.chart-area-reveal {
+  animation: chart-area-fade 460ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-line-reveal,
+  .chart-area-reveal {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 1;
   }
 }
 

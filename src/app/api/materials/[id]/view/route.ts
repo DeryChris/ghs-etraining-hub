@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { sql } from "drizzle-orm";
 import { db } from "@/db/index";
 import { materialViews, materials } from "@/db/schema";
+import { dateKeyInTimeZone } from "@/lib/dates";
 import { isUuid } from "@/lib/ids";
 import { log } from "@/lib/server/logger";
 import { consumeRateLimit, rateLimitKey } from "@/lib/server/rate-limit";
@@ -36,13 +36,13 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       .limit(1);
     if (!material) return new NextResponse(null, { status: 204 });
 
-    const viewedOn = new Date().toISOString().slice(0, 10);
+    const viewedOn = dateKeyInTimeZone();
     await db
       .insert(materialViews)
       .values({ materialId: id, userId: session.sub, viewedOn })
       .onConflictDoUpdate({
         target: [materialViews.materialId, materialViews.userId, materialViews.viewedOn],
-        set: { viewCount: sql`${materialViews.viewCount} + 1`, lastViewedAt: new Date() },
+        set: { viewCount: 1, lastViewedAt: new Date() },
       });
   } catch (error) {
     log.error({ event: "material_view.record_failed", err: String(error) });

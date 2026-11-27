@@ -493,10 +493,10 @@ export const fieldFacilitators = pgTable("field_facilitators", {
 ]);
 
 /* ── Views ──────────────────────────────────────────────────────────────────
- * Traffic, counted honestly: one row per person, material and day, so a refresh
- * loop cannot inflate a number and a repeat visit is a visit. Downloads are
- * already in the audit trail; together they answer "is this programme being
- * used?", which is the question the insights page exists to answer.
+ * Traffic is stored at one row per person, material and Accra calendar day.
+ * Repeated opens update the last-viewed timestamp but never inflate the daily
+ * reporting grain. Downloads are already in the audit trail; together they
+ * answer "is this programme being used?" for the Insights page.
  */
 
 export const materialViews = pgTable("material_views", {
@@ -504,6 +504,7 @@ export const materialViews = pgTable("material_views", {
   materialId: uuid("material_id").notNull().references(() => materials.id, { onDelete: "cascade" }),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   viewedOn: date("viewed_on").notNull(),
+  /** Legacy counter; reporting counts unique daily ledger rows, not repeat mounts. */
   viewCount: integer("view_count").notNull().default(1),
   firstViewedAt: timestamp("first_viewed_at", { withTimezone: true }).notNull().defaultNow(),
   lastViewedAt: timestamp("last_viewed_at", { withTimezone: true }).notNull().defaultNow(),

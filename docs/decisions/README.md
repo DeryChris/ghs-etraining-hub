@@ -211,8 +211,9 @@ verification. The activity surface was simplified to opens and downloads by ADR�
 
 **Decision.** `training_sessions` records a dated training under a programme, at region → district →
 sub‑district → facility (Upper West seeded, CHPS excluded, programme taxonomy left to a later client
-upload). Traffic is open‑counts (`material_views`, one row per person per day, fire‑and‑forget beacon that
-honours DNT) plus downloads from the existing audit trail, drawn as server‑rendered SVG charts on `/insights`.
+upload). Traffic counts one `material_views` ledger row per person/material/Accra day (repeat opens do not
+increment the legacy counter; the beacon honours DNT) plus downloads from the existing audit trail, drawn as
+server‑rendered SVG charts on `/insights`.
 
 ---
 

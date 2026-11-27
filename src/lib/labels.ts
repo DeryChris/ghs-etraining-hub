@@ -71,6 +71,14 @@ export const MATERIAL_TYPE_LABELS: Record<MaterialType, string> = {
   ASSESSMENT_LINK: "Assessment link",
 };
 
+/** Stable resource-type colours, shared by the dashboard and Insights charts. */
+export const MATERIAL_TYPE_COLORS: Record<MaterialType, string> = {
+  DOCUMENT: "var(--chart-1)",
+  VIDEO: "var(--chart-2)",
+  LAB: "var(--chart-3)",
+  ASSESSMENT_LINK: "var(--chart-6)",
+};
+
 export const PRIORITY_LABELS: Record<PriorityLevel, string> = {
   LOW: "Low",
   MEDIUM: "Medium",

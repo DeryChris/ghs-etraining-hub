@@ -16,15 +16,16 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export function DonutChart({ slices, centreLabel }: { slices: DonutSlice[]; centreLabel: string }) {
   const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+  const visibleSlices = slices.filter((slice) => slice.value > 0);
   let offset = 0;
 
   return (
     <div className="flex flex-wrap items-center gap-6">
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-40 w-40 shrink-0" role="img" aria-label={centreLabel}>
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-40 w-40 shrink-0" role="img" aria-label={`${total} ${centreLabel}`}>
         <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
           <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" stroke="var(--chart-grid)" strokeWidth={STROKE} />
           {total > 0 &&
-            slices.map((slice) => {
+            visibleSlices.map((slice) => {
               const length = (slice.value / total) * CIRCUMFERENCE;
               const dash = `${Math.max(0, length - 2)} ${CIRCUMFERENCE - Math.max(0, length - 2)}`;
               const element = (
@@ -56,7 +57,7 @@ export function DonutChart({ slices, centreLabel }: { slices: DonutSlice[]; cent
       </svg>
 
       <ul className="min-w-[10rem] flex-1 space-y-2 text-sm">
-        {slices.map((slice) => (
+        {visibleSlices.map((slice) => (
           <li key={slice.label} className="flex items-center justify-between gap-3">
             <span className="inline-flex items-center gap-2 text-ink">
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: slice.color }} aria-hidden />
