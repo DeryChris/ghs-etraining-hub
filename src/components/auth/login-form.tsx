@@ -23,7 +23,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
   const [showPassword, setShowPassword] = useState(false);
 
   const error = state.error;
-  const credentialsProblem = error?.startsWith("That staff ID and password do not match") ?? false;
+  const credentialsProblem = error?.startsWith("The email or password is not correct") ?? false;
 
   return (
     <form action={formAction} className="space-y-5" noValidate={false}>
@@ -37,6 +37,9 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
               <Link href="/forgot-password" className="font-semibold underline underline-offset-4">
                 Reset your password
               </Link>
+              <Link href="/help/report" className="font-semibold underline underline-offset-4">
+                Lodge a complaint
+              </Link>
             </p>
           )}
         </div>
@@ -44,7 +47,7 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
 
       <div>
         <label htmlFor="identifier" className={labelClass}>
-          GHS Staff ID or work email
+          Staff ID
         </label>
         <div className="relative">
           <BadgeCheck className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" aria-hidden />
@@ -52,15 +55,18 @@ export function LoginForm({ next, initialError }: { next: string; initialError: 
             id="identifier"
             name="identifier"
             type="text"
-            autoCapitalize="none"
+            inputMode="numeric"
             autoComplete="username"
-            spellCheck={false}
             required
             defaultValue={state.identifier ?? ""}
-            placeholder="Enter your GHS Staff ID or work email"
+            placeholder="e.g. your staff number"
+            aria-describedby="identifier-hint"
             className={`${inputClass} h-12 pl-10`}
           />
         </div>
+        <p id="identifier-hint" className="mt-1.5 text-[13px] leading-relaxed text-ink-muted">
+          The number on your GHS staff card. Your work e-mail address also works.
+        </p>
       </div>
 
       <div>
