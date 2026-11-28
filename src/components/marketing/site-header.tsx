@@ -7,14 +7,13 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BrandLockup } from "@/components/brand/brand-mark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { PRIMARY_NAV } from "@/lib/site";
-import { SITE } from "@/lib/site";
+import { primaryNavFor, SITE } from "@/lib/site";
 
 /**
  * The public header: a floating bar that sits over the page at rest and picks
  * up a translucent surface, hairline and soft shadow once the page scrolls
  * under it. The full institutional lockup appears from `xl`; below that the
- * compact wordmark keeps the bar from crowding the six navigation items.
+ * compact wordmark keeps the bar from crowding the navigation items.
  */
 export function SiteHeader({ signedIn }: { signedIn: boolean }) {
   const pathname = usePathname();
@@ -32,6 +31,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
   const elevated = scrolled || open;
   const ctaHref = signedIn ? "/dashboard" : "/login";
   const ctaLabel = signedIn ? "Open dashboard" : "Sign in";
+  const navItems = primaryNavFor(signedIn);
 
   return (
     <header className="sticky top-0 z-40 px-3 pt-3 sm:px-5 sm:pt-4">
@@ -47,7 +47,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
           </Link>
 
           <nav aria-label="Main" className="hidden items-center gap-0.5 lg:flex">
-            {PRIMARY_NAV.map((item) => {
+            {navItems.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
@@ -105,7 +105,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
               className="mt-2 overflow-hidden rounded-[var(--radius-hero)] border border-hairline bg-surface shadow-panel lg:hidden"
             >
               <nav aria-label="Mobile" className="flex flex-col gap-1 p-3">
-                {PRIMARY_NAV.map((item) => (
+                {navItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
