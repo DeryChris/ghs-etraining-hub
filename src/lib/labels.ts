@@ -41,6 +41,8 @@ export const PRIORITY_RANK: Record<PriorityLevel, number> = { LOW: 0, MEDIUM: 1,
 
 export const ROLE_LABELS: Record<Role, string> = {
   SYSTEM_ADMIN: "System administrator",
+  /* An administrator whose authority stops at one district. */
+  DISTRICT_HR: "District HR",
   FACILITATOR: "Facilitator",
   /*
    * The role key is still LEARNER in the database — renaming an enum value would
@@ -58,9 +60,11 @@ export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
 
 /** One line under each choice in a role field, in the same order. */
 export const STAFF_ROLE_HINTS: Record<StaffRole, string> = {
-  LEARNER: "Browses and opens published Training Materials available to them.",
-  FACILITATOR: "Authors Training Materials within assigned Programme Area and Programme Field scopes. Training Session record permissions are separate.",
-  UNIT_HEAD: "A facilitator who also reviews Training Materials and Training Session records within their review scope.",
+  LEARNER: "Reads published trainings and the files attached to them. No editing.",
+  FACILITATOR: "Records trainings, attaches their files and comments, within the Programme Fields and Programme Areas assigned to them.",
+  UNIT_HEAD: "A facilitator who also reviews Training Session records within their review scope.",
+  DISTRICT_HR:
+    "Administers one district: accounts, passwords, facilities, notices and complaints. Cannot change roles above facilitator, or touch another district.",
   SYSTEM_ADMIN: "Manages staff access and reference data, including Programme Areas, Programme Fields and geography.",
 };
 

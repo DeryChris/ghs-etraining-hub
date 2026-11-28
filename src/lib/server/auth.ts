@@ -44,6 +44,8 @@ export interface AuthenticatedUser {
   region: string | null;
   directorate: string | null;
   grade: string | null;
+  /** The district row; the boundary of a District HR's authority. */
+  districtId: string | null;
   unitHead: boolean;
 }
 
@@ -127,6 +129,7 @@ export async function authenticateUser(identifier: string, password: string): Pr
       region: user.region,
       directorate: user.directorate,
       grade: user.grade,
+      districtId: user.districtId,
       unitHead: user.isUnitHead,
     },
   };

@@ -13,6 +13,8 @@ export interface Viewer {
   region: string | null;
   directorate: string | null;
   grade: string | null;
+  /** Row id of the district this person belongs to; the boundary for a District HR. */
+  districtId?: string | null;
   /** Facilitators who also decide the review queue for their programme fields. */
   unitHead?: boolean;
 }

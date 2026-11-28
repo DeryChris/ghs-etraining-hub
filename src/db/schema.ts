@@ -16,7 +16,7 @@ import {
   pgEnum,
 } from "drizzle-orm/pg-core";
 
-export const userRoleEnum = pgEnum("user_role", ["SYSTEM_ADMIN", "FACILITATOR", "LEARNER"]);
+export const userRoleEnum = pgEnum("user_role", ["SYSTEM_ADMIN", "DISTRICT_HR", "FACILITATOR", "LEARNER"]);
 export const materialStateEnum = pgEnum("material_state", ["DRAFT", "IN_REVIEW", "PUBLISHED", "SUPERSEDED", "ARCHIVED"]);
 /** Postgres `bytea`, for deployments that keep files in the database. */
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
@@ -69,6 +69,11 @@ export const users = pgTable("users", {
   grade: text("grade"),
   directorate: text("directorate"),
   region: text("region"),
+  /**
+   * The district as the staff sheet spelled it, kept for display and for the
+   * import's upsert. `districtId` is the same fact as a foreign key — it is what
+   * a District HR's authority is scoped by, because a name is not a boundary.
+   */
   district: text("district"),
   subDistrict: text("sub_district"),
   facility: text("facility"),
@@ -82,6 +87,12 @@ export const users = pgTable("users", {
    * means their area assignments, trainings and materials keep working.
    */
   isUnitHead: boolean("is_unit_head").notNull().default(false),
+  /**
+   * The district row this person belongs to, resolved by the migration and kept
+   * current by the import. A District HR is scoped to exactly this district;
+   * for everybody else it is how "their district" is stated in one place.
+   */
+  districtId: uuid("district_id").references(() => districts.id, { onDelete: "set null" }),
   deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
   mfaEnabled: boolean("mfa_enabled").notNull().default(false),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
@@ -93,6 +104,7 @@ export const users = pgTable("users", {
   index("users_region_role_idx").on(t.region, t.role),
   index("users_directorate_idx").on(t.directorate),
   index("users_district_idx").on(t.district),
+  index("users_district_id_idx").on(t.districtId),
   index("users_facility_idx").on(t.facility),
   index("users_email_lower_idx").on(sql`lower(${t.email})`),
 ]);

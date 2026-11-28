@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   Activity,
   ArrowRight,
@@ -58,6 +59,14 @@ export default async function DashboardPage({
   searchParams: Promise<{ notice?: string; period?: string }>;
 }) {
   const session = await requireSession();
+
+  /*
+   * A district HR holds no programme grant, so every figure this page draws would
+   * be zero — an empty dashboard reads as a broken one. Their work is the district
+   * directory, so that is where "home" goes for them.
+   */
+  if (session.role === "DISTRICT_HR") redirect("/users");
+
   const { notice, period: requestedPeriod } = await searchParams;
   const now = new Date();
   const staff = isStaffRole(session.role);

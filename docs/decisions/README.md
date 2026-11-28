@@ -357,3 +357,11 @@ workspace and no `/materials/<id>` page — a file is uploaded from the training
 it was used at and is read on that training. Public browse therefore lists the
 trainings held for a Programme Field, not the documents. See
 `0031-material-belongs-to-a-training.md`.
+
+## ADR‑0032 — A fourth role: District HR, scoped to one district
+
+Administrators were regional, so every account change outside Wa waited for one.
+`DISTRICT_HR` administers people in **one** district — create, edit, deactivate,
+reset, read PII — and may appoint staff, facilitators and unit heads, but not
+administrators or other HRs. The boundary is `users.district_id`, a foreign key,
+because a district *name* is not a boundary. See `0032-district-hr.md`.

@@ -118,3 +118,24 @@ change their assignments or the scope of training management.
   rows only.
 * The flag widens a facilitator's menu; it never promotes a learner. `navFor` checks the role
   before honouring it.
+
+## District HR — an administrator for one district
+
+`DISTRICT_HR` is a fourth role, added in ADR‑0032. It carries the administrator's
+capabilities minus everything that reaches past a district:
+
+| | District HR | System administrator |
+|---|---|---|
+| Create, edit, deactivate, reactivate people | in their district | everywhere |
+| Reset passwords, read PII | in their district | everywhere |
+| Appoint staff, facilitator, unit head | yes | yes |
+| Appoint administrator or another District HR | no | yes |
+| Bulk staff import | no — the sheet is regional | yes |
+| Programme taxonomy, area grants | no — both are regional | yes |
+| Record or approve trainings | no | yes |
+| Geography, notices, complaints | **not yet** — screens still administrator-only | yes |
+
+The boundary is `users.district_id` (a foreign key), never `users.district`
+(free text from the staff sheet). Every people action calls
+`src/lib/server/district-scope.ts`, which reads the district from the database on
+each request; a `DISTRICT_HR` row without a district can act on nobody.

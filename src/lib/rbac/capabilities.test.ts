@@ -4,13 +4,18 @@ import {
   FACILITATOR_GLOBAL_ACTIONS,
   PUBLIC_ACTIONS,
   can,
+  canAssignRole,
+  isDistrictScoped,
   isGlobalForFacilitators,
+  rolesAssignableBy,
+  roleForStaffRole,
+  staffRoleOf,
   scopeAllows,
   type Action,
   type Role,
 } from "./capabilities";
 
-const ROLES: Role[] = ["SYSTEM_ADMIN", "FACILITATOR", "LEARNER"];
+const ROLES: Role[] = ["SYSTEM_ADMIN", "DISTRICT_HR", "FACILITATOR", "LEARNER"];
 const ACTIONS = Object.keys(CAPABILITY_MATRIX.SYSTEM_ADMIN) as Action[];
 
 // Spot checks against the authoritative matrix in docs/rbac.md (section 1).
@@ -87,5 +92,73 @@ describe("scope resolution", () => {
     expect(scopeAllows("LEARNER", "material.read_published", { audienceMatch: false })).toBe(false);
     expect(scopeAllows("LEARNER", "material.download", { audienceMatch: false })).toBe(false);
     expect(scopeAllows("LEARNER", "material.read_published", { audienceMatch: true })).toBe(true);
+  });
+});
+
+/*
+ * District HR: an administrator for one district. The matrix is written as the
+ * administrator's row less the exceptions, so these tests exist to keep the
+ * exceptions honest — a new action defaults to the administrator's answer, and
+ * anything that must not follow has to be named here.
+ */
+describe("district HR", () => {
+  it("administers people", () => {
+    expect(can("DISTRICT_HR", "user.create")).toBe(true);
+    expect(can("DISTRICT_HR", "user.deactivate")).toBe(true);
+    expect(can("DISTRICT_HR", "user.reactivate")).toBe(true);
+    expect(can("DISTRICT_HR", "user.reset_password")).toBe(true);
+    expect(can("DISTRICT_HR", "user.read_pii")).toBe(true);
+    expect(can("DISTRICT_HR", "user.assign_role")).toBe(true);
+  });
+
+  it("cannot reach past the district", () => {
+    /* A regional sheet is not a district's business, and the taxonomy decides
+     * what exists for every district at once. */
+    expect(can("DISTRICT_HR", "user.bulk_import")).toBe(false);
+    expect(can("DISTRICT_HR", "taxonomy.manage")).toBe(false);
+    expect(can("DISTRICT_HR", "area.update")).toBe(false);
+    expect(can("DISTRICT_HR", "area.assign_facilitator")).toBe(false);
+    expect(can("DISTRICT_HR", "maintenance_banner.manage")).toBe(false);
+    /* The regions' geography and notices screens are still administrator-only:
+     * the capability stays off until those queries carry the district filter. */
+    expect(can("DISTRICT_HR", "geography.manage")).toBe(false);
+    expect(can("DISTRICT_HR", "notification.broadcast")).toBe(false);
+  });
+
+  it("does not author or approve trainings", () => {
+    expect(can("DISTRICT_HR", "training.manage")).toBe(false);
+    expect(can("DISTRICT_HR", "material.publish")).toBe(false);
+    expect(can("DISTRICT_HR", "comment.moderate")).toBe(false);
+  });
+
+  it("is the only role whose authority is district-scoped", () => {
+    expect(isDistrictScoped("DISTRICT_HR")).toBe(true);
+    expect(isDistrictScoped("SYSTEM_ADMIN")).toBe(false);
+    expect(isDistrictScoped("FACILITATOR")).toBe(false);
+    expect(isDistrictScoped("LEARNER")).toBe(false);
+  });
+});
+
+describe("role assignment", () => {
+  it("lets a district HR make facilitators and unit heads, but not administrators", () => {
+    expect(canAssignRole("DISTRICT_HR", "LEARNER")).toBe(true);
+    expect(canAssignRole("DISTRICT_HR", "FACILITATOR")).toBe(true);
+    expect(canAssignRole("DISTRICT_HR", "UNIT_HEAD")).toBe(true);
+    expect(canAssignRole("DISTRICT_HR", "DISTRICT_HR")).toBe(false);
+    expect(canAssignRole("DISTRICT_HR", "SYSTEM_ADMIN")).toBe(false);
+  });
+
+  it("lets an administrator grant anything, and nobody else grant anything", () => {
+    for (const role of ["LEARNER", "FACILITATOR", "UNIT_HEAD", "DISTRICT_HR", "SYSTEM_ADMIN"] as const) {
+      expect(canAssignRole("SYSTEM_ADMIN", role)).toBe(true);
+    }
+    expect(rolesAssignableBy("FACILITATOR")).toEqual([]);
+    expect(rolesAssignableBy("LEARNER")).toEqual([]);
+  });
+
+  it("round-trips every role choice through the stored row", () => {
+    for (const choice of ["LEARNER", "FACILITATOR", "UNIT_HEAD", "DISTRICT_HR", "SYSTEM_ADMIN"] as const) {
+      expect(staffRoleOf(roleForStaffRole(choice))).toBe(choice);
+    }
   });
 });

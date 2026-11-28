@@ -13,7 +13,7 @@ import { CreateUserForm } from "@/components/users/create-user-form";
 import { UserRowActions } from "@/components/users/user-row-actions";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { STAFF_ROLE_LABELS } from "@/lib/labels";
-import { isStaffRole, staffRoleOf, STAFF_ROLE_VALUES } from "@/lib/rbac/capabilities";
+import { isStaffRole, rolesAssignableBy, staffRoleOf, STAFF_ROLE_VALUES } from "@/lib/rbac/capabilities";
 import {
   DIRECTORY_PAGE_SIZE,
   type DirectorySummary,
@@ -25,6 +25,7 @@ import {
 } from "@/lib/server/directory-queries";
 import { listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
 import { requireRole } from "@/lib/server/rbac";
+import { districtName, districtScopeOf } from "@/lib/server/district-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -60,8 +61,17 @@ export default async function UsersPage({
 }: {
   searchParams: Promise<{ q?: string; role?: string; status?: string; group?: string; page?: string }>;
 }) {
-  const session = await requireRole(["SYSTEM_ADMIN"]);
+  const session = await requireRole(["SYSTEM_ADMIN", "DISTRICT_HR"]);
   const params = await searchParams;
+
+  /*
+   * A district HR sees the directory of one district and nothing else — the list,
+   * the counts above it and the people whose rows they can act on all come from
+   * this one scope, so the page cannot show a name the actions would then refuse.
+   */
+  const scope = districtScopeOf(session);
+  const scopedDistrict = scope.scoped ? await districtName(scope.districtId) : null;
+  const assignable = rolesAssignableBy(session.role);
 
   const query = (params.q ?? "").trim().slice(0, 120);
   // A role choice, not a stored role: Unit head is a facilitator carrying the duty.
@@ -75,8 +85,16 @@ export default async function UsersPage({
 
   const loaded = await withDeadline("users", () =>
     mapLimit([
-      () => listDirectory({ query, role, status, group, page: Number.isFinite(requestedPage) ? requestedPage : 1 }),
-      getDirectorySummary,
+      () =>
+        listDirectory({
+          district: scope,
+          query,
+          role,
+          status,
+          group,
+          page: Number.isFinite(requestedPage) ? requestedPage : 1,
+        }),
+      () => getDirectorySummary(scope),
       () => listProgrammeFieldOptions(),
     ]),
   );
@@ -103,7 +121,11 @@ export default async function UsersPage({
       <PageHeader
         eyebrow="Administration"
         title="Users"
-        description="Who may sign in and what they may do. The role is chosen from four: staff, facilitator, unit head and system administrator. Every change here is capability-checked on the server and written to the audit trail."
+        description={
+          scope.scoped
+            ? `Who may sign in and what they may do, for ${scopedDistrict ?? "your district"}. You can give staff, facilitator and unit head; administrators are created above you. Every change here is capability-checked on the server and written to the audit trail.`
+            : "Who may sign in and what they may do. The role is chosen from four: staff, facilitator, unit head and district HR, plus system administrator. Every change here is capability-checked on the server and written to the audit trail."
+        }
         actions={
           <Link href="/insights" className={buttonClass({ variant: "ghost" })}>
             Service insights
@@ -158,7 +180,7 @@ export default async function UsersPage({
         <Stat value={summary.neverSignedIn} label="Never signed in" />
       </section>
 
-      <CreateUserForm />
+      <CreateUserForm roles={assignable} />
 
       {summary.learners === 0 && (
         <section
@@ -297,6 +319,7 @@ npm run staff:status`}
                         isSelf={isSelf}
                         fields={fieldOptions}
                         grants={grants.get(row.id) ?? { fieldIds: [], areaIds: [] }}
+                        assignableRoles={assignable}
                       />
                     </td>
                   </tr>

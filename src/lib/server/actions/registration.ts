@@ -63,6 +63,7 @@ interface DirectoryRow {
   fullName: string;
   region: string | null;
   district: string | null;
+  districtId: string | null;
   facility: string | null;
   grade: string | null;
   isActive: boolean;
@@ -77,6 +78,7 @@ async function findStaff(staffId: string): Promise<DirectoryRow | undefined> {
       fullName: users.fullName,
       region: users.region,
       district: users.district,
+      districtId: users.districtId,
       facility: users.facility,
       grade: users.grade,
       isActive: users.isActive,
@@ -265,6 +267,7 @@ export async function registerAction(
       staffId: row.ghsStaffId,
       email: contact.data.email,
       region: row.region ?? null,
+      districtId: row.districtId ?? null,
       directorate: null,
       grade: row.grade ?? null,
       unitHead: false,

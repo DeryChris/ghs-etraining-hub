@@ -104,6 +104,7 @@ export async function signInAction(_previous: SignInState, formData: FormData): 
         region: user.region ?? null,
         directorate: user.directorate ?? null,
         grade: user.grade ?? null,
+        districtId: user.districtId ?? null,
         unitHead: user.unitHead ?? false,
         mustChange: user.mustChangePassword,
       },

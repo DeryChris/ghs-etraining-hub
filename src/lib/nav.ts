@@ -72,10 +72,12 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-const EVERYONE: readonly Role[] = ["SYSTEM_ADMIN", "FACILITATOR", "LEARNER"];
-const STAFF: readonly Role[] = ["SYSTEM_ADMIN", "FACILITATOR"];
+const EVERYONE: readonly Role[] = ["SYSTEM_ADMIN", "DISTRICT_HR", "FACILITATOR", "LEARNER"];
+const STAFF: readonly Role[] = ["SYSTEM_ADMIN", "DISTRICT_HR", "FACILITATOR"];
 const FACILITATOR_ONLY: readonly Role[] = ["FACILITATOR"];
 const ADMIN_ONLY: readonly Role[] = ["SYSTEM_ADMIN"];
+/** A district HR administers people in their own district, and nothing regional. */
+const PEOPLE_ADMIN: readonly Role[] = ["SYSTEM_ADMIN", "DISTRICT_HR"];
 
 export const NAV_SECTIONS: readonly NavSection[] = [
   {
@@ -153,7 +155,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     id: "administration",
     label: "Administration",
     items: [
-      { href: "/users", label: "Users", icon: "users", roles: ADMIN_ONLY },
+      { href: "/users", label: "Users", icon: "users", roles: PEOPLE_ADMIN },
       {
         href: "/geography",
         label: "Geography & facilities",

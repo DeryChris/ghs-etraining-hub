@@ -3,6 +3,7 @@ import { and, count, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle
 import { db } from "@/db/index";
 import { areaFacilitators, fieldFacilitators, users } from "@/db/schema";
 import type { Role, StaffRole } from "@/lib/rbac/capabilities";
+import { districtUserFilter, type DistrictScope } from "@/lib/server/district-scope";
 import { escapeLike } from "@/lib/server/query-utils";
 
 /*
@@ -15,7 +16,7 @@ import { escapeLike } from "@/lib/server/query-utils";
 export const DIRECTORY_PAGE_SIZE = 25;
 
 export type DirectoryStatus = "active" | "inactive";
-export const DIRECTORY_ROLES: readonly Role[] = ["SYSTEM_ADMIN", "FACILITATOR", "LEARNER"];
+export const DIRECTORY_ROLES: readonly Role[] = ["SYSTEM_ADMIN", "DISTRICT_HR", "FACILITATOR", "LEARNER"];
 
 export interface DirectoryRow {
   id: string;
@@ -27,6 +28,8 @@ export interface DirectoryRow {
   region: string | null;
   directorate: string | null;
   grade: string | null;
+  /** The district as spelled on the staff sheet. `districtId` is the boundary. */
+  district: string | null;
   facility: string | null;
   isActive: boolean;
   isUnitHead: boolean;
@@ -37,6 +40,8 @@ export interface DirectoryRow {
 export type DirectoryGroup = "staff" | "facilitators" | "unit-heads" | "admins";
 
 export interface DirectoryFilters {
+  /** Which slice of the directory the caller may see at all. */
+  district?: DistrictScope;
   query: string;
   /** A role choice, so `UNIT_HEAD` means "facilitators carrying the duty". */
   role: StaffRole | null;
@@ -69,6 +74,7 @@ function filters(input: DirectoryFilters): SQL | undefined {
   const term = input.query.trim();
   const pattern = `%${escapeLike(term)}%`;
   return and(
+    input.district ? districtUserFilter(input.district) : undefined,
     term
       ? or(ilike(users.fullName, pattern), ilike(users.email, pattern), ilike(users.ghsStaffId, pattern))
       : undefined,
@@ -105,6 +111,7 @@ export async function listDirectory(input: DirectoryFilters & { page?: number })
       region: users.region,
       directorate: users.directorate,
       grade: users.grade,
+      district: users.district,
       facility: users.facility,
       isActive: users.isActive,
       isUnitHead: users.isUnitHead,
@@ -131,9 +138,11 @@ export interface DirectorySummary {
   admins: number;
   neverSignedIn: number;
   activeAdmins: number;
+  /** District HR officers. Counted only within the caller's district. */
+  hrOfficers: number;
 }
 
-export async function getDirectorySummary(): Promise<DirectorySummary> {
+export async function getDirectorySummary(scope?: DistrictScope): Promise<DirectorySummary> {
   const [row] = await db
     .select({
       total: count(),
@@ -144,8 +153,10 @@ export async function getDirectorySummary(): Promise<DirectorySummary> {
       admins: sql<number>`count(*) filter (where ${users.role} = 'SYSTEM_ADMIN' and ${users.isActive})::int`,
       neverSignedIn: sql<number>`count(*) filter (where ${users.lastLoginAt} is null and ${users.isActive})::int`,
       activeAdmins: sql<number>`count(*) filter (where ${users.role} = 'SYSTEM_ADMIN' and ${users.isActive})::int`,
+      hrOfficers: sql<number>`count(*) filter (where ${users.role} = 'DISTRICT_HR' and ${users.isActive})::int`,
     })
-    .from(users);
+    .from(users)
+    .where(scope ? districtUserFilter(scope) : undefined);
 
   return (
     row ?? {
@@ -157,6 +168,7 @@ export async function getDirectorySummary(): Promise<DirectorySummary> {
       admins: 0,
       neverSignedIn: 0,
       activeAdmins: 0,
+      hrOfficers: 0,
     }
   );
 }
