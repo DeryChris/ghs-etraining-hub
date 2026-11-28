@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "@/lib/load-env";
 import { createHash } from "node:crypto";
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";

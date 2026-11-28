@@ -33,6 +33,7 @@
     "staff:import": "node --conditions=react-server --import tsx scripts/import-staff.ts",
     "staff:sql": "node --conditions=react-server --import tsx scripts/export-staff-sql.ts",
     "db:repair": "node scripts/db-repair.mjs",
+    "db:apply": "node scripts/apply-sql.mjs",
     "user:password": "node --conditions=react-server --import tsx scripts/set-password.ts",
     "staff:status": "node --conditions=react-server --import tsx scripts/staff-status.ts"
   },

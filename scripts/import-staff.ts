@@ -56,7 +56,7 @@
  * file for the Neon SQL editor or `psql -f` when a long-running Node process is
  * not an option.
  */
-import "dotenv/config";
+import "@/lib/load-env";
 import { existsSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import { and, eq, inArray, sql } from "drizzle-orm";

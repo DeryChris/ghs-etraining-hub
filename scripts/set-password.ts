@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "@/lib/load-env";
 import { hash } from "bcryptjs";
 import { eq, or, sql } from "drizzle-orm";
 import { client, db } from "../src/db/client";

@@ -5,7 +5,8 @@
  *   npm run staff:sql -- --file "Staff Data.csv" --out accounts.sql --no-passwords
  *
  * The import script talks to Postgres itself; this one writes the same work as
- * SQL you can open in the Neon SQL editor, paste into a `psql` session, or hand
+ * SQL you can run with `npm run db:apply -- <file>`, paste into the Neon SQL
+ * editor, or hand
  * to somebody who has the connection string and not the repository. It exists
  * because a six-thousand-row import is a long-running Node process holding a
  * pooled connection open, and that is the part that keeps failing on a laptop
@@ -29,7 +30,7 @@
  * the accounts with `password_hash` null instead; those people cannot sign in
  * until `npm run user:password` is run for them.
  */
-import "dotenv/config";
+import "@/lib/load-env";
 import { existsSync, writeFileSync } from "node:fs";
 import {
   DISTRICT_KIND,
@@ -55,7 +56,7 @@ if (!file || !existsSync(file)) {
   console.error("       [--batch=100] [--limit=N] [--no-passwords]");
   console.error("");
   console.error("  Writes the geography and one account per employee as plain SQL — run it with");
-  console.error('  psql "$DIRECT_URL" -f staff-accounts.sql, or paste it into the Neon SQL editor.');
+  console.error("  npm run db:apply -- staff-accounts.sql, or paste it into the Neon SQL editor.");
   process.exit(1);
 }
 
@@ -117,7 +118,7 @@ async function main() {
     push(" * commit it, and delete it after it has run.");
   }
   push(" *");
-  push(' *   psql "$DIRECT_URL" -f staff-accounts.sql');
+  push(" *   npm run db:apply -- staff-accounts.sql   (no psql needed)");
   push(" *   — or paste it into the Neon SQL editor.");
   push(" */");
   push("");
@@ -254,7 +255,7 @@ async function main() {
   console.log(`Wrote ${out} — ${rows.length} accounts in ${batches.length} statements, ${kilobytes} kB.`);
   console.log("");
   console.log("Run it with:");
-  console.log(`  psql "$DIRECT_URL" -f ${out}`);
+  console.log(`  npm run db:apply -- ${out}`);
   console.log("or paste it into the Neon SQL editor (use DIRECT_URL — the unpooled host — for a file this size).");
   if (!noPasswords) console.log("Delete the file when it has run: it contains a bcrypt hash per person.");
 }
