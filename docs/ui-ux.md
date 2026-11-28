@@ -130,8 +130,10 @@ Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard opera
   on the current UTC date. Charts use the `--chart-1..8` / `--chart-grid` tokens in `globals.css`; each
   chart repeats its figures in a table and `<title>` tooltips. Every time-based number names its window
   (for example, "Opens · 12 weeks").
-* **Trainings register** — one Training Session record per row: title, Programme Area and Programme
-  Field, date, region → district → sub-district → facility, facilitator and an optional attendee count.
+* **Trainings register** — one Training Session record per tile, with four counts above the list
+  (records, planned, held, awaiting review) and review chips that keep the current filters rather than
+  clearing them: title, Programme Area and Programme Field, date, region → district → sub-district →
+  facility, facilitator and an optional attendee count.
   Members of staff see published records and their own submissions; administrators and unit heads can
   also see other review states. Facilities exclude CHPS compounds. The location cascade narrows as you
   choose; every selected key is cross-checked against its parent on the server. An attendee-count total

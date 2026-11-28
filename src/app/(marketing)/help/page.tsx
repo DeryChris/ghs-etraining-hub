@@ -31,7 +31,7 @@ const COMPLAINT_STEPS = [
     number: "02",
     title: "Your issue is reviewed",
     description:
-      "An administrator may review the report, update its status, answer you or help with account access. Processing time varies.",
+      "An administrator or a district HR officer may review the report, update its status, answer you or help with account access. Processing time varies.",
     icon: ClipboardList,
     tone: "bg-ghs-green/10 text-ghs-green",
   },

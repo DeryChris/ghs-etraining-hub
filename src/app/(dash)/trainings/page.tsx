@@ -82,8 +82,8 @@ const REVIEW_STATES = ["PENDING", "PUBLISHED", "REJECTED"];
 /** Chips above the list: the review queue is one click, not a filter hunt. */
 const REVIEW_CHIPS = [
   { key: "", label: "Everything" },
-  { key: "PENDING", label: "Pending Review" },
-  { key: "PUBLISHED", label: "Live/Published" },
+  { key: "PENDING", label: "Pending review" },
+  { key: "PUBLISHED", label: "Live" },
   { key: "REJECTED", label: "Returned" },
 ] as const;
 
@@ -194,15 +194,15 @@ export default async function TrainingsPage({
 
       <PageHeader
         eyebrow="Trainings"
-        title="Training Register"
+        title="Training register"
         description="Find Training Session records, including plans and records marked as held. Filter by Programme Area, Programme Field, year, location, status or review state. Open a training to see the files attached to it."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {mayManage ? (
-              <NewTrainingDialog fields={fields} geography={geography} label="Create New Training" />
+              <NewTrainingDialog fields={fields} geography={geography} label="Create new training" />
             ) : null}
             <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
-              Browse the Library
+              Browse the library
             </Link>
           </div>
         }
@@ -214,7 +214,7 @@ export default async function TrainingsPage({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             {
-              label: "Training Records",
+              label: "Training records",
               value: summary.total,
               icon: CalendarDays,
               washTone: "bg-ghs-green/10",
@@ -235,7 +235,7 @@ export default async function TrainingsPage({
               iconTone: "bg-ghs-green/10 text-ghs-green",
             },
             {
-              label: "Awaiting Review",
+              label: "Awaiting review",
               value: summary.awaitingReview,
               icon: Clock3,
               washTone: "bg-ghs-red/10",
@@ -287,6 +287,9 @@ export default async function TrainingsPage({
             if (query.q) search.set("q", query.q);
             if (query.year) search.set("year", String(query.year));
             if (query.field) search.set("field", query.field);
+            if (query.area) search.set("area", query.area);
+            if (query.region) search.set("region", query.region);
+            if (query.district) search.set("district", query.district);
             if (query.status) search.set("status", query.status);
             const suffix = search.toString();
             return suffix ? `/trainings?${suffix}` : "/trainings";
