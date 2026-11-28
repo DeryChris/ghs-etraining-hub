@@ -143,7 +143,7 @@ export function ComplaintCard({ complaint }: { complaint: ComplaintCardData }) {
       </div>
 
       {complaint.response && (
-        <div className="mt-4 rounded-control border-l-2 border-primary bg-surface-2/60 px-4 py-3">
+        <div className="mt-4 rounded-control border border-hairline bg-surface-2/60 px-4 py-3">
           <p className="text-[11px] font-bold uppercase tracking-wide text-ink-muted">Sent to the person</p>
           <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-ink">{complaint.response}</p>
           {complaint.resolvedAt && (

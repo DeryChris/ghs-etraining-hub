@@ -86,7 +86,7 @@ function ComplaintHubHero() {
               <li>
                 <Link
                   href="/help/report"
-                  className="group flex h-full min-h-60 flex-col rounded-card border border-white/80 border-t-4 border-t-ghs-red bg-white p-5 text-[#202522] shadow-panel transition-[transform,box-shadow] duration-fast motion-safe:hover:-translate-y-0.5 hover:shadow-lift motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white sm:p-6"
+                  className="group flex h-full min-h-60 flex-col rounded-card border border-white/80 bg-white p-5 text-[#202522] shadow-panel transition-[transform,box-shadow] duration-fast motion-safe:hover:-translate-y-0.5 hover:shadow-lift motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white sm:p-6"
                 >
                   <span className="flex items-start gap-4">
                     <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-control bg-ghs-red text-white">
@@ -110,7 +110,7 @@ function ComplaintHubHero() {
               <li>
                 <Link
                   href="/help/status"
-                  className="group flex h-full min-h-60 flex-col rounded-card border border-white/80 border-t-4 border-t-ghs-gold bg-white p-5 text-[#202522] shadow-panel transition-[transform,box-shadow] duration-fast motion-safe:hover:-translate-y-0.5 hover:shadow-lift motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white sm:p-6"
+                  className="group flex h-full min-h-60 flex-col rounded-card border border-white/80 bg-white p-5 text-[#202522] shadow-panel transition-[transform,box-shadow] duration-fast motion-safe:hover:-translate-y-0.5 hover:shadow-lift motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white sm:p-6"
                 >
                   <span className="flex items-start gap-4">
                     <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-control bg-ghs-gold text-ghs-green">
@@ -187,7 +187,7 @@ function AdditionalSupport() {
   return (
     <section aria-labelledby="additional-support-title" className="mx-auto max-w-7xl px-5 pb-16 pt-2 sm:px-8 lg:px-10">
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
-        <div className="flex flex-col items-start gap-4 rounded-card border border-hairline border-l-4 border-l-ghs-red bg-surface p-5 shadow-panel sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex flex-col items-start gap-4 rounded-card border border-hairline bg-surface p-5 shadow-panel sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div className="max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-ghs-red">Additional support</p>
             <h2 id="additional-support-title" className="mt-1 text-xl font-extrabold tracking-tight text-ink">
@@ -207,7 +207,7 @@ function AdditionalSupport() {
           </Link>
         </div>
 
-        <div className="flex items-start gap-3 rounded-card border border-hairline border-l-4 border-l-ghs-gold bg-surface-2/60 p-5 sm:p-6">
+        <div className="flex items-start gap-3 rounded-card border border-hairline bg-surface-2/60 p-5 sm:p-6">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-ghs-gold/35 text-ghs-green">
             <ShieldCheck className="h-5 w-5" aria-hidden />
           </span>
