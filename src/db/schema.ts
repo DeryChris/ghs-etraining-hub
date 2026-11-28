@@ -563,6 +563,14 @@ export const complaints = pgTable("complaints", {
   phone: text("phone"),
   region: text("region"),
   facility: text("facility"),
+  /**
+   * The district that handles this complaint, where one could be established.
+   * Null is a real answer — a complaint from somebody outside the directory, or
+   * whose facility nobody matched — and it means "not in any district's queue":
+   * an administrator sees it, a district officer does not. Guessing would send a
+   * complaint to a stranger.
+   */
+  districtId: uuid("district_id").references(() => districts.id, { onDelete: "set null" }),
   issueType: complaintIssueEnum("issue_type").notNull(),
   /**
    * Which training the complaint is about, when the issue is one of its files.
@@ -586,6 +594,7 @@ export const complaints = pgTable("complaints", {
   index("complaints_staff_idx").on(sql`lower(${t.staffId})`),
   index("complaints_status_idx").on(t.status, t.createdAt),
   index("complaints_user_idx").on(t.userId),
+  index("complaints_district_idx").on(t.districtId, t.createdAt),
 ]);
 
 /**

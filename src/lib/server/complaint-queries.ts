@@ -59,13 +59,28 @@ export interface AdminComplaint extends PublicComplaint {
 }
 
 /** The whole queue, newest first. Administrators read the contact details here. */
-export async function listComplaints(status?: "OPEN" | "RESOLVED" | "ALL"): Promise<AdminComplaint[]> {
-  const where =
+/**
+ * The complaints desk.
+ *
+ * `districtId` is the District HR boundary: their queue is the complaints filed
+ * in their district and no others. `null` means "this person holds no district",
+ * which cannot be satisfied — the honest result is an empty queue, not the whole
+ * country. `undefined` is an administrator, who sees everything, including the
+ * complaints with no district at all.
+ */
+export async function listComplaints(
+  status?: "OPEN" | "RESOLVED" | "ALL",
+  districtId?: string | null,
+): Promise<AdminComplaint[]> {
+  const byStatus =
     status === "RESOLVED"
       ? sql`${complaints.status} = 'RESOLVED'`
       : status === "ALL" || status === undefined
         ? undefined
         : sql`${complaints.status} <> 'RESOLVED'`;
+  const byDistrict =
+    districtId === undefined ? undefined : districtId === null ? sql`false` : eq(complaints.districtId, districtId);
+  const where = and(byStatus, byDistrict);
 
   return db
     .select({
@@ -93,11 +108,14 @@ export async function listComplaints(status?: "OPEN" | "RESOLVED" | "ALL"): Prom
     .limit(200);
 }
 
-export async function openComplaintCount(): Promise<number> {
+/** Same boundary as `listComplaints`: the badge must not count other districts' work. */
+export async function openComplaintCount(districtId?: string | null): Promise<number> {
+  const byDistrict =
+    districtId === undefined ? undefined : districtId === null ? sql`false` : eq(complaints.districtId, districtId);
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(complaints)
-    .where(sql`${complaints.status} <> 'RESOLVED'`);
+    .where(and(sql`${complaints.status} <> 'RESOLVED'`, byDistrict));
   return row?.n ?? 0;
 }
 

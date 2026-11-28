@@ -43,6 +43,7 @@ export const MIGRATIONS: readonly MigrationEntry[] = [
   { tag: "0022_grade_not_cadre", when: 1796700000000 },
   { tag: "0023_redact_legacy_complaint_passwords", when: 1796800000000 },
   { tag: "0024_district_hr", when: 1796900000000 },
+  { tag: "0025_complaint_district", when: 1797000000000 },
 ];
 
 export const EXPECTED_MIGRATIONS = MIGRATIONS.length;

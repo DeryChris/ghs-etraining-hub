@@ -331,6 +331,23 @@ export const listGeography = unstable_cache(loadGeography, ["geography-tree"], {
 });
 
 /**
+ * The same tree, cut down to one district.
+ *
+ * A district officer's page is their district and nothing above or beside it:
+ * one region, one district, its sub-districts and its facilities. Filtering the
+ * cached national tree costs nothing extra, and keeping one loader means the
+ * shape the page renders cannot drift between the two callers. A session with no
+ * district gets an empty tree, which the page says out loud.
+ */
+export async function listGeographyForDistrict(districtId: string | null): Promise<GeographyRegion[]> {
+  if (!districtId) return [];
+  const all = await listGeography();
+  return all
+    .map((region) => ({ ...region, districts: region.districts.filter((district) => district.id === districtId) }))
+    .filter((region) => region.districts.length > 0);
+}
+
+/**
  * One row of counters for the two administration pages.
  *
  * One statement, not six. Each count used to be its own round trip to Paris, and

@@ -2,6 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { and, asc, count, desc, eq, gte, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db/index";
+import { programmeGrantsFilter, type ProgrammeGrants } from "@/lib/server/programme-scope";
 import {
   districts,
   facilities,
@@ -33,6 +34,12 @@ export interface TrainingVisibility {
   userId: string;
   /** Administrators and unit heads may see every review state. */
   seeAll: boolean;
+  /**
+   * The programme grants this viewer is held to, or `undefined` for somebody
+   * unrestricted (an administrator, or a learner whose limit is publication
+   * rather than grants). A facilitator with empty grants sees nothing.
+   */
+  grants?: ProgrammeGrants | null;
 }
 
 export interface TrainingFilters {
@@ -52,10 +59,20 @@ export interface TrainingFilters {
 
 export type TrainingReviewState = "PENDING" | "PUBLISHED" | "REJECTED";
 
-/** Keep list and aggregate visibility consistent; programme grants do not gate the Trainings register. */
+/**
+ * Keep list and aggregate visibility consistent.
+ *
+ * Two limits, and both apply: **what is published** (or your own drafts, unless
+ * you are a unit head) and **what your grants cover**. A facilitator holds the
+ * Programme Fields assigned to them and nothing else — an unassigned one sees no
+ * trainings at all, which is the truthful rendering of "you have nothing yet".
+ */
 export function trainingVisibilityFilter(viewer: TrainingVisibility): SQL | undefined {
-  if (viewer.seeAll) return undefined;
-  return or(eq(trainingSessions.reviewState, "PUBLISHED"), eq(trainingSessions.createdById, viewer.userId));
+  const within = programmeGrantsFilter(viewer.grants);
+  const byState = viewer.seeAll
+    ? undefined
+    : or(eq(trainingSessions.reviewState, "PUBLISHED"), eq(trainingSessions.createdById, viewer.userId));
+  return and(within, byState);
 }
 
 export interface TrainingListRow {

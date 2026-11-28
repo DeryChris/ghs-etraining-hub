@@ -17,6 +17,7 @@ import { TRAINING_STATUS_LABELS } from "@/lib/labels";
 import { can } from "@/lib/rbac/capabilities";
 import { archiveTrainingAction } from "@/lib/server/actions/trainings";
 import { mayReviewField, requireSession } from "@/lib/server/rbac";
+import { grantsCoverTraining, programmeGrantsFor, trimOptionsToGrants } from "@/lib/server/programme-scope";
 import { listGeography, listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
 import { getTraining, listTrainingComments } from "@/lib/server/training-queries";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
@@ -58,6 +59,16 @@ export default async function TrainingDetailPage({
   }
   const training = loaded.data;
   if (!training) notFound();
+
+  /*
+   * A facilitator sees the trainings of the programme they hold, and no others.
+   * Reading is not the loophole here: a URL typed from memory lands on the same
+   * "no such training" card as a wrong id, so the register and the record agree
+   * about what exists. Administrators and learners are unaffected — a learner's
+   * limit is publication, which the check below already applies.
+   */
+  const grants = session.role === "FACILITATOR" ? await programmeGrantsFor(session.sub) : undefined;
+  if (grants && !grantsCoverTraining(grants, training)) notFound();
 
   const query = await searchParams;
   const notice = typeof query.notice === "string" ? query.notice : null;
@@ -132,7 +143,9 @@ export default async function TrainingDetailPage({
         />
       );
     }
-    [fields, geography] = loaded.data;
+    const [allFields, allGeography] = loaded.data;
+    fields = grants ? trimOptionsToGrants(allFields, grants) : allFields;
+    geography = allGeography;
   }
 
   const place = [training.facilityName ?? training.venue, training.subDistrictName, training.districtName, training.regionName]

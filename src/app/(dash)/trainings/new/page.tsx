@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { can } from "@/lib/rbac/capabilities";
 import { requireSession } from "@/lib/server/rbac";
 import { listGeography, listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
+import { programmeGrantsFor, trimOptionsToGrants } from "@/lib/server/programme-scope";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,12 @@ export default async function NewTrainingPage() {
       />
     );
   }
-  const [fields, geography] = loaded.data;
+  const [allFields, geography] = loaded.data;
+  /* A facilitator is offered only the fields they hold; an administrator sees all. */
+  const fields =
+    session.role === "FACILITATOR"
+      ? trimOptionsToGrants(allFields, await programmeGrantsFor(session.sub))
+      : allFields;
 
   return (
     <div className="space-y-8">

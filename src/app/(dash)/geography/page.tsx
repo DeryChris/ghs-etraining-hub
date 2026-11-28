@@ -36,7 +36,8 @@ import {
   FACILITY_TYPE_LABELS,
 } from "@/lib/labels";
 import { requireRole } from "@/lib/server/rbac";
-import { getReferenceTotals, listGeography } from "@/lib/server/taxonomy-queries";
+import { districtScopeOf } from "@/lib/server/district-scope";
+import { getReferenceTotals, listGeography, listGeographyForDistrict } from "@/lib/server/taxonomy-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,16 @@ export default async function GeographyPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireRole(["SYSTEM_ADMIN"]);
+  /*
+   * Regions and districts are national reference data, so only an administrator
+   * creates them. Everything below a district — its sub-districts and its
+   * facilities — changes in the district that lives with it, which is the work of
+   * that district's HR officer. The page shows each caller their own slice; the
+   * actions refuse anything outside it, whether or not a form was rendered.
+   */
+  const session = await requireRole(["SYSTEM_ADMIN", "DISTRICT_HR"]);
+  const scope = districtScopeOf(session);
+  const canManageNational = !scope.scoped;
 
   const query = await searchParams;
   const notice = first(query.notice);
@@ -59,7 +69,12 @@ export default async function GeographyPage({
   const regionId = first(query.region);
   const districtId = first(query.district);
 
-  const loaded = await withDeadline("geography", () => mapLimit([listGeography, getReferenceTotals]));
+  const loaded = await withDeadline("geography", () =>
+    mapLimit([
+      () => (scope.scoped ? listGeographyForDistrict(scope.districtId) : listGeography()),
+      getReferenceTotals,
+    ]),
+  );
   if (!loaded.ok) {
     return (
       <DataUnavailable
@@ -71,8 +86,11 @@ export default async function GeographyPage({
   }
   const [geography, totals] = loaded.data;
 
-  const region = geography.find((row) => row.id === regionId) ?? null;
-  const district = region?.districts.find((row) => row.id === districtId) ?? null;
+  /* A district officer has one region and one district: open it for them rather
+   * than making them click through a list of one. */
+  const region = geography.find((row) => row.id === regionId) ?? (scope.scoped ? (geography[0] ?? null) : null);
+  const district =
+    region?.districts.find((row) => row.id === districtId) ?? (scope.scoped ? (region?.districts[0] ?? null) : null);
 
   return (
     <div className="space-y-8">
@@ -84,15 +102,22 @@ export default async function GeographyPage({
 
       <Notice notice={notice} error={error} />
 
-      <section
-        aria-label="Geography totals"
-        className="grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-4"
-      >
-        <Stat value={totals.regions} label="Regions" />
-        <Stat value={totals.districts} label="Districts" />
-        <Stat value={totals.subDistricts} label="Sub-districts" />
-        <Stat value={totals.facilities} label="Facilities" />
-      </section>
+      {canManageNational ? (
+        <section
+          aria-label="Geography totals"
+          className="grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-4"
+        >
+          <Stat value={totals.regions} label="Regions" />
+          <Stat value={totals.districts} label="Districts" />
+          <Stat value={totals.subDistricts} label="Sub-districts" />
+          <Stat value={totals.facilities} label="Facilities" />
+        </section>
+      ) : (
+        <p className="rounded-card border border-hairline bg-surface p-4 text-sm leading-relaxed text-ink-muted">
+          You maintain the sub-districts and facilities of your own district. Regions and districts are national
+          reference data and are changed by an administrator.
+        </p>
+      )}
 
       <section aria-labelledby="regions-heading" className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -102,6 +127,7 @@ export default async function GeographyPage({
             </h2>
             <p className="text-sm text-ink-muted">Choose a region to work on its districts and facilities.</p>
           </div>
+          {canManageNational && (
           <ActionDialog
               label="Add a region"
               title="Add a region"
@@ -132,6 +158,7 @@ export default async function GeographyPage({
               </button>
             </form>
           </ActionDialog>
+          )}
         </div>
 
         <ul className="flex flex-wrap gap-2">
@@ -214,6 +241,7 @@ export default async function GeographyPage({
                 {region.districts.reduce((total, row) => total + row.facilities.length, 0)} facilities
               </p>
             </div>
+            {canManageNational && (
             <ConfirmAction
               label="Delete region"
               title={`Delete ${region.name}?`}
@@ -222,8 +250,10 @@ export default async function GeographyPage({
               action={deleteRegionAction}
               fields={{ id: region.id }}
             />
+            )}
           </div>
 
+          {canManageNational && (
           <ActionDialog label="Edit" title="Edit region name and code" size="sm">
             <form action={updateRegionAction} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="id" value={region.id} />
@@ -258,6 +288,7 @@ export default async function GeographyPage({
               </button>
             </form>
           </ActionDialog>
+          )}
 
           <div className="border-t border-hairline pt-4">
             <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink-muted">
@@ -265,6 +296,7 @@ export default async function GeographyPage({
               Districts
             </h3>
 
+            {canManageNational && (
             <ActionDialog
                   label="Add a district"
                   title={`Add a district to ${region.name}`}
@@ -301,6 +333,7 @@ export default async function GeographyPage({
                 </button>
               </form>
             </ActionDialog>
+            )}
 
             {region.districts.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">
@@ -337,6 +370,7 @@ export default async function GeographyPage({
                           >
                             Open
                           </Link>
+                          {canManageNational && (
                           <ConfirmAction
                             label="Delete"
                             title={`Delete ${row.name}?`}
@@ -345,9 +379,11 @@ export default async function GeographyPage({
                             action={deleteDistrictAction}
                             fields={{ id: row.id, regionId: region.id }}
                           />
+                          )}
                         </div>
                       </div>
 
+                      {canManageNational && (
                       <ActionDialog label="Edit" title="Edit" size="sm">
                         <form action={updateDistrictAction} data-draft={`district-${row.id}`} className="grid gap-3">
                           <input type="hidden" name="id" value={row.id} />
@@ -394,6 +430,7 @@ export default async function GeographyPage({
                           </button>
                         </form>
                       </ActionDialog>
+                      )}
                     </li>
                   );
                 })}

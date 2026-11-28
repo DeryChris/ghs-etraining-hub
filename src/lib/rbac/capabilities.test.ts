@@ -119,9 +119,11 @@ describe("district HR", () => {
     expect(can("DISTRICT_HR", "area.update")).toBe(false);
     expect(can("DISTRICT_HR", "area.assign_facilitator")).toBe(false);
     expect(can("DISTRICT_HR", "maintenance_banner.manage")).toBe(false);
-    /* The regions' geography and notices screens are still administrator-only:
-     * the capability stays off until those queries carry the district filter. */
-    expect(can("DISTRICT_HR", "geography.manage")).toBe(false);
+    /* Geography is theirs below the district line and nowhere above it: the page
+     * loads one district's tree, and the actions refuse region and district rows
+     * outright. Notices wait for an audience filter that can name a district —
+     * until then a broadcast from this role would reach the whole region. */
+    expect(can("DISTRICT_HR", "geography.manage")).toBe(true);
     expect(can("DISTRICT_HR", "notification.broadcast")).toBe(false);
   });
 
