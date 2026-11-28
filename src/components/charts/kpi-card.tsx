@@ -57,17 +57,16 @@ export function KpiCard({ icon: Icon, label, value, hint, delta, deltaLabel, spa
   return (
     <div
       className={cn(
-        "relative flex h-full min-h-[172px] flex-col overflow-hidden rounded-card border border-hairline bg-surface p-5 shadow-panel transition-[border-color,box-shadow] duration-base hover:shadow-lift",
+        "relative isolate flex h-full min-h-[172px] flex-col overflow-hidden rounded-card border border-hairline bg-surface p-5 shadow-panel transition-[border-color,box-shadow] duration-base hover:shadow-lift",
         className,
       )}
-      style={{ borderTopColor: color, borderTopWidth: 3 }}
     >
       <span
         aria-hidden
-        className="pointer-events-none absolute -right-7 -top-10 h-28 w-28 rounded-full"
-        style={{ backgroundColor: `color-mix(in oklab, ${color} 7%, transparent)` }}
+        className="pointer-events-none absolute -right-8 -top-10 z-0 h-32 w-36 rotate-12 rounded-[42%_58%_67%_33%/55%_41%_59%_45%] blur-2xl"
+        style={{ backgroundColor: `color-mix(in oklab, ${color} 10%, transparent)` }}
       />
-      <div className="relative flex items-start justify-between gap-3">
+      <div className="relative z-10 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.11em] text-ink-muted">{label}</p>
           <p className="mt-3 text-4xl font-extrabold leading-none tracking-tight text-ink tabular-nums">
@@ -82,9 +81,9 @@ export function KpiCard({ icon: Icon, label, value, hint, delta, deltaLabel, spa
         </span>
       </div>
 
-      {hint && <p className="relative mt-2 text-xs leading-relaxed text-ink-muted">{hint}</p>}
+      {hint && <p className="relative z-10 mt-2 text-xs leading-relaxed text-ink-muted">{hint}</p>}
 
-      <div className="relative mt-auto flex items-end justify-between gap-3 pt-4">
+      <div className="relative z-10 mt-auto flex items-end justify-between gap-3 pt-4">
         <Sparkline values={spark ?? []} color={color} id={gradientId} />
         {hasChange && (
           <span

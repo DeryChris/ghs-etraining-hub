@@ -47,3 +47,8 @@ export const PRIMARY_NAV = [
   { href: "/help", label: "Help" },
   { href: "/contact", label: "Contact" },
 ] as const;
+
+/** The Library is a signed-in destination, not a public-header link. */
+export function primaryNavFor(signedIn: boolean): readonly (typeof PRIMARY_NAV)[number][] {
+  return PRIMARY_NAV.filter((item) => signedIn || item.href !== "/catalogue");
+}
