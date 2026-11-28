@@ -9,6 +9,7 @@ import {
   materials,
   programmeAreas,
   regions,
+  trainingResources,
   trainingSessions,
   users,
 } from "@/db/schema";
@@ -30,7 +31,15 @@ export interface FieldCard {
   name: string;
   description: string | null;
   areaCount: number;
-  materialCount: number;
+  /**
+   * Files attached to the published trainings in this Programme Area.
+   *
+   * There is no separate material corpus any more: a file belongs to the
+   * training it was used at (ADR-0031). The old `materials` count described a
+   * browsable library that no longer exists, so it read as "0 materials" on a
+   * field whose trainings were full of slides.
+   */
+  fileCount: number;
   trainingCount: number;
 }
 
@@ -40,11 +49,19 @@ export async function listFields(viewer: Viewer | null): Promise<FieldCard[]> {
     .from(programmeAreas)
     .where(and(eq(programmeAreas.fieldId, programmeFields.id), liveArea, audienceFor(viewer)));
 
-  const materialTotal = db
+  const fileTotal = db
     .select({ n: count() })
-    .from(materials)
-    .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-    .where(and(eq(programmeAreas.fieldId, programmeFields.id), liveArea, publishedMaterial, audienceFor(viewer)));
+    .from(trainingResources)
+    .innerJoin(trainingSessions, eq(trainingSessions.id, trainingResources.trainingId))
+    .innerJoin(regions, eq(regions.id, trainingSessions.regionId))
+    .where(
+      and(
+        eq(trainingSessions.programmeFieldId, programmeFields.id),
+        eq(trainingSessions.reviewState, "PUBLISHED"),
+        eq(trainingSessions.isArchived, false),
+        eq(regions.code, UPPER_WEST_REGION_CODE),
+      ),
+    );
 
   const trainingTotal = db
     .select({ n: count() })
@@ -66,7 +83,7 @@ export async function listFields(viewer: Viewer | null): Promise<FieldCard[]> {
       name: programmeFields.name,
       description: programmeFields.description,
       areaCount: sql<number>`coalesce((${areaTotal}), 0)::int`,
-      materialCount: sql<number>`coalesce((${materialTotal}), 0)::int`,
+      fileCount: sql<number>`coalesce((${fileTotal}), 0)::int`,
       trainingCount: sql<number>`coalesce((${trainingTotal}), 0)::int`,
     })
     .from(programmeFields)
@@ -122,16 +139,26 @@ export interface AreaCard {
   code: string;
   name: string;
   description: string | null;
-  materialCount: number;
+  /** Files attached to this area's published trainings; see `FieldCard.fileCount`. */
+  fileCount: number;
   /** How many trainings are filed under this area — the area page's own count. */
   trainingCount: number;
 }
 
 export async function listAreasInField(fieldId: string, viewer: Viewer | null): Promise<AreaCard[]> {
-  const materialTotal = db
+  const fileTotal = db
     .select({ n: count() })
-    .from(materials)
-    .where(and(eq(materials.programmeAreaId, programmeAreas.id), publishedMaterial));
+    .from(trainingResources)
+    .innerJoin(trainingSessions, eq(trainingSessions.id, trainingResources.trainingId))
+    .innerJoin(regions, eq(regions.id, trainingSessions.regionId))
+    .where(
+      and(
+        eq(trainingSessions.programmeAreaId, programmeAreas.id),
+        eq(trainingSessions.reviewState, "PUBLISHED"),
+        eq(trainingSessions.isArchived, false),
+        eq(regions.code, UPPER_WEST_REGION_CODE),
+      ),
+    );
 
   const trainingTotal = db
     .select({ n: count() })
@@ -152,7 +179,7 @@ export async function listAreasInField(fieldId: string, viewer: Viewer | null): 
       code: programmeAreas.code,
       name: programmeAreas.name,
       description: programmeAreas.description,
-      materialCount: sql<number>`coalesce((${materialTotal}), 0)::int`,
+      fileCount: sql<number>`coalesce((${fileTotal}), 0)::int`,
       trainingCount: sql<number>`coalesce((${trainingTotal}), 0)::int`,
     })
     .from(programmeAreas)

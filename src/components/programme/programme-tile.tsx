@@ -100,7 +100,7 @@ export function ProgrammeFieldTile({
     name: string;
     description?: string | null;
     areaCount: number;
-    materialCount: number;
+    fileCount: number;
     trainingCount?: number;
   };
   /** Where the tile goes: the library (signed in) or the public list. */
@@ -116,7 +116,7 @@ export function ProgrammeFieldTile({
       meta={
         <>
           {field.areaCount} {field.areaCount === 1 ? "Programme Field" : "Programme Fields"} ·{" "}
-          {field.materialCount} {field.materialCount === 1 ? "Training Material" : "Training Materials"}
+          {field.fileCount} {field.fileCount === 1 ? "file" : "files"}
           {typeof field.trainingCount === "number" ? (
             <> · {field.trainingCount} {field.trainingCount === 1 ? "Training Session record" : "Training Session records"}</>
           ) : null}
