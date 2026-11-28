@@ -456,21 +456,21 @@ export default async function TrainingsPage({
                   />
                   <div className="flex flex-1 flex-col gap-4 p-5">
                     <div className="space-y-2">
-                      <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-                        <span className="inline-flex max-w-full flex-wrap items-baseline gap-x-1.5 rounded-[var(--radius-pill)] bg-ghs-green px-2.5 py-1.5 text-[11px] leading-snug text-white">
-                          <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-[0.08em] text-white/85">
-                            Programme Area
-                          </span>
-                          <span className="min-w-0 break-words font-semibold">{training.fieldName ?? "Not recorded"}</span>
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1">
+                        <span
+                          className="inline-flex max-w-full min-w-0 flex-wrap items-center rounded-[var(--radius-pill)] border border-primary/15 px-2.5 py-0.5 text-[11px] font-semibold leading-4 text-primary"
+                          style={{ backgroundColor: "color-mix(in oklab, var(--surface) 92%, var(--primary) 8%)" }}
+                        >
+                          <span className="min-w-0 break-words">{training.fieldName ?? "Not recorded"}</span>
                         </span>
                         {training.areaName && (
                           <>
-                            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-muted" aria-hidden />
-                            <span className="inline-flex max-w-full flex-wrap items-baseline gap-x-1.5 rounded-[var(--radius-pill)] border border-ghs-green/20 bg-ghs-green/10 px-2.5 py-1.5 text-[11px] leading-snug text-ghs-green">
-                              <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-[0.08em]">
-                                Programme Field
-                              </span>
-                              <span className="min-w-0 break-words font-semibold">{training.areaName}</span>
+                            <ChevronRight className="h-3 w-3 shrink-0 text-ink-muted/80" aria-hidden />
+                            <span
+                              className="inline-flex max-w-full min-w-0 flex-wrap items-center rounded-[var(--radius-pill)] border border-accent/20 px-2.5 py-0.5 text-[11px] font-medium leading-4 text-ink"
+                              style={{ backgroundColor: "color-mix(in oklab, var(--surface) 92%, var(--accent) 8%)" }}
+                            >
+                              <span className="min-w-0 break-words">{training.areaName}</span>
                             </span>
                           </>
                         )}
