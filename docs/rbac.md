@@ -38,7 +38,7 @@ signed-in capability, where `scope` is the object being acted on (or its intende
 | `training.manage` | ✅ | ✅ (Upper West service records; not Programme Field governance) | ❌ |
 | `taxonomy.manage` | ✅ | ❌ | ❌ |
 | `geography.manage` | ✅ | ❌ | ✅ (sub-districts and facilities of their own district) |
-| `notification.broadcast` | ✅ | ✅ (Programme Field announcement, assigned scope) | ❌ |
+| `notification.broadcast` | ✅ | ✅ (Programme Field announcement, assigned scope) | ✅ (their district only) |
 | `notification.view` | ✅ | ✅ | ✅ (own) |
 | `analytics.view_personal` | ✅ | ✅ | ✅ (own) |
 | `analytics.view_cohort` | ✅ (service data) | ✅ (assigned scope) | ❌ |
@@ -146,16 +146,18 @@ capabilities minus everything that reaches past a district:
 | Sub-districts and facilities | in their district, and nothing above it | everywhere |
 | Regions and districts | no | yes |
 | Complaints queue, answer and resolve | in their district | everywhere |
-| Notices | **not yet** — the audience filter cannot name a district | yes |
+| Notices | their district only — forced, not chosen | everywhere |
 
 Complaints carry a `district_id` (migration `0025`), backfilled from the filer's
 account and then from the facility name; a complaint that matched neither keeps
 `null`, which means "in no district's queue" — the administrator sees it, no
 officer does, and nothing is guessed.
 
-Notices are the remaining gap and are switched off deliberately: the audience
-filter holds region, directorate and grade, and adding `district` is the change
-that turns `notification.broadcast` on for this role.
+Notices carry a `district` audience dimension (ADR‑0034): the key holds the
+district's row id, matched against `users.district_id`, never its name. The
+broadcast action writes the officer's own district into `audience_filter`
+whatever the form posted, so a hand-built request cannot widen the audience, and
+"Everyone" stays an administrator's sentence.
 
 The boundary is `users.district_id` (a foreign key), never `users.district`
 (free text from the staff sheet). Every people action calls

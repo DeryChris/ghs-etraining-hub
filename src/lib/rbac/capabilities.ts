@@ -166,11 +166,12 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
      * action refuses a row filed elsewhere. Region and district rows stay
      * administrator-only inside the action, not by hiding a button.
      *
-     * Notices are still off: the audience filter has no district dimension yet,
-     * so a broadcast from this role would reach the whole region. Turned on in the
-     * change that adds that dimension, not before. */
+     * Notices: an audience filter that names a district now exists, and the
+     * broadcast action writes the officer's own district into it — overwriting
+     * whatever the form sent — so their notice reaches their district and nothing
+     * else. "Everyone" stays an administrator's sentence. */
     "geography.manage": true,
-    "notification.broadcast": false,
+    "notification.broadcast": true,
     /* Training register: read-only here. Recording a training is a facilitator's
      * act, and a district HR holds no programme grant. */
     "training.manage": false,

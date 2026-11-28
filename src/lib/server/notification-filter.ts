@@ -55,6 +55,9 @@ export function audienceMatches(viewer: Viewer) {
       sql`(${filter}->>'region' is null or ${filter}->>'region' = ${viewer.region ?? null})`,
       sql`(${filter}->>'directorate' is null or ${filter}->>'directorate' = ${viewer.directorate ?? null})`,
       sql`(${filter}->>'grade' is null or ${filter}->>'grade' = ${viewer.grade ?? null})`,
+      /* The district key holds a row id, matched against the viewer's district —
+       * the same column the District HR boundary is drawn on. */
+      sql`(${filter}->>'district' is null or ${filter}->>'district' = ${viewer.districtId ?? null})`,
     ),
   );
 }

@@ -370,3 +370,8 @@ A second boundary: the district a complaint belongs to, and the programme a
 facilitator holds. Geography below the district line, the complaint queue, and
 the trainings register all narrow to it; notices wait for an audience filter that
 can name a district. See `0033-district-scope-and-programme-scope.md`.
+
+A notice can name a district. The audience filter gains a `district` key holding
+a row id, so a District HR officer sends to their own district — forced by the
+action, not chosen in the form — and `notification.broadcast` turns on for the
+role. See `0034-notices-name-a-district.md`.

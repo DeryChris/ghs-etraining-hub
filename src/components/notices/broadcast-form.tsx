@@ -23,9 +23,19 @@ const PRIORITIES = [
   { value: "CRITICAL", label: "Critical" },
 ];
 
-export function BroadcastForm({ areas, canAddressEveryone }: { areas: AuthoringArea[]; canAddressEveryone: boolean }) {
+export function BroadcastForm({
+  areas,
+  canAddressEveryone,
+  districtName,
+}: {
+  areas: AuthoringArea[];
+  canAddressEveryone: boolean;
+  /** Set for a District HR: their notice reaches their district and nowhere else. */
+  districtName?: string | null;
+}) {
   const [state, formAction] = useActionState(broadcastNoticeAction, INITIAL);
-  const [scope, setScope] = useState<"AREA" | "ALL">(areas.length ? "AREA" : "ALL");
+  const scopedToDistrict = Boolean(districtName);
+  const [scope, setScope] = useState<"AREA" | "ALL">(!scopedToDistrict && areas.length ? "AREA" : "ALL");
 
   return (
     <form action={formAction} className="space-y-4">
@@ -39,7 +49,7 @@ export function BroadcastForm({ areas, canAddressEveryone }: { areas: AuthoringA
               value="AREA"
               checked={scope === "AREA"}
               onChange={() => setScope("AREA")}
-              disabled={areas.length === 0}
+              disabled={areas.length === 0 || scopedToDistrict}
             />
             One Programme Field&apos;s cohort
           </label>
@@ -52,10 +62,17 @@ export function BroadcastForm({ areas, canAddressEveryone }: { areas: AuthoringA
               onChange={() => setScope("ALL")}
               disabled={!canAddressEveryone}
             />
-            Everyone
+            {scopedToDistrict ? `Everyone in ${districtName}` : "Everyone"}
           </label>
         </div>
-        {!canAddressEveryone && <p className={hintClass}>Only a system administrator can address everyone.</p>}
+        {scopedToDistrict ? (
+          <p className={hintClass}>
+            A district notice reaches staff whose district is {districtName}. It cannot be sent to another district or
+            to the whole region.
+          </p>
+        ) : (
+          !canAddressEveryone && <p className={hintClass}>Only a system administrator can address everyone.</p>
+        )}
       </fieldset>
 
       {scope === "AREA" && (

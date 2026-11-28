@@ -12,6 +12,7 @@ import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
+import { NO_DISTRICT_MESSAGE, districtScopeOf } from "@/lib/server/district-scope";
 
 // What a person can choose when writing a notice. The first three are the events
 // this service produces; "material update" and "system maintenance" are the
@@ -98,7 +99,21 @@ export async function broadcastNoticeAction(
   if (!guard.ok) return { ok: false, message: guard.message };
   const { session } = guard;
 
-  if (scope === "ALL" && session.role !== "SYSTEM_ADMIN") {
+  /*
+   * A District HR officer's notice is a notice to their district, and that is not
+   * a choice they get to change: the district is written into the filter here,
+   * overwriting anything the form sent, so a hand-built request cannot widen it.
+   * With the filter in place the notice is no longer "everyone", which is why the
+   * everyone-check below lets this role through while still refusing a
+   * facilitator.
+   */
+  const district = districtScopeOf(session);
+  if (district.scoped) {
+    if (!district.districtId) return { ok: false, message: NO_DISTRICT_MESSAGE };
+    audienceFilter = { ...(audienceFilter ?? {}), district: district.districtId };
+  }
+
+  if (scope === "ALL" && session.role !== "SYSTEM_ADMIN" && !district.scoped) {
     return { ok: false, message: "Only a system administrator can send a notice to everyone." };
   }
 
