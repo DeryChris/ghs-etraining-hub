@@ -37,7 +37,7 @@ signed-in capability, where `scope` is the object being acted on (or its intende
 | `message.read_any_thread` | ✅ (only with DPO‑approved investigation, audited) | ❌ | ❌ |
 | `training.manage` | ✅ | ✅ (Upper West service records; not Programme Field governance) | ❌ |
 | `taxonomy.manage` | ✅ | ❌ | ❌ |
-| `geography.manage` | ✅ | ❌ | ❌ |
+| `geography.manage` | ✅ | ❌ | ✅ (sub-districts and facilities of their own district) |
 | `notification.broadcast` | ✅ | ✅ (Programme Field announcement, assigned scope) | ❌ |
 | `notification.view` | ✅ | ✅ | ✅ (own) |
 | `analytics.view_personal` | ✅ | ✅ | ✅ (own) |
@@ -67,8 +67,18 @@ restrict Training register access. Facilitator scope does not grant nationwide a
   data remain Upper West-focused. Reading published material and selected self-service actions are
   also global to the role; authoring and review remain scoped to assigned Programme Areas/Fields
   (ADR‑0014).
-* `taxonomy.manage` and `geography.manage` are administrator‑only: they change the words and places
-  every other form offers.
+* `taxonomy.manage` is administrator‑only: it changes the words every other form offers.
+* `geography.manage` covers two different jobs. Regions and districts are national reference data and
+  stay administrator‑only — the page hides those controls and the actions refuse them outright. A
+  District HR officer maintains the sub‑districts and facilities **of their own district**: the page
+  loads a tree cut to that one district, and every sub‑district and facility action re‑reads the row's
+  district before writing.
+* A facilitator's register is their programme. `trainingVisibilityFilter` applies the grants as a
+  second limit beside publication, so the Trainings list, its counters and the record page show the
+  Programme Areas and Programme Fields they hold — plus drafts they wrote themselves — and a facilitator
+  with no grants sees an empty register rather than the region's. Attaching a file, commenting, editing
+  and archiving are checked against the same grants on the posted id, and the create form offers only
+  granted Programme Fields.
 * Material authoring and review scope is the material's Programme Field; a facilitator may act when
   assigned either directly to that field or to its parent Programme Area.
 * Audience match for a Staff account (stored role `LEARNER`) = `audienceRegion IS NULL OR
@@ -133,7 +143,19 @@ capabilities minus everything that reaches past a district:
 | Bulk staff import | no — the sheet is regional | yes |
 | Programme taxonomy, area grants | no — both are regional | yes |
 | Record or approve trainings | no | yes |
-| Geography, notices, complaints | **not yet** — screens still administrator-only | yes |
+| Sub-districts and facilities | in their district, and nothing above it | everywhere |
+| Regions and districts | no | yes |
+| Complaints queue, answer and resolve | in their district | everywhere |
+| Notices | **not yet** — the audience filter cannot name a district | yes |
+
+Complaints carry a `district_id` (migration `0025`), backfilled from the filer's
+account and then from the facility name; a complaint that matched neither keeps
+`null`, which means "in no district's queue" — the administrator sees it, no
+officer does, and nothing is guessed.
+
+Notices are the remaining gap and are switched off deliberately: the audience
+filter holds region, directorate and grade, and adding `district` is the change
+that turns `notification.broadcast` on for this role.
 
 The boundary is `users.district_id` (a foreign key), never `users.district`
 (free text from the staff sheet). Every people action calls

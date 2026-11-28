@@ -17,6 +17,7 @@ import { formatDate } from "@/lib/format";
 import { TRAINING_STATUSES, TRAINING_STATUS_LABELS, isTrainingStatus } from "@/lib/labels";
 import { can } from "@/lib/rbac/capabilities";
 import { requireSession } from "@/lib/server/rbac";
+import { programmeGrantsFor } from "@/lib/server/programme-scope";
 import { listGeography, listProgrammeFieldOptions } from "@/lib/server/taxonomy-queries";
 import {
   TRAININGS_PAGE_SIZE,
@@ -120,6 +121,12 @@ export default async function TrainingsPage({
   // A unit head needs the queue to work it; the per-row guard below still stops
   // them acting outside the fields they hold.
   const canSeeUnpublished = session.role === "SYSTEM_ADMIN" || session.unitHead === true;
+  /*
+   * A facilitator's register is their programme: the fields they hold, plus the
+   * whole areas they were given. An administrator is unrestricted, and a learner's
+   * limit is publication rather than grants — so `grants` stays undefined for both.
+   */
+  const grants = session.role === "FACILITATOR" ? await programmeGrantsFor(session.sub) : undefined;
   const loaded = await withDeadline("trainings", () =>
     mapLimit([
       () =>
@@ -132,10 +139,10 @@ export default async function TrainingsPage({
           districtId: query.district ?? undefined,
           status: isTrainingStatus(query.status) ? query.status : undefined,
           review: (query.review as "PENDING" | "PUBLISHED" | "REJECTED" | null) ?? undefined,
-          viewer: { userId: session.sub, seeAll: canSeeUnpublished },
+          viewer: { userId: session.sub, seeAll: canSeeUnpublished, grants },
           page: query.page,
         }),
-      () => getTrainingSummary({ userId: session.sub, seeAll: canSeeUnpublished }),
+      () => getTrainingSummary({ userId: session.sub, seeAll: canSeeUnpublished, grants }),
       getTrainingFilterOptions,
       listProgrammeFieldOptions,
       listGeography,

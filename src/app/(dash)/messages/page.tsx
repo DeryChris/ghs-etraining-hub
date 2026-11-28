@@ -18,6 +18,7 @@ import {
   type ComplaintMessage,
 } from "@/lib/server/complaint-queries";
 import { requireSession } from "@/lib/server/rbac";
+import { districtScopeOf } from "@/lib/server/district-scope";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 
 function parseBefore(value: string | undefined): Date | undefined {
@@ -59,15 +60,22 @@ export default async function MessagesPage({
   const before = parseBefore(params.before);
   const show: Show = params.show === "messages" ? "MESSAGES" : params.show === "complaints" ? "COMPLAINTS" : "ALL";
 
-  // The complaint desk is staff work; a learner's inbox is their conversations.
+  /*
+   * The complaint desk is staff work; a learner's inbox is their conversations.
+   * A District HR officer's desk is their own district, so the queue, the count
+   * and the answer form are all narrowed to it — and a district officer whose
+   * account names no district gets an empty queue rather than the whole country.
+   */
+  const districtScope = districtScopeOf(session);
+  const complaintBoundary = districtScope.scoped ? districtScope.districtId : undefined;
   const mayHandleComplaints = session.role !== "LEARNER";
 
   const loaded = await withDeadline("messages", () =>
     mapLimit([
       () => listConversations(session.sub),
       () => listDirectory(session.sub),
-      () => (mayHandleComplaints ? listComplaints("ALL") : Promise.resolve([])),
-      () => (mayHandleComplaints ? openComplaintCount() : Promise.resolve(0)),
+      () => (mayHandleComplaints ? listComplaints("ALL", complaintBoundary) : Promise.resolve([])),
+      () => (mayHandleComplaints ? openComplaintCount(complaintBoundary) : Promise.resolve(0)),
     ]),
   );
   if (!loaded.ok) {

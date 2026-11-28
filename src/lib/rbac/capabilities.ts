@@ -160,11 +160,16 @@ export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
     "taxonomy.manage": false,
     "area.update": false,
     "area.assign_facilitator": false,
-    /* Geography and notices are theirs inside their district, but those screens
-     * are still administrator-only: turning the capability on before the district
-     * filter exists would hand out a route that edits every district. Flipped on
-     * in the change that lands the filter, not before. */
-    "geography.manage": false,
+    /* Geography: their own district's sub-districts and facilities, and only
+     * those. The capability is on now because the filter landed with it — the
+     * page loads a tree cut to one district, and every facility and sub-district
+     * action refuses a row filed elsewhere. Region and district rows stay
+     * administrator-only inside the action, not by hiding a button.
+     *
+     * Notices are still off: the audience filter has no district dimension yet,
+     * so a broadcast from this role would reach the whole region. Turned on in the
+     * change that adds that dimension, not before. */
+    "geography.manage": true,
     "notification.broadcast": false,
     /* Training register: read-only here. Recording a training is a facilitator's
      * act, and a district HR holds no programme grant. */

@@ -33,6 +33,7 @@ import { durationLabel, planYearOf } from "@/lib/training-dates";
 import { logAudit } from "@/lib/server/audit";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
+import { canWorkOnTraining, grantsCoverTraining, programmeGrantsFor } from "@/lib/server/programme-scope";
 
 /*
  * Creating and changing a training.
@@ -387,6 +388,12 @@ export async function archiveTrainingAction(formData: FormData): Promise<void> {
   const id = field(formData, "trainingId");
   if (!id) redirect(`/trainings?error=${encodeURIComponent("That training could not be found.")}`);
 
+  /* Archiving is not a programme-wide act: it takes the training out of every
+   * register, so it needs the same grant check as editing one. */
+  if (!(await canWorkOnTraining(session, id))) {
+    redirect(`/trainings/${id}?error=${encodeURIComponent("That training is not yours to change.")}`);
+  }
+
   try {
     await db.transaction(async (tx) => {
       await tx
@@ -714,14 +721,35 @@ async function loadReviewableTraining(
   const { session } = guard;
 
   const [training] = await db
-    .select({ fieldId: trainingSessions.programmeFieldId, createdById: trainingSessions.createdById })
+    .select({
+      fieldId: trainingSessions.programmeFieldId,
+      areaId: trainingSessions.programmeAreaId,
+      createdById: trainingSessions.createdById,
+    })
     .from(trainingSessions)
     .where(and(eq(trainingSessions.id, trainingId), eq(trainingSessions.isArchived, false)))
     .limit(1);
   if (!training) return { ok: false, message: "That training no longer exists." };
 
   if (session.role === "SYSTEM_ADMIN") return { ok: true, sessionId: session.sub };
-  if (training.createdById === session.sub) return { ok: true, sessionId: session.sub };
+
+  /*
+   * A facilitator may change a training that sits inside their grants even when
+   * somebody else wrote it — two people work the same Programme Field, and
+   * correcting a venue should not need the author's account. What they may never
+   * do is reach a training outside their programme, which is what the grants
+   * check below decides. Writing your own row is always allowed: a draft is
+   * yours, whatever happens to the assignment afterwards.
+   */
+  if (
+    training.createdById === session.sub ||
+    grantsCoverTraining(await programmeGrantsFor(session.sub), {
+      programmeFieldId: training.fieldId,
+      programmeAreaId: training.areaId,
+    })
+  ) {
+    return { ok: true, sessionId: session.sub };
+  }
   if (await mayReviewField(session, training.fieldId)) return { ok: true, sessionId: session.sub };
 
   return { ok: false, message: "That training is not yours to change." };
@@ -803,6 +831,9 @@ export async function deleteTrainingCommentAction(formData: FormData): Promise<v
   const guard = await checkCapability("training.manage");
   if (!guard.ok) redirect(`/trainings/${trainingId}?error=${encodeURIComponent(guard.message)}`);
   const { session } = guard;
+  if (!(await canWorkOnTraining(session, trainingId))) {
+    redirect(`/trainings/${trainingId}?error=${encodeURIComponent("That training is not yours to change.")}`);
+  }
 
   const [comment] = await db
     .select({ authorId: trainingComments.authorId })

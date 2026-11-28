@@ -365,3 +365,8 @@ Administrators were regional, so every account change outside Wa waited for one.
 reset, read PII — and may appoint staff, facilitators and unit heads, but not
 administrators or other HRs. The boundary is `users.district_id`, a foreign key,
 because a district *name* is not a boundary. See `0032-district-hr.md`.
+
+A second boundary: the district a complaint belongs to, and the programme a
+facilitator holds. Geography below the district line, the complaint queue, and
+the trainings register all narrow to it; notices wait for an audience filter that
+can name a district. See `0033-district-scope-and-programme-scope.md`.

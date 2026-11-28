@@ -14,6 +14,7 @@ import { complaintsForStaffId } from "@/lib/server/complaint-queries";
 import { log } from "@/lib/server/logger";
 import { hashPassword } from "@/lib/server/auth";
 import { requireRole } from "@/lib/server/rbac";
+import { NO_DISTRICT_MESSAGE, districtScopeOf } from "@/lib/server/district-scope";
 import { consumeRateLimit, rateLimitKey, retryAfterText } from "@/lib/server/rate-limit";
 import { clientAddress } from "@/lib/server/request-context";
 
@@ -167,9 +168,17 @@ export async function submitComplaintAction(
   let matchedUserId: string | null = null;
   let region: string | null = null;
   let facility: string | null = null;
+  /*
+   * The district is what routes the complaint to an officer's queue, so it is
+   * captured at filing time rather than worked out later from the free text. A
+   * complaint from somebody outside the directory keeps a null district: it goes
+   * to the administrator, and to no district officer — which is the safe way to
+   * be wrong.
+   */
+  let districtId: string | null = null;
   if (input.staffId) {
     const [match] = await db
-      .select({ id: users.id, region: users.region, facility: users.facility })
+      .select({ id: users.id, region: users.region, facility: users.facility, districtId: users.districtId })
       .from(users)
       .where(sql`lower(${users.ghsStaffId}) = ${input.staffId.toLowerCase()}`)
       .limit(1);
@@ -177,6 +186,7 @@ export async function submitComplaintAction(
       matchedUserId = match.id;
       region = match.region;
       facility = match.facility;
+      districtId = match.districtId;
     }
   }
 
@@ -191,6 +201,7 @@ export async function submitComplaintAction(
       phone: input.phone,
       region,
       facility,
+      districtId,
       issueType: input.issueType,
       trainingId,
       trainingTitle,
@@ -310,7 +321,7 @@ export async function respondToComplaintAction(
   _previous: ComplaintState,
   formData: FormData,
 ): Promise<ComplaintState> {
-  const session = await requireRole(["SYSTEM_ADMIN"]);
+  const session = await requireRole(["SYSTEM_ADMIN", "DISTRICT_HR"]);
   const complaintId = field(formData, "complaintId") ?? "";
   const response = (field(formData, "response") ?? "").trim();
   const resolve = field(formData, "resolve") === "on";
@@ -318,6 +329,26 @@ export async function respondToComplaintAction(
   if (!complaintId) return { ok: false, message: "That complaint could not be identified. Reload the page." };
   if (response.length < 10) {
     return { ok: false, message: "Write the answer as you would say it — at least a sentence." };
+  }
+
+  /*
+   * Answering a complaint is answering *this district's* complaint. The id comes
+   * from a posted form, so it is checked against the officer's own district
+   * before anything is written — a queue you cannot see is not a queue you may
+   * answer by typing its address.
+   */
+  const scopeForReply = districtScopeOf(session);
+  if (scopeForReply.scoped) {
+    if (!scopeForReply.districtId) return { ok: false, message: NO_DISTRICT_MESSAGE };
+    const [target] = await db
+      .select({ districtId: complaints.districtId })
+      .from(complaints)
+      .where(eq(complaints.id, complaintId))
+      .limit(1);
+    if (!target) return { ok: false, message: "That complaint could not be found. Reload the page." };
+    if (target.districtId !== scopeForReply.districtId) {
+      return { ok: false, message: "That complaint belongs to another district." };
+    }
   }
 
   const now = new Date();

@@ -9,6 +9,8 @@ import { codeFrom, districtInput, facilityInput, regionInput, subDistrictInput }
 import { logAudit } from "@/lib/server/audit";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
+import { getSession } from "@/lib/server/session";
+import { NO_DISTRICT_MESSAGE, districtScopeOf, type DistrictScope } from "@/lib/server/district-scope";
 import { backTo, failureMessage } from "./managed-form";
 
 /*
@@ -37,11 +39,27 @@ interface Actor {
   staffId: string;
 }
 
-type Work = (actor: Actor) => Promise<string | void>;
+type Work = (actor: Actor, scope: DistrictScope) => Promise<string | void>;
+
+/**
+ * Region and district rows are national reference data: an administrator creates
+ * them, and they do not belong to anybody. A District HR officer keeps the
+ * sub-districts and facilities of their own district, which is the part that
+ * changes in practice.
+ */
+async function manageNational(event: string, back: string, notice: string, work: Work): Promise<void> {
+  const session = await getSession();
+  if (!session || session.role !== "SYSTEM_ADMIN") {
+    return backTo(back, { error: "Only an administrator can change regions and districts." });
+  }
+  return manage(event, back, notice, work);
+}
 
 async function manage(event: string, back: string, notice: string, work: Work): Promise<void> {
   const check = await checkCapability("geography.manage");
   if (!check.ok) return backTo(back, { error: check.message });
+  const scope = districtScopeOf(check.session);
+  if (scope.scoped && !scope.districtId) return backTo(back, { error: NO_DISTRICT_MESSAGE });
   const actor: Actor = {
     sub: check.session.sub,
     role: check.session.role,
@@ -51,7 +69,7 @@ async function manage(event: string, back: string, notice: string, work: Work): 
 
   let failure: string | null = null;
   try {
-    const refusal = await work(actor);
+    const refusal = await work(actor, scope);
     if (refusal) failure = refusal;
   } catch (error) {
     log.error({ event: `${event}_failed`, err: String(error) });
@@ -64,6 +82,29 @@ async function manage(event: string, back: string, notice: string, work: Work): 
   revalidateTag("taxonomy", "max");
   revalidateTag("geography", "max");
   return backTo(back, { notice });
+}
+
+/**
+ * The district boundary, as one question asked in several places: may this
+ * caller touch a row filed under `districtId`? An administrator always may; a
+ * district officer only their own; anything else never.
+ */
+function outsideDistrict(scope: DistrictScope, districtId: string | null | undefined): string | null {
+  if (!scope.scoped) return null;
+  if (!scope.districtId) return NO_DISTRICT_MESSAGE;
+  if (!districtId || districtId !== scope.districtId) return "That belongs to another district.";
+  return null;
+}
+
+/** The district a stored row belongs to, for the checks that only have its id. */
+async function districtOfSubDistrict(id: string): Promise<string | null> {
+  const [row] = await db.select({ districtId: subDistricts.districtId }).from(subDistricts).where(eq(subDistricts.id, id)).limit(1);
+  return row?.districtId ?? null;
+}
+
+async function districtOfFacility(id: string): Promise<string | null> {
+  const [row] = await db.select({ districtId: facilities.districtId }).from(facilities).where(eq(facilities.id, id)).limit(1);
+  return row?.districtId ?? null;
 }
 
 /** Region codes are two letters in the reference data; keep them that way. */
@@ -87,7 +128,7 @@ export async function createRegionAction(formData: FormData): Promise<void> {
   const parsed = regionInput.safeParse({ name: field(formData, "name"), code: field(formData, "code") });
   if (!parsed.success) return backTo(PATH, { error: parsed.error.issues[0]?.message ?? "Check the details." });
 
-  return manage("region.create", PATH, `Added the ${parsed.data.name} Region.`, async (actor) => {
+  return manageNational("region.create", PATH, `Added the ${parsed.data.name} Region.`, async (actor) => {
     const code = await availableRegionCode(parsed.data.name, parsed.data.code);
     await db.transaction(async (tx) => {
       const [created] = await tx
@@ -114,7 +155,7 @@ export async function updateRegionAction(formData: FormData): Promise<void> {
   if (!id) return backTo(PATH, { error: "That region could not be found." });
   if (!parsed.success) return backTo(PATH, { error: parsed.error.issues[0]?.message ?? "Check the details." });
 
-  return manage("region.update", `${PATH}?region=${id}`, `Saved the ${parsed.data.name} Region.`, async (actor) => {
+  return manageNational("region.update", `${PATH}?region=${id}`, `Saved the ${parsed.data.name} Region.`, async (actor) => {
     await db.transaction(async (tx) => {
       await tx
         .update(regions)
@@ -132,7 +173,7 @@ export async function deleteRegionAction(formData: FormData): Promise<void> {
   const id = field(formData, "id");
   if (!id) return backTo(PATH, { error: "That region could not be found." });
 
-  return manage("region.delete", PATH, "Region deleted.", async (actor) => {
+  return manageNational("region.delete", PATH, "Region deleted.", async (actor) => {
     const [children] = await db.select({ n: count() }).from(districts).where(eq(districts.regionId, id));
     if ((children?.n ?? 0) > 0) {
       return `${children?.n} district(s) still belong to this region. Remove them first.`;
@@ -156,7 +197,7 @@ export async function createDistrictAction(formData: FormData): Promise<void> {
   if (!parsed.success) return backTo(PATH, { error: parsed.error.issues[0]?.message ?? "Check the details." });
 
   const regionId = parsed.data.regionId;
-  return manage("district.create", `${PATH}?region=${regionId}`, `Added ${parsed.data.name}.`, async (actor) => {
+  return manageNational("district.create", `${PATH}?region=${regionId}`, `Added ${parsed.data.name}.`, async (actor) => {
     await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(districts)
@@ -193,7 +234,7 @@ export async function updateDistrictAction(formData: FormData): Promise<void> {
   if (!parsed.success) return backTo(PATH, { error: parsed.error.issues[0]?.message ?? "Check the details." });
 
   const regionId = parsed.data.regionId;
-  return manage(
+  return manageNational(
     "district.update",
     `${PATH}?region=${regionId}&district=${id}`,
     `Saved ${parsed.data.name}.`,
@@ -218,7 +259,7 @@ export async function deleteDistrictAction(formData: FormData): Promise<void> {
   if (!id) return backTo(PATH, { error: "That district could not be found." });
   const back = regionId ? `${PATH}?region=${regionId}` : PATH;
 
-  return manage("district.delete", back, "District deleted.", async (actor) => {
+  return manageNational("district.delete", back, "District deleted.", async (actor) => {
     const [[sub], [fac]] = await Promise.all([
       db.select({ n: count() }).from(subDistricts).where(eq(subDistricts.districtId, id)),
       db.select({ n: count() }).from(facilities).where(eq(facilities.districtId, id)),
@@ -245,7 +286,9 @@ export async function createSubDistrictAction(formData: FormData): Promise<void>
   const regionId = field(formData, "regionId");
   const back = regionId ? `${PATH}?region=${regionId}&district=${parsed.data.districtId}` : PATH;
 
-  return manage("sub_district.create", back, `Added ${parsed.data.name}.`, async (actor) => {
+  return manage("sub_district.create", back, `Added ${parsed.data.name}.`, async (actor, scope) => {
+    const outside = outsideDistrict(scope, parsed.data.districtId);
+    if (outside) return outside;
     await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(subDistricts)
@@ -276,7 +319,9 @@ export async function deleteSubDistrictAction(formData: FormData): Promise<void>
     "sub_district.delete",
     back,
     "Sub-district deleted. Facilities and trainings that used it are unchanged.",
-    async (actor) => {
+    async (actor, scope) => {
+      const outside = outsideDistrict(scope, await districtOfSubDistrict(id));
+      if (outside) return outside;
       await db.transaction(async (tx) => {
         await tx.delete(subDistricts).where(eq(subDistricts.id, id));
         await logAudit({ actor, action: "SUB_DISTRICT_DELETED", entity: "sub_district", entityId: id }, tx);
@@ -317,7 +362,9 @@ export async function createFacilityAction(formData: FormData): Promise<void> {
   const regionId = field(formData, "regionId");
   const back = regionId ? `${PATH}?region=${regionId}&district=${input.districtId}` : PATH;
 
-  return manage("facility.create", back, `Added ${input.name}.`, async (actor) => {
+  return manage("facility.create", back, `Added ${input.name}.`, async (actor, scope) => {
+    const outside = outsideDistrict(scope, input.districtId);
+    if (outside) return outside;
     if (!(await subDistrictMatches(input.subDistrictId, input.districtId))) {
       return "That sub-district is in a different district.";
     }
@@ -357,7 +404,9 @@ export async function updateFacilityAction(formData: FormData): Promise<void> {
   const regionId = field(formData, "regionId");
   const back = regionId ? `${PATH}?region=${regionId}&district=${input.districtId}` : PATH;
 
-  return manage("facility.update", back, `Saved ${input.name}.`, async (actor) => {
+  return manage("facility.update", back, `Saved ${input.name}.`, async (actor, scope) => {
+    const outside = outsideDistrict(scope, input.districtId) ?? outsideDistrict(scope, await districtOfFacility(id));
+    if (outside) return outside;
     if (!(await subDistrictMatches(input.subDistrictId, input.districtId))) {
       return "That sub-district is in a different district.";
     }
@@ -391,7 +440,9 @@ export async function deleteFacilityAction(formData: FormData): Promise<void> {
     "facility.delete",
     back,
     "Facility deleted. Trainings held there keep their dates and lose the venue.",
-    async (actor) => {
+    async (actor, scope) => {
+      const outside = outsideDistrict(scope, await districtOfFacility(id));
+      if (outside) return outside;
       await db.transaction(async (tx) => {
         await tx.delete(facilities).where(eq(facilities.id, id));
         await logAudit({ actor, action: "FACILITY_DELETED", entity: "facility", entityId: id }, tx);
@@ -413,7 +464,9 @@ export async function setFacilityActiveAction(formData: FormData): Promise<void>
     active ? "facility.reactivate" : "facility.deactivate",
     back,
     active ? "Facility is active again." : "Facility marked inactive.",
-    async (actor) => {
+    async (actor, scope) => {
+      const outside = outsideDistrict(scope, await districtOfFacility(id));
+      if (outside) return outside;
       await db.transaction(async (tx) => {
         await tx.update(facilities).set({ isActive: active }).where(eq(facilities.id, id));
         await logAudit(

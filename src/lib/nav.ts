@@ -160,7 +160,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         href: "/geography",
         label: "Geography & facilities",
         icon: "geography",
-        roles: ADMIN_ONLY,
+        roles: PEOPLE_ADMIN,
         hint: "Regions, districts, sub-districts and the facilities a training is held at",
       },
       {
