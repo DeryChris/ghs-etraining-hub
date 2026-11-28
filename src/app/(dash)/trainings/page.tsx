@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, Users } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarCheck,
+  CalendarClock,
+  CalendarDays,
+  Clock3,
+  MapPin,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
@@ -12,7 +20,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { NewTrainingDialog } from "@/components/trainings/new-training-dialog";
-import { Stat } from "@/components/ui/stat";
 import { formatDate } from "@/lib/format";
 import { TRAINING_STATUSES, TRAINING_STATUS_LABELS, isTrainingStatus } from "@/lib/labels";
 import { can } from "@/lib/rbac/capabilities";
@@ -74,8 +81,8 @@ const REVIEW_STATES = ["PENDING", "PUBLISHED", "REJECTED"];
 /** Chips above the list: the review queue is one click, not a filter hunt. */
 const REVIEW_CHIPS = [
   { key: "", label: "Everything" },
-  { key: "PENDING", label: "Pending review" },
-  { key: "PUBLISHED", label: "Live" },
+  { key: "PENDING", label: "Pending Review" },
+  { key: "PUBLISHED", label: "Live/Published" },
   { key: "REJECTED", label: "Returned" },
 ] as const;
 
@@ -176,6 +183,7 @@ export default async function TrainingsPage({
   const firstOnPage = list.total === 0 ? 0 : (list.page - 1) * TRAININGS_PAGE_SIZE + 1;
   const lastOnPage = (list.page - 1) * TRAININGS_PAGE_SIZE + list.items.length;
   const mayManage = can(session.role, "training.manage");
+  const mayViewInsights = session.role === "SYSTEM_ADMIN" || session.role === "FACILITATOR";
   const notice = single("notice");
   const error = single("error");
 
@@ -185,31 +193,84 @@ export default async function TrainingsPage({
 
       <PageHeader
         eyebrow="Trainings"
-        title="Training register"
+        title="Training Register"
         description="Find Training Session records, including plans and records marked as held. Filter by Programme Area, Programme Field, year, location, status or review state. Open a training to see the files attached to it."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
-              Browse the library
-            </Link>
             {mayManage ? (
-              <NewTrainingDialog fields={fields} geography={geography} label="Create new training" />
+              <NewTrainingDialog fields={fields} geography={geography} label="Create New Training" />
             ) : null}
+            <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
+              Browse the Library
+            </Link>
           </div>
         }
       />
 
       <Notice notice={notice} error={error} />
 
-      <section
-        id="training-totals"
-        aria-label="Training totals"
-        className="scroll-mt-24 grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-4"
-      >
-        <Stat value={summary.total} label="Training records" />
-        <Stat value={summary.planned} label="Marked as planned" />
-        <Stat value={summary.thisYear} label={`Records filed for ${new Date().getFullYear()}`} />
-        <Stat value={summary.attendees.toLocaleString("en-GB")} label="Attendee counts recorded" />
+      <section id="training-totals" aria-label="Training overview" className="scroll-mt-24 space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: "Training Records",
+              value: summary.total,
+              icon: CalendarDays,
+              borderTone: "border-t-ghs-green",
+              iconTone: "bg-ghs-green/10 text-ghs-green",
+            },
+            {
+              label: "Planned",
+              value: summary.planned,
+              icon: CalendarClock,
+              borderTone: "border-t-ghs-gold",
+              iconTone: "bg-ghs-gold/35 text-ghs-green",
+            },
+            {
+              label: "Held",
+              value: summary.completed,
+              icon: CalendarCheck,
+              borderTone: "border-t-ghs-green",
+              iconTone: "bg-ghs-green/10 text-ghs-green",
+            },
+            {
+              label: "Awaiting Review",
+              value: summary.awaitingReview,
+              icon: Clock3,
+              borderTone: "border-t-ghs-red",
+              iconTone: "bg-ghs-red/10 text-ghs-red",
+            },
+          ].map((card) => {
+            const Icon = card.icon;
+            return (
+              <article
+                key={card.label}
+                className={`flex min-h-28 items-center justify-between gap-4 rounded-card border border-hairline border-t-4 bg-surface p-4 shadow-panel ${card.borderTone}`}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink-muted">{card.label}</p>
+                  <p className="mt-1 text-2xl font-extrabold tabular-nums text-ink">
+                    {card.value.toLocaleString("en-GB")}
+                  </p>
+                </div>
+                <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-control ${card.iconTone}`}>
+                  <Icon className="h-5 w-5" aria-hidden />
+                </span>
+              </article>
+            );
+          })}
+        </div>
+        {mayViewInsights && (
+          <div className="flex justify-end">
+            <Link
+              href="/insights"
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              View detailed insights
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+        )}
       </section>
 
       <nav aria-label="Review queue" className="flex flex-wrap items-center gap-2">
