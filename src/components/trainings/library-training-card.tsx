@@ -56,6 +56,7 @@ export function LibraryTrainingCard({
   return (
     <Dialog
       size="lg"
+      allowFullscreen
       title={title}
       trigger={({ open }) => (
         <a

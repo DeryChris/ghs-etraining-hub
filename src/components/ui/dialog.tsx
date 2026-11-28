@@ -155,25 +155,32 @@ export function Dialog({
                   </p>
                 )}
               </div>
-              {allowFullscreen && (
+              <div className="flex shrink-0 items-center gap-2">
+                {allowFullscreen && (
+                  <button
+                    type="button"
+                    onClick={toggleFullscreen}
+                    aria-label={expanded ? "Leave full screen" : "Full screen"}
+                    title={expanded ? "Leave full screen" : "Full screen"}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-primary/25 bg-primary/10 text-primary transition-colors duration-fast hover:border-primary/40 hover:bg-primary/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none"
+                  >
+                    {expanded ? <Minimize2 className="h-4 w-4" aria-hidden /> : <Maximize2 className="h-4 w-4" aria-hidden />}
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={toggleFullscreen}
-                  aria-label={expanded ? "Leave full screen" : "Full screen"}
-                  title={expanded ? "Leave full screen" : "Full screen"}
-                  className="-mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close"
+                  title="Close"
+                  className={
+                    allowFullscreen
+                      ? "inline-flex h-10 w-10 items-center justify-center rounded-full border border-danger/25 bg-danger/10 text-danger transition-colors duration-fast hover:border-danger/40 hover:bg-danger/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger motion-reduce:transition-none"
+                      : "-mr-1 -mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  }
                 >
-                  {expanded ? <Minimize2 className="h-4 w-4" aria-hidden /> : <Maximize2 className="h-4 w-4" aria-hidden />}
+                  <X className="h-4 w-4" aria-hidden />
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Close"
-                className="-mr-1 -mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                <X className="h-4 w-4" aria-hidden />
-              </button>
+              </div>
             </div>
 
             <div
