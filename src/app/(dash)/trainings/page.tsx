@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   CalendarClock,
   CalendarDays,
+  ChevronRight,
   Clock3,
   MapPin,
   Users,
@@ -216,28 +217,28 @@ export default async function TrainingsPage({
               label: "Training Records",
               value: summary.total,
               icon: CalendarDays,
-              borderTone: "border-t-ghs-green",
+              borderTone: "border-l-ghs-green",
               iconTone: "bg-ghs-green/10 text-ghs-green",
             },
             {
               label: "Planned",
               value: summary.planned,
               icon: CalendarClock,
-              borderTone: "border-t-ghs-gold",
+              borderTone: "border-l-ghs-gold",
               iconTone: "bg-ghs-gold/35 text-ghs-green",
             },
             {
               label: "Held",
               value: summary.completed,
               icon: CalendarCheck,
-              borderTone: "border-t-ghs-green",
+              borderTone: "border-l-ghs-green",
               iconTone: "bg-ghs-green/10 text-ghs-green",
             },
             {
               label: "Awaiting Review",
               value: summary.awaitingReview,
               icon: Clock3,
-              borderTone: "border-t-ghs-red",
+              borderTone: "border-l-ghs-red",
               iconTone: "bg-ghs-red/10 text-ghs-red",
             },
           ].map((card) => {
@@ -245,7 +246,7 @@ export default async function TrainingsPage({
             return (
               <article
                 key={card.label}
-                className={`flex min-h-28 items-center justify-between gap-4 rounded-card border border-hairline border-t-4 bg-surface p-4 shadow-panel ${card.borderTone}`}
+                className={`flex min-h-28 items-center justify-between gap-4 rounded-card border border-hairline border-l-4 bg-surface p-4 shadow-panel ${card.borderTone}`}
               >
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-ink-muted">{card.label}</p>
@@ -450,11 +451,26 @@ export default async function TrainingsPage({
                     className="absolute inset-0 z-10 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   />
                   <div className="flex flex-1 flex-col gap-4 p-5">
-                    <div className="space-y-1.5">
-                      <p className="text-[11px] font-semibold uppercase leading-relaxed tracking-[0.16em] text-ink-muted">
-                        Programme Field: {training.fieldName ?? "Not recorded"}
-                        {training.areaName ? ` · Programme Area: ${training.areaName}` : ""}
-                      </p>
+                    <div className="space-y-2">
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+                        <span className="inline-flex max-w-full flex-wrap items-baseline gap-x-1.5 rounded-[var(--radius-pill)] bg-ghs-green px-2.5 py-1.5 text-[11px] leading-snug text-white">
+                          <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-[0.08em] text-white/85">
+                            Programme Area
+                          </span>
+                          <span className="min-w-0 break-words font-semibold">{training.fieldName ?? "Not recorded"}</span>
+                        </span>
+                        {training.areaName && (
+                          <>
+                            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-muted" aria-hidden />
+                            <span className="inline-flex max-w-full flex-wrap items-baseline gap-x-1.5 rounded-[var(--radius-pill)] border border-ghs-green/20 bg-ghs-green/10 px-2.5 py-1.5 text-[11px] leading-snug text-ghs-green">
+                              <span className="shrink-0 text-[9px] font-extrabold uppercase tracking-[0.08em]">
+                                Programme Field
+                              </span>
+                              <span className="min-w-0 break-words font-semibold">{training.areaName}</span>
+                            </span>
+                          </>
+                        )}
+                      </div>
                       <h2 className="text-lg font-bold text-ink transition-colors group-hover:text-primary">
                         {training.title}
                       </h2>
