@@ -1,4 +1,4 @@
-export type Role = "SYSTEM_ADMIN" | "FACILITATOR" | "LEARNER";
+export type Role = "SYSTEM_ADMIN" | "DISTRICT_HR" | "FACILITATOR" | "LEARNER";
 
 /**
  * What an administrator picks in a role field.
@@ -13,7 +13,7 @@ export type Role = "SYSTEM_ADMIN" | "FACILITATOR" | "LEARNER";
 export type StaffRole = Role | "UNIT_HEAD";
 
 /** Ordered by how much authority the choice carries. */
-export const STAFF_ROLE_VALUES = ["LEARNER", "FACILITATOR", "UNIT_HEAD", "SYSTEM_ADMIN"] as const;
+export const STAFF_ROLE_VALUES = ["LEARNER", "FACILITATOR", "UNIT_HEAD", "DISTRICT_HR", "SYSTEM_ADMIN"] as const;
 
 export function isStaffRole(value: string | null | undefined): value is StaffRole {
   return STAFF_ROLE_VALUES.includes(value as StaffRole);
@@ -22,6 +22,32 @@ export function isStaffRole(value: string | null | undefined): value is StaffRol
 /** The row a StaffRole writes: the stored role, plus the unit-head duty. */
 export function roleForStaffRole(staffRole: StaffRole): { role: Role; unitHead: boolean } {
   return staffRole === "UNIT_HEAD" ? { role: "FACILITATOR", unitHead: true } : { role: staffRole, unitHead: false };
+}
+
+/**
+ * Which roles one person may hand out.
+ *
+ * A system administrator may grant anything, including another administrator.
+ * A District HR may make somebody in their district a facilitator or a unit head
+ * — that is the point of the role, HR runs the establishment — but may not mint
+ * administrators (who are unscoped, and so could reach every district) or another
+ * District HR (which would multiply authority over their own district without
+ * anybody above them deciding to). Enforced in the action, not only in the
+ * picker: the picker is a convenience, the check is the rule.
+ */
+export function rolesAssignableBy(actor: Role): readonly StaffRole[] {
+  if (actor === "SYSTEM_ADMIN") return STAFF_ROLE_VALUES;
+  if (actor === "DISTRICT_HR") return ["LEARNER", "FACILITATOR", "UNIT_HEAD"];
+  return [];
+}
+
+export function canAssignRole(actor: Role, target: StaffRole): boolean {
+  return rolesAssignableBy(actor).includes(target);
+}
+
+/** Roles whose authority stops at their own district. One today. */
+export function isDistrictScoped(role: Role): boolean {
+  return role === "DISTRICT_HR";
 }
 
 /** The choice a stored row corresponds to — the inverse of roleForStaffRole. */
@@ -74,41 +100,86 @@ export type Scope = {
   audienceMatch?: boolean;
 };
 
+/** Everything, stated once. `DISTRICT_HR` below is this row less the exceptions. */
+const SYSTEM_ADMIN_CAPABILITIES: Record<Action, boolean> = {
+  "user.create": true,
+  "user.bulk_import": true,
+  "user.deactivate": true,
+  "user.reactivate": true,
+  "user.assign_role": true,
+  "user.reset_password": true,
+  "user.read_pii": true,
+  "area.update": true,
+  "area.assign_facilitator": true,
+  "material.create": true,
+  "material.upload_version": true,
+  "material.submit_review": true,
+  "material.review": true,
+  "material.publish": true,
+  "material.archive": true,
+  "material.read_draft": true,
+  "material.read_published": true,
+  "material.download": true,
+  "training.manage": true,
+  "taxonomy.manage": true,
+  "geography.manage": true,
+  "comment.create": true,
+  "comment.edit_own": true,
+  "comment.moderate": true,
+  "message.send": true,
+  "message.read_any_thread": true,
+  "notification.broadcast": true,
+  "notification.view": true,
+  "analytics.view_personal": true,
+  "analytics.view_cohort": true,
+  "analytics.export": true,
+  "audit_log.read": true,
+  "maintenance_banner.manage": true,
+};
+
 export const CAPABILITY_MATRIX: Record<Role, Record<Action, boolean>> = {
-  SYSTEM_ADMIN: {
-    "user.create": true,
-    "user.bulk_import": true,
-    "user.deactivate": true,
-    "user.reactivate": true,
+  SYSTEM_ADMIN: SYSTEM_ADMIN_CAPABILITIES,
+  /**
+   * An administrator of one district: people, facilities, notices and complaints
+   * inside it, and nothing that reaches past its boundary.
+   *
+   * Written as the administrator's row minus what must not carry over, because a
+   * list of what this role *can* do goes stale the moment an action is added: the
+   * new action would default to "no" silently. Here it defaults to the
+   * administrator's answer, and every exception below has to be argued for.
+   */
+  DISTRICT_HR: {
+    ...SYSTEM_ADMIN_CAPABILITIES,
+    /* People: yes, with the role scope in `rolesAssignableBy` and the district
+     * boundary checked in every action. Bulk import is regional — a sheet for the
+     * whole region landing in one district would be a quiet catastrophe. */
+    "user.bulk_import": false,
     "user.assign_role": true,
-    "user.reset_password": true,
-    "user.read_pii": true,
-    "area.update": true,
-    "area.assign_facilitator": true,
-    "material.create": true,
-    "material.upload_version": true,
-    "material.submit_review": true,
-    "material.review": true,
-    "material.publish": true,
-    "material.archive": true,
-    "material.read_draft": true,
-    "material.read_published": true,
-    "material.download": true,
-    "training.manage": true,
-    "taxonomy.manage": true,
-    "geography.manage": true,
-    "comment.create": true,
-    "comment.edit_own": true,
-    "comment.moderate": true,
-    "message.send": true,
-    "message.read_any_thread": true,
-    "notification.broadcast": true,
-    "notification.view": true,
-    "analytics.view_personal": true,
-    "analytics.view_cohort": true,
-    "analytics.export": true,
+    /* The programme taxonomy is regional: it decides what trainings exist for
+     * every district at once. */
+    "taxonomy.manage": false,
+    "area.update": false,
+    "area.assign_facilitator": false,
+    /* Geography and notices are theirs inside their district, but those screens
+     * are still administrator-only: turning the capability on before the district
+     * filter exists would hand out a route that edits every district. Flipped on
+     * in the change that lands the filter, not before. */
+    "geography.manage": false,
+    "notification.broadcast": false,
+    /* Training register: read-only here. Recording a training is a facilitator's
+     * act, and a district HR holds no programme grant. */
+    "training.manage": false,
+    "material.create": false,
+    "material.upload_version": false,
+    "material.submit_review": false,
+    "material.review": false,
+    "material.publish": false,
+    "material.archive": false,
+    "material.read_draft": false,
+    "comment.moderate": false,
+    /* Platform-wide surfaces. */
+    "maintenance_banner.manage": false,
     "audit_log.read": true,
-    "maintenance_banner.manage": true,
   },
   FACILITATOR: {
     "user.create": false,

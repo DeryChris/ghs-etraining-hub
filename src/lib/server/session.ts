@@ -24,6 +24,11 @@ export interface Session {
   region: string | null;
   directorate: string | null;
   grade: string | null;
+  /**
+   * The district this person belongs to, as a row id. It is the boundary of a
+   * District HR's authority; for everybody else it is where they work.
+   */
+  districtId: string | null;
   unitHead?: boolean;
   /** Set while the account still carries the password ICT issued. */
   mustChange?: boolean;
@@ -124,6 +129,7 @@ export async function createDbSession(userId: string, ip?: string, userAgent?: s
     region: user.region,
     directorate: user.directorate,
     grade: user.grade,
+    districtId: user.districtId,
     unitHead: user.isUnitHead,
     mustChange: user.mustChangePassword,
   };
@@ -184,6 +190,7 @@ export const resolveAccount = cache(async (): Promise<AccountState> => {
       region: user.region,
       directorate: user.directorate,
       grade: user.grade,
+      districtId: user.districtId,
       unitHead: user.isUnitHead,
       mustChange: user.mustChangePassword,
     },

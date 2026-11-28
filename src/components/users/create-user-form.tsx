@@ -11,8 +11,7 @@ import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { createUserAction, type UserActionState } from "@/lib/server/actions/users";
 import { STAFF_ROLE_HINTS, STAFF_ROLE_LABELS } from "@/lib/labels";
-import type { StaffRole } from "@/lib/rbac/capabilities";
-import { STAFF_ROLE_VALUES } from "@/lib/rbac/capabilities";
+import { STAFF_ROLE_VALUES, type StaffRole } from "@/lib/rbac/capabilities";
 import { GHS_REGIONS, isLiveRegion } from "@/lib/ghs-constants";
 
 const INITIAL: UserActionState = { ok: false, message: null };
@@ -37,7 +36,7 @@ const REGIONS: readonly string[] = GHS_REGIONS.filter((name) => isLiveRegion(nul
  *
  * The employee number is asked for as the payroll list prints it — plain digits.
  */
-export function CreateUserForm() {
+export function CreateUserForm({ roles = STAFF_ROLE_VALUES }: { roles?: readonly StaffRole[] } = {}) {
   const [state, formAction, pending] = useActionState(createUserAction, INITIAL);
   const [role, setRole] = useState<StaffRole>("LEARNER");
 
@@ -138,7 +137,7 @@ export function CreateUserForm() {
                         id="new-role"
                         name="role"
                         value={role}
-                        options={STAFF_ROLE_VALUES.map((option) => ({
+                        options={roles.map((option) => ({
                           value: option,
                           label: STAFF_ROLE_LABELS[option],
                           hint: STAFF_ROLE_HINTS[option],

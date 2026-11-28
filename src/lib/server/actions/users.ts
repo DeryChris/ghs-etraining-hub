@@ -9,12 +9,15 @@ import { field } from "@/lib/schemas/authoring";
 import { logAudit } from "@/lib/server/audit";
 import { log } from "@/lib/server/logger";
 import { checkCapability } from "@/lib/server/rbac";
+import { districtName, districtScopeOf, NO_DISTRICT_MESSAGE } from "@/lib/server/district-scope";
+import { canAssignRole, isDistrictScoped } from "@/lib/rbac/capabilities";
 import { countWaitingFor } from "@/lib/server/review-scope";
 import { notifyAccount } from "@/lib/server/notify";
 import { canonicalStaffId, isValidStaffId, sameStaffId } from "@/lib/staff-id";
 import { staffIdMatches } from "@/lib/server/staff-id-sql";
 import { roleForStaffRole, staffRoleOf, STAFF_ROLE_VALUES } from "@/lib/rbac/capabilities";
 import { createPasswordResetToken, hashPassword } from "@/lib/server/auth";
+import type { Session } from "@/lib/server/session";
 import { randomBytes } from "node:crypto";
 
 /*
@@ -160,6 +163,38 @@ async function activeAdminCount(excludingId?: string): Promise<number> {
   return row?.n ?? 0;
 }
 
+
+/**
+ * The district boundary, applied to every action that names a person.
+ *
+ * Returns a refusal in the form the actions return, or null when the action may
+ * proceed. Administrators pass straight through. A district HR may only touch
+ * people inside their own district, and never an administrator's account: their
+ * authority is over the establishment, not over the people who hold authority.
+ *
+ * Read from the database rather than the form: the caller supplies a user id, and
+ * the district that id belongs to is not the caller's to assert.
+ */
+async function refusalForTarget(session: Session, targetId: string): Promise<string | null> {
+  const scope = districtScopeOf(session);
+  if (!scope.scoped) return null;
+  if (!scope.districtId) return NO_DISTRICT_MESSAGE;
+
+  const [target] = await db
+    .select({ role: users.role, districtId: users.districtId })
+    .from(users)
+    .where(eq(users.id, targetId))
+    .limit(1);
+  if (!target) return "That person is no longer in the directory.";
+  if (target.districtId !== scope.districtId) {
+    return "That person is not in your district, so you cannot change their account.";
+  }
+  if (target.role === "SYSTEM_ADMIN" || target.role === "DISTRICT_HR") {
+    return "Only a system administrator can change an administrator's account.";
+  }
+  return null;
+}
+
 export async function createUserAction(_previous: UserActionState, formData: FormData): Promise<UserActionState> {
   const parsed = createInput.safeParse({
     staffId: field(formData, "staffId"),
@@ -180,6 +215,25 @@ export async function createUserAction(_previous: UserActionState, formData: For
   if (!guard.ok) return { ok: false, message: guard.message };
   const { session } = guard;
   const input = parsed.data;
+
+  if (!canAssignRole(session.role, input.role)) {
+    return {
+      ok: false,
+      message: "You may create staff, facilitators and unit heads. Administrators are created by a system administrator.",
+    };
+  }
+
+  /*
+   * A district HR creates people for their own district, so the district is not a
+   * field they fill in — it is the boundary they act inside. Taking it from the
+   * form would let a typo (or a crafted request) file a new account in somebody
+   * else's district, where they could then not be managed by anyone local.
+   */
+  const scope = districtScopeOf(session);
+  if (scope.scoped && !scope.districtId) return { ok: false, message: NO_DISTRICT_MESSAGE };
+  const forcedDistrictId = scope.scoped ? scope.districtId : null;
+  const forcedDistrictName = scope.scoped ? await districtName(forcedDistrictId) : null;
+
   const duty = roleForStaffRole(input.role);
 
   const [existing] = await db
@@ -213,6 +267,8 @@ export async function createUserAction(_previous: UserActionState, formData: For
           directorate: input.directorate,
           grade: input.grade,
           facility: input.facility,
+          district: forcedDistrictName ?? undefined,
+          districtId: forcedDistrictId ?? undefined,
           phone: input.phone,
           passwordHash: null, // No password set — must be set via reset link
         })
@@ -256,6 +312,18 @@ export async function changeUserRoleAction(_previous: UserActionState, formData:
   if (parsed.data.userId === session.sub) {
     return { ok: false, message: "You cannot change your own role. Ask another administrator." };
   }
+
+  if (!canAssignRole(session.role, parsed.data.role)) {
+    return {
+      ok: false,
+      message: isDistrictScoped(session.role)
+        ? "You may give staff, facilitator or unit head. Creating an administrator, or another District HR, is a system administrator's decision."
+        : "Your role does not allow this action.",
+    };
+  }
+
+  const districtRefusal = await refusalForTarget(session, parsed.data.userId);
+  if (districtRefusal) return { ok: false, message: districtRefusal };
 
   const [target] = await db
     .select({ id: users.id, fullName: users.fullName, role: users.role, isUnitHead: users.isUnitHead })
@@ -325,6 +393,9 @@ export async function setUserActiveAction(_previous: UserActionState, formData: 
     return { ok: false, message: "You cannot close your own account." };
   }
 
+  const districtRefusal = await refusalForTarget(session, parsed.data.userId);
+  if (districtRefusal) return { ok: false, message: districtRefusal };
+
   const [target] = await db
     .select({ id: users.id, fullName: users.fullName, role: users.role, isActive: users.isActive })
     .from(users)
@@ -378,6 +449,9 @@ export async function sendPasswordResetAction(_previous: UserActionState, formDa
   const guard = await checkCapability("user.reset_password");
   if (!guard.ok) return { ok: false, message: guard.message };
   const { session } = guard;
+
+  const districtRefusal = await refusalForTarget(session, parsed.data.userId);
+  if (districtRefusal) return { ok: false, message: districtRefusal };
 
   const [target] = await db
     .select({ id: users.id, fullName: users.fullName, email: users.email, isActive: users.isActive })
@@ -443,6 +517,9 @@ export async function resetUserPasswordAction(
   const guard = await checkCapability("user.reset_password");
   if (!guard.ok) return { ok: false, message: guard.message };
   const { session } = guard;
+
+  const districtRefusal = await refusalForTarget(session, parsed.data.userId);
+  if (districtRefusal) return { ok: false, message: districtRefusal };
 
   const [target] = await db
     .select({ id: users.id, fullName: users.fullName, email: users.email, isActive: users.isActive })
@@ -533,6 +610,9 @@ export async function updateUserDetailsAction(
   const guard = await checkCapability("user.create");
   if (!guard.ok) return { ok: false, message: guard.message };
   const { session } = guard;
+
+  const districtRefusal = await refusalForTarget(session, parsed.data.userId);
+  if (districtRefusal) return { ok: false, message: districtRefusal };
 
   const [target] = await db
     .select({ id: users.id, fullName: users.fullName, email: users.email })

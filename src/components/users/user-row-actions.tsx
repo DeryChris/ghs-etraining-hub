@@ -9,7 +9,7 @@ import { hintClass, inputClass, labelClass } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { STAFF_ROLE_HINTS, STAFF_ROLE_LABELS } from "@/lib/labels";
-import { staffRoleOf, STAFF_ROLE_VALUES, type Role } from "@/lib/rbac/capabilities";
+import { staffRoleOf, STAFF_ROLE_VALUES, type Role, type StaffRole } from "@/lib/rbac/capabilities";
 import {
   changeUserRoleAction,
   resetUserPasswordAction,
@@ -61,6 +61,7 @@ export function UserRowActions({
   isSelf,
   fields,
   grants,
+  assignableRoles = STAFF_ROLE_VALUES,
 }: {
   userId: string;
   fullName: string;
@@ -74,6 +75,8 @@ export function UserRowActions({
   isSelf: boolean;
   fields: FieldOption[];
   grants: { fieldIds: string[]; areaIds: string[] };
+  /** What the signed-in person may hand out. A district HR cannot mint admins. */
+  assignableRoles?: readonly StaffRole[];
 }) {
   if (isSelf) {
     return (
@@ -99,6 +102,7 @@ export function UserRowActions({
         region={region}
         grade={grade}
         facility={facility}
+        assignableRoles={assignableRoles}
       />
 
       <ActiveToggle userId={userId} isActive={isActive} fullName={fullName} />
@@ -208,6 +212,8 @@ function AccessDialog({
   fullName: string;
   fields: FieldOption[];
   grants: { fieldIds: string[]; areaIds: string[] };
+  /** What the signed-in person may hand out. A district HR cannot mint admins. */
+  assignableRoles?: readonly StaffRole[];
 }) {
   const [state, formAction, pending] = useActionState<UserActionState, FormData>(setUserAccessAction, INITIAL);
   const [openField, setOpenField] = useState<string | null>(null);
@@ -311,6 +317,7 @@ function DetailsDialog({
   region,
   grade,
   facility,
+  assignableRoles,
 }: {
   userId: string;
   fullName: string;
@@ -320,8 +327,15 @@ function DetailsDialog({
   region: string | null;
   grade: string | null;
   facility: string | null;
+  assignableRoles: readonly StaffRole[];
 }) {
   const currentRole = staffRoleOf({ role, unitHead: isUnitHead });
+  /*
+   * The picker offers what the actor may grant, plus the role the person already
+   * holds — otherwise editing somebody's telephone number would show a role field
+   * with no current value, and "save" would silently demote an administrator.
+   */
+  const roleChoices = [...new Set<StaffRole>([...assignableRoles, currentRole])];
   const [details, detailsAction, pendingDetails] = useActionState<UserActionState, FormData>(updateUserDetailsAction, INITIAL);
   const [roleState, roleAction] = useActionState(changeUserRoleAction, INITIAL);
 
@@ -396,7 +410,7 @@ function DetailsDialog({
               id={`role-${userId}`}
               name="role"
               defaultValue={currentRole}
-              options={STAFF_ROLE_VALUES.map((value) => ({
+              options={roleChoices.map((value) => ({
                 value,
                 label: STAFF_ROLE_LABELS[value],
                 hint: STAFF_ROLE_HINTS[value],
