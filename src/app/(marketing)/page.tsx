@@ -117,7 +117,7 @@ const AUDIENCE: { icon: LucideIcon; title: string; body: string }[] = [
 const FAQ = [
   {
     question: `What is the ${SITE.name}?`,
-    answer: `The ${SITE.fullName} is an institutional digital library for organising training materials associated with programmes in the Upper West Region. Browse visible Programme Areas and Programme Fields; materials appear in public browse only after they have been uploaded, approved and published.`,
+    answer: `The ${SITE.fullName} is an institutional digital library for the training GHS runs in the Upper West Region. Browse visible Programme Areas and Programme Fields to reach the trainings filed under them; a training and the files attached to it appear in public browse once the record has been reviewed and published.`,
   },
   {
     question: "Who can use it?",
@@ -127,7 +127,7 @@ const FAQ = [
   {
     question: "What happens to material shared in chat groups?",
     answer:
-      "The Library does not import chat history or files automatically. Authorised personnel submit materials for review and publication. Once published, a material can be found under its Programme Area and Programme Field.",
+      "The Library does not import chat history or files automatically. A file is attached to the training it belongs to, by the facilitator who ran it, and the training goes through review before it is published. Once published, it is found under its Programme Area and Programme Field, and its files sit on the training itself.",
   },
   {
     question: "Can I still open an older version?",
@@ -287,14 +287,14 @@ export default async function LandingPage() {
             <SectionHeading
               eyebrow="The library at a glance"
               title={<span id="stats-title">The library at a glance.</span> as unknown as string}
-              description="Counts are drawn from publicly visible taxonomy, published Training Materials and published Training Sessions recorded for the Upper West Region."
+              description="Counts are drawn from publicly visible taxonomy, the files attached to published Training Sessions, and those sessions themselves, recorded for the Upper West Region."
             />
           </Reveal>
           <dl className="mt-12 grid grid-cols-2 gap-5 lg:grid-cols-4">
               {[
                 { icon: LayoutGrid, value: stats.programmeAreas, label: "Programme Areas" },
                 { icon: FolderTree, value: stats.programmeFields, label: "Programme Fields" },
-                { icon: Library, value: stats.materials, label: "Training Materials" },
+                { icon: Library, value: stats.files, label: "Files attached to trainings" },
                 { icon: GraduationCap, value: stats.trainings, label: "Training Sessions" },
               ].map((stat, index) => {
                 const Icon = stat.icon;

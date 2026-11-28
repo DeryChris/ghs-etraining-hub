@@ -93,10 +93,14 @@ Every primitive: `forwardRef`, no domain logic, no data fetching, keyboard opera
   then the reading record, then announcements, then the Programme Areas and Programme Fields. No
   chart appears on this page: charts are staff equipment.
 * **Public programme browse** — `/programmes` lists Programme Areas; opening a Programme Area shows
-  its Programme Fields; opening a Programme Field shows listings for currently published, publicly
-  visible Training Materials. The field page keeps the parent-area breadcrumb and an honest empty
-  state when no materials are published. This signed-out hierarchy is separate from the authenticated
-  `/catalogue`.
+  its Programme Fields; opening a Programme Field lists the currently published trainings filed under
+  it. The field page keeps the parent-area breadcrumb and an honest empty state when no training is
+  published. This signed-out hierarchy is separate from the authenticated `/catalogue`.
+
+  Every tile counts **trainings and the files attached to them** — never "materials". There is no
+  separate material corpus to count (ADR‑0031): a file lives on the training it was handed out at, so
+  a field whose trainings carry slides reads "3 trainings · 12 files", and a field with nothing reads
+  "0 trainings · 0 files". The legacy `materials` rows are read by the review queue only.
 * **Signed-out screens** — the sign-in card is split between getting-started guidance and the form
   on wide screens; mobile puts the form first. Under the Sign in button are *Create an account* and
   the Complaint Hub. `/register` verifies a GHS Staff ID against the available staff directory and

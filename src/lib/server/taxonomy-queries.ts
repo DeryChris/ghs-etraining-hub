@@ -6,11 +6,11 @@ import {
   areaFacilitators,
   districts,
   facilities,
-  materials,
   programmeAreas,
   programmeFields,
   regions,
   subDistricts,
+  trainingResources,
   trainingSessions,
   users,
 } from "@/db/schema";
@@ -52,7 +52,8 @@ export interface ProgrammeAreaRow {
   sortOrder: number;
   isArchived: boolean;
   trainingCount: number;
-  materialCount: number;
+  /** Files attached to the trainings filed under this Programme Field. */
+  fileCount: number;
   facilitators: AreaFacilitator[];
 }
 
@@ -69,7 +70,7 @@ export interface ProgrammeFieldRow {
 }
 
 const loadProgrammeTaxonomy = async (): Promise<ProgrammeFieldRow[]> => {
-  const [fields, areas, usage, assignments, materialCounts] = await Promise.all(
+  const [fields, areas, usage, assignments, fileCounts] = await Promise.all(
     [
       db
         .select()
@@ -99,17 +100,19 @@ const loadProgrammeTaxonomy = async (): Promise<ProgrammeFieldRow[]> => {
         .orderBy(asc(users.fullName)),
       db
         .select({
-          areaId: materials.programmeAreaId,
+          areaId: trainingSessions.programmeAreaId,
           n: sql<number>`count(*)::int`,
         })
-        .from(materials)
-        .groupBy(materials.programmeAreaId),
+        .from(trainingResources)
+        .innerJoin(trainingSessions, eq(trainingSessions.id, trainingResources.trainingId))
+        .where(sql`${trainingSessions.programmeAreaId} is not null`)
+        .groupBy(trainingSessions.programmeAreaId),
     ],
   );
 
   const perArea = new Map(usage.map((row) => [row.areaId, row.n]));
-  const perAreaMaterials = new Map(
-    materialCounts.map((row) => [row.areaId, row.n]),
+  const perAreaFiles = new Map(
+    fileCounts.map((row) => [row.areaId, row.n]),
   );
   const facilitatorsByArea = new Map<string, AreaFacilitator[]>();
   for (const assignment of assignments) {
@@ -138,7 +141,7 @@ const loadProgrammeTaxonomy = async (): Promise<ProgrammeFieldRow[]> => {
         sortOrder: area.sortOrder,
         isArchived: area.isArchived,
         trainingCount: perArea.get(area.id) ?? 0,
-        materialCount: perAreaMaterials.get(area.id) ?? 0,
+        fileCount: perAreaFiles.get(area.id) ?? 0,
         facilitators: facilitatorsByArea.get(area.id) ?? [],
       }));
     return {

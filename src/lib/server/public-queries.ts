@@ -3,9 +3,9 @@ import { unstable_cache } from "next/cache";
 import { and, count, eq } from "drizzle-orm";
 import { log } from "@/lib/server/logger";
 import { db } from "@/db/index";
-import { programmeFields, materials, programmeAreas, regions, trainingSessions } from "@/db/schema";
+import { programmeFields, programmeAreas, regions, trainingResources, trainingSessions } from "@/db/schema";
 import { UPPER_WEST_REGION_CODE } from "@/db/data/geography";
-import { audienceFor, fieldFor, liveArea, liveField, visibleMaterial } from "@/lib/server/visibility";
+import { audienceFor, fieldFor, liveArea, liveField } from "@/lib/server/visibility";
 
 /**
  * Aggregate counts only. No individual learner or content detail is exposed.
@@ -23,10 +23,11 @@ import { audienceFor, fieldFor, liveArea, liveField, visibleMaterial } from "@/l
 export async function getPublicStats(): Promise<{
   programmeAreas: number;
   programmeFields: number;
-  materials: number;
+  /** Files attached to published trainings — there is no separate material count. */
+  files: number;
   trainings: number;
 }> {
-  const [areaRows, fieldRows, materialRows, trainingRows] = await Promise.all([
+  const [areaRows, fieldRows, fileRows, trainingRows] = await Promise.all([
     db
       .select({ n: count() })
       .from(programmeFields)
@@ -38,10 +39,16 @@ export async function getPublicStats(): Promise<{
       .where(and(liveArea, liveField, fieldFor(null), audienceFor(null))),
     db
       .select({ n: count() })
-      .from(materials)
-      .innerJoin(programmeAreas, eq(programmeAreas.id, materials.programmeAreaId))
-      .innerJoin(programmeFields, eq(programmeFields.id, programmeAreas.fieldId))
-      .where(visibleMaterial(null)),
+      .from(trainingResources)
+      .innerJoin(trainingSessions, eq(trainingSessions.id, trainingResources.trainingId))
+      .innerJoin(regions, eq(regions.id, trainingSessions.regionId))
+      .where(
+        and(
+          eq(trainingSessions.reviewState, "PUBLISHED"),
+          eq(trainingSessions.isArchived, false),
+          eq(regions.code, UPPER_WEST_REGION_CODE),
+        ),
+      ),
     db
       .select({ n: count() })
       .from(trainingSessions)
@@ -57,7 +64,7 @@ export async function getPublicStats(): Promise<{
   return {
     programmeAreas: areaRows[0]?.n ?? 0,
     programmeFields: fieldRows[0]?.n ?? 0,
-    materials: materialRows[0]?.n ?? 0,
+    files: fileRows[0]?.n ?? 0,
     trainings: trainingRows[0]?.n ?? 0,
   };
 }

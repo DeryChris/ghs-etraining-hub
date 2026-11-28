@@ -61,7 +61,7 @@ export default async function FieldPage({ params }: { params: Promise<{ fieldCod
                   meta={
                     <>
                       {area.trainingCount} {area.trainingCount === 1 ? "training" : "trainings"} ·{" "}
-                      {area.materialCount} {area.materialCount === 1 ? "material" : "materials"}
+                      {area.fileCount} {area.fileCount === 1 ? "file" : "files"}
                     </>
                   }
                 />

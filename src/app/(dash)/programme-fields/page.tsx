@@ -307,8 +307,8 @@ export default async function ProgrammeFieldsPage({
                                 <span className="font-mono">{area.code}</span> ·{" "}
                                 {area.trainingCount} training
                                 {area.trainingCount === 1 ? "" : "s"} ·{" "}
-                                {area.materialCount} material
-                                {area.materialCount === 1 ? "" : "s"}
+                                {area.fileCount} file
+                                {area.fileCount === 1 ? "" : "s"}
                               </p>
                             </div>
                             <div className="flex shrink-0 flex-wrap items-center gap-2">
