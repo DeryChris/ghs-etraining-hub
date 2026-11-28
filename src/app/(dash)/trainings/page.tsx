@@ -217,28 +217,28 @@ export default async function TrainingsPage({
               label: "Training Records",
               value: summary.total,
               icon: CalendarDays,
-              borderTone: "border-l-ghs-green",
+              washTone: "bg-ghs-green/10",
               iconTone: "bg-ghs-green/10 text-ghs-green",
             },
             {
               label: "Planned",
               value: summary.planned,
               icon: CalendarClock,
-              borderTone: "border-l-ghs-gold",
+              washTone: "bg-ghs-gold/20",
               iconTone: "bg-ghs-gold/35 text-ghs-green",
             },
             {
               label: "Held",
               value: summary.completed,
               icon: CalendarCheck,
-              borderTone: "border-l-ghs-green",
+              washTone: "bg-ghs-green/10",
               iconTone: "bg-ghs-green/10 text-ghs-green",
             },
             {
               label: "Awaiting Review",
               value: summary.awaitingReview,
               icon: Clock3,
-              borderTone: "border-l-ghs-red",
+              washTone: "bg-ghs-red/10",
               iconTone: "bg-ghs-red/10 text-ghs-red",
             },
           ].map((card) => {
@@ -246,15 +246,19 @@ export default async function TrainingsPage({
             return (
               <article
                 key={card.label}
-                className={`flex min-h-28 items-center justify-between gap-4 rounded-card border border-hairline border-l-4 bg-surface p-4 shadow-panel ${card.borderTone}`}
+                className="relative isolate flex min-h-28 items-center justify-between gap-4 overflow-hidden rounded-card border border-hairline bg-surface p-4 shadow-panel transition-[transform,box-shadow] duration-fast motion-safe:hover:-translate-y-0.5 hover:shadow-lift motion-reduce:transition-none"
               >
-                <div className="min-w-0">
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute -right-8 -top-10 z-0 h-28 w-28 rotate-12 rounded-[42%_58%_67%_33%/55%_41%_59%_45%] blur-2xl ${card.washTone}`}
+                />
+                <div className="relative z-10 min-w-0">
                   <p className="text-sm font-semibold text-ink-muted">{card.label}</p>
                   <p className="mt-1 text-2xl font-extrabold tabular-nums text-ink">
                     {card.value.toLocaleString("en-GB")}
                   </p>
                 </div>
-                <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-control ${card.iconTone}`}>
+                <span className={`relative z-10 grid h-11 w-11 shrink-0 place-items-center rounded-control ${card.iconTone}`}>
                   <Icon className="h-5 w-5" aria-hidden />
                 </span>
               </article>
