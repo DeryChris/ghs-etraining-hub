@@ -1,10 +1,14 @@
 export default function Loading() {
   return (
-    <div className="flex h-screen items-center justify-center bg-canvas">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-8 h-8 border-4 border-hairline border-t-primary rounded-full animate-spin"></div>
-        <p className="text-ink-muted text-sm">Loading</p>
+    <main className="flex min-h-screen items-center justify-center bg-canvas" aria-busy="true">
+      <div role="status" aria-label="Loading" className="flex flex-col items-center gap-3">
+        <span aria-hidden="true" className="flex h-8 items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-primary motion-safe:animate-bounce" />
+          <span className="h-2 w-2 rounded-full bg-primary motion-safe:animate-bounce" style={{ animationDelay: "120ms" }} />
+          <span className="h-2 w-2 rounded-full bg-primary motion-safe:animate-bounce" style={{ animationDelay: "240ms" }} />
+        </span>
+        <p className="text-sm text-ink-muted">Loading</p>
       </div>
-    </div>
+    </main>
   );
 }

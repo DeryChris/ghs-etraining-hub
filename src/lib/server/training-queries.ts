@@ -234,24 +234,21 @@ export interface TrainingSummary {
   total: number;
   planned: number;
   completed: number;
-  thisYear: number;
-  attendees: number;
+  awaitingReview: number;
 }
 
 export async function getTrainingSummary(viewer?: TrainingVisibility): Promise<TrainingSummary> {
-  const year = new Date().getFullYear();
   const [row] = await db
     .select({
       total: sql<number>`count(*)::int`,
       planned: sql<number>`count(*) filter (where ${trainingSessions.status} = 'PLANNED')::int`,
       completed: sql<number>`count(*) filter (where ${trainingSessions.status} = 'COMPLETED')::int`,
-      thisYear: sql<number>`count(*) filter (where ${trainingSessions.year} = ${year})::int`,
-      attendees: sql<number>`coalesce(sum(${trainingSessions.attendeeCount}) filter (where ${trainingSessions.status} = 'COMPLETED'), 0)::int`,
+      awaitingReview: sql<number>`count(*) filter (where ${trainingSessions.reviewState} = 'PENDING')::int`,
     })
     .from(trainingSessions)
     .where(and(eq(trainingSessions.isArchived, false), viewer ? trainingVisibilityFilter(viewer) : undefined));
 
-  return row ?? { total: 0, planned: 0, completed: 0, thisYear: 0, attendees: 0 };
+  return row ?? { total: 0, planned: 0, completed: 0, awaitingReview: 0 };
 }
 
 export interface TrainingFilterOptions {

@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, Users } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarCheck,
+  CalendarClock,
+  CalendarDays,
+  ChevronRight,
+  Clock3,
+  MapPin,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { ListEmptyState } from "@/components/ui/empty-state";
@@ -12,7 +21,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { DataUnavailable } from "@/components/ui/data-unavailable";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 import { NewTrainingDialog } from "@/components/trainings/new-training-dialog";
-import { Stat } from "@/components/ui/stat";
 import { formatDate } from "@/lib/format";
 import { TRAINING_STATUSES, TRAINING_STATUS_LABELS, isTrainingStatus } from "@/lib/labels";
 import { can } from "@/lib/rbac/capabilities";
@@ -74,8 +82,8 @@ const REVIEW_STATES = ["PENDING", "PUBLISHED", "REJECTED"];
 /** Chips above the list: the review queue is one click, not a filter hunt. */
 const REVIEW_CHIPS = [
   { key: "", label: "Everything" },
-  { key: "PENDING", label: "Pending review" },
-  { key: "PUBLISHED", label: "Live" },
+  { key: "PENDING", label: "Pending Review" },
+  { key: "PUBLISHED", label: "Live/Published" },
   { key: "REJECTED", label: "Returned" },
 ] as const;
 
@@ -176,6 +184,7 @@ export default async function TrainingsPage({
   const firstOnPage = list.total === 0 ? 0 : (list.page - 1) * TRAININGS_PAGE_SIZE + 1;
   const lastOnPage = (list.page - 1) * TRAININGS_PAGE_SIZE + list.items.length;
   const mayManage = can(session.role, "training.manage");
+  const mayViewInsights = session.role === "SYSTEM_ADMIN" || session.role === "FACILITATOR";
   const notice = single("notice");
   const error = single("error");
 
@@ -185,31 +194,88 @@ export default async function TrainingsPage({
 
       <PageHeader
         eyebrow="Trainings"
-        title="Training register"
+        title="Training Register"
         description="Find Training Session records, including plans and records marked as held. Filter by Programme Area, Programme Field, year, location, status or review state. Open a training to see the files attached to it."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
-              Browse the library
-            </Link>
             {mayManage ? (
-              <NewTrainingDialog fields={fields} geography={geography} label="Create new training" />
+              <NewTrainingDialog fields={fields} geography={geography} label="Create New Training" />
             ) : null}
+            <Link href="/catalogue" className={buttonClass({ variant: "ghost" })}>
+              Browse the Library
+            </Link>
           </div>
         }
       />
 
       <Notice notice={notice} error={error} />
 
-      <section
-        id="training-totals"
-        aria-label="Training totals"
-        className="scroll-mt-24 grid gap-4 rounded-card border border-hairline bg-surface p-6 shadow-panel sm:grid-cols-2 lg:grid-cols-4"
-      >
-        <Stat value={summary.total} label="Training records" />
-        <Stat value={summary.planned} label="Marked as planned" />
-        <Stat value={summary.thisYear} label={`Records filed for ${new Date().getFullYear()}`} />
-        <Stat value={summary.attendees.toLocaleString("en-GB")} label="Attendee counts recorded" />
+      <section id="training-totals" aria-label="Training overview" className="scroll-mt-24 space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: "Training Records",
+              value: summary.total,
+              icon: CalendarDays,
+              washTone: "bg-ghs-green/10",
+              iconTone: "bg-ghs-green/10 text-ghs-green",
+            },
+            {
+              label: "Planned",
+              value: summary.planned,
+              icon: CalendarClock,
+              washTone: "bg-ghs-gold/20",
+              iconTone: "bg-ghs-gold/35 text-ghs-green",
+            },
+            {
+              label: "Held",
+              value: summary.completed,
+              icon: CalendarCheck,
+              washTone: "bg-ghs-green/10",
+              iconTone: "bg-ghs-green/10 text-ghs-green",
+            },
+            {
+              label: "Awaiting Review",
+              value: summary.awaitingReview,
+              icon: Clock3,
+              washTone: "bg-ghs-red/10",
+              iconTone: "bg-ghs-red/10 text-ghs-red",
+            },
+          ].map((card) => {
+            const Icon = card.icon;
+            return (
+              <article
+                key={card.label}
+                className="relative isolate flex min-h-28 items-center justify-between gap-4 overflow-hidden rounded-card border border-hairline bg-surface p-4 shadow-panel transition-[transform,box-shadow] duration-fast motion-safe:hover:-translate-y-0.5 hover:shadow-lift motion-reduce:transition-none"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute -right-8 -top-10 z-0 h-28 w-28 rotate-12 rounded-[42%_58%_67%_33%/55%_41%_59%_45%] blur-2xl ${card.washTone}`}
+                />
+                <div className="relative z-10 min-w-0">
+                  <p className="text-sm font-semibold text-ink-muted">{card.label}</p>
+                  <p className="mt-1 text-2xl font-extrabold tabular-nums text-ink">
+                    {card.value.toLocaleString("en-GB")}
+                  </p>
+                </div>
+                <span className={`relative z-10 grid h-11 w-11 shrink-0 place-items-center rounded-control ${card.iconTone}`}>
+                  <Icon className="h-5 w-5" aria-hidden />
+                </span>
+              </article>
+            );
+          })}
+        </div>
+        {mayViewInsights && (
+          <div className="flex justify-end">
+            <Link
+              href="/insights"
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              View detailed insights
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+        )}
       </section>
 
       <nav aria-label="Review queue" className="flex flex-wrap items-center gap-2">
@@ -369,7 +435,7 @@ export default async function TrainingsPage({
           actionHref={filtered ? "/trainings" : mayManage ? "/trainings/new" : undefined}
         />
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {list.items.map((training) => {
             const place = [training.facilityName ?? training.venue, training.subDistrictName, training.districtName, training.regionName]
               .filter(Boolean)
@@ -380,58 +446,80 @@ export default async function TrainingsPage({
                 : formatDate(training.startsOn);
 
             return (
-              <li
-                key={training.id}
-                className="group relative rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40 focus-within:border-primary/60"
-              >
-                {/*
-                 * One link per row, laid over the whole card and *above* the text:
-                 * a row where only the title responded was a target the size of a
-                 * sentence. The title keeps its own emphasis but is not a link.
-                 */}
-                <Link
-                  href={`/trainings/${training.id}`}
-                  aria-label={`Open ${training.title}`}
-                  className="absolute inset-0 z-10 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                />
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0 space-y-1.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
-                      Programme Field: {training.fieldName ?? "Not recorded"}
-                      {training.areaName ? ` · Programme Area: ${training.areaName}` : ""}
-                    </p>
-                    <h2 className="text-base font-bold text-ink transition-colors group-hover:text-primary">{training.title}</h2>
-                    {training.targetGroup && <p className="text-sm text-ink-muted">For {training.targetGroup}</p>}
-                    <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
-                      <span className="inline-flex items-center gap-1.5">
-                        <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                        {dates}
-                        {training.durationText ? ` · ${training.durationText}` : ""}
-                      </span>
-                      {place && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5" aria-hidden />
-                          {place}
+              <li key={training.id} className="min-w-0">
+                <article className="group relative flex h-full flex-col overflow-hidden rounded-card border border-hairline bg-surface shadow-panel transition-[transform,border-color,box-shadow] duration-fast motion-safe:hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lift motion-reduce:transition-none focus-within:border-primary/60">
+                  {/* One link covers the whole tile while preserving a single accessible target. */}
+                  <Link
+                    href={`/trainings/${training.id}`}
+                    aria-label={`Open ${training.title}`}
+                    className="absolute inset-0 z-10 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  />
+                  <div className="flex flex-1 flex-col gap-4 p-5">
+                    <div className="space-y-2">
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1">
+                        <span
+                          className="inline-flex max-w-full min-w-0 flex-wrap items-center rounded-[var(--radius-pill)] border border-primary/15 px-2.5 py-0.5 text-[11px] font-semibold leading-4 text-primary"
+                          style={{ backgroundColor: "color-mix(in oklab, var(--surface) 92%, var(--primary) 8%)" }}
+                        >
+                          <span className="min-w-0 break-words">{training.fieldName ?? "Not recorded"}</span>
                         </span>
+                        {training.areaName && (
+                          <>
+                            <ChevronRight className="h-3 w-3 shrink-0 text-ink-muted/80" aria-hidden />
+                            <span
+                              className="inline-flex max-w-full min-w-0 flex-wrap items-center rounded-[var(--radius-pill)] border border-accent/20 px-2.5 py-0.5 text-[11px] font-medium leading-4 text-ink"
+                              style={{ backgroundColor: "color-mix(in oklab, var(--surface) 92%, var(--accent) 8%)" }}
+                            >
+                              <span className="min-w-0 break-words">{training.areaName}</span>
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <h2 className="text-lg font-bold text-ink transition-colors group-hover:text-primary">
+                        {training.title}
+                      </h2>
+                      {training.targetGroup && <p className="text-sm leading-relaxed text-ink-muted">For {training.targetGroup}</p>}
+                    </div>
+
+                    <div className="mt-auto space-y-2.5">
+                      <p className="flex items-start gap-2.5 text-sm leading-relaxed text-ink-muted">
+                        <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-control bg-ghs-green/10 text-ghs-green">
+                          <CalendarDays className="h-4 w-4" aria-hidden />
+                        </span>
+                        <span>
+                          {dates}
+                          {training.durationText ? ` · ${training.durationText}` : ""}
+                        </span>
+                      </p>
+                      {place && (
+                        <p className="flex items-start gap-2.5 text-sm leading-relaxed text-ink-muted">
+                          <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-control bg-ghs-red/10 text-ghs-red">
+                            <MapPin className="h-4 w-4" aria-hidden />
+                          </span>
+                          <span>{place}</span>
+                        </p>
                       )}
                       {training.attendeeCount !== null && training.status === "COMPLETED" && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Users className="h-3.5 w-3.5" aria-hidden />
-                          {training.attendeeCount.toLocaleString("en-GB")} attendees recorded
-                        </span>
+                        <p className="flex items-start gap-2.5 text-sm leading-relaxed text-ink-muted">
+                          <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-control bg-ghs-gold/35 text-ghs-green">
+                            <Users className="h-4 w-4" aria-hidden />
+                          </span>
+                          <span>{training.attendeeCount.toLocaleString("en-GB")} attendees recorded</span>
+                        </p>
                       )}
-                    </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 border-t border-hairline pt-4">
+                      <Badge variant="outline">{training.year}</Badge>
+                      <Badge variant={STATUS_BADGE[training.status]}>{TRAINING_STATUS_LABELS[training.status]}</Badge>
+                      {training.reviewState !== "PUBLISHED" && (
+                        <Badge variant={REVIEW_BADGE[training.reviewState].variant}>
+                          {REVIEW_BADGE[training.reviewState].label}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    <Badge variant="outline">{training.year}</Badge>
-                    <Badge variant={STATUS_BADGE[training.status]}>{TRAINING_STATUS_LABELS[training.status]}</Badge>
-                    {training.reviewState !== "PUBLISHED" && (
-                      <Badge variant={REVIEW_BADGE[training.reviewState].variant}>
-                        {REVIEW_BADGE[training.reviewState].label}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
+                </article>
               </li>
             );
           })}

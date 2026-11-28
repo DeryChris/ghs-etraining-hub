@@ -444,7 +444,8 @@
     background: linear-gradient(90deg, #cf2027 0 33.33%, #fcd116 33.33% 66.66%, #006b3f 66.66% 100%);
   }
   .glass {
-    background: color-mix(in oklab, var(--surface) 78%, transparent);
+    /* Keep floating surfaces mostly opaque so text stays legible over busy content. */
+    background: color-mix(in oklab, var(--surface) 86%, transparent);
     backdrop-filter: saturate(140%) blur(14px);
     -webkit-backdrop-filter: saturate(140%) blur(14px);
   }

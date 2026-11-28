@@ -149,7 +149,7 @@ export function AccountMenu({ user }: { user: ShellUser }) {
         <span className="sr-only">Open account menu</span>
       </summary>
 
-      <div className="surface-card absolute right-0 z-40 mt-2 w-72 overflow-hidden p-0 shadow-lift">
+      <div className="glass absolute right-0 z-40 mt-2 w-72 overflow-hidden rounded-card border border-hairline p-0 shadow-lift">
         <div className="flex items-center gap-3 border-b border-hairline bg-surface-2/60 p-3">
           <span
             aria-hidden
