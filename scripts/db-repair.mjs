@@ -14,7 +14,14 @@
  *
  *   node scripts/db-repair.mjs --dry-run
  */
-import "dotenv/config";
+import { existsSync } from "node:fs";
+import { config } from "dotenv";
+
+// `.env.local` first: it is the file `.env.example` tells people to create, and
+// dotenv's own default (`.env` only) would miss it. See src/lib/load-env.ts.
+for (const file of [".env.local", ".env"]) {
+  if (existsSync(file)) config({ path: file });
+}
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import pg from "pg";

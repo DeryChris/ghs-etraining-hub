@@ -7,7 +7,7 @@
  * re-ordered. Run it after a restore (docs/qa.md §9) and on a schedule; a silent
  * break is the one failure mode an audit trail cannot tolerate.
  */
-import "dotenv/config";
+import "@/lib/load-env";
 import { client } from "../src/db/client";
 import { verifyAuditChain } from "../src/lib/server/audit";
 

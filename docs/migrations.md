@@ -41,6 +41,19 @@ npm run db:seed
 does not hold the advisory locks DDL takes. `DATABASE_URL` (the app) wants the pooled host. Swapping
 them is the most common Neon mistake, and `npm run db:doctor` calls it out by name.
 
+## Running a hand-written file
+
+`docs/apply-pending-migrations.sql` and `docs/apply-0023.sql` exist for the case where
+`drizzle-kit migrate` cannot be run at all. Apply either without installing `psql`:
+
+```bash
+npm run db:apply -- docs/apply-0023.sql
+```
+
+The file goes over `DIRECT_URL` as one implicit transaction, so a failure halfway leaves the
+database unchanged, and `.env.local` is read the way the app reads it. `--dry-run` checks the file
+and the connection string without opening a connection.
+
 ## Environment that was previously created with `drizzle-kit push`
 
 Such a database has the tables but no `drizzle.__drizzle_migrations` history. Do **not** run

@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "@/lib/load-env";
 
 /*
  * `npm run db:seed:geography` — regions, districts, sub-districts and facilities

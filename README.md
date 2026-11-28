@@ -286,7 +286,7 @@ connection, or a host that keeps cutting the statement — write the same work a
 
 ```bash
 npm run staff:sql -- --file "/path/to/Staff Data.csv"        # writes staff-accounts.sql
-psql "$DIRECT_URL" -f staff-accounts.sql                     # or paste into the Neon SQL editor
+npm run db:apply -- staff-accounts.sql                        # or paste into the Neon SQL editor
 ```
 
 The file is upserts throughout (`on conflict` on the natural key), so it can be run twice; it keeps

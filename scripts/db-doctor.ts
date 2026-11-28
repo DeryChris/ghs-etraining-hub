@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "@/lib/load-env";
 import { lookup } from "node:dns/promises";
 import postgres from "postgres";
 

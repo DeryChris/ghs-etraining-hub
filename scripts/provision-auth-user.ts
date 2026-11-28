@@ -14,7 +14,7 @@
  * The temporary password is printed once; it is never written to the database,
  * to a log, or to disk.
  */
-import "dotenv/config";
+import "@/lib/load-env";
 import { randomInt } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { hash } from "bcryptjs";
