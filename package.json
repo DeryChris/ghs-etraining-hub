@@ -49,7 +49,7 @@
     "drizzle-orm": "^0.45.4",
     "framer-motion": "^14.13.0",
     "jszip": "^3.10.2",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^1.79.0",
     "next": "^16.4.6",
     "pg": "^8.13.0",
     "postgres": "^3.4.4",
