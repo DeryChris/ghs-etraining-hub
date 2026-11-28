@@ -9,12 +9,21 @@ import { notificationTypeLabel } from "@/lib/labels";
 import { listAuthoringAreas } from "@/lib/server/authoring-queries";
 import { listSentNotices } from "@/lib/server/notification-queries";
 import { requireRole } from "@/lib/server/rbac";
+import { districtName, districtScopeOf } from "@/lib/server/district-scope";
 import { mapLimit, withDeadline } from "@/lib/server/page-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function NoticesPage() {
-  const session = await requireRole(["SYSTEM_ADMIN", "FACILITATOR"]);
+  /*
+   * Three kinds of sender: an administrator addresses everybody or a programme
+   * field's cohort; a facilitator addresses a cohort inside their programme; a
+   * District HR addresses their district. What each may send is checked in the
+   * action — the form only says which choice is theirs.
+   */
+  const session = await requireRole(["SYSTEM_ADMIN", "FACILITATOR", "DISTRICT_HR"]);
+  const districtScope = districtScopeOf(session);
+  const ownDistrictName = districtScope.scoped ? await districtName(districtScope.districtId) : null;
   const loaded = await withDeadline("notices", () =>
     mapLimit([() => listAuthoringAreas(session), () => listSentNotices(10)]),
   );
@@ -50,7 +59,11 @@ export default async function NoticesPage() {
         <p className="mt-1 mb-4 text-sm text-ink-muted">
           A notice is an instruction to staff, so the sender, audience and text are recorded in the audit trail.
         </p>
-        <BroadcastForm areas={areas} canAddressEveryone={session.role === "SYSTEM_ADMIN"} />
+        <BroadcastForm
+          areas={areas}
+          canAddressEveryone={session.role === "SYSTEM_ADMIN" || districtScope.scoped}
+          districtName={ownDistrictName}
+        />
       </section>
 
       <section aria-labelledby="sent-heading" className="space-y-4">

@@ -33,8 +33,8 @@ describe("audienceMatches", () => {
 
     expect(query.sql).not.toMatch(/=\s*\)/);
     expect(query.sql).toContain("->>'region' = $");
-    // Three dimensions, three bound parameters, all NULL.
-    expect(query.params.filter((param) => param === null)).toHaveLength(3);
+    // Four dimensions (region, directorate, grade, district), four bound parameters, all NULL.
+    expect(query.params.filter((param) => param === null)).toHaveLength(4);
   });
 
   it("compares against the viewer's own values when they exist", () => {

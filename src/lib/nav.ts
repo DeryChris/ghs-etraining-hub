@@ -74,7 +74,13 @@ export interface NavGroup {
 
 const EVERYONE: readonly Role[] = ["SYSTEM_ADMIN", "DISTRICT_HR", "FACILITATOR", "LEARNER"];
 const STAFF: readonly Role[] = ["SYSTEM_ADMIN", "DISTRICT_HR", "FACILITATOR"];
-const FACILITATOR_ONLY: readonly Role[] = ["FACILITATOR"];
+/**
+ * Who is offered the compose link. An administrator reaches /notices without it —
+ * that was decided before this change and is left alone here; a district officer
+ * needs the link, because sending a notice to their district is part of the job
+ * they were appointed to do.
+ */
+const NOTICE_SENDERS: readonly Role[] = ["FACILITATOR", "DISTRICT_HR"];
 const ADMIN_ONLY: readonly Role[] = ["SYSTEM_ADMIN"];
 /** A district HR administers people in their own district, and nothing regional. */
 const PEOPLE_ADMIN: readonly Role[] = ["SYSTEM_ADMIN", "DISTRICT_HR"];
@@ -148,7 +154,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         count: "reviews",
         hint: "Versions waiting for a decision before anything goes live",
       },
-      { href: "/notices", label: "Send notice", icon: "notice", roles: FACILITATOR_ONLY },
+      { href: "/notices", label: "Send notice", icon: "notice", roles: NOTICE_SENDERS },
     ],
   },
   {

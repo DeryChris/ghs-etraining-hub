@@ -1,7 +1,7 @@
 import "server-only";
 import { and, count, desc, sql } from "drizzle-orm";
 import { db } from "@/db/index";
-import { notifications } from "@/db/schema";
+import { districts, notifications } from "@/db/schema";
 import { readByUser, visibleNotifications } from "@/lib/server/notification-filter";
 import { describeAudience, isAudienceFilter, type AudienceFilter } from "@/lib/notification-audience";
 import type { Viewer } from "@/lib/viewer";
@@ -59,9 +59,19 @@ export async function listSentNotices(limit = 10): Promise<(SentNoticeRow & { au
     .orderBy(desc(notifications.publishedAt))
     .limit(limit);
 
+  /*
+   * A district is stored as an id, so the history resolves it to a name before it
+   * is printed. The reference table is tiny and this runs once per page.
+   */
+  const districtRows = await db.select({ id: districts.id, name: districts.name }).from(districts);
+  const names = new Map(districtRows.map((row) => [row.id, row.name]));
+
   return rows.map(({ audienceFilter, ...row }) => ({
     ...row,
-    audienceLabel: describeAudience(isAudienceFilter(audienceFilter) ? (audienceFilter as AudienceFilter) : null),
+    audienceLabel: describeAudience(
+      isAudienceFilter(audienceFilter) ? (audienceFilter as AudienceFilter) : null,
+      names,
+    ),
   }));
 }
 
