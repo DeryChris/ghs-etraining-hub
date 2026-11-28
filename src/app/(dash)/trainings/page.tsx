@@ -430,7 +430,7 @@ export default async function TrainingsPage({
           actionHref={filtered ? "/trainings" : mayManage ? "/trainings/new" : undefined}
         />
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {list.items.map((training) => {
             const place = [training.facilityName ?? training.venue, training.subDistrictName, training.districtName, training.regionName]
               .filter(Boolean)
@@ -441,58 +441,65 @@ export default async function TrainingsPage({
                 : formatDate(training.startsOn);
 
             return (
-              <li
-                key={training.id}
-                className="group relative rounded-card border border-hairline bg-surface p-5 shadow-panel transition-colors hover:border-primary/40 focus-within:border-primary/60"
-              >
-                {/*
-                 * One link per row, laid over the whole card and *above* the text:
-                 * a row where only the title responded was a target the size of a
-                 * sentence. The title keeps its own emphasis but is not a link.
-                 */}
-                <Link
-                  href={`/trainings/${training.id}`}
-                  aria-label={`Open ${training.title}`}
-                  className="absolute inset-0 z-10 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                />
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0 space-y-1.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
-                      Programme Field: {training.fieldName ?? "Not recorded"}
-                      {training.areaName ? ` · Programme Area: ${training.areaName}` : ""}
-                    </p>
-                    <h2 className="text-base font-bold text-ink transition-colors group-hover:text-primary">{training.title}</h2>
-                    {training.targetGroup && <p className="text-sm text-ink-muted">For {training.targetGroup}</p>}
-                    <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-muted">
-                      <span className="inline-flex items-center gap-1.5">
-                        <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                        {dates}
-                        {training.durationText ? ` · ${training.durationText}` : ""}
-                      </span>
-                      {place && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5" aria-hidden />
-                          {place}
+              <li key={training.id} className="min-w-0">
+                <article className="group relative flex h-full flex-col overflow-hidden rounded-card border border-hairline bg-surface shadow-panel transition-[transform,border-color,box-shadow] duration-fast motion-safe:hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lift motion-reduce:transition-none focus-within:border-primary/60">
+                  {/* One link covers the whole tile while preserving a single accessible target. */}
+                  <Link
+                    href={`/trainings/${training.id}`}
+                    aria-label={`Open ${training.title}`}
+                    className="absolute inset-0 z-10 rounded-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  />
+                  <div className="flex flex-1 flex-col gap-4 p-5">
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] font-semibold uppercase leading-relaxed tracking-[0.16em] text-ink-muted">
+                        Programme Field: {training.fieldName ?? "Not recorded"}
+                        {training.areaName ? ` · Programme Area: ${training.areaName}` : ""}
+                      </p>
+                      <h2 className="text-lg font-bold text-ink transition-colors group-hover:text-primary">
+                        {training.title}
+                      </h2>
+                      {training.targetGroup && <p className="text-sm leading-relaxed text-ink-muted">For {training.targetGroup}</p>}
+                    </div>
+
+                    <div className="mt-auto space-y-2.5">
+                      <p className="flex items-start gap-2.5 text-sm leading-relaxed text-ink-muted">
+                        <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-control bg-ghs-green/10 text-ghs-green">
+                          <CalendarDays className="h-4 w-4" aria-hidden />
                         </span>
+                        <span>
+                          {dates}
+                          {training.durationText ? ` · ${training.durationText}` : ""}
+                        </span>
+                      </p>
+                      {place && (
+                        <p className="flex items-start gap-2.5 text-sm leading-relaxed text-ink-muted">
+                          <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-control bg-ghs-red/10 text-ghs-red">
+                            <MapPin className="h-4 w-4" aria-hidden />
+                          </span>
+                          <span>{place}</span>
+                        </p>
                       )}
                       {training.attendeeCount !== null && training.status === "COMPLETED" && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Users className="h-3.5 w-3.5" aria-hidden />
-                          {training.attendeeCount.toLocaleString("en-GB")} attendees recorded
-                        </span>
+                        <p className="flex items-start gap-2.5 text-sm leading-relaxed text-ink-muted">
+                          <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-control bg-ghs-gold/35 text-ghs-green">
+                            <Users className="h-4 w-4" aria-hidden />
+                          </span>
+                          <span>{training.attendeeCount.toLocaleString("en-GB")} attendees recorded</span>
+                        </p>
                       )}
-                    </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 border-t border-hairline pt-4">
+                      <Badge variant="outline">{training.year}</Badge>
+                      <Badge variant={STATUS_BADGE[training.status]}>{TRAINING_STATUS_LABELS[training.status]}</Badge>
+                      {training.reviewState !== "PUBLISHED" && (
+                        <Badge variant={REVIEW_BADGE[training.reviewState].variant}>
+                          {REVIEW_BADGE[training.reviewState].label}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2">
-                    <Badge variant="outline">{training.year}</Badge>
-                    <Badge variant={STATUS_BADGE[training.status]}>{TRAINING_STATUS_LABELS[training.status]}</Badge>
-                    {training.reviewState !== "PUBLISHED" && (
-                      <Badge variant={REVIEW_BADGE[training.reviewState].variant}>
-                        {REVIEW_BADGE[training.reviewState].label}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
+                </article>
               </li>
             );
           })}
